@@ -678,6 +678,7 @@ export default function ComprehensiveEditFixed() {
             });
             
             const locationDetailsArray = Array.from(locationDetailsMap.values());
+            console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
             return locationDetailsArray.length > 0 ? locationDetailsArray : [{
               municipality: "",
               regional_unit: "",
@@ -1430,15 +1431,17 @@ export default function ComprehensiveEditFixed() {
                                   <FormControl>
                                     <Select
                                       onValueChange={(value) => {
+                                        const fieldKey = `location_details.${index}.region`;
                                         field.onChange(value);
                                         
-                                        // Mark this field as interacted for future changes
-                                        const fieldKey = `location_details.${index}.region`;
-                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
+                                        // Only reset dependent fields if this is a user interaction (not form initialization)
+                                        if (isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                          form.setValue(`location_details.${index}.regional_unit`, "");
+                                          form.setValue(`location_details.${index}.municipality`, "");
+                                        }
                                         
-                                        // Reset dependent fields when region changes (user interaction)
-                                        form.setValue(`location_details.${index}.regional_unit`, "");
-                                        form.setValue(`location_details.${index}.municipality`, "");
+                                        // Mark this field as interacted for future changes
+                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
                                       defaultValue={field.value || ""}
@@ -1472,14 +1475,16 @@ export default function ComprehensiveEditFixed() {
                                   <FormControl>
                                     <Select 
                                       onValueChange={(value) => {
+                                        const fieldKey = `location_details.${index}.regional_unit`;
                                         field.onChange(value);
                                         
-                                        // Mark this field as interacted for future changes
-                                        const fieldKey = `location_details.${index}.regional_unit`;
-                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
+                                        // Only reset dependent fields if this is a user interaction (not form initialization)
+                                        if (isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                          form.setValue(`location_details.${index}.municipality`, "");
+                                        }
                                         
-                                        // Reset municipality when regional unit changes (user interaction)
-                                        form.setValue(`location_details.${index}.municipality`, "");
+                                        // Mark this field as interacted for future changes
+                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
                                       defaultValue={field.value || ""}
