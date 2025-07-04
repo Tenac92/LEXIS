@@ -597,13 +597,9 @@ export default function ComprehensiveEditFixed() {
             
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
-              console.log(`Processing project index item:`, indexItem);
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
               const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
               const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
-              console.log(`Found kallikratis:`, kallikratis);
-              console.log(`Found unit:`, unit);
-              console.log(`Found expenditure type:`, expenditureType);
               
               const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
               
@@ -652,7 +648,15 @@ export default function ComprehensiveEditFixed() {
               }
             });
             
-            return Array.from(locationDetailsMap.values());
+            const locationDetailsArray = Array.from(locationDetailsMap.values());
+            return locationDetailsArray.length > 0 ? locationDetailsArray : [{
+              municipality: "",
+              regional_unit: "",
+              region: "",
+              implementing_agency: typedProjectData.enhanced_unit?.name || "",
+              event_type: "",
+              expenditure_types: [],
+            }];
           }
           
           // Default location detail if no project index data
@@ -1240,8 +1244,6 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {form.watch("location_details").map((location, index) => {
-                      console.log("Location detail being rendered:", location);
-                      
                       // Get geographic level for this location
                       const geographicLevel = location.geographic_level || 4;
                       const shouldShowRegion = geographicLevel >= 2;
@@ -1250,10 +1252,7 @@ export default function ComprehensiveEditFixed() {
                       
                       return (
                       <div key={index} className="p-4 border rounded-lg space-y-4">
-                        <div className="text-xs text-gray-500 mb-2">
-                          Επίπεδο γεωγραφικής κωδικοποίησης: {geographicLevel} ψηφία 
-                          ({geographicLevel === 4 ? 'Δήμος' : geographicLevel === 3 ? 'Περιφερειακή Ενότητα' : 'Περιφέρεια'})
-                        </div>
+
                         <div className="grid grid-cols-4 gap-4">
                           {shouldShowRegion && (
                             <FormField

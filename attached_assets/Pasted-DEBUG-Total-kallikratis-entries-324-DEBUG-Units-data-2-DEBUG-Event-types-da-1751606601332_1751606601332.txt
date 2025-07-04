@@ -1,0 +1,94 @@
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipality: "", regional_unit: "", region: "", implementing_agency: "", event_type: "", …}
+Initializing form with project data: 
+Object {id: 2, mis: 5174076, project_title: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζήμιών σε κτίρια από την πλημμύρα της 26/01/2021 σε…", event_description: "2021 πλημμύρα Αγρίνιο", status: "Ενεργό", …}
+Project index data: 
+(3) [{…}, {…}, {…}]
+Processing project index item: 
+Object {project_id: 2, event_type_id: 10, event_type_name: "ΠΛΗΜΜΥΡΑ", expenditure_type_id: 3, expenditure_type_name: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", …}
+Found kallikratis: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+Found unit: 
+Object {id: 5, unit: "ΔΑΕΦΚ-ΔΕ", unit_name: {…}, name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}
+Found expenditure type: 
+Object {id: 3, expediture_types: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", expediture_types_minor: "Δ.Κ.Α. ανακατασκευής"}
+Processing project index item: 
+Object {project_id: 2, event_type_id: 10, event_type_name: "ΠΛΗΜΜΥΡΑ", expenditure_type_id: 4, expenditure_type_name: "ΔΚΑ ΕΠΙΣΚΕΥΗ", …}
+Found kallikratis: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+Found unit: 
+Object {id: 5, unit: "ΔΑΕΦΚ-ΔΕ", unit_name: {…}, name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}
+Found expenditure type: 
+Object {id: 4, expediture_types: "ΔΚΑ ΕΠΙΣΚΕΥΗ", expediture_types_minor: "Δ.Κ.Α. επισκευής"}
+Processing project index item: 
+Object {project_id: 2, event_type_id: 10, event_type_name: "ΠΛΗΜΜΥΡΑ", expenditure_type_id: 1, expenditure_type_name: "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", …}
+Found kallikratis: 
+Object {id: 123, kodikos_neou_ota: 9123, eidos_neou_ota: "ΔΗΜΟΣ", onoma_neou_ota: "ΑΓΡΙΝΙΟΥ", kodikos_perifereiakis_enotitas: 701, …}
+Found unit: 
+Object {id: 5, unit: "ΔΑΕΦΚ-ΔΕ", unit_name: {…}, name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ"}
+Found expenditure type: 
+Object {id: 1, expediture_types: "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", expediture_types_minor: "Δ.Κ.Α. αυτοστέγαση"}
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 
+(2) [{…}, {…}]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Location detail being rendered: 
+Object {municipality: "", regional_unit: "", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", event_type: "ΠΛΗΜΜΥΡΑ", …}
+Warning: A component is changing an uncontrolled input to be controlled. This is likely caused by the value changing from undefined to a defined value, which should not happen. Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://reactjs.org/link/controlled-components
+    at input
+    at _c (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/input.tsx:20:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=ea23ecab:52:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DKHUMOWT.js?v=ea23ecab:33:11
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:127:9
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:71:6
+    at Controller (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=ea23ecab:313:35)
+    at FormField (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/form.tsx:32:6)
+    at div
+    at div
+    at div
+    at div
+    at _c9 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/card.tsx:106:12)
+    at div
+    at _c (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=ea23ecab:41:13
+    at Presence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-AZCBCMZO.js?v=ea23ecab:24:11)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=ea23ecab:175:13
+    at _c5 (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/tabs.tsx:68:12)
+    at div
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CPFL7ZFD.js?v=ea23ecab:41:13
+    at Provider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-LSQNWB54.js?v=ea23ecab:38:15)
+    at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tabs.js?v=ea23ecab:53:7
+    at form
+    at FormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=ea23ecab:102:11)
+    at div
+    at ComprehensiveEditFixed (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:121:19)
+    at Route (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ea23ecab:191:16)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ea23ecab:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ea23ecab:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:42:34)
+    at Router
+    at DocumentFormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/contexts/document-form-context.tsx:63:40)
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:139:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=ea23ecab:2848:3)
+    at App
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
