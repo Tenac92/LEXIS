@@ -1,0 +1,64 @@
+DEBUG - All units: 
+(11) ["11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ", "1: ΓΔΑΕΦΚ", "4: ΔΑΕΦΚ-ΒΕ", "6: ΤΑΕΦΚ-ΔΑ", "7: ΤΑΕΦΚ-ΑΑ", "8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ", "9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ", "10: ΤΑΕΦΚ ΧΑΝΙΩΝ", "2: ΔΑΕΦΚ-ΚΕ", "5: ΔΑΕΦΚ-ΔΕ", "3: ΔΑΕΦΚ-ΑΚ"]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Region field debug - Index 0: 
+Object {fieldValue: "", formValue: "", locationDetail: {…}}
+Region options for field value "": false 
+(13) ["ΑΝ. ΜΑΚΕΔΟΝΙΑΣ & ΘΡΑΚΗΣ", "ΑΤΤΙΚΗΣ", "ΒΟΡΕΙΟΥ ΑΙΓΑΙΟΥ", "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", "ΔΥΤΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΗΠΕΙΡΟΥ", "ΘΕΣΣΑΛΙΑΣ", "ΙΟΝΙΩΝ ΝΗΣΩΝ", "ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΚΡΗΤΗΣ", "ΝΟΤΙΟΥ ΑΙΓΑΙΟΥ", "ΠΕΛΟΠΟΝΝΗΣΟΥ", "ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ"]
+Regional Unit options for region "", field value "": false 
+Array []
+Municipality options for region "", regional unit "", field value "": false 
+Array []
+Initializing form with project data: 
+Object {id: 2, mis: 5174076, project_title: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζήμιών σε κτίρια από την πλημμύρα της 26/01/2021 σε…", event_description: "2021 πλημμύρα Αγρίνιο", status: "Ενεργό", …}
+Project index data: 
+(3) [{…}, {…}, {…}]
+DEBUG Geographic Code Analysis: 
+Object {geographicCode: 9123, geoInfo: {…}, kallikratisFound: true, kallikratisData: {…}}
+Setting location fields: 
+Object {municipality: "ΑΓΡΙΝΙΟΥ", regional_unit: "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", kallikratisId: 123}
+Final locationDetail: 
+Object {municipality: "ΑΓΡΙΝΙΟΥ", regional_unit: "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", region: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", implementing_agency: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ", event_type: "ΠΛΗΜΜΥΡΑ", …}
+DEBUG Final locationDetailsArray: 
+Array [{…}]
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 11 units total
+DEBUG - All units: 
+(11) ["11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ", "1: ΓΔΑΕΦΚ", "4: ΔΑΕΦΚ-ΒΕ", "6: ΤΑΕΦΚ-ΔΑ", "7: ΤΑΕΦΚ-ΑΑ", "8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ", "9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ", "10: ΤΑΕΦΚ ΧΑΝΙΩΝ", "2: ΔΑΕΦΚ-ΚΕ", "5: ΔΑΕΦΚ-ΔΕ", "3: ΔΑΕΦΚ-ΑΚ"]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Region field debug - Index 0: 
+Object {fieldValue: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", formValue: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", locationDetail: {…}}
+Region options for field value "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ": true 
+(13) ["ΑΝ. ΜΑΚΕΔΟΝΙΑΣ & ΘΡΑΚΗΣ", "ΑΤΤΙΚΗΣ", "ΒΟΡΕΙΟΥ ΑΙΓΑΙΟΥ", "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", "ΔΥΤΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΗΠΕΙΡΟΥ", "ΘΕΣΣΑΛΙΑΣ", "ΙΟΝΙΩΝ ΝΗΣΩΝ", "ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΚΡΗΤΗΣ", "ΝΟΤΙΟΥ ΑΙΓΑΙΟΥ", "ΠΕΛΟΠΟΝΝΗΣΟΥ", "ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ"]
+Regional Unit options for region "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", field value "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ": true 
+(3) ["ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", "ΑΧΑΪΑΣ", "ΗΛΕΙΑΣ"]
+Municipality options for region "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", regional unit "ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", field value "ΑΓΡΙΝΙΟΥ": true 
+(7) ["ΑΓΡΙΝΙΟΥ", "ΑΚΤΙΟΥ-ΒΟΝΙΤΣΑΣ", "ΑΜΦΙΛΟΧΙΑΣ", "ΘΕΡΜΟΥ", "ΙΕΡΑΣ ΠΟΛΗΣ ΜΕΣΟΛΟΓΓΙΟΥ", "ΝΑΥΠΑΚΤΙΑΣ", "ΞΗΡΟΜΕΡΟΥ"]
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 11 units total
+DEBUG - All units: 
+(11) ["11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ", "1: ΓΔΑΕΦΚ", "4: ΔΑΕΦΚ-ΒΕ", "6: ΤΑΕΦΚ-ΔΑ", "7: ΤΑΕΦΚ-ΑΑ", "8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ", "9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ", "10: ΤΑΕΦΚ ΧΑΝΙΩΝ", "2: ΔΑΕΦΚ-ΚΕ", "5: ΔΑΕΦΚ-ΔΕ", "3: ΔΑΕΦΚ-ΑΚ"]
+DEBUG - Event types data: 
+(2) [{…}, {…}]
+DEBUG - Expenditure types data: 
+(2) [{…}, {…}]
+Region field debug - Index 0: 
+Object {fieldValue: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", formValue: "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", locationDetail: {…}}
+Region options for field value "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ": true 
+(13) ["ΑΝ. ΜΑΚΕΔΟΝΙΑΣ & ΘΡΑΚΗΣ", "ΑΤΤΙΚΗΣ", "ΒΟΡΕΙΟΥ ΑΙΓΑΙΟΥ", "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", "ΔΥΤΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΗΠΕΙΡΟΥ", "ΘΕΣΣΑΛΙΑΣ", "ΙΟΝΙΩΝ ΝΗΣΩΝ", "ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ", "ΚΡΗΤΗΣ", "ΝΟΤΙΟΥ ΑΙΓΑΙΟΥ", "ΠΕΛΟΠΟΝΝΗΣΟΥ", "ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ"]
+Regional Unit options for region "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", field value "": false 
+(3) ["ΑΙΤΩΛΟΑΚΑΡΝΑΝΙΑΣ", "ΑΧΑΪΑΣ", "ΗΛΕΙΑΣ"]
+Municipality options for region "ΔΥΤΙΚΗΣ ΕΛΛΑΔΑΣ", regional unit "", field value "": false 
+Array []
+[StableWebSocket] Creating new connection
+[StableWebSocket] Connected successfully

@@ -166,6 +166,7 @@ export default function ComprehensiveEditFixed() {
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
   const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const [initializationTime, setInitializationTime] = useState<number>(0);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -705,6 +706,7 @@ export default function ComprehensiveEditFixed() {
         })());
       form.setValue("changes", []);
       setIsFormInitialized(true);
+      setInitializationTime(Date.now());
     }
   }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, isFormInitialized, form]);
 
@@ -1420,10 +1422,13 @@ export default function ComprehensiveEditFixed() {
                               control={form.control}
                               name={`location_details.${index}.region`}
                               render={({ field }) => {
+                                // Get current form values directly to avoid stale watch data
+                                const currentLocationDetail = form.getValues(`location_details.${index}`);
                                 console.log(`Region field debug - Index ${index}:`, {
                                   fieldValue: field.value,
                                   formValue: form.getValues(`location_details.${index}.region`),
-                                  locationDetail: location
+                                  locationDetail: location,
+                                  currentFormState: currentLocationDetail
                                 });
                                 return (
                                 <FormItem>
@@ -1434,8 +1439,10 @@ export default function ComprehensiveEditFixed() {
                                         const fieldKey = `location_details.${index}.region`;
                                         field.onChange(value);
                                         
-                                        // Only reset dependent fields if this is a user interaction (not form initialization)
-                                        if (isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                        // Only reset dependent fields if enough time has passed since initialization AND it's a user interaction
+                                        const timeSinceInit = Date.now() - initializationTime;
+                                        const isUserInteraction = isFormInitialized && timeSinceInit > 2000 && userInteractedFields.has(fieldKey);
+                                        if (isUserInteraction) {
                                           form.setValue(`location_details.${index}.regional_unit`, "");
                                           form.setValue(`location_details.${index}.municipality`, "");
                                         }
@@ -1478,8 +1485,10 @@ export default function ComprehensiveEditFixed() {
                                         const fieldKey = `location_details.${index}.regional_unit`;
                                         field.onChange(value);
                                         
-                                        // Only reset dependent fields if this is a user interaction (not form initialization)
-                                        if (isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                        // Only reset dependent fields if enough time has passed since initialization AND it's a user interaction
+                                        const timeSinceInit = Date.now() - initializationTime;
+                                        const isUserInteraction = isFormInitialized && timeSinceInit > 2000 && userInteractedFields.has(fieldKey);
+                                        if (isUserInteraction) {
                                           form.setValue(`location_details.${index}.municipality`, "");
                                         }
                                         
