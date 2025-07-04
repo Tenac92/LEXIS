@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -167,6 +167,7 @@ export default function ComprehensiveEditFixed() {
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [initializationTime, setInitializationTime] = useState<number>(0);
+  const isInitializingRef = useRef(false);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -504,6 +505,9 @@ export default function ComprehensiveEditFixed() {
       console.log('Initializing form with project data:', typedProjectData);
       console.log('Project index data:', projectIndexData);
       
+      // Set initialization flag to prevent field clearing during setup
+      isInitializingRef.current = true;
+      
       // Populate decisions from database or create default
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
@@ -707,6 +711,12 @@ export default function ComprehensiveEditFixed() {
       form.setValue("changes", []);
       setIsFormInitialized(true);
       setInitializationTime(Date.now());
+      
+      // Clear initialization flag after a delay to allow form to settle
+      setTimeout(() => {
+        isInitializingRef.current = false;
+        console.log('Form initialization complete - field clearing protection disabled');
+      }, 3000);
     }
   }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, isFormInitialized, form]);
 
@@ -1439,19 +1449,19 @@ export default function ComprehensiveEditFixed() {
                                         const fieldKey = `location_details.${index}.region`;
                                         field.onChange(value);
                                         
-                                        // Only reset dependent fields if enough time has passed since initialization AND it's a user interaction
-                                        const timeSinceInit = Date.now() - initializationTime;
-                                        const isUserInteraction = isFormInitialized && timeSinceInit > 2000 && userInteractedFields.has(fieldKey);
-                                        if (isUserInteraction) {
+                                        // Only reset dependent fields if NOT initializing and it's a genuine user interaction
+                                        if (!isInitializingRef.current && isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                          console.log(`Region changed by user - clearing dependent fields`);
                                           form.setValue(`location_details.${index}.regional_unit`, "");
                                           form.setValue(`location_details.${index}.municipality`, "");
+                                        } else if (isInitializingRef.current) {
+                                          console.log(`Region change during initialization - skipping field clearing`);
                                         }
                                         
                                         // Mark this field as interacted for future changes
                                         setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
-                                      defaultValue={field.value || ""}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε περιφέρεια" />
@@ -1485,19 +1495,19 @@ export default function ComprehensiveEditFixed() {
                                         const fieldKey = `location_details.${index}.regional_unit`;
                                         field.onChange(value);
                                         
-                                        // Only reset dependent fields if enough time has passed since initialization AND it's a user interaction
-                                        const timeSinceInit = Date.now() - initializationTime;
-                                        const isUserInteraction = isFormInitialized && timeSinceInit > 2000 && userInteractedFields.has(fieldKey);
-                                        if (isUserInteraction) {
+                                        // Only reset dependent fields if NOT initializing and it's a genuine user interaction
+                                        if (!isInitializingRef.current && isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                          console.log(`Regional unit changed by user - clearing municipality`);
                                           form.setValue(`location_details.${index}.municipality`, "");
+                                        } else if (isInitializingRef.current) {
+                                          console.log(`Regional unit change during initialization - skipping field clearing`);
                                         }
                                         
                                         // Mark this field as interacted for future changes
                                         setUserInteractedFields(prev => new Set(prev).add(fieldKey));
                                       }} 
                                       value={field.value || ""}
-                                      defaultValue={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.region`) && !field.value}
+                                      disabled={!form.watch(`location_details.${index}.region`)}
                                   >
                                     <SelectTrigger className="text-sm">
                                       <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
@@ -1533,8 +1543,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                       }} 
                                       value={field.value || ""}
-                                      defaultValue={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.regional_unit`) && !field.value}
+                                      disabled={!form.watch(`location_details.${index}.regional_unit`)}
                                     >
                                       <SelectTrigger className="text-sm">
                                         <SelectValue placeholder="Επιλέξτε δήμο" />
