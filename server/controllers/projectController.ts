@@ -1194,17 +1194,12 @@ router.get('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
       return res.status(404).json({ message: "Project not found" });
     }
 
-    console.log(`[ProjectDecisions] Found project:`, { id: project.id, mis: project.mis });
-
     // Get decisions from normalized table
     const { data: decisions, error: decisionsError } = await supabase
       .from('project_decisions')
       .select('*')
       .eq('project_id', project.id)
       .order('decision_sequence');
-
-    console.log(`[ProjectDecisions] Query executed with project_id: ${project.id}`);
-    console.log(`[ProjectDecisions] Raw decisions result:`, decisions);
 
     if (decisionsError) {
       console.error(`[ProjectDecisions] Error fetching decisions:`, decisionsError);

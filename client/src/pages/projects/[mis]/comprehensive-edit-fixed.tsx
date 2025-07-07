@@ -351,11 +351,10 @@ export default function ComprehensiveEditFixed() {
     }
   }, [decisionsData, mis, queryClient]);
 
-  // Manual refresh for debugging - force invalidate all caches
+  // Reset form initialization state when component mounts
   useEffect(() => {
-    console.log('🔄 MANUAL REFRESH - Invalidating all decision caches for debugging...');
-    queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
-  }, [mis, queryClient]);
+    setIsFormInitialized(false);
+  }, []);
 
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
@@ -806,7 +805,7 @@ export default function ComprehensiveEditFixed() {
         console.log('Form initialization complete - field clearing protection disabled');
       }, 3000);
     }
-  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, isFormInitialized, form]);
+  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
