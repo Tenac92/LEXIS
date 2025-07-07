@@ -148,6 +148,7 @@ const comprehensiveProjectSchema = z.object({
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     connected_decisions: z.array(z.string()).default([]),
     comments: z.string().default(""),
+    included: z.boolean().default(true),
   })).default([]),
   
   // Section 5: Changes performed
@@ -511,15 +512,15 @@ export default function ComprehensiveEditFixed() {
       // Populate decisions from database or create default
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
-            protocol_number: decision.protocol_number || "",
-            fek: decision.fek || "",
-            ada: decision.ada || "",
-            implementing_agency: decision.implementing_agency || typedProjectData.enhanced_unit?.name || "",
+            protocol_number: safeText(decision.protocol_number),
+            fek: safeText(decision.fek),
+            ada: safeText(decision.ada),
+            implementing_agency: safeText(decision.implementing_agency) || typedProjectData.enhanced_unit?.name || "",
             decision_budget: decision.decision_budget ? formatEuropeanNumber(decision.decision_budget) : "",
-            expenses_covered: decision.expenses_covered || "",
+            expenses_covered: safeText(decision.expenses_covered),
             decision_type: decision.decision_type || "Έγκριση" as const,
             is_included: decision.is_included ?? true,
-            comments: decision.comments || "",
+            comments: safeText(decision.comments),
           }))
         : [{
             protocol_number: "",
@@ -548,7 +549,8 @@ export default function ComprehensiveEditFixed() {
             decision_status: formulation.decision_status || formulation.status || "Ενεργή" as const,
             change_type: formulation.change_type || "Έγκριση" as const,
             connected_decisions: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
-            comments: formulation.comments || "",
+            comments: safeText(formulation.comments),
+            included: formulation.included ?? true,
           }))
         : [
             // NA853 entry
@@ -566,6 +568,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: true,
             },
             // NA271 entry if exists
             ...(typedProjectData.na271 ? [{
@@ -582,6 +585,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: true,
             }] : []),
             // E069 entry if exists
             ...(typedProjectData.e069 ? [{
@@ -598,6 +602,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: true,
             }] : [])
           ];
 
@@ -1371,6 +1376,26 @@ export default function ComprehensiveEditFixed() {
                                 <FormControl>
                                   <Input {...field} placeholder="Σχόλια" className="text-sm" />
                                 </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="col-span-full">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.included`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-2">
+                                <FormControl>
+                                  <input
+                                    type="checkbox"
+                                    checked={field.value}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal">Έχει συμπεριληφθεί</FormLabel>
                               </FormItem>
                             )}
                           />
