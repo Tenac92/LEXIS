@@ -551,6 +551,7 @@ export default function ComprehensiveEditFixed() {
             change_type: formulation.change_type || "Έγκριση" as const,
             connected_decisions: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
             comments: formulation.comments || "",
+            included: formulation.included ?? false,
           }))
         : [
             // NA853 entry
@@ -568,6 +569,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: false,
             },
             // NA271 entry if exists
             ...(typedProjectData.na271 ? [{
@@ -584,6 +586,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: false,
             }] : []),
             // E069 entry if exists
             ...(typedProjectData.e069 ? [{
@@ -600,6 +603,7 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
+              included: false,
             }] : [])
           ];
 
