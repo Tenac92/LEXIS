@@ -127,6 +127,26 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### January 7, 2025 - FEK Field JSONB Format & Included Checkbox Implementation
+- **CRITICAL UPDATE: FEK field converted from string to JSONB structure**
+- **New FEK Format:** `{"year": "2022", "issue": "B", "number": "384"}` matching database requirements
+- **Frontend Updates:**
+  - Updated form schema to expect FEK object with year, issue, and number fields
+  - Replaced single FEK input with three separate inputs (Έτος, Τεύχος, Αριθμός) in decisions section
+  - Added `normalizeFekData()` function to handle both old string and new JSONB formats during initialization
+  - Enhanced form initialization to properly convert existing data to new format
+- **Included Checkbox Implementation:**
+  - Fixed "Έχει συμπεριληφθεί" checkbox in project_decisions table (Section 1: "Αποφάσεις που τεκμηριώνουν το έργο")
+  - Updated form schema to use `included` field instead of `is_included`
+  - Added proper boolean field handling with default value `true`
+  - Corrected field mapping in form initialization and submission
+- **Database Schema Alignment:**
+  - Updated shared/schema.ts to reflect `fek: jsonb("fek")` column type
+  - Added `included: boolean("included").notNull().default(true)` to project_decisions table
+  - Enhanced data validation and type safety for form submissions
+- **European Number Formatting Maintained:** Both budget fields continue to use European format (e.g., "71.943,00")
+- **Backward Compatibility:** Form initialization handles both old string FEK data and new JSONB format seamlessly
+
 ### July 4, 2025 - Budget Modal Display Fix & Data Structure Alignment
 - **CRITICAL FRONTEND FIX: Budget data now displays correctly in project details modal**
 - **Root Cause Identified:** API response structure mismatch between backend and frontend

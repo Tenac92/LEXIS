@@ -17,6 +17,50 @@ import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
 import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave } from "@shared/utils/geographic-utils";
 
+// Helper function to safely convert array or object fields to text
+function safeText(value: any): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "Δεν υπάρχει";
+    if (value.length === 1) return String(value[0]);
+    return value.join(", ");
+  }
+  return "";
+}
+
+// Helper function to convert FEK data from old string format to new object format
+function normalizeFekData(fekValue: any): { year: string; issue: string; number: string } {
+  if (!fekValue) return { year: "", issue: "", number: "" };
+  
+  // If it's already an object with the new format
+  if (typeof fekValue === "object" && fekValue.year !== undefined) {
+    return {
+      year: String(fekValue.year || ""),
+      issue: String(fekValue.issue || ""),
+      number: String(fekValue.number || "")
+    };
+  }
+  
+  // If it's a string (old format), return empty object for now
+  // In the future, we could try to parse the string format if needed
+  if (typeof fekValue === "string") {
+    return { year: "", issue: "", number: "" };
+  }
+  
+  // If it's an array (from JSONB), take the first element if it's an object
+  if (Array.isArray(fekValue) && fekValue.length > 0 && typeof fekValue[0] === "object") {
+    const obj = fekValue[0];
+    return {
+      year: String(obj.year || ""),
+      issue: String(obj.issue || ""),
+      number: String(obj.number || "")
+    };
+  }
+  
+  return { year: "", issue: "", number: "" };
+}
+
 // Interface definitions
 interface KallikratisEntry {
   id: number;
@@ -75,13 +119,17 @@ const comprehensiveProjectSchema = z.object({
   // Section 1: Decisions that document the project
   decisions: z.array(z.object({
     protocol_number: z.string().default(""),
-    fek: z.string().default(""),
+    fek: z.object({
+      year: z.string().default(""),
+      issue: z.string().default(""),
+      number: z.string().default(""),
+    }).default({ year: "", issue: "", number: "" }),
     ada: z.string().default(""),
     implementing_agency: z.string().default(""),
     decision_budget: z.string().default(""),
     expenses_covered: z.union([z.string(), z.number()]).transform(val => String(val)).default(""),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
-    is_included: z.boolean().default(true),
+    included: z.boolean().default(true),
     comments: z.string().default(""),
   })).default([]),
   
@@ -511,25 +559,25 @@ export default function ComprehensiveEditFixed() {
       // Populate decisions from database or create default
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
-            protocol_number: safeText(decision.protocol_number),
-            fek: safeText(decision.fek),
-            ada: safeText(decision.ada),
-            implementing_agency: safeText(decision.implementing_agency) || typedProjectData.enhanced_unit?.name || "",
+            protocol_number: decision.protocol_number || "",
+            fek: normalizeFekData(decision.fek),
+            ada: decision.ada || "",
+            implementing_agency: decision.implementing_agency || typedProjectData.enhanced_unit?.name || "",
             decision_budget: decision.decision_budget ? formatEuropeanNumber(decision.decision_budget) : "",
-            expenses_covered: safeText(decision.expenses_covered),
+            expenses_covered: decision.expenses_covered || "",
             decision_type: decision.decision_type || "Έγκριση" as const,
-            is_included: decision.is_included ?? true,
-            comments: safeText(decision.comments),
+            included: decision.included ?? decision.is_included ?? true,
+            comments: decision.comments || "",
           }))
         : [{
             protocol_number: "",
-            fek: "",
+            fek: { year: "", issue: "", number: "" },
             ada: "",
             implementing_agency: typedProjectData.enhanced_unit?.name || "",
             decision_budget: "",
             expenses_covered: "",
             decision_type: "Έγκριση" as const,
-            is_included: true,
+            included: true,
             comments: "",
           }];
       
@@ -548,8 +596,7 @@ export default function ComprehensiveEditFixed() {
             decision_status: formulation.decision_status || formulation.status || "Ενεργή" as const,
             change_type: formulation.change_type || "Έγκριση" as const,
             connected_decisions: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
-            comments: safeText(formulation.comments),
-            included: formulation.included ?? true,
+            comments: formulation.comments || "",
           }))
         : [
             // NA853 entry
@@ -567,7 +614,6 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              included: true,
             },
             // NA271 entry if exists
             ...(typedProjectData.na271 ? [{
@@ -584,7 +630,6 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              included: true,
             }] : []),
             // E069 entry if exists
             ...(typedProjectData.e069 ? [{
@@ -601,7 +646,6 @@ export default function ComprehensiveEditFixed() {
               change_type: "Έγκριση" as const,
               connected_decisions: [],
               comments: "",
-              included: true,
             }] : [])
           ];
 
@@ -897,18 +941,44 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={form.control}
-                            name={`decisions.${index}.fek`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">ΦΕΚ</FormLabel>
-                                <FormControl>
-                                  <Input {...field} className="text-sm" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                          <div className="space-y-2">
+                            <FormLabel className="text-xs">ΦΕΚ</FormLabel>
+                            <div className="grid grid-cols-3 gap-1">
+                              <FormField
+                                control={form.control}
+                                name={`decisions.${index}.fek.year`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input {...field} placeholder="Έτος" className="text-xs" />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`decisions.${index}.fek.issue`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input {...field} placeholder="Τεύχος" className="text-xs" />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`decisions.${index}.fek.number`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input {...field} placeholder="Αριθμός" className="text-xs" />
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.ada`}
@@ -1019,7 +1089,7 @@ export default function ComprehensiveEditFixed() {
                         
                         <FormField
                           control={form.control}
-                          name={`decisions.${index}.included`}
+                          name={`decisions.${index}.is_included`}
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2">
                               <FormControl>
@@ -1046,7 +1116,7 @@ export default function ComprehensiveEditFixed() {
                           const currentDecisions = form.getValues("decisions");
                           form.setValue("decisions", [
                             ...currentDecisions,
-                            { protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, included: true, comments: "" }
+                            { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, included: true, comments: "" }
                           ]);
                         }}
                         className="text-sm"
@@ -1379,8 +1449,6 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
                         </div>
-                        
-
                       </div>
                     ))}
                     

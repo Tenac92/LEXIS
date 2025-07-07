@@ -574,7 +574,7 @@ export const projectDecisions = pgTable(
 
     // Document references
     protocol_number: text("protocol_number"),
-    fek: jsonb("fek"), // JSONB to match database structure
+    fek: text("fek"),
     ada: text("ada"),
 
     // Decision details
@@ -587,9 +587,6 @@ export const projectDecisions = pgTable(
     is_included: boolean("is_included").default(true),
     is_active: boolean("is_active").default(true),
     comments: text("comments"),
-    
-    // Inclusion checkbox - "Έχει συμπεριληφθεί"
-    included: boolean("included").notNull().default(true),
 
     // Additional document references
     budget_decision: text("budget_decision"),
