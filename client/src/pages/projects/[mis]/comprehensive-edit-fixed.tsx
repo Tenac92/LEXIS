@@ -224,13 +224,13 @@ export default function ComprehensiveEditFixed() {
     defaultValues: {
       decisions: [{ 
         protocol_number: "", 
-        fek: "", 
+        fek: { year: "", issue: "", number: "" }, 
         ada: "", 
         implementing_agency: "", 
         decision_budget: "", 
         expenses_covered: "", 
         decision_type: "Έγκριση", 
-        is_included: true, 
+        included: true, 
         comments: "" 
       }],
       event_details: { 
@@ -1089,7 +1089,7 @@ export default function ComprehensiveEditFixed() {
                         
                         <FormField
                           control={form.control}
-                          name={`decisions.${index}.is_included`}
+                          name={`decisions.${index}.included`}
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2">
                               <FormControl>
@@ -1397,7 +1397,7 @@ export default function ComprehensiveEditFixed() {
                                       {form.watch("decisions").map((decision, decisionIndex) => (
                                         <SelectItem key={decisionIndex} value={`${decisionIndex}`}>
                                           {decision.protocol_number || `Απόφαση ${decisionIndex + 1}`}
-                                          {decision.fek && ` - ΦΕΚ: ${decision.fek}`}
+                                          {decision.fek?.year && ` - ΦΕΚ: ${decision.fek.year}/${decision.fek.issue}/${decision.fek.number}`}
                                           {decision.ada && ` - ΑΔΑ: ${decision.ada}`}
                                         </SelectItem>
                                       ))}
