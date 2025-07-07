@@ -215,6 +215,7 @@ export default function ComprehensiveEditFixed() {
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
   const hasInitialized = useRef(false);
   const [initializationTime, setInitializationTime] = useState<number>(0);
+  const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
@@ -800,12 +801,24 @@ export default function ComprehensiveEditFixed() {
         changes: []
       };
       
-      form.reset(formData);
+      // Set each field individually to force component updates
+      console.log('🔥 SETTING FORM VALUES INDIVIDUALLY:');
+      form.setValue("decisions", formData.decisions, { shouldValidate: true, shouldDirty: true });
+      form.setValue("formulation_details", formData.formulation_details, { shouldValidate: true, shouldDirty: true });
+      form.setValue("location_details", formData.location_details, { shouldValidate: true, shouldDirty: true });
+      form.setValue("previous_entries", formData.previous_entries, { shouldValidate: true, shouldDirty: true });
+      form.setValue("changes", formData.changes, { shouldValidate: true, shouldDirty: true });
+      
+      // Force form re-render and validation
+      form.trigger();
+      
+      // Force component re-render by updating key
+      setFormKey(prev => prev + 1);
       
       // Verify the values were set
       setTimeout(() => {
         const currentDecisions = form.getValues("decisions");
-        console.log('🔍 FORM VALUES AFTER RESET:', currentDecisions);
+        console.log('🔍 FORM VALUES AFTER INDIVIDUAL SET:', currentDecisions);
       }, 100);
       form.setValue("event_details", {
         event_name: typedProjectData.enhanced_event_type?.name || "",
@@ -922,7 +935,7 @@ export default function ComprehensiveEditFixed() {
         console.log('Form initialization complete - field clearing protection disabled');
       }, 3000);
     }
-  }, [typedProjectData, projectIndexData, decisionsData, formulationsData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData, form]);
+  }, [mis, typedProjectData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData]);
 
   const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
@@ -989,7 +1002,7 @@ export default function ComprehensiveEditFixed() {
         <p className="text-gray-600">MIS: {typedProjectData?.mis}</p>
       </div>
 
-      <Form {...form}>
+      <Form key={formKey} {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <Tabs defaultValue="edit" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
