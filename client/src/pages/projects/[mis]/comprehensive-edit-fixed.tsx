@@ -213,7 +213,7 @@ export default function ComprehensiveEditFixed() {
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
-  const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const hasInitialized = useRef(false);
   const [initializationTime, setInitializationTime] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
@@ -351,9 +351,9 @@ export default function ComprehensiveEditFixed() {
     }
   }, [decisionsData, mis, queryClient]);
 
-  // Reset form initialization state when component mounts
+  // Reset initialization state when component mounts
   useEffect(() => {
-    setIsFormInitialized(false);
+    hasInitialized.current = false;
   }, []);
 
   // Type-safe data casting
@@ -576,11 +576,11 @@ export default function ComprehensiveEditFixed() {
       typedKallikratisData: !!typedKallikratisData, 
       typedUnitsData: !!typedUnitsData,
       typedExpenditureTypesData: !!typedExpenditureTypesData,
-      isFormInitialized,
-      willInitialize: typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !isFormInitialized
+      hasInitialized: hasInitialized.current,
+      willInitialize: typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !hasInitialized.current
     });
 
-    if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !isFormInitialized) {
+    if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !hasInitialized.current) {
       console.log('🚀 INITIALIZING FORM with project data:', typedProjectData);
       console.log('Project index data:', projectIndexData);
       
@@ -913,7 +913,7 @@ export default function ComprehensiveEditFixed() {
           }];
         })());
       form.setValue("changes", []);
-      setIsFormInitialized(true);
+      hasInitialized.current = true;
       setInitializationTime(Date.now());
       
       // Clear initialization flag after a delay to allow form to settle
@@ -1723,7 +1723,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                         
                                         // Only reset dependent fields if NOT initializing and it's a genuine user interaction
-                                        if (!isInitializingRef.current && isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                        if (!isInitializingRef.current && hasInitialized.current && userInteractedFields.has(fieldKey)) {
                                           console.log(`Region changed by user - clearing dependent fields`);
                                           form.setValue(`location_details.${index}.regional_unit`, "");
                                           form.setValue(`location_details.${index}.municipality`, "");
@@ -1770,7 +1770,7 @@ export default function ComprehensiveEditFixed() {
                                         field.onChange(value);
                                         
                                         // Only reset dependent fields if NOT initializing and it's a genuine user interaction
-                                        if (!isInitializingRef.current && isFormInitialized && userInteractedFields.has(fieldKey)) {
+                                        if (!isInitializingRef.current && hasInitialized.current && userInteractedFields.has(fieldKey)) {
                                           console.log(`Regional unit changed by user - clearing municipality`);
                                           form.setValue(`location_details.${index}.municipality`, "");
                                         } else if (isInitializingRef.current) {
