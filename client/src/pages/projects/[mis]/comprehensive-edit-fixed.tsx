@@ -148,7 +148,6 @@ const comprehensiveProjectSchema = z.object({
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     connected_decisions: z.array(z.string()).default([]),
     comments: z.string().default(""),
-    included: z.boolean().default(true),
   })).default([]),
   
   // Section 5: Changes performed
@@ -1020,7 +1019,7 @@ export default function ComprehensiveEditFixed() {
                         
                         <FormField
                           control={form.control}
-                          name={`decisions.${index}.is_included`}
+                          name={`decisions.${index}.included`}
                           render={({ field }) => (
                             <FormItem className="flex flex-row items-center space-x-2">
                               <FormControl>
@@ -1047,7 +1046,7 @@ export default function ComprehensiveEditFixed() {
                           const currentDecisions = form.getValues("decisions");
                           form.setValue("decisions", [
                             ...currentDecisions,
-                            { protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, is_included: true, comments: "" }
+                            { protocol_number: "", fek: "", ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, included: true, comments: "" }
                           ]);
                         }}
                         className="text-sm"
@@ -1381,25 +1380,7 @@ export default function ComprehensiveEditFixed() {
                           />
                         </div>
                         
-                        <div className="col-span-full">
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.included`}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2">
-                                <FormControl>
-                                  <input
-                                    type="checkbox"
-                                    checked={field.value}
-                                    onChange={(e) => field.onChange(e.target.checked)}
-                                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-normal">Έχει συμπεριληφθεί</FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
+
                       </div>
                     ))}
                     
