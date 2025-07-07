@@ -557,14 +557,6 @@ export default function ComprehensiveEditFixed() {
       isInitializingRef.current = true;
       
       // Populate decisions from database or create default
-      console.log('DEBUG - Decisions Data:', decisionsData);
-      if (decisionsData && decisionsData.length > 0) {
-        decisionsData.forEach((decision, idx) => {
-          console.log(`DEBUG - Decision ${idx} FEK value:`, decision.fek, typeof decision.fek);
-          console.log(`DEBUG - Decision ${idx} Normalized FEK:`, normalizeFekData(decision.fek));
-        });
-      }
-      
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
             protocol_number: decision.protocol_number || "",
@@ -958,7 +950,21 @@ export default function ComprehensiveEditFixed() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} placeholder="Έτος" className="text-xs" />
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger className="text-xs">
+                                          <SelectValue placeholder="Έτος" />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-48 overflow-y-auto">
+                                          {Array.from({ length: new Date().getFullYear() - 1900 + 1 }, (_, i) => {
+                                            const year = (new Date().getFullYear() - i).toString();
+                                            return (
+                                              <SelectItem key={year} value={year}>
+                                                {year}
+                                              </SelectItem>
+                                            );
+                                          })}
+                                        </SelectContent>
+                                      </Select>
                                     </FormControl>
                                   </FormItem>
                                 )}
@@ -969,7 +975,17 @@ export default function ComprehensiveEditFixed() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} placeholder="Τεύχος" className="text-xs" />
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <SelectTrigger className="text-xs">
+                                          <SelectValue placeholder="Τεύχος" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="Α">Α</SelectItem>
+                                          <SelectItem value="Β">Β</SelectItem>
+                                          <SelectItem value="Γ">Γ</SelectItem>
+                                          <SelectItem value="Δ">Δ</SelectItem>
+                                        </SelectContent>
+                                      </Select>
                                     </FormControl>
                                   </FormItem>
                                 )}
@@ -980,7 +996,18 @@ export default function ComprehensiveEditFixed() {
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormControl>
-                                      <Input {...field} placeholder="Αριθμός" className="text-xs" />
+                                      <Input 
+                                        {...field} 
+                                        placeholder="Αριθμός" 
+                                        className="text-xs" 
+                                        type="text"
+                                        maxLength={6}
+                                        onChange={(e) => {
+                                          // Only allow numbers and limit to 6 digits
+                                          const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                          field.onChange(value);
+                                        }}
+                                      />
                                     </FormControl>
                                   </FormItem>
                                 )}

@@ -1410,7 +1410,7 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
           decision_budget: parseEuropeanBudget(decision.decision_budget),
           expenses_covered: parseEuropeanBudget(decision.expenses_covered),
           decision_date: new Date().toISOString().split('T')[0], // Today's date as default
-          is_included: decision.is_included !== undefined ? decision.is_included : true,
+          included: decision.included !== undefined ? decision.included : true,
           is_active: true,
           comments: decision.comments || null,
           created_by: req.user.id,

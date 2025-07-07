@@ -574,7 +574,7 @@ export const projectDecisions = pgTable(
 
     // Document references
     protocol_number: text("protocol_number"),
-    fek: text("fek"),
+    fek: jsonb("fek"),
     ada: text("ada"),
 
     // Decision details
@@ -584,7 +584,7 @@ export const projectDecisions = pgTable(
     decision_date: date("decision_date"),
 
     // Status and metadata
-    is_included: boolean("is_included").default(true),
+    included: boolean("included").notNull().default(true),
     is_active: boolean("is_active").default(true),
     comments: text("comments"),
 
