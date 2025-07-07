@@ -950,7 +950,13 @@ export default function ComprehensiveEditFixed() {
                               <FormItem>
                                 <FormLabel className="text-xs">Προϋπολογισμός Απόφασης</FormLabel>
                                 <FormControl>
-                                  <Input {...field} className="text-sm" />
+                                  <Input 
+                                    {...field} 
+                                    className="text-sm" 
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                  />
                                 </FormControl>
                               </FormItem>
                             )}
@@ -1221,12 +1227,10 @@ export default function ComprehensiveEditFixed() {
                                 <FormControl>
                                   <Input 
                                     {...field} 
-                                    placeholder="0,00 €" 
+                                    placeholder="0.00" 
                                     className="text-sm"
-                                    onChange={(e) => {
-                                      const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
-                                    }}
+                                    type="number"
+                                    step="0.01"
                                   />
                                 </FormControl>
                               </FormItem>
