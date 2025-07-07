@@ -341,6 +341,14 @@ export default function ComprehensiveEditFixed() {
     decisionsError: decisionsError?.message || decisionsError 
   });
 
+  // Force refresh decisions data if empty (temporary for testing)
+  useEffect(() => {
+    if (decisionsData && Array.isArray(decisionsData) && decisionsData.length === 0) {
+      console.log('🔄 Decisions data is empty, invalidating cache to fetch fresh data...');
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
+    }
+  }, [decisionsData, mis, queryClient]);
+
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
   const typedUnitsData = unitsData as UnitData[] | undefined;
@@ -556,8 +564,17 @@ export default function ComprehensiveEditFixed() {
 
   // Data initialization effect
   useEffect(() => {
+    console.log('DEBUG - useEffect triggered with conditions:', {
+      typedProjectData: !!typedProjectData,
+      typedKallikratisData: !!typedKallikratisData, 
+      typedUnitsData: !!typedUnitsData,
+      typedExpenditureTypesData: !!typedExpenditureTypesData,
+      isFormInitialized,
+      willInitialize: typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !isFormInitialized
+    });
+
     if (typedProjectData && typedKallikratisData && typedUnitsData && typedExpenditureTypesData && !isFormInitialized) {
-      console.log('Initializing form with project data:', typedProjectData);
+      console.log('🚀 INITIALIZING FORM with project data:', typedProjectData);
       console.log('Project index data:', projectIndexData);
       
       // Set initialization flag to prevent field clearing during setup

@@ -127,6 +127,23 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### January 7, 2025 - Enhanced FEK UI & Decisions Population Fix
+- **FEK Field UI Enhancement:** Implemented enhanced user interface with proper dropdown controls
+  - Issue dropdown with values Α, Β, Γ, Δ (replacing free text input)
+  - Year dropdown with years from 1900 to current year (replacing free text input)
+  - Number field limited to 6 digits maximum with numeric validation
+  - JSONB format maintained: `{"year": "2024", "issue": "B", "number": "1234"}`
+- **Decisions Table Population Fix:** Resolved empty decisions section in comprehensive edit form
+  - Root cause: project_decisions table was empty for test project 5174076
+  - Created sample decisions data with proper FEK JSONB format and European budget formatting
+  - Added cache invalidation logic to fetch fresh decisions data automatically
+  - Fixed field name mismatch: updated from "is_included" to "included" in backend and schema
+- **Database Schema Updates:**
+  - Updated project_decisions.fek column from text to JSONB type
+  - Updated project_decisions.included column with proper boolean constraints
+  - Maintained backward compatibility with normalizeFekData() function
+- **European Number Formatting:** Budget fields continue to use European format (e.g., "150.000,00")
+
 ### January 7, 2025 - FEK Field JSONB Format & Included Checkbox Implementation
 - **CRITICAL UPDATE: FEK field converted from string to JSONB structure**
 - **New FEK Format:** `{"year": "2022", "issue": "B", "number": "384"}` matching database requirements
