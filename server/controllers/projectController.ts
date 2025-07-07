@@ -492,6 +492,83 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
 // Note: Project regions endpoint moved to routes.ts using optimized schema
 // This endpoint was removed to prevent database column errors
 
+// Get complete project data in one call (optimized for performance)
+router.get('/:mis/complete', async (req: Request, res: Response) => {
+  try {
+    const { mis } = req.params;
+    
+    if (!mis) {
+      return res.status(400).json({ message: 'MIS parameter is required' });
+    }
+    
+    console.log(`[ProjectComplete] Fetching complete data for project MIS: ${mis}`);
+    
+    // First get the project to extract the ID for related tables
+    const { data: projectData, error: projectError } = await supabase
+      .from('Projects')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+      
+    if (projectError || !projectData) {
+      console.error('Error fetching project:', projectError);
+      return res.status(404).json({ message: 'Project not found', error: projectError?.message });
+    }
+    
+    const projectId = projectData.id;
+    
+    // Fetch all related data in parallel for optimal performance
+    const [
+      decisionsRes,
+      formulationsRes,
+      indexRes,
+      eventTypesRes,
+      unitsRes,
+      kallikratisRes,
+      expenditureTypesRes
+    ] = await Promise.all([
+      supabase.from('project_decisions').select('*').eq('project_id', projectId),
+      supabase.from('project_formulations').select('*').eq('project_id', projectId),
+      supabase.from('project_index').select('*').eq('project_id', projectId),
+      supabase.from('event_types').select('*'),
+      supabase.from('Monada').select('*'),
+      supabase.from('kallikratis').select('*'),
+      supabase.from('expediture_types').select('*')
+    ]);
+    
+    if (projectRes.error) {
+      console.error('Error fetching project:', projectRes.error);
+      return res.status(500).json({ message: 'Failed to fetch project data', error: projectRes.error.message });
+    }
+    
+    if (!projectRes.data) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
+    const completeData = {
+      project: projectRes.data,
+      decisions: decisionsRes.data || [],
+      formulations: formulationsRes.data || [],
+      index: indexRes.data || [],
+      eventTypes: eventTypesRes.data || [],
+      units: unitsRes.data || [],
+      kallikratis: kallikratisRes.data || [],
+      expenditureTypes: expenditureTypesRes.data || []
+    };
+    
+    console.log(`[ProjectComplete] Successfully fetched complete data for project ${projectId}`);
+    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}`);
+    
+    res.json(completeData);
+  } catch (error) {
+    console.error('[ProjectComplete] Error fetching complete project data:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch complete project data',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);

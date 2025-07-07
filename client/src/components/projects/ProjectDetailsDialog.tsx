@@ -142,37 +142,33 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   const projectId = projectData?.id;
   const projectMis = projectData?.mis;
 
-  // Comprehensive data fetching with proper error handling
-  const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery({
-    queryKey: [`/api/budget/${projectMis}`],
+  // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
+  const { 
+    data: completeProjectData, 
+    isLoading: isCompleteDataLoading, 
+    error: completeDataError 
+  } = useQuery({
+    queryKey: [`/api/projects/${projectMis}/complete`],
     enabled: !!projectMis && open,
     retry: 1,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: projectIndexData, isLoading: indexLoading, error: indexError } = useQuery({
-    queryKey: [`/api/projects/${projectMis}/index`],
+  // Additional budget query for now (can be integrated into complete endpoint later)
+  const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery({
+    queryKey: [`/api/budget/${projectMis}`],
     enabled: !!projectMis && open,
     retry: 1,
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: decisionsData, isLoading: decisionsLoading, error: decisionsError } = useQuery({
-    queryKey: [`/api/projects/${projectMis}/decisions`],
-    enabled: !!projectMis && open,
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
-  });
+  // Extract data from unified response
+  const projectIndexData = completeProjectData?.index;
+  const decisionsData = completeProjectData?.decisions;
+  const formulationsData = completeProjectData?.formulations;
 
-  const { data: formulationsData, isLoading: formulationsLoading, error: formulationsError } = useQuery({
-    queryKey: [`/api/projects/${projectMis}/formulations`],
-    enabled: !!projectMis && open,
-    retry: 1,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const isLoading = budgetLoading || indexLoading || decisionsLoading || formulationsLoading;
-  const hasErrors = budgetError || indexError || decisionsError || formulationsError;
+  const isLoading = isCompleteDataLoading || budgetLoading;
+  const hasErrors = completeDataError || budgetError;
 
   // Enhanced data extraction with comprehensive validation
   const budgetInfo = React.useMemo(() => {

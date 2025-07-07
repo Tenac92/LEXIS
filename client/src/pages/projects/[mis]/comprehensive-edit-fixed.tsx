@@ -279,78 +279,36 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
-  // Use optimized parallel fetching - project data + combined reference data
-  const queries = useQueries({
-    queries: [
-      // Project-specific data (dependent on MIS)
-      {
-        queryKey: [`/api/projects/${mis}`],
-        enabled: !!mis,
-        staleTime: 5 * 60 * 1000, // 5 minutes cache
-      },
-      {
-        queryKey: [`/api/projects/${mis}/index`],
-        enabled: !!mis,
-        staleTime: 5 * 60 * 1000,
-      },
-      {
-        queryKey: [`/api/projects/${mis}/decisions`],
-        enabled: !!mis,
-        staleTime: 5 * 60 * 1000,
-      },
-      {
-        queryKey: [`/api/projects/${mis}/formulations`],
-        enabled: !!mis,
-        staleTime: 5 * 60 * 1000,
-      },
-      // Individual reference data endpoints (fallback for reliability)
-      {
-        queryKey: ["/api/event-types"],
-        staleTime: 30 * 60 * 1000, // 30 minutes cache for reference data
-      },
-      {
-        queryKey: ["/api/public/units"],
-        staleTime: 30 * 60 * 1000,
-      },
-      {
-        queryKey: ["/api/kallikratis"],
-        staleTime: 30 * 60 * 1000,
-      },
-      {
-        queryKey: ["/api/expenditure-types"],
-        staleTime: 30 * 60 * 1000,
-      },
-    ],
+  // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
+  const { 
+    data: completeProjectData, 
+    isLoading: isCompleteDataLoading, 
+    error: completeDataError 
+  } = useQuery({
+    queryKey: [`/api/projects/${mis}/complete`],
+    enabled: !!mis,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
-  // Extract data from parallel queries with proper typing
-  const [
-    { data: projectData, isLoading: projectLoading, error: projectError },
-    { data: projectIndexData },
-    { data: decisionsData, isLoading: decisionsLoading, error: decisionsError },
-    { data: formulationsData },
-    { data: eventTypesData, isLoading: eventTypesLoading },
-    { data: unitsData, isLoading: unitsLoading },
-    { data: kallikratisData, isLoading: kallikratisLoading },
-    { data: expenditureTypesData, isLoading: expenditureTypesLoading },
-  ] = queries;
+  // Extract data from unified API response with proper typing
+  const projectData = completeProjectData?.project;
+  const projectIndexData = completeProjectData?.index;
+  const decisionsData = completeProjectData?.decisions;
+  const formulationsData = completeProjectData?.formulations;
+  const eventTypesData = completeProjectData?.eventTypes;
+  const unitsData = completeProjectData?.units;
+  const kallikratisData = completeProjectData?.kallikratis;
+  const expenditureTypesData = completeProjectData?.expenditureTypes;
 
-  // Debug logging for decisions data
-  console.log('DEBUG - Decisions Query Status:', { 
-    decisionsData, 
-    decisionsLoading, 
-    decisionsError: decisionsError?.message || decisionsError 
+  // Debug logging for unified data fetch
+  console.log('DEBUG - Complete Project Data:', { 
+    hasData: !!completeProjectData,
+    projectData: !!projectData,
+    decisionsCount: decisionsData?.length || 0,
+    formulationsCount: formulationsData?.length || 0,
+    isLoading: isCompleteDataLoading,
+    error: completeDataError?.message || completeDataError 
   });
-
-  // Force refresh decisions data if empty (temporary for testing)
-  useEffect(() => {
-    if (decisionsData !== undefined && Array.isArray(decisionsData) && decisionsData.length === 0) {
-      console.log('🔄 Decisions data is empty, invalidating cache to fetch fresh data...');
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
-      }, 100);
-    }
-  }, [decisionsData, mis, queryClient]);
 
   // Reset initialization state when component mounts
   useEffect(() => {
@@ -937,10 +895,10 @@ export default function ComprehensiveEditFixed() {
     }
   }, [mis, typedProjectData, typedKallikratisData, typedUnitsData, typedExpenditureTypesData]);
 
-  const isLoading = projectLoading || eventTypesLoading || unitsLoading || kallikratisLoading || expenditureTypesLoading;
+  const isLoading = isCompleteDataLoading;
   const isDataReady = typedProjectData && typedEventTypesData && typedUnitsData && typedKallikratisData && typedExpenditureTypesData;
 
-  if (projectError) {
+  if (completeDataError) {
     return <div className="container mx-auto p-6">Σφάλμα κατά τη φόρτωση των δεδομένων</div>;
   }
 
