@@ -343,11 +343,19 @@ export default function ComprehensiveEditFixed() {
 
   // Force refresh decisions data if empty (temporary for testing)
   useEffect(() => {
-    if (decisionsData && Array.isArray(decisionsData) && decisionsData.length === 0) {
+    if (decisionsData !== undefined && Array.isArray(decisionsData) && decisionsData.length === 0) {
       console.log('🔄 Decisions data is empty, invalidating cache to fetch fresh data...');
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
+      }, 100);
     }
   }, [decisionsData, mis, queryClient]);
+
+  // Manual refresh for debugging - force invalidate all caches
+  useEffect(() => {
+    console.log('🔄 MANUAL REFRESH - Invalidating all decision caches for debugging...');
+    queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
+  }, [mis, queryClient]);
 
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
