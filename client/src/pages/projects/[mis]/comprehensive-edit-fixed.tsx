@@ -326,13 +326,20 @@ export default function ComprehensiveEditFixed() {
   const [
     { data: projectData, isLoading: projectLoading, error: projectError },
     { data: projectIndexData },
-    { data: decisionsData },
+    { data: decisionsData, isLoading: decisionsLoading, error: decisionsError },
     { data: formulationsData },
     { data: eventTypesData, isLoading: eventTypesLoading },
     { data: unitsData, isLoading: unitsLoading },
     { data: kallikratisData, isLoading: kallikratisLoading },
     { data: expenditureTypesData, isLoading: expenditureTypesLoading },
   ] = queries;
+
+  // Debug logging for decisions data
+  console.log('DEBUG - Decisions Query Status:', { 
+    decisionsData, 
+    decisionsLoading, 
+    decisionsError: decisionsError?.message || decisionsError 
+  });
 
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
@@ -557,6 +564,12 @@ export default function ComprehensiveEditFixed() {
       isInitializingRef.current = true;
       
       // Populate decisions from database or create default
+      console.log('DEBUG - Decisions Data for initialization:', {
+        decisionsData,
+        hasDecisions: decisionsData && decisionsData.length > 0,
+        length: decisionsData?.length || 0
+      });
+      
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
             protocol_number: decision.protocol_number || "",
@@ -580,6 +593,8 @@ export default function ComprehensiveEditFixed() {
             included: true,
             comments: "",
           }];
+
+      console.log('DEBUG - Final decisions array:', decisions);
       
       // Populate formulation details from database or create default from project data
       const formulations = formulationsData && formulationsData.length > 0
