@@ -557,6 +557,14 @@ export default function ComprehensiveEditFixed() {
       isInitializingRef.current = true;
       
       // Populate decisions from database or create default
+      console.log('DEBUG - Decisions Data:', decisionsData);
+      if (decisionsData && decisionsData.length > 0) {
+        decisionsData.forEach((decision, idx) => {
+          console.log(`DEBUG - Decision ${idx} FEK value:`, decision.fek, typeof decision.fek);
+          console.log(`DEBUG - Decision ${idx} Normalized FEK:`, normalizeFekData(decision.fek));
+        });
+      }
+      
       const decisions = decisionsData && decisionsData.length > 0 
         ? decisionsData.map(decision => ({
             protocol_number: decision.protocol_number || "",
