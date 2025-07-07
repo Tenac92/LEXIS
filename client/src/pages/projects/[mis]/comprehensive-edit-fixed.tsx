@@ -833,11 +833,21 @@ export default function ComprehensiveEditFixed() {
                   municipality: kallikratis?.onoma_neou_ota || "",
                   regional_unit: kallikratis?.perifereiaki_enotita || "", 
                   region: kallikratis?.perifereia || "",
-                  implementing_agency: unit?.name || unit?.unit_name?.name || unit?.unit || "",
+                  implementing_agency: unit?.unit || unit?.name || unit?.unit_name?.name || "",
                   event_type: eventType?.name || "",
                   expenditure_types: [],
                   geographic_code: geographicCode
                 };
+                
+                console.log(`DEBUG - Location Detail Init:`, {
+                  unitData: unit,
+                  unitValue: unit?.unit || unit?.name || unit?.unit_name?.name || "",
+                  eventTypeData: eventType,
+                  eventTypeValue: eventType?.name || "",
+                  kallikratisRegion: kallikratis?.perifereia,
+                  expenditureTypeData: expenditureType,
+                  expenditureTypeValue: expenditureType?.expediture_types || ""
+                });
                 
                 console.log(`Setting location fields:`, {
                   municipality: locationDetail.municipality,
@@ -1866,8 +1876,8 @@ export default function ComprehensiveEditFixed() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       {typedUnitsData?.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.name}>
-                                          {unit.name}
+                                        <SelectItem key={unit.id} value={unit.unit}>
+                                          {unit.unit}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
