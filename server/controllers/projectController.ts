@@ -536,17 +536,10 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       supabase.from('expediture_types').select('*')
     ]);
     
-    if (projectRes.error) {
-      console.error('Error fetching project:', projectRes.error);
-      return res.status(500).json({ message: 'Failed to fetch project data', error: projectRes.error.message });
-    }
-    
-    if (!projectRes.data) {
-      return res.status(404).json({ message: 'Project not found' });
-    }
+    // Project data already validated above, continue with response creation
     
     const completeData = {
-      project: projectRes.data,
+      project: projectData,
       decisions: decisionsRes.data || [],
       formulations: formulationsRes.data || [],
       index: indexRes.data || [],
