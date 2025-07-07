@@ -575,8 +575,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       </Badge>
                     </div>
                     
-                    {decisionsError ? (
-                      <ErrorDisplay error={decisionsError} title="Σφάλμα φόρτωσης αποφάσεων" />
+                    {completeDataError ? (
+                      <ErrorDisplay error={completeDataError} title="Σφάλμα φόρτωσης αποφάσεων" />
                     ) : decisions.length > 0 ? (
                       <div className="space-y-4">
                         {decisions.map((decision, index) => (
@@ -651,8 +651,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       </Badge>
                     </div>
                     
-                    {formulationsError ? (
-                      <ErrorDisplay error={formulationsError} title="Σφάλμα φόρτωσης στοιχείων κατάρτισης" />
+                    {completeDataError ? (
+                      <ErrorDisplay error={completeDataError} title="Σφάλμα φόρτωσης στοιχείων κατάρτισης" />
                     ) : formulations.length > 0 ? (
                       <div className="space-y-4">
                         {formulations.map((formulation, index) => (
