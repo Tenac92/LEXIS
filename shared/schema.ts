@@ -86,7 +86,7 @@ export const projects = pgTable("Projects", {
   id: serial("id").primaryKey(),
   mis: integer("mis").unique(),
   e069: text("e069"),
-  na271: text("na271"), 
+  na271: text("na271"),
   na853: text("na853").notNull().unique(),
   event_description: text("event_description").notNull().unique(),
   project_title: text("project_title"),
@@ -110,12 +110,18 @@ export const projectBudget = pgTable("project_budget", {
   na853: text("na853").notNull().unique(),
   mis: integer("mis").unique().notNull(),
   proip: decimal("proip", { precision: 15, scale: 2 }).default("0"),
-  ethsia_pistosi: decimal("ethsia_pistosi", { precision: 15, scale: 2 }).default("0"),
+  ethsia_pistosi: decimal("ethsia_pistosi", {
+    precision: 15,
+    scale: 2,
+  }).default("0"),
   q1: decimal("q1", { precision: 15, scale: 2 }).default("0"),
   q2: decimal("q2", { precision: 15, scale: 2 }).default("0"),
   q3: decimal("q3", { precision: 15, scale: 2 }).default("0"),
   q4: decimal("q4", { precision: 15, scale: 2 }).default("0"),
-  katanomes_etous: decimal("katanomes_etous", { precision: 15, scale: 2 }).default("0"),
+  katanomes_etous: decimal("katanomes_etous", {
+    precision: 15,
+    scale: 2,
+  }).default("0"),
   user_view: decimal("user_view", { precision: 15, scale: 2 }).default("0"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
@@ -131,9 +137,14 @@ export const projectBudget = pgTable("project_budget", {
  */
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
   mis: integer("mis"), // Legacy field for migration compatibility
-  previous_amount: decimal("previous_amount", { precision: 12, scale: 2 }).notNull(),
+  previous_amount: decimal("previous_amount", {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
   new_amount: decimal("new_amount", { precision: 12, scale: 2 }).notNull(),
   change_type: text("change_type").notNull(),
   change_reason: text("change_reason"),
@@ -150,61 +161,76 @@ export const budgetHistory = pgTable("budget_history", {
  */
 export const projectHistory = pgTable("project_history", {
   id: bigint("id", { mode: "bigint" }).generatedAlwaysAsIdentity().primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  created_at: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   change_type: text("change_type").notNull(), // "CREATE", "UPDATE", "STATUS_CHANGE"
   change_description: text("change_description"),
   changed_by: integer("changed_by"), // User ID who made the change
-  
+
   // Core Project Fields (snapshot at time of change)
   project_title: text("project_title"),
   project_description: text("project_description"),
   event_description: text("event_description"),
   status: text("status"),
-  
+
   // Financial Data
   budget_na853: decimal("budget_na853", { precision: 12, scale: 2 }),
   budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),
   budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
-  
+
   // SA Codes
   na853: text("na853"),
   na271: text("na271"),
   e069: text("e069"),
-  
+
   // Event Information
   event_type_id: integer("event_type_id").references(() => eventTypes.id),
   event_year: text("event_year"), // JSON array as text for multiple years
-  
+
   // Document References (for decisions/documents that triggered this change)
   protocol_number: text("protocol_number"),
   fek: text("fek"),
   ada: text("ada"),
-  
+
   // Location (simplified - main location only)
   region: text("region"),
   regional_unit: text("regional_unit"),
   municipality: text("municipality"),
-  
+
   // Implementation
-  implementing_agency_id: integer("implementing_agency_id").references(() => monada.id),
+  implementing_agency_id: integer("implementing_agency_id").references(
+    () => monada.id,
+  ),
   implementing_agency_name: text("implementing_agency_name"),
-  
+
   // Additional Fields
   expenses_executed: decimal("expenses_executed", { precision: 12, scale: 2 }),
   project_status: text("project_status"),
   enumeration_code: text("enumeration_code"),
   inclusion_year: integer("inclusion_year"),
-  
+
   // Summary and Comments
   summary_description: text("summary_description"),
   change_comments: text("change_comments"),
-  
+
   // Previous state (for comparison)
   previous_status: text("previous_status"),
-  previous_budget_na853: decimal("previous_budget_na853", { precision: 12, scale: 2 }),
-  previous_budget_na271: decimal("previous_budget_na271", { precision: 12, scale: 2 }),
-  previous_budget_e069: decimal("previous_budget_e069", { precision: 12, scale: 2 }),
+  previous_budget_na853: decimal("previous_budget_na853", {
+    precision: 12,
+    scale: 2,
+  }),
+  previous_budget_na271: decimal("previous_budget_na271", {
+    precision: 12,
+    scale: 2,
+  }),
+  previous_budget_e069: decimal("previous_budget_e069", {
+    precision: 12,
+    scale: 2,
+  }),
 });
 
 /**
@@ -214,7 +240,9 @@ export const projectHistory = pgTable("project_history", {
  */
 export const budgetNotifications = pgTable("budget_notifications", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
   mis: integer("mis"), // Legacy field for migration compatibility
   type: text("type").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
@@ -236,7 +264,9 @@ export const generatedDocuments = pgTable("generated_documents", {
   id: serial("id").primaryKey(),
   status: text("status").notNull().default("draft"),
   unit: text("unit").notNull(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
   mis: integer("mis"), // Legacy field for migration compatibility
   project_na853: text("project_na853"),
   expenditure_type: text("expenditure_type").notNull(),
@@ -328,22 +358,26 @@ export const monada = pgTable("Monada", {
  * Employees Table
  * Contains employee information for autocomplete and recipient management
  */
-export const employees = pgTable("Employees", {
-  id: serial("id").primaryKey(),
-  surname: text("surname"),
-  name: text("name"),
-  fathername: text("fathername"),
-  afm: serial("afm").unique(),
-  klados: text("klados"),
-  attribute: text("attribute"),
-  workaf: text("workaf"),
-  monada: text("monada"),
-}, (table) => ({
-  monadaReference: foreignKey({
-    columns: [table.monada],
-    foreignColumns: [monada.unit],
+export const employees = pgTable(
+  "Employees",
+  {
+    id: serial("id").primaryKey(),
+    surname: text("surname"),
+    name: text("name"),
+    fathername: text("fathername"),
+    afm: serial("afm").unique(),
+    klados: text("klados"),
+    attribute: text("attribute"),
+    workaf: text("workaf"),
+    monada: text("monada"),
+  },
+  (table) => ({
+    monadaReference: foreignKey({
+      columns: [table.monada],
+      foreignColumns: [monada.unit],
+    }),
   }),
-}));
+);
 
 /**
  * Beneficiaries Table (Clean normalized structure)
@@ -374,7 +408,9 @@ export const beneficiaries = pgTable("beneficiaries", {
  */
 export const beneficiaryPayments = pgTable("beneficiary_payments", {
   id: serial("id").primaryKey(),
-  beneficiary_id: integer("beneficiary_id").notNull().references(() => beneficiaries.id, { onDelete: "cascade" }),
+  beneficiary_id: integer("beneficiary_id")
+    .notNull()
+    .references(() => beneficiaries.id, { onDelete: "cascade" }),
   unit_code: text("unit_code").notNull(),
   na853_code: text("na853_code").notNull(),
   expenditure_type: text("expenditure_type").notNull(),
@@ -393,7 +429,9 @@ export const beneficiaryPayments = pgTable("beneficiary_payments", {
  */
 export const userPreferences = pgTable("user_preferences", {
   id: serial("id").primaryKey(),
-  user_id: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  user_id: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
   preference_type: text("preference_type").notNull(), // 'esdian', 'attachments', etc.
   preference_key: text("preference_key").notNull(), // 'field1', 'field2', etc.
   preference_value: text("preference_value").notNull(), // The actual preference value
@@ -407,23 +445,31 @@ export const userPreferences = pgTable("user_preferences", {
  * Project Index Table
  * Contains normalized project relationships with reference tables
  */
-export const projectIndex = pgTable("project_index", {
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  monada_id: integer("monada_id").references(() => monada.id),
-  kallikratis_id: integer("kallikratis_id").references(() => kallikratis.id),
-  event_types_id: integer("event_types_id").notNull().references(() => eventTypes.id),
-  expediture_type_id: integer("expediture_type_id").notNull(),
-  geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
-}, (table) => ({
-  // Create unique constraint instead of primary key to allow NULL values
-  unique_project_entry: unique("project_index_unique").on(
-    table.project_id, 
-    table.monada_id, 
-    table.kallikratis_id, 
-    table.event_types_id, 
-    table.expediture_type_id
-  )
-}));
+export const projectIndex = pgTable(
+  "project_index",
+  {
+    project_id: integer("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    monada_id: integer("monada_id").references(() => monada.id),
+    kallikratis_id: integer("kallikratis_id").references(() => kallikratis.id),
+    event_types_id: integer("event_types_id")
+      .notNull()
+      .references(() => eventTypes.id),
+    expediture_type_id: integer("expediture_type_id").notNull(),
+    geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
+  },
+  (table) => ({
+    // Create unique constraint instead of primary key to allow NULL values
+    unique_project_entry: unique("project_index_unique").on(
+      table.project_id,
+      table.monada_id,
+      table.kallikratis_id,
+      table.event_types_id,
+      table.expediture_type_id,
+    ),
+  }),
+);
 
 /**
  * Event Types Table
@@ -454,7 +500,9 @@ export const kallikratis = pgTable("kallikratis", {
   kodikos_neou_ota: bigint("kodikos_neou_ota", { mode: "number" }),
   eidos_neou_ota: text("eidos_neou_ota"),
   onoma_neou_ota: text("onoma_neou_ota"),
-  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", { mode: "number" }),
+  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", {
+    mode: "number",
+  }),
   perifereiaki_enotita: text("perifereiaki_enotita"),
   kodikos_perifereias: bigint("kodikos_perifereias", { mode: "number" }),
   perifereia: text("perifereia"),
@@ -463,129 +511,172 @@ export const kallikratis = pgTable("kallikratis", {
 /**
  * Legacy Beneficiary Table (for backward compatibility during migration)
  */
-export const beneficiariesLegacy = pgTable("Beneficiary", {
-  id: serial("id").primaryKey(),
-  aa: integer("a / a"), // Serial number
-  region: text("region"),
-  adeia: integer("adeia"), // License/permit number
-  surname: text("surname"),
-  name: text("name"),
-  fathername: text("fathername"),
-  freetext: text("freetext"), // Additional free text
-  afm: integer("afm"), // Tax ID (AFM)
-  date: text("date"), // Date as text
-  monada: text("monada"), // Unit/Organization
-  cengsur1: text("cengsur1"), // Engineer 1 surname
-  cengname1: text("cengname1"), // Engineer 1 name
-  cengsur2: text("cengsur2"), // Engineer 2 surname
-  cengname2: text("cengname2"), // Engineer 2 name
-  onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-  project: integer("project"), // Legacy project reference (MIS code)
-  project_id: integer("project_id").references(() => projects.id, { onDelete: "set null" }), // New project reference by id
-  oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
-}, (table) => ({
-  monadaReference: foreignKey({
-    columns: [table.monada],
-    foreignColumns: [monada.unit],
+export const beneficiariesLegacy = pgTable(
+  "Beneficiary",
+  {
+    id: serial("id").primaryKey(),
+    aa: integer("a / a"), // Serial number
+    region: text("region"),
+    adeia: integer("adeia"), // License/permit number
+    surname: text("surname"),
+    name: text("name"),
+    fathername: text("fathername"),
+    freetext: text("freetext"), // Additional free text
+    afm: integer("afm"), // Tax ID (AFM)
+    date: text("date"), // Date as text
+    monada: text("monada"), // Unit/Organization
+    cengsur1: text("cengsur1"), // Engineer 1 surname
+    cengname1: text("cengname1"), // Engineer 1 name
+    cengsur2: text("cengsur2"), // Engineer 2 surname
+    cengname2: text("cengname2"), // Engineer 2 name
+    onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+    project: integer("project"), // Legacy project reference (MIS code)
+    project_id: integer("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }), // New project reference by id
+    oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at"),
+  },
+  (table) => ({
+    monadaReference: foreignKey({
+      columns: [table.monada],
+      foreignColumns: [monada.unit],
+    }),
+    projectReference: foreignKey({
+      columns: [table.project],
+      foreignColumns: [projects.mis],
+    }),
   }),
-  projectReference: foreignKey({
-    columns: [table.project],
-    foreignColumns: [projects.mis],
-  }),
-}));
+);
 
 /**
  * Normalized Project Decisions Table - "Αποφάσεις που τεκμηριώνουν το έργο"
  * Separate table for project decisions with proper foreign key relationships
  */
-export const projectDecisions = pgTable("project_decisions", {
-  id: bigserial("id", { mode: "number" }).primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  
-  // Decision identification
-  decision_sequence: integer("decision_sequence").notNull().default(1),
-  decision_type: text("decision_type").notNull().default("Έγκριση"), // Έγκριση, Τροποποίηση, Παράταση
-  
-  // Document references
-  protocol_number: text("protocol_number"),
-  fek: text("fek"),
-  ada: text("ada"),
-  
-  // Decision details
-  implementing_agency: text("implementing_agency"),
-  decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
-  expenses_covered: decimal("expenses_covered", { precision: 12, scale: 2 }),
-  decision_date: date("decision_date"),
-  
-  // Status and metadata
-  is_included: boolean("is_included").default(true),
-  is_active: boolean("is_active").default(true),
-  comments: text("comments"),
-  
-  // Additional document references
-  budget_decision: text("budget_decision"),
-  funding_decision: text("funding_decision"),
-  allocation_decision: text("allocation_decision"),
-  
-  // Audit fields
-  created_by: integer("created_by"),
-  updated_by: integer("updated_by"),
-}, (table) => ({
-  // Ensure unique sequence per project
-  uniqueProjectSequence: unique().on(table.project_id, table.decision_sequence),
-}));
+export const projectDecisions = pgTable(
+  "project_decisions",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    project_id: integer("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    // Decision identification
+    decision_sequence: integer("decision_sequence").notNull().default(1),
+    decision_type: text("decision_type").notNull().default("Έγκριση"), // Έγκριση, Τροποποίηση, Παράταση
+
+    // Document references
+    protocol_number: text("protocol_number"),
+    fek: jsonb("fek"),
+    ada: text("ada"),
+
+    // Decision details
+    implementing_agency: text("implementing_agency"),
+    decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
+    expenses_covered: decimal("expenses_covered", { precision: 12, scale: 2 }),
+    decision_date: date("decision_date"),
+
+    // Status and metadata
+    is_included: boolean("is_included").default(true),
+    is_active: boolean("is_active").default(true),
+    comments: text("comments"),
+
+    // Additional document references
+    budget_decision: text("budget_decision"),
+    funding_decision: text("funding_decision"),
+    allocation_decision: text("allocation_decision"),
+
+    // Audit fields
+    created_by: integer("created_by"),
+    updated_by: integer("updated_by"),
+  },
+  (table) => ({
+    // Ensure unique sequence per project
+    uniqueProjectSequence: unique().on(
+      table.project_id,
+      table.decision_sequence,
+    ),
+  }),
+);
 
 /**
  * Normalized Project Formulations Table - "Στοιχεία κατάρτισης έργου"
  * Separate table for project formulations that can link to decisions
  */
-export const projectFormulations = pgTable("project_formulations", {
-  id: bigserial("id", { mode: "number" }).primaryKey(),
-  project_id: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  decision_id: bigint("decision_id", { mode: "number" }).references(() => projectDecisions.id, { onDelete: "set null" }),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  
-  // Formulation identification
-  formulation_sequence: integer("formulation_sequence").notNull().default(1),
-  
-  // SA type and codes
-  sa_type: text("sa_type").notNull(), // CHECK constraint: ΝΑ853, ΝΑ271, E069
-  enumeration_code: text("enumeration_code"),
-  
-  // Decision references (can link to external decisions too)
-  protocol_number: text("protocol_number"),
-  ada: text("ada"),
-  decision_year: integer("decision_year"),
-  
-  // Financial data
-  project_budget: decimal("project_budget", { precision: 12, scale: 2 }).notNull().default("0"),
-  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 }),
-  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 }),
-  
-  // EPA and status
-  epa_version: text("epa_version"),
-  decision_status: text("decision_status").default("Ενεργή"),
-  change_type: text("change_type").default("Έγκριση"),
-  
-  // Connected decisions (can reference multiple decision IDs)
-  connected_decision_ids: integer("connected_decision_ids").array(),
-  
-  // Comments and metadata
-  comments: text("comments"),
-  is_active: boolean("is_active").default(true),
-  
-  // Audit fields
-  created_by: integer("created_by"),
-  updated_by: integer("updated_by"),
-}, (table) => ({
-  // Ensure unique sequence per project
-  uniqueProjectSequence: unique().on(table.project_id, table.formulation_sequence),
-}));
+export const projectFormulations = pgTable(
+  "project_formulations",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    project_id: integer("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    decision_id: bigint("decision_id", { mode: "number" }).references(
+      () => projectDecisions.id,
+      { onDelete: "set null" },
+    ),
+    created_at: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updated_at: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+
+    // Formulation identification
+    formulation_sequence: integer("formulation_sequence").notNull().default(1),
+
+    // SA type and codes
+    sa_type: text("sa_type").notNull(), // CHECK constraint: ΝΑ853, ΝΑ271, E069
+    enumeration_code: text("enumeration_code"),
+
+    // Decision references (can link to external decisions too)
+    protocol_number: text("protocol_number"),
+    ada: text("ada"),
+    decision_year: integer("decision_year"),
+
+    // Financial data
+    project_budget: decimal("project_budget", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    total_public_expense: decimal("total_public_expense", {
+      precision: 12,
+      scale: 2,
+    }),
+    eligible_public_expense: decimal("eligible_public_expense", {
+      precision: 12,
+      scale: 2,
+    }),
+
+    // EPA and status
+    epa_version: text("epa_version"),
+    decision_status: text("decision_status").default("Ενεργή"),
+    change_type: text("change_type").default("Έγκριση"),
+
+    // Connected decisions (can reference multiple decision IDs)
+    connected_decision_ids: integer("connected_decision_ids").array(),
+
+    // Comments and metadata
+    comments: text("comments"),
+    is_active: boolean("is_active").default(true),
+
+    // Audit fields
+    created_by: integer("created_by"),
+    updated_by: integer("updated_by"),
+  },
+  (table) => ({
+    // Ensure unique sequence per project
+    uniqueProjectSequence: unique().on(
+      table.project_id,
+      table.formulation_sequence,
+    ),
+  }),
+);
 
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
@@ -596,10 +687,12 @@ export const insertUserSchema = createInsertSchema(users);
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences);
 
 // Schema for user details JSON structure
-export const userDetailsSchema = z.object({
-  gender: z.enum(["male", "female"]).optional(),
-  specialty: z.string().optional(),
-}).optional();
+export const userDetailsSchema = z
+  .object({
+    gender: z.enum(["male", "female"]).optional(),
+    specialty: z.string().optional(),
+  })
+  .optional();
 
 // Extended schemas with additional validation
 export const extendedUserSchema = insertUserSchema.extend({
@@ -631,7 +724,7 @@ export const recipientSchema = z.object({
   secondary_text: z.string().optional(), // Πεδίο για το ελεύθερο κείμενο κάτω από το όνομα
   installment: z.string().default("ΕΦΑΠΑΞ"), // Παλιό πεδίο για συμβατότητα
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
-  installmentAmounts: z.record(z.string(), z.number()).default({ΕΦΑΠΑΞ: 0}), // Πεδίο για ποσά ανά δόση
+  installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }), // Πεδίο για ποσά ανά δόση
 });
 
 export const insertGeneratedDocumentSchema =
@@ -667,16 +760,22 @@ export const insertEmployeeSchema = createInsertSchema(employees);
 export const insertBeneficiarySchema = createInsertSchema(beneficiaries, {
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
   name: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
-  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία").regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να περιέχει μόνο αριθμούς"),
+  afm: z
+    .string()
+    .length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία")
+    .regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να περιέχει μόνο αριθμούς"),
 });
 
-export const insertBeneficiaryPaymentSchema = createInsertSchema(beneficiaryPayments, {
-  unit_code: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
-  na853_code: z.string().min(1, "Ο κωδικός NA853 είναι υποχρεωτικός"),
-  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
-  installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
-  amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
-});
+export const insertBeneficiaryPaymentSchema = createInsertSchema(
+  beneficiaryPayments,
+  {
+    unit_code: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+    na853_code: z.string().min(1, "Ο κωδικός NA853 είναι υποχρεωτικός"),
+    expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+    installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
+    amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
+  },
+);
 
 export const insertProjectBudgetSchema = createInsertSchema(projectBudget);
 
@@ -733,7 +832,9 @@ export type InsertBudgetNotification = z.infer<
 >;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type InsertBeneficiary = z.infer<typeof insertBeneficiarySchema>;
-export type InsertBeneficiaryPayment = z.infer<typeof insertBeneficiaryPaymentSchema>;
+export type InsertBeneficiaryPayment = z.infer<
+  typeof insertBeneficiaryPaymentSchema
+>;
 export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 

@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -148,6 +149,7 @@ const comprehensiveProjectSchema = z.object({
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     connected_decisions: z.array(z.string()).default([]),
     comments: z.string().default(""),
+    included: z.boolean().default(false),
   })).default([]),
   
   // Section 5: Changes performed
@@ -1371,6 +1373,28 @@ export default function ComprehensiveEditFixed() {
                                 <FormControl>
                                   <Input {...field} placeholder="Σχόλια" className="text-sm" />
                                 </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        
+                        <div className="col-span-full">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.included`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="text-xs">
+                                    Έχει συμπεριληφθεί
+                                  </FormLabel>
+                                </div>
                               </FormItem>
                             )}
                           />
