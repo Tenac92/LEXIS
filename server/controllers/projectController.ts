@@ -530,13 +530,25 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       supabase.from('project_decisions').select('*').eq('project_id', projectId),
       supabase.from('project_formulations').select('*').eq('project_id', projectId),
       supabase.from('project_index').select('*').eq('project_id', projectId),
-      supabase.from('event_types').select('*'),
-      supabase.from('Monada').select('*'),
-      supabase.from('kallikratis').select('*'),
-      supabase.from('expediture_types').select('*')
+      supabase.from('event_types').select('*').limit(100),
+      supabase.from('Monada').select('*').limit(50),
+      supabase.from('kallikratis').select('*').limit(2000),
+      supabase.from('expediture_types').select('*').limit(50)
     ]);
     
-    // Project data already validated above, continue with response creation
+    // Check for errors in reference data queries
+    if (eventTypesRes.error) {
+      console.error('[ProjectComplete] Error fetching event types:', eventTypesRes.error);
+    }
+    if (unitsRes.error) {
+      console.error('[ProjectComplete] Error fetching units:', unitsRes.error);
+    }
+    if (expenditureTypesRes.error) {
+      console.error('[ProjectComplete] Error fetching expenditure types:', expenditureTypesRes.error);
+    }
+    if (kallikratisRes.error) {
+      console.error('[ProjectComplete] Error fetching kallikratis:', kallikratisRes.error);
+    }
     
     const completeData = {
       project: projectData,
@@ -550,7 +562,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     };
     
     console.log(`[ProjectComplete] Successfully fetched complete data for project ${projectId}`);
-    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}`);
+    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}, eventTypes=${completeData.eventTypes.length}, units=${completeData.units.length}, expenditureTypes=${completeData.expenditureTypes.length}`);
     
     res.json(completeData);
   } catch (error) {
