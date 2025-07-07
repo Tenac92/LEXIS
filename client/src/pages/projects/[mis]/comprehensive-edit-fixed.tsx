@@ -688,8 +688,125 @@ export default function ComprehensiveEditFixed() {
             }] : [])
           ];
 
-      // Use setValue instead of reset to maintain controlled components
-      form.setValue("decisions", decisions);
+      // Use reset to properly initialize all form values
+      console.log('🔥 RESETTING FORM WITH DECISIONS:', decisions);
+      
+      const formData = {
+        decisions,
+        event_details: {
+          event_name: typedProjectData.enhanced_event_type?.name || "",
+          event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+        },
+        project_details: {
+          mis: typedProjectData.mis?.toString() || "",
+          sa: [typedProjectData.na853, typedProjectData.na271, typedProjectData.e069].filter(Boolean).join(", ") || "",
+          enumeration_code: typedProjectData.enumeration_code || "",
+          inclusion_year: "",
+          project_title: typedProjectData.project_title || "",
+          project_description: typedProjectData.event_description || "",
+          summary_description: "",
+          expenses_executed: "",
+          project_status: typedProjectData.status || "Ενεργό"
+        },
+        formulation_details: formulations,
+        location_details: (() => {
+          if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
+            const locationDetailsMap = new Map();
+            
+            projectIndexData.forEach(indexEntry => {
+              const kallikratisData = indexEntry.kallikratis_data;
+              const expenditureType = indexEntry.expenditure_type;
+              const unit = indexEntry.unit;
+              const eventType = indexEntry.event_type;
+              
+              if (kallikratisData) {
+                const geoInfo = getGeographicInfo(kallikratisData.geographic_code);
+                console.log('DEBUG Geographic Code Analysis:', {
+                  geographicCode: kallikratisData.geographic_code,
+                  geoInfo,
+                  kallikratisFound: !!kallikratisData,
+                  kallikratisData: {
+                    region: kallikratisData.region,
+                    regionalUnit: kallikratisData.regionalUnit,
+                    municipality: kallikratisData.municipality
+                  }
+                });
+
+                const kallikratisEntry = typedKallikratisData?.find(k => k.kodikos_neou_ota === kallikratisData.geographic_code);
+                
+                const key = `${kallikratisData.region}-${kallikratisData.regionalUnit}-${kallikratisData.municipality}`;
+                
+                if (!locationDetailsMap.has(key)) {
+                  const locationDetail = {
+                    municipality: kallikratisData.municipality || "",
+                    regional_unit: kallikratisData.regionalUnit || "",
+                    region: kallikratisData.region || "",
+                    implementing_agency: unit?.unit_name || typedProjectData.enhanced_unit?.name || "",
+                    event_type: eventType?.name || typedProjectData.enhanced_event_type?.name || "",
+                    expenditure_types: [] as string[],
+                    geographic_level: geoInfo.level,
+                    geographic_code: kallikratisData.geographic_code
+                  };
+                  
+                  console.log('Setting location fields:', {
+                    municipality: locationDetail.municipality,
+                    regional_unit: locationDetail.regional_unit,
+                    region: locationDetail.region,
+                    kallikratisId: kallikratisEntry?.id
+                  });
+                  
+                  console.log('Final locationDetail:', locationDetail);
+                  
+                  locationDetailsMap.set(key, locationDetail);
+                }
+                
+                // Add expenditure type if it exists
+                if (expenditureType && expenditureType.expediture_types) {
+                  const locationDetail = locationDetailsMap.get(key);
+                  if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
+                    locationDetail.expenditure_types.push(expenditureType.expediture_types);
+                  }
+                }
+              }
+            });
+            
+            const locationDetailsArray = Array.from(locationDetailsMap.values());
+            console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
+            return locationDetailsArray.length > 0 ? locationDetailsArray : [{
+              municipality: "",
+              regional_unit: "",
+              region: "",
+              implementing_agency: typedProjectData.enhanced_unit?.name || "",
+              event_type: "",
+              expenditure_types: [],
+              geographic_level: undefined,
+              geographic_code: undefined
+            }];
+          }
+          
+          // Default location detail if no project index data
+          return [{
+            municipality: "",
+            regional_unit: "",
+            region: "",
+            implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            event_type: "",
+            expenditure_types: [],
+            geographic_level: undefined,
+            geographic_code: undefined
+          }];
+        })(),
+        previous_entries: [],
+        changes: []
+      };
+      
+      form.reset(formData);
+      
+      // Verify the values were set
+      setTimeout(() => {
+        const currentDecisions = form.getValues("decisions");
+        console.log('🔍 FORM VALUES AFTER RESET:', currentDecisions);
+      }, 100);
       form.setValue("event_details", {
         event_name: typedProjectData.enhanced_event_type?.name || "",
         event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
@@ -945,10 +1062,10 @@ export default function ComprehensiveEditFixed() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="space-y-4">
+                  <div className="space-y-4" key={`decisions-container-${initializationTime}`}>
                     {/* Decisions List */}
                     {form.watch("decisions").map((_, index) => (
-                      <div key={index} className="p-3 border rounded-lg space-y-3">
+                      <div key={`decision-${index}-${initializationTime}`} className="p-3 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
                           <Button
