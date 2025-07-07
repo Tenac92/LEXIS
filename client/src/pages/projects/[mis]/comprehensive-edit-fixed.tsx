@@ -287,7 +287,9 @@ export default function ComprehensiveEditFixed() {
   } = useQuery({
     queryKey: [`/api/projects/${mis}/complete`],
     enabled: !!mis,
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    staleTime: 30 * 60 * 1000, // 30 minutes cache for better performance
+    cacheTime: 60 * 60 * 1000, // 1 hour cache retention
+    refetchOnWindowFocus: false, // Prevent unnecessary refetches
   });
 
   // Extract data from unified API response with proper typing
@@ -950,8 +952,8 @@ export default function ComprehensiveEditFixed() {
   console.log("DEBUG - Total kallikratis entries:", typedKallikratisData?.length);
   console.log("DEBUG - Units data:", typedUnitsData?.length, "units total");
   console.log("DEBUG - All units:", typedUnitsData?.map(u => `${u.id}: ${u.unit}`));
-  console.log("DEBUG - Event types data:", typedEventTypesData?.slice(0, 2));
-  console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.slice(0, 2));
+  console.log("DEBUG - Event types data:", typedEventTypesData?.length || 0, "total items", typedEventTypesData?.slice(0, 3));
+  console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.length || 0, "total items", typedExpenditureTypesData?.slice(0, 3));
 
   return (
     <div className="container mx-auto p-6 max-w-7xl">
