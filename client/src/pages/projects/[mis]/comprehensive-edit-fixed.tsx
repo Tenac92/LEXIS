@@ -584,21 +584,41 @@ export default function ComprehensiveEditFixed() {
       
       // Populate formulation details from database or create default from project data
       const formulations = formulationsData && formulationsData.length > 0
-        ? formulationsData.map(formulation => ({
-            sa: formulation.sa || "ΝΑ853" as const,
-            enumeration_code: formulation.enumeration_code || "",
-            protocol_number: formulation.protocol_number || "",
-            ada: formulation.ada || formulation.ada_reference || "",
-            decision_year: String(formulation.decision_year || formulation.year || ""),
-            project_budget: formulation.project_budget ? formatEuropeanNumber(formulation.project_budget) : "",
-            epa_version: formulation.epa_version || "",
-            total_public_expense: formulation.total_public_expense ? String(formulation.total_public_expense) : "",
-            eligible_public_expense: formulation.eligible_public_expense ? String(formulation.eligible_public_expense) : "",
-            decision_status: formulation.decision_status || formulation.status || "Ενεργή" as const,
-            change_type: formulation.change_type || "Έγκριση" as const,
-            connected_decisions: Array.isArray(formulation.connected_decisions) ? formulation.connected_decisions : [],
-            comments: formulation.comments || "",
-          }))
+        ? formulationsData.map(formulation => {
+            // Convert connected_decision_ids from database to form format
+            let connectedDecisions: string[] = [];
+            if (formulation.connected_decision_ids && Array.isArray(formulation.connected_decision_ids)) {
+              // Map decision IDs back to form indices by finding them in decisionsData
+              connectedDecisions = formulation.connected_decision_ids
+                .map((decisionId: number) => {
+                  const decisionIndex = decisionsData?.findIndex((d: any) => d.id === decisionId);
+                  return decisionIndex !== -1 ? String(decisionIndex) : null;
+                })
+                .filter((index: string | null) => index !== null) as string[];
+            }
+            
+            console.log(`[FormulationInit] Formulation ${formulation.sa_type}:`, {
+              connected_decision_ids: formulation.connected_decision_ids,
+              mapped_to_indices: connectedDecisions,
+              decisions_available: decisionsData?.length || 0
+            });
+
+            return {
+              sa: formulation.sa_type || "ΝΑ853" as const,
+              enumeration_code: formulation.enumeration_code || "",
+              protocol_number: formulation.protocol_number || "",
+              ada: formulation.ada || formulation.ada_reference || "",
+              decision_year: String(formulation.decision_year || formulation.year || ""),
+              project_budget: formulation.project_budget ? formatEuropeanNumber(formulation.project_budget) : "",
+              epa_version: formulation.epa_version || "",
+              total_public_expense: formulation.total_public_expense ? String(formulation.total_public_expense) : "",
+              eligible_public_expense: formulation.eligible_public_expense ? String(formulation.eligible_public_expense) : "",
+              decision_status: formulation.decision_status || formulation.status || "Ενεργή" as const,
+              change_type: formulation.change_type || "Έγκριση" as const,
+              connected_decisions: connectedDecisions,
+              comments: formulation.comments || "",
+            };
+          })
         : [
             // NA853 entry
             {
