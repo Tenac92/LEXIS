@@ -114,6 +114,10 @@ export const authLimiter = rateLimit({
  */
 export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
+    console.log('[Auth] authenticateSession middleware called for:', req.path);
+    console.log('[Auth] Session ID:', req.sessionID);
+    console.log('[Auth] Session user exists:', !!req.session?.user);
+    
     // Check if the request path is in the public routes list
     const isPublicRoute = PUBLIC_ROUTES.some(route => {
       // Handle wildcard routes
@@ -142,6 +146,7 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       console.log('[Auth] Session ID:', req.sessionID);
       console.log('[Auth] Session exists:', !!req.session);
       console.log('[Auth] Session user:', req.session?.user);
+      console.log('[Auth] Cookie header:', req.headers.cookie);
       
       // Create an error object with status code to be handled by our error middleware
       const authError = new Error('Authentication required');
@@ -190,6 +195,19 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       sessionID: req.sessionID,
       ip: req.ip
     });
+    
+    // Double-check that user was properly set
+    if (!req.user) {
+      console.error('[Auth] Failed to set req.user despite having session user');
+      const authError = new Error('Failed to set user data');
+      Object.defineProperty(authError, 'status', {
+        value: 500,
+        writable: true,
+        configurable: true
+      });
+      throw authError;
+    }
+    
     next();
   } catch (error) {
     console.error('[Auth] Authentication error:', error);

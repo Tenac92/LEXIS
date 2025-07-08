@@ -1264,10 +1264,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/projects/cards', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('[Projects] Fetching optimized project card data...');
-        const user = req.user;
+        console.log('[Projects] Session user:', req.session?.user);
+        console.log('[Projects] Request user:', req.user);
+        
+        // Use session user if req.user is not set
+        const user = req.user || req.session?.user;
         
         if (!user) {
-          console.error('[Projects] No user found in request');
+          console.error('[Projects] No user found in request or session');
+          console.error('[Projects] Session:', req.session);
+          console.error('[Projects] Session ID:', req.sessionID);
           return res.status(401).json({ error: 'Authentication required' });
         }
         
