@@ -1,0 +1,57 @@
+[Projects] Using optimized schema expenditure_types for 5203838: 
+(4) ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΕΚΤΟΣ ΕΔΡΑΣ"]
+[Projects] Using optimized schema expenditure_types for 5203805: 
+(4) ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΕΠΙΣΚΕΥΗ"]
+[Projects] Using optimized schema expenditure_types for 5203839: 
+(4) ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ"]
+[Projects] Using optimized schema expenditure_types for 5185638: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΕΚΤΟΣ ΕΔΡΑΣ"]
+[Projects] Using optimized schema expenditure_types for 5185847: 
+(4) ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"]
+[Projects] Using optimized schema expenditure_types for 5201407: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ"]
+[Projects] Using optimized schema expenditure_types for 5222807: 
+Array ["ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ"]
+[Projects] Using optimized schema expenditure_types for 5222806: 
+Array ["ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ"]
+[Projects] Using optimized schema expenditure_types for 5222550: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"]
+[Projects] Using optimized schema expenditure_types for 5222794: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"]
+[Projects] Using optimized schema expenditure_types for 5222801: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"]
+[ProjectSelect] Unit changed from  to 2
+[ProjectSelect] Fetching projects for unit: 2
+[ProjectSelect] State update - selectedUnit: 2 projects: 0 isLoading: true isFocused: false
+[ProjectSelect] API response: 
+(58) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+[ProjectSelect] Valid projects filtered: 58
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+[ProjectSelect] Focus activated, selectedUnit: 2 projects count: 58
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: true
+[ProjectSelect] Blur triggered
+[ProjectSelect] Project selected: 
+Object {id: "2024ΝΑ85300040", mis: "5174718", name: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζημιών σε κτίρια που επλήγησαν από την πλημμύρα της…", expenditure_types: Array(4)}
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+[Budget] Fetching budget for project identifier: 2024ΝΑ85300040
+Fetching regions for project: 
+Object {id: "2024ΝΑ85300040", mis: "5174718"}
+[DocumentForm Context] Current state: 
+Object {step: 1, projectId: "2024ΝΑ85300040", unit: 2, hasRecipients: false, recipientsCount: 0}
+Region API response: 
+Object {regions: Array(1)}
+[StableWebSocket] Using existing connection
+[ProjectSelect] Focus activated, selectedUnit: 2 projects count: 58
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: true
+[ProjectSelect] Blur triggered
+[ProjectSelect] Project selected: 
+Object {id: "2024ΝΑ85300108", mis: "5203879", name: "Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκευή κτιρίων που υπέστησαν βλάβες από τις πλημμύρες…", expenditure_types: Array(4)}
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+[Budget] Fetching budget for project identifier: 2024ΝΑ85300108
+Fetching regions for project: 
+Object {id: "2024ΝΑ85300108", mis: "5203879"}
+[DocumentForm Context] Current state: 
+Object {step: 1, projectId: "2024ΝΑ85300108", unit: 2, hasRecipients: false, recipientsCount: 0}
+Region API response: 
+Object {regions: Array(1)}
+[StableWebSocket] Using existing connection

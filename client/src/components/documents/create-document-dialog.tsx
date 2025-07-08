@@ -2353,13 +2353,20 @@ export function CreateDocumentDialog({
 
             {currentStep === 1 && (
               <div className="space-y-4">
-                {/* Logs moved to useEffect for proper debugging */}
-                {budgetData && (
-                  <BudgetIndicator
-                    budgetData={budgetData}
-                    currentAmount={currentAmount}
-                  />
-                )}
+                {/* Budget debug logging */}
+                {console.log('[CreateDocument] Budget debug:', { 
+                  budgetData: budgetData, 
+                  selectedProjectId: selectedProjectId, 
+                  formDataProjectId: formData.project_id,
+                  isBudgetLoading: isBudgetLoading,
+                  budgetError: budgetError
+                })}
+                
+                {/* Always show budget indicator - handle null data inside component */}
+                <BudgetIndicator
+                  budgetData={budgetData}
+                  currentAmount={currentAmount}
+                />
 
                 <div className="grid gap-4">
                   <FormField

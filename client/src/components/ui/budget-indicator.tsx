@@ -97,6 +97,9 @@ export function BudgetIndicator({
     quarter_available?: number;
   } | null>(null);
   
+  // Debug logging for budget data
+  console.log('[BudgetIndicator] Received budget data:', budgetData);
+  
   // Subscribe to WebSocket updates and get real-time budget updates
   const { lastMessage, isConnected } = useWebSocketUpdates();
   
