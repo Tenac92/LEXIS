@@ -254,23 +254,33 @@ export class DatabaseStorage implements IStorage {
         
         // Get documents created by users from the same units to determine accessible MIS codes
         console.log('[Storage] Searching for users with units overlapping:', userUnits);
-        // Use PostgreSQL's JSONB operators correctly for array overlap
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, name, units')
-          .overlaps('units', userUnits);
         
-        console.log('[Storage] User query result:', { userData, userError });
-          
-        if (!userError && userData && userData.length > 0) {
-          const userIds = userData.map(u => u.id);
-          console.log('[Storage] Found user IDs in same units:', userIds);
+        // Fix JSONB array overlap query - use contains for each unit
+        let allUserIds: number[] = [];
+        for (const unit of userUnits) {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id, name, units')
+            .contains('units', [unit]);
+            
+          if (!userError && userData && userData.length > 0) {
+            const userIds = userData.map(u => u.id);
+            allUserIds.push(...userIds);
+          }
+        }
+        
+        // Remove duplicates
+        const uniqueUserIds = [...new Set(allUserIds)];
+        console.log('[Storage] Found users in same units:', uniqueUserIds.length, uniqueUserIds);
+        
+        if (uniqueUserIds.length > 0) {
+          console.log('[Storage] Found user IDs in same units:', uniqueUserIds);
           
           // Get budget history entries created by users from the same units
           const { data: budgetData, error: budgetError } = await supabase
             .from('budget_history')
             .select('mis')
-            .in('created_by', userIds);
+            .in('created_by', uniqueUserIds);
             
           if (!budgetError && budgetData && budgetData.length > 0) {
             const uniqueMisIds = new Set(budgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id)));
