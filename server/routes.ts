@@ -1321,8 +1321,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const kallikratis = indexItem ? kallikratisData?.find(k => k.id === indexItem.kallikratis_id) : null;
           
           // Filter by user units if not admin
-          if (user && user.role !== 'admin' && user.units && user.units.length > 0) {
-            if (monada && !user.units.includes(monada.unit)) {
+          if (user && user.role !== 'admin' && user.unit_id && user.unit_id.length > 0) {
+            if (monada && !user.unit_id.includes(monada.id)) {
               return null; // Skip this project
             }
           }
@@ -1599,7 +1599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const creator = req.query.creator as string | undefined;
         
         // Get user units for access control
-        const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
+        const userUnits = req.user.role === 'admin' ? undefined : (req.user.unit_id || undefined);
         
         console.log(`[Budget] Exporting history with filters: mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
         
@@ -1741,12 +1741,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Beneficiary payments endpoint for enhanced display
     app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
-        if (!req.user?.units) {
+        if (!req.user?.unit_id) {
           return res.status(401).json({ message: 'Authentication required' });
         }
 
         // Get all beneficiaries for user's units first
-        const beneficiaries = await storage.getBeneficiariesByUnit(req.user.units[0]);
+        const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0]);
         
         // Get payments for all these beneficiaries
         const allPayments = [];

@@ -179,7 +179,6 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       email: sessionUser.email,
       name: sessionUser.name || '',
       role: sessionUser.role,
-      units: sessionUser.units || [],
       unit_id: sessionUser.unit_id || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
@@ -192,7 +191,6 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       name: req.user?.name,
       email: req.user?.email,
       role: req.user?.role,
-      units: req.user?.units,
       unit_id: req.user?.unit_id,
       sessionID: req.sessionID,
       ip: req.ip
@@ -571,7 +569,7 @@ export async function setupAuth(app: Express) {
         email: userData.email,
         name: userData.name,
         role: userData.role,
-        units: userData.units || [],
+        unit_id: userData.unit_id || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
         descr: userData.descr || undefined,
@@ -766,6 +764,37 @@ export async function setupAuth(app: Express) {
         authenticated: false,
         message: 'Session error'
       });
+    }
+  });
+
+  // Debug endpoint to check user data in database
+  app.get("/api/debug/user/:id", async (req, res) => {
+    try {
+      const userId = req.params.id;
+      console.log(`[Debug] Checking user ${userId} in database`);
+      
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (userError) {
+        console.error(`[Debug] Database error:`, userError);
+        return res.status(500).json({ error: userError });
+      }
+      
+      console.log(`[Debug] Raw database data for user ${userId}:`, userData);
+      
+      return res.json({
+        raw_data: userData,
+        unit_id_value: userData?.unit_id,
+        unit_id_type: typeof userData?.unit_id,
+        unit_id_is_array: Array.isArray(userData?.unit_id)
+      });
+    } catch (error) {
+      console.error('[Debug] Error:', error);
+      return res.status(500).json({ error: error.message });
     }
   });
 

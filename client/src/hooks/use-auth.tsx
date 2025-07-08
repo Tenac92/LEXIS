@@ -65,7 +65,7 @@ function useLoginMutation() {
           name: userData.name || "Guest User",
           email: userData.email,
           role: userData.role,
-          units: userData.units || []
+          unit_id: userData.unit_id || []
         };
         
         return user;
@@ -85,7 +85,7 @@ function useLoginMutation() {
         name: user.name,
         email: user.email,
         role: user.role,
-        units: user.units || []
+        unit_id: user.unit_id || []
       };
       
       // Update the cache with the processed user

@@ -62,10 +62,10 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} (${req.user.role}) requesting beneficiaries for units: ${req.user.units?.join(', ') || 'NONE'}`);
+    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} (${req.user.role}) requesting beneficiaries for units: ${req.user.unit_id?.join(', ') || 'NONE'}`);
 
     // SECURITY: Get user's units for filtering - NO EXCEPTION FOR ANY ROLE
-    const userUnits = req.user.units || [];
+    const userUnits = req.user.unit_id || [];
     if (userUnits.length === 0) {
       console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking access');
       return res.status(403).json({
