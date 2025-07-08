@@ -2443,7 +2443,31 @@ export function CreateDocumentDialog({
                         <FormLabel>Έργο</FormLabel>
                         <ProjectSelect
                           selectedUnit={selectedUnit || ""}
-                          onProjectSelect={(project) => field.onChange(project?.id || "")}
+                          onProjectSelect={(project) => {
+                            console.log("[CreateDocument] Project selection handler called with:", project);
+                            
+                            if (project) {
+                              // Update the form field
+                              field.onChange(project.id);
+                              
+                              // Update the form context to ensure state persistence
+                              updateFormData({
+                                ...formData,
+                                project_id: project.id
+                              });
+                              
+                              console.log("[CreateDocument] Project selected successfully:", project.id);
+                            } else {
+                              // Clear selection
+                              field.onChange("");
+                              updateFormData({
+                                ...formData,
+                                project_id: ""
+                              });
+                              
+                              console.log("[CreateDocument] Project selection cleared");
+                            }
+                          }}
                           value={field.value}
                           placeholder="Επιλέξτε έργο..."
                         />

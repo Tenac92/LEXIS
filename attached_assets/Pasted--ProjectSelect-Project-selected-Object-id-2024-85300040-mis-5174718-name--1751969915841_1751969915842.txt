@@ -1,0 +1,33 @@
+[ProjectSelect] Project selected: 
+Object {id: "2024ΝΑ85300040", mis: "5174718", name: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζημιών σε κτίρια που επλήγησαν από την πλημμύρα της…", expenditure_types: Array(4)}
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+Fetching regions for project: 
+Object {id: "2024ΝΑ85300040", mis: "5174718"}
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 1, projectId: "2024ΝΑ85300040", currentAmount: 0}
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 1, projectId: "", currentAmount: 0}
+Region API response: 
+Object {regions: Array(1)}
+No regions found for project: 5174718
+[ProjectSelect] Focus activated, selectedUnit: 2 projects count: 58
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: true
+[ProjectSelect] Blur triggered
+[ProjectSelect] Project selected: 
+Object {id: "2024ΝΑ85300099", mis: "5203866", name: "Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκευή κτιρίων που υπέστησαν βλάβες από τις…", expenditure_types: Array(4)}
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+Fetching regions for project: 
+Object {id: "2024ΝΑ85300099", mis: "5203866"}
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 1, projectId: "2024ΝΑ85300099", currentAmount: 0}
+[Budget Debug] budgetData state: 
+Object {available: false, currentStep: 1, projectId: "", currentAmount: 0}
+Region API response: 
+Object {regions: Array(1)}
+No regions found for project: 5203866
+[ProjectSelect] Focus activated, selectedUnit: 2 projects count: 58
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: true
+[ProjectSelect] Blur triggered
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+[CreateDocument] Form state preserved on dialog close (click outside): 
+Object {expenditure_type: "", project_id: "", step: 1}
