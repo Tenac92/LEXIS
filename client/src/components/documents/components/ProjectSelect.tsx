@@ -62,18 +62,25 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     const { data: projects = [], isLoading, error } = useQuery<Project[]>({
       queryKey: ['projects-working', selectedUnit],
       queryFn: async () => {
-        if (!selectedUnit) return [];
+        if (!selectedUnit) {
+          console.log("[ProjectSelect] No selectedUnit, returning empty array");
+          return [];
+        }
         
+        console.log("[ProjectSelect] Fetching projects for unit:", selectedUnit);
         const url = `/api/projects-working/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
         const response = await apiRequest(url);
+        console.log("[ProjectSelect] API response:", response);
         
         if (!Array.isArray(response)) {
+          console.error("[ProjectSelect] Invalid response format:", response);
           throw new Error('Invalid response format');
         }
 
         const validProjects = response.filter((item: any) => 
           item && typeof item === 'object' && item.mis
         );
+        console.log("[ProjectSelect] Valid projects filtered:", validProjects.length);
 
         return validProjects.map((item: any) => {
           // Process expenditure types - handle both legacy and optimized schema
@@ -107,6 +114,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       enabled: Boolean(selectedUnit),
       staleTime: 5 * 60 * 1000,
       onError: (error) => {
+        console.error("[ProjectSelect] Query error:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
@@ -114,6 +122,11 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         });
       }
     });
+
+    // Add debug logging for state changes
+    useEffect(() => {
+      console.log("[ProjectSelect] State update - selectedUnit:", selectedUnit, "projects:", projects?.length, "isLoading:", isLoading, "isFocused:", isFocused);
+    }, [selectedUnit, projects, isLoading, isFocused]);
 
     const selectedProject = useMemo(() => 
       projects?.find(p => p.id === value) || null,
@@ -152,10 +165,12 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     }, [projects, debouncedSearchQuery, normalizeText]);
 
     const handleFocus = () => {
+      console.log("[ProjectSelect] Focus activated, selectedUnit:", selectedUnit, "projects count:", projects?.length);
       setIsFocused(true);
     };
 
     const handleBlur = () => {
+      console.log("[ProjectSelect] Blur triggered");
       setTimeout(() => setIsFocused(false), 200);
     };
 
