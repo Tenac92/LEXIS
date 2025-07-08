@@ -1436,6 +1436,15 @@ export function CreateDocumentDialog({
   // Αυτό διορθώνει το πρόβλημα όπου το προϋπολογισμός δε φαίνεται στο βήμα 2 (παραλήπτες)
   } = useBudgetUpdates(selectedProjectId || formData.project_id, 0); // Fixed: Use static value to prevent infinite loop
   
+  console.log("[DocumentValidation] useBudgetUpdates inputs:", {
+    projectId: selectedProjectId || formData.project_id,
+    amount: 0,
+    isBudgetLoading,
+    isValidationLoading,
+    budgetError,
+    validationError
+  });
+  
   // Budget data validation and tracking - DISABLED to prevent infinite loops
   /*
   useEffect(() => {
@@ -1629,12 +1638,18 @@ export function CreateDocumentDialog({
     }
   }, [validationResult, toast]);
 
+  // Fix validation logic: Allow submission if validation is null/undefined (no validation needed)
+  // Only block if validation explicitly says error or canCreate is false
   const isSubmitDisabled =
-    validationResult?.status === "error" || !validationResult?.canCreate;
+    validationResult?.status === "error" || 
+    (validationResult && validationResult.canCreate === false);
     
   // Debug validation issues
   console.log("[DocumentValidation] Validation result:", validationResult);
   console.log("[DocumentValidation] Submit disabled:", isSubmitDisabled);
+  console.log("[DocumentValidation] Budget data:", budgetData);
+  console.log("[DocumentValidation] Selected project ID:", selectedProjectId);
+  console.log("[DocumentValidation] Form project ID:", formData.project_id);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
