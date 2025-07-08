@@ -812,34 +812,20 @@ export default function ComprehensiveEditFixed() {
       });
       form.setValue("formulation_details", formulations);
       form.setValue("location_details", (() => {
-          // Populate location details from project index data
+          // Populate location details from project index data OR create fallback from project data
           if (projectIndexData && projectIndexData.length > 0) {
             const locationDetailsMap = new Map();
             
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
-              // First try joined data from backend, then fallback to manual lookup
-              const kallikratis = indexItem.kallikratis || typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              const unit = indexItem.Monada || typedUnitsData.find(u => u.id === indexItem.monada_id);
-              const eventType = indexItem.event_types || typedEventTypesData.find(et => et.id === indexItem.event_types_id);
-              const expenditureType = indexItem.expediture_types || typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
-              
-              console.log('DEBUG Enhanced project_index data:', {
-                indexItem,
-                joinedKallikratis: indexItem.kallikratis,
-                joinedUnit: indexItem.Monada,
-                joinedEventType: indexItem.event_types,
-                joinedExpenditureType: indexItem.expediture_types,
-                kallikratis,
-                unit,
-                eventType,
-                expenditureType
-              });
+              const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
+              const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
+              const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
+              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
               
               const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
-                
                 // Use geographic code logic to determine what to display
                 const geographicCode = indexItem.geographic_code;
                 const geoInfo = getGeographicInfo(geographicCode);
@@ -911,11 +897,21 @@ export default function ComprehensiveEditFixed() {
           }
           
           // Default location detail if no project index data
+          console.log('DEBUG - Creating fallback location entry for project without project_index data');
+          
+          // Try to get implementing agency from various sources
+          const implementingAgency = typedProjectData.enhanced_unit?.name || 
+                                   typedProjectData.enhanced_unit?.unit ||
+                                   (typedUnitsData && typedUnitsData.length > 0 ? typedUnitsData[0].unit : "") ||
+                                   "ΔΑΕΦΚ-ΚΕ";
+          
+          console.log('DEBUG - Fallback implementing agency:', implementingAgency);
+          
           return [{
             municipality: "",
             regional_unit: "",
             region: "",
-            implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            implementing_agency: implementingAgency,
             event_type: "",
             expenditure_types: [],
             geographic_level: undefined,
