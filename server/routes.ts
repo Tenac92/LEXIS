@@ -1264,7 +1264,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.get('/api/projects/cards', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('[Projects] Fetching optimized project card data...');
-        const user = req.user as User;
+        const user = req.user;
+        
+        if (!user) {
+          console.error('[Projects] No user found in request');
+          return res.status(401).json({ error: 'Authentication required' });
+        }
         
         // First get all unique projects from Projects table
         const { data: projectsData, error: projectsError } = await supabase
@@ -1310,7 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const kallikratis = indexItem ? kallikratisData?.find(k => k.id === indexItem.kallikratis_id) : null;
           
           // Filter by user units if not admin
-          if (user.role !== 'admin' && user.units && user.units.length > 0) {
+          if (user && user.role !== 'admin' && user.units && user.units.length > 0) {
             if (monada && !user.units.includes(monada.unit)) {
               return null; // Skip this project
             }
