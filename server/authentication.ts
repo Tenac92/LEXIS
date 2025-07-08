@@ -388,6 +388,15 @@ export async function authenticateUser(email: string, password: string): Promise
       .select('*')  // Include all fields to handle potential schema variations
       .eq('email', email)
       .single();
+      
+    // Debug: Log the actual user data from database
+    console.log('[Auth] Raw user data from database:', {
+      id: userData?.id,
+      email: userData?.email,
+      role: userData?.role,
+      unit_id: userData?.unit_id,
+      units: userData?.units // Check if old field still exists
+    });
 
     if (userError) {
       console.error(`[Auth] Database error when retrieving user: ${email}`, userError);
@@ -596,7 +605,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
-        units: sessionUser.units,
+        unit_id: sessionUser.unit_id,
         department: sessionUser.department,
         sessionID: req.sessionID,
         ip: req.ip
@@ -609,7 +618,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
-        units: sessionUser.units || []
+        unit_id: sessionUser.unit_id || []
       };
       
       return res.status(200).json({
