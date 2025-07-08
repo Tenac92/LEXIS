@@ -70,17 +70,23 @@ import { BudgetIndicator } from "@/components/ui/budget-indicator";
 import { useDocumentForm } from "@/contexts/document-form-context";
 import { Lightbulb, Star } from "lucide-react";
 
-// Constants
-const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"];
-const DKA_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
-const ALL_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
+// Import constants from dedicated file
+import { 
+  DKA_TYPES, 
+  DKA_INSTALLMENTS, 
+  ALL_INSTALLMENTS, 
+  HOUSING_ALLOWANCE_TYPE, 
+  HOUSING_QUARTERS, 
+  STANDARD_QUARTER_AMOUNT,
+  STEPS,
+  STEP_TITLES 
+} from "./constants";
+import { useDebounce } from "./hooks/useDebounce";
+import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSuggestions";
+import { ProjectSelect } from "./components/ProjectSelect";
+import { StepIndicator } from "./components/StepIndicator";
 
-// Housing allowance constants
-const HOUSING_ALLOWANCE_TYPE = "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ";
-const HOUSING_QUARTERS = Array.from({ length: 24 }, (_, i) => `ΤΡΙΜΗΝΟ ${i + 1}`);
-const STANDARD_QUARTER_AMOUNT = 900.00;
-
-// Project selection component
+// Main project interface - simplified as components are now extracted
 interface Project {
   id: string;
   mis?: string;
@@ -88,464 +94,25 @@ interface Project {
   expenditure_types: string[];
 }
 
-// ESDIAN suggestion types
-interface EsdianSuggestion {
-  value: string;
-  count: number;
-  contextMatches: number;
+// Components are now extracted to separate files
+// Main dialog component interface
+
+interface CreateDocumentDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onClose: () => void;
 }
 
-interface EsdianSuggestionsResponse {
-  status: string;
-  suggestions: EsdianSuggestion[];
-  total: number;
-  hasContext: boolean;
-}
+type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
-// ESDIAN Fields with Suggestions Component
-interface EsdianFieldsWithSuggestionsProps {
-  form: any;
-  user: any;
-}
+type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
-function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestionsProps) {
-  const projectId = form.watch("project_id");
-  const expenditureType = form.watch("expenditure_type");
+// Main create document schema and validation starts below
+// All extracted components are now in separate files for better organization
 
-  const { data: esdianSuggestions, isLoading: suggestionsLoading } = useQuery<EsdianSuggestionsResponse>({
-    queryKey: ['esdian-suggestions', user?.id, projectId, expenditureType],
-    queryFn: async () => {
-      if (!user?.id) return { status: 'error', suggestions: [], total: 0, hasContext: false };
-      
-      const params = new URLSearchParams();
-      if (projectId) params.append('project_id', projectId);
-      if (expenditureType) params.append('expenditure_type', expenditureType);
-      
-      const url = `/api/user-preferences/esdian${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await apiRequest(url);
-      return response as EsdianSuggestionsResponse;
-    },
-    enabled: Boolean(user?.id),
-    staleTime: 2 * 60 * 1000, // Cache for 2 minutes to allow for context changes
-  });
+// Budget and expenditure configuration constants
 
-  const suggestions = esdianSuggestions?.suggestions || [];
-  const hasContext = esdianSuggestions?.hasContext || false;
-
-  const handleSuggestionClick = (value: string, fieldName: 'esdian_field1' | 'esdian_field2') => {
-    form.setValue(fieldName, value);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-medium text-gray-900">Εσωτερική Διανομή</h3>
-          <p className="text-sm text-gray-600">Επιλέξτε τμήματα για διανομή του εγγράφου</p>
-        </div>
-        {suggestions.length > 0 && hasContext && (
-          <Badge variant="secondary" className="text-xs">
-            <Lightbulb className="h-3 w-3 mr-1" />
-            Έξυπνες προτάσεις
-          </Badge>
-        )}
-      </div>
-
-      {/* Compact Smart Suggestions */}
-      {suggestions.filter(s => s.contextMatches > 0).length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded p-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 text-green-600" />
-              <span className="text-xs font-medium text-green-800">Για αυτό το έργο συνήθως:</span>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-xs text-green-700 hover:bg-green-100 h-6 px-2"
-              onClick={() => {
-                const contextSuggestions = suggestions.filter(s => s.contextMatches > 0);
-                if (contextSuggestions.length >= 2) {
-                  form.setValue('esdian_field1', contextSuggestions[0].value);
-                  form.setValue('esdian_field2', contextSuggestions[1].value);
-                }
-              }}
-            >
-              Αυτόματα
-            </Button>
-          </div>
-          <div className="space-y-1">
-            {suggestions
-              .filter(s => s.contextMatches > 0)
-              .slice(0, 3)
-              .map((suggestion, index) => (
-                <div key={index} className="flex items-center justify-between bg-white rounded p-2 text-xs">
-                  <span className="text-gray-700 truncate flex-1 mr-2">{suggestion.value}</span>
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 text-green-600 hover:bg-green-100"
-                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field1')}
-                      title="Πεδίο 1"
-                    >
-                      1
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 text-green-600 hover:bg-green-100"
-                      onClick={() => handleSuggestionClick(suggestion.value, 'esdian_field2')}
-                      title="Πεδίο 2"
-                    >
-                      2
-                    </Button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
-
-      {/* Form Fields with Smart Placeholders */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="esdian_field1"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                Πρώτη Διανομή
-              </FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  placeholder={
-                    suggestions.length > 0 
-                      ? `π.χ. ${suggestions[0].value}` 
-                      : "π.χ. ΤΜΗΜΑ ΟΙΚΟΝΟΜΙΚΩΝ"
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="esdian_field2"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                Δεύτερη Διανομή
-              </FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  placeholder={
-                    suggestions.length > 1 
-                      ? `π.χ. ${suggestions[1].value}` 
-                      : "π.χ. ΓΡΑΦΕΙΟ ΔΙΕΥΘΥΝΤΗ"
-                  }
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
-
-      {/* Skip Option */}
-      <div className="flex justify-center pt-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-xs text-gray-500"
-          onClick={() => {
-            form.setValue('esdian_field1', '');
-            form.setValue('esdian_field2', '');
-          }}
-        >
-          Παράλειψη εσωτερικής διανομής
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-interface ProjectSelectProps {
-  value?: string;
-  onChange: (value: string) => void;
-  projects: Project[];
-  disabled?: boolean;
-}
-
-function useDebounce<T>(value: T, delay?: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay || 500);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
-// Optimized project select component with better search performance and error handling
-const ProjectSelect = React.forwardRef<HTMLButtonElement, ProjectSelectProps>(
-  function ProjectSelect(props, ref) {
-    const { value, onChange, projects, disabled } = props;
-    const [searchQuery, setSearchQuery] = useState("");
-    const [isSearching, setIsSearching] = useState(false);
-    const [isFocused, setIsFocused] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const commandRef = useRef<HTMLDivElement>(null);
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    
-    // Only log in development mode if needed for debugging
-    useEffect(() => {
-      if (process.env.NODE_ENV === 'development' && value) {
-        // Debug logging removed in production
-      }
-    }, [value, projects, disabled]);
-
-    // Cache the selected project to prevent unnecessary lookups
-    const selectedProject = useMemo(() => 
-      projects.find((project) => project.id === value),
-    [projects, value]);
-
-    // Use a 300ms debounce for search to prevent UI lag
-    const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
-    // Text normalization helper for more accurate search results
-    const normalizeText = useCallback((text: string) => {
-      // Avoid operations on empty text
-      if (!text) return "";
-      
-      return text
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
-        .trim();
-    }, []);
-
-    // Extract NA853 code from project names for better display
-    const extractNA853Info = useCallback((name: string) => {
-      if (!name) return null;
-      
-      // Look for patterns like 2024ΝΑ85300016 or 2024NA85300016
-      const match = name.match(/\d{4}(?:NA|ΝΑ)853\d+/i);
-      if (!match) return null;
-      
-      const code = match[0];
-      const parts = name.split(" - ");
-      
-      return {
-        full: code,
-        displayText: parts.length > 1 ? parts.slice(1).join(" - ") : name, // Handle missing separator
-        numbers: code.replace(/\D/g, ""), // Extract all numbers from the code
-        originalMatch: match,
-      };
-    }, []);
-
-    // Memoized filtered projects list with improved error handling
-    const filteredProjects = useMemo(() => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-      
-      // Set searching state with a small delay to prevent flashing UI
-      setIsSearching(true);
-      setError(null);
-
-      try {
-        // Return all projects if search is empty
-        if (!debouncedSearchQuery.trim()) {
-          searchTimeoutRef.current = setTimeout(() => setIsSearching(false), 100);
-          return projects;
-        }
-
-        const searchTerm = normalizeText(debouncedSearchQuery);
-        const isNumericSearch = /^\d+$/.test(searchTerm);
-        
-        // Remove all debug logging for cleaner console
-
-        // Improved search algorithm with better error tolerance
-        const results = projects.filter((project) => {
-          // Guard against undefined projects
-          if (!project || !project.name || !project.id) return false;
-          
-          const normalizedProjectName = normalizeText(project.name);
-          const normalizedProjectId = normalizeText(project.id);
-          
-          // Match project ID for NA853 codes
-          if (normalizedProjectId.includes(searchTerm)) {
-            return true;
-          }
-          
-          // For numeric searches, try to match MIS field too
-          if (isNumericSearch && project.mis) {
-            const normalizedMis = normalizeText(project.mis);
-            if (normalizedMis.includes(searchTerm)) {
-              return true;
-            }
-          }
-          
-          // Finally check project name
-          return normalizedProjectName.includes(searchTerm);
-        });
-
-        // Show meaningful error message if no results
-        if (results.length === 0) {
-          setError(
-            `Δεν βρέθηκαν έργα που να ταιριάζουν με "${debouncedSearchQuery}"`,
-          );
-        }
-
-        return results;
-      } catch (error) {
-        console.error("Project search error:", error);
-        setError("Σφάλμα κατά την αναζήτηση. Παρακαλώ δοκιμάστε ξανά.");
-        return projects;
-      } finally {
-        // Clear searching state with a slight delay to prevent UI flicker
-        searchTimeoutRef.current = setTimeout(() => setIsSearching(false), 100);
-      }
-    }, [projects, debouncedSearchQuery, normalizeText]);
-
-    useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "/" && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          inputRef.current?.focus();
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }, []);
-
-    useEffect(() => {
-      // Reset search query when selection changes
-      if (selectedProject && !isFocused) {
-        const na853Info = extractNA853Info(selectedProject.name);
-        const displayText = na853Info
-          ? `${na853Info.full} - ${na853Info.displayText}`
-          : selectedProject.name;
-        setSearchQuery(displayText);
-      }
-    }, [selectedProject, isFocused, extractNA853Info]);
-
-    const handleFocus = () => {
-      setIsFocused(true);
-      setSearchQuery("");
-    };
-
-    const handleBlur = () => {
-      setTimeout(() => {
-        if (selectedProject && !searchQuery.trim()) {
-          const na853Info = extractNA853Info(selectedProject.name);
-          const displayText = na853Info
-            ? `${na853Info.full} - ${na853Info.displayText}`
-            : selectedProject.name;
-          setSearchQuery(displayText);
-        }
-        setIsFocused(false);
-      }, 200);
-    };
-
-    return (
-      <div className="relative w-full min-w-[500px]">
-        <Command
-          className="relative rounded-lg border shadow-md w-full min-w-[500px] overflow-visible"
-          ref={commandRef}
-        >
-          <div className="flex items-center px-4 py-3 gap-3 bg-background w-full">
-            <Search className="h-5 w-5 shrink-0 opacity-50" />
-            <CommandInput
-              ref={inputRef}
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              placeholder="Αναζήτηση με NA853 ή όνομα έργου"
-              className="flex-1 bg-transparent border-0 outline-none text-base placeholder:text-muted-foreground focus:ring-0 h-auto py-1 w-full min-w-[500px]"
-            />
-            {isSearching && (
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-primary border-t-transparent" />
-            )}
-            {/* <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"></kbd> */}
-          </div>
-
-          {isFocused && (
-            <>
-              {error ? (
-                <div className="p-4 text-center">
-                  <AlertCircle className="h-6 w-6 text-destructive mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                </div>
-              ) : (
-                <>
-                  <CommandEmpty className="py-6 text-center text-sm">
-                    Δεν βρέθηκαν έργα
-                  </CommandEmpty>
-
-                  <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredProjects.map((project) => {
-                      const na853Info = extractNA853Info(project.name);
-                      const displayName = na853Info
-                        ? na853Info.displayText
-                        : project.name;
-                      return (
-                        <CommandItem
-                          key={project.id}
-                          value={project.id}
-                          onSelect={(value) => {
-                            onChange(value);
-                            setIsFocused(false);
-                          }}
-                          className={cn(
-                            "cursor-pointer py-3 px-4 hover:bg-accent",
-                            project.id === value && "bg-accent",
-                          )}
-                        >
-                          <div className="flex flex-col gap-1 w-full">
-                            <Badge
-                              variant="outline"
-                              className="text-xs w-fit mb-1"
-                            >
-                              {na853Info?.full || project.id}
-                            </Badge>
-                            <span className="text-sm break-words">
-                              {displayName}
-                            </span>
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </>
-              )}
-            </>
-          )}
-        </Command>
-      </div>
-    );
-  },
-);
-
-ProjectSelect.displayName = "ProjectSelect";
-
-// Interfaces
-// Εισαγωγή του τύπου BudgetData από το lib/types
-import type { BudgetData as BaseBudgetData } from "@/lib/types";
+// Data validation schemas
 
 // Χρησιμοποιούμε τον ίδιο τύπο για συμβατότητα
 interface BudgetData extends BaseBudgetData {}
@@ -557,8 +124,6 @@ interface CreateDocumentDialogProps {
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
 }
-
-type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
 
 // Animation variants
 const stepVariants = {
@@ -578,52 +143,7 @@ const stepVariants = {
   }),
 };
 
-// Step Indicator Component
-const StepIndicator = ({ currentStep }: { currentStep: number }) => {
-  const steps = [
-    { title: "Επιλογή Μονάδας", icon: <User className="h-4 w-4" /> },
-    { title: "Στοιχεία Έργου", icon: <FileText className="h-4 w-4" /> },
-    { title: "Δικαιούχοι", icon: <User className="h-4 w-4" /> },
-    { title: "Υπογραφή", icon: <User className="h-4 w-4" /> },
-    { title: "Συνημμένα", icon: <FileText className="h-4 w-4" /> },
-  ];
-
-  return (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, index) => (
-        <div key={index} className="flex items-center">
-          <div
-            className={`flex items-center justify-center ${
-              index <= currentStep ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                index === currentStep
-                  ? "border-primary bg-primary/10"
-                  : index < currentStep
-                    ? "border-primary bg-primary text-background"
-                    : "border-muted"
-              }`}
-            >
-              {index < currentStep ? <Check className="h-4 w-4" /> : step.icon}
-            </div>
-            <span className="ml-2 text-sm font-medium hidden md:block">
-              {step.title}
-            </span>
-          </div>
-          {index < steps.length - 1 && (
-            <ChevronDown
-              className={`mx-2 h-4 w-4 rotate-[-90deg] ${
-                index < currentStep ? "text-primary" : "text-muted-foreground"
-              }`}
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
+// StepIndicator component extracted to separate file
 
 // Removed: Local BudgetIndicator Component - now importing from @/components/ui/budget-indicator
 
@@ -671,8 +191,6 @@ const createDocumentSchema = z.object({
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
 });
-
-type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Main component
 export function CreateDocumentDialog({
@@ -743,13 +261,13 @@ export function CreateDocumentDialog({
                   broadcastUpdate(currentAmount || 0);
                 }
               } catch (e) {
-                console.error("[CreateDocument] Error broadcasting budget update:", e);
+
               }
             }
           }
         }, 0);
       } catch (err) {
-        console.error("[CreateDocument] Error preserving form state:", err);
+
       }
     };
     
@@ -860,14 +378,13 @@ export function CreateDocumentDialog({
         });
 
         if (!response.ok) {
-          console.error(`[CreateDocument] Units fetch error: ${response.status} ${response.statusText}`);
           throw new Error(`Failed to fetch units: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
         
         if (!data || !Array.isArray(data)) {
-          console.error("[CreateDocument] Error fetching units: Invalid response format", data);
+
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
@@ -878,8 +395,7 @@ export function CreateDocumentDialog({
 
         // Units fetched successfully - processing data
         
-        // Enhanced data transformation with additional debugging
-        console.log("[CreateDocument] Processing units data:", JSON.stringify(data));
+        // Enhanced data transformation
         
         // Process abbreviated unit IDs mapping
         const unitAbbreviations: Record<string, string> = {
@@ -901,7 +417,7 @@ export function CreateDocumentDialog({
         const processedUnits = data.map((item: any) => {
           // For debugging purposes
           if (!item.unit && !item.id) {
-            console.warn("[CreateDocument] Unit missing id/unit field:", item);
+
           }
           
           // First handle the ID
@@ -954,7 +470,7 @@ export function CreateDocumentDialog({
         
         return processedUnits;
       } catch (error) {
-        console.error("[CreateDocument] Units fetch error:", error);
+
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
@@ -983,13 +499,13 @@ export function CreateDocumentDialog({
   const handleDialogOpen = useCallback(async () => {
     // CRITICAL: Block dialog reinitialization during autocomplete operations
     if (isAutocompletingRef.current) {
-      console.log("[CreateDocument] Blocked dialog reinitialization during autocomplete");
+
       return;
     }
     
     // CRITICAL: Block reinitialization if dialog is already open and in use
     if (open && currentStep > 0) {
-      console.log("[CreateDocument] Blocked reinitialization - dialog already in use at step:", currentStep);
+
       return;
     }
     
@@ -1003,7 +519,7 @@ export function CreateDocumentDialog({
                                (formData?.recipients && formData.recipients.length > 0);
     
     if (!hasExistingFormData) {
-      console.log("[CreateDocument] Starting fresh document creation");
+
       
       // Don't reset the unit if user has one assigned - preserve auto-selection
       let defaultUnit = "";
@@ -1037,14 +553,10 @@ export function CreateDocumentDialog({
       setCurrentStep(0);
       
       if (defaultUnit) {
-        console.log("[CreateDocument] Preserved user unit during reset:", defaultUnit);
+
       }
     } else {
-      console.log("[CreateDocument] Restoring existing form data:", {
-        project_id: formData?.project_id,
-        expenditure_type: formData?.expenditure_type,
-        step: savedStep
-      });
+
     }
     
     // Dialog initialization - form and units data will be refreshed
@@ -1072,11 +584,11 @@ export function CreateDocumentDialog({
         queryClient.invalidateQueries({ queryKey: ["public-units"] });
         // Units query invalidated to refresh data
       } catch (err) {
-        console.warn("[CreateDocument] Non-critical error refreshing units:", err);
+
       }
       
       if (!refreshedUser) {
-        console.warn("[CreateDocument] No authenticated user found, dialog may not function properly");
+
         toast({
           title: "Προειδοποίηση σύνδεσης",
           description: "Η συνεδρία σας ενδέχεται να έχει λήξει. Αν αντιμετωπίσετε προβλήματα, ανανεώστε τη σελίδα.",
