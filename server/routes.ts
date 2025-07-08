@@ -1833,15 +1833,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('[UserPreferences] ESDIAN request for user:', userId, 'project:', projectId, 'type:', expenditureType);
 
         // Build query with optional filters for better contextual suggestions
-        // For now, filter by user's units to get relevant suggestions
-        const userUnits = (req as any).user?.units || [];
+        // Filter by user's unit_id to get relevant suggestions
+        const userUnitId = (req as any).user?.unit_id?.[0]; // Get first unit ID from array
         
-        // Use documents table instead of generated_documents which doesn't exist
         let query = supabase
-          .from('documents')
-          .select('esdian, project_na853, expenditure_type')
+          .from('generated_documents')
+          .select('esdian, project_na853, expenditure_type, unit_id')
           .not('esdian', 'is', null)
           .order('created_at', { ascending: false });
+          
+        // Filter by user's unit if available
+        if (userUnitId) {
+          query = query.eq('unit_id', userUnitId);
+        }
 
         // If we have context, prioritize matching documents but still include others
         if (projectId || expenditureType) {

@@ -260,35 +260,32 @@ export const budgetNotifications = pgTable("budget_notifications", {
  * Now references project by id instead of mis
  */
 export const generatedDocuments = pgTable("generated_documents", {
-  id: serial("id").primaryKey(),
-  status: text("status").notNull().default("draft"),
-  unit: text("unit").notNull(),
-  project_id: integer("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  mis: integer("mis"), // Legacy field for migration compatibility
+  id: bigserial("id", { mode: "number" }).primaryKey(),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  generated_by: bigint("generated_by", { mode: "number" }),
+  recipients: jsonb("recipients").notNull(),
+  protocol_date: date("protocol_date"),
+  total_amount: decimal("total_amount", { precision: 10, scale: 2 }),
+  document_date: date("document_date"),
+  status: varchar("status", { length: 50 }).default("pending"),
+  protocol_number_input: text("protocol_number_input").unique(),
+  expenditure_type: text("expenditure_type"),
+  mis: text("mis"), // Changed to text to match actual table
   project_na853: text("project_na853"),
-  expenditure_type: text("expenditure_type").notNull(),
-  total_amount: decimal("total_amount", { precision: 12, scale: 2 }),
-  protocol_number: text("protocol_number"),
-  protocol_number_input: text("protocol_number_input"),
-  protocol_date: timestamp("protocol_date"),
+  original_protocol_number: varchar("original_protocol_number", { length: 255 }),
+  original_protocol_date: date("original_protocol_date"),
+  is_correction: boolean("is_correction").default(false),
   department: text("department"),
-  user_name: text("user_name"),
-  contact_number: text("contact_number"),
-  region: text("region"),
-  attachments: jsonb("attachments").default([]),
-  recipients: jsonb("recipients").default([]),
-  installments: jsonb("installments").default([]),
-  installmentAmounts: jsonb("installmentAmounts").default({}),
-  template_id: integer("template_id"),
   comments: text("comments"),
-  esdian: jsonb("esdian").default([]), // Internal distribution fields
-  // Director signature fields
-  director_signature: jsonb("director_signature"), // Stores selected director info
-  department_manager_signature: jsonb("department_manager_signature"), // Stores selected department manager info
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
+  original_document_id: bigint("original_document_id", { mode: "number" }),
+  updated_by: text("updated_by"),
+  attachments: jsonb("attachments").array(),
+  updated_at: timestamp("updated_at", { withTimezone: true }),
+  region: jsonb("region"),
+  esdian: text("esdian").array(),
+  director_signature: jsonb("director_signature"),
+  unit_id: integer("unit_id"), // Added unit_id field as per actual table
+  updated_at: timestamp("updated_at", { withTimezone: true }),
 });
 
 /**
