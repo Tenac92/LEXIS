@@ -171,7 +171,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
 
     const handleBlur = () => {
       console.log("[ProjectSelect] Blur triggered");
-      setTimeout(() => setIsFocused(false), 200);
+      setTimeout(() => setIsFocused(false), 500);
     };
 
     const handleProjectSelect = (project: Project) => {

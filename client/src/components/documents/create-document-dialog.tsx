@@ -45,6 +45,8 @@ import {
   Search,
   Trash2,
   User,
+  Lightbulb,
+  Star
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
@@ -68,7 +70,6 @@ import type {
 } from "@/lib/types";
 import { BudgetIndicator } from "@/components/ui/budget-indicator";
 import { useDocumentForm } from "@/contexts/document-form-context";
-import { Lightbulb, Star } from "lucide-react";
 
 // Import constants from dedicated file
 import { 

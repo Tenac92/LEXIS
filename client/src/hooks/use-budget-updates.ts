@@ -140,7 +140,7 @@ export function useBudgetUpdates(
         const encodedMisValue = encodeURIComponent(misValue);
         
         // Use the correct endpoint path - this public endpoint doesn't require authentication
-        const response = await fetch(`/api/budget/${encodedMisValue}`);
+        const response = await fetch(`/api/budget/data/${encodedMisValue}`);
         
         // Check if the response is ok before trying to parse JSON
         if (!response.ok) {
