@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -290,6 +290,7 @@ export default function ComprehensiveEditFixed() {
     staleTime: 30 * 60 * 1000, // 30 minutes cache for better performance
     cacheTime: 60 * 60 * 1000, // 1 hour cache retention
     refetchOnWindowFocus: false, // Prevent unnecessary refetches
+    refetchOnMount: false, // Use cached data when available
   });
 
   // Extract data from unified API response with proper typing

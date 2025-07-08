@@ -505,18 +505,56 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     console.log(`[ProjectComplete] Fetching complete data for project MIS: ${mis}`);
     
     // First get the project to extract the ID for related tables
-    const { data: projectData, error: projectError } = await supabase
-      .from('Projects')
-      .select('*')
-      .eq('mis', mis)
-      .single();
-      
-    if (projectError || !projectData) {
-      console.error('Error fetching project:', projectError);
-      return res.status(404).json({ message: 'Project not found', error: projectError?.message });
-    }
+    // Optimization: Use project_id if available, otherwise look up by MIS
+    let projectId: number;
+    let projectData: any;
     
-    const projectId = projectData.id;
+    // Check if mis is actually a numeric ID
+    const numericMis = parseInt(mis);
+    if (!isNaN(numericMis) && numericMis.toString() === mis) {
+      // Try to fetch by ID first for better performance
+      const { data: projectById, error: idError } = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('id', numericMis)
+        .single();
+        
+      if (!idError && projectById) {
+        projectData = projectById;
+        projectId = projectById.id;
+        console.log(`[ProjectComplete] Found project by ID: ${projectId}`);
+      } else {
+        // Fallback to MIS lookup
+        const { data: projectByMis, error: misError } = await supabase
+          .from('Projects')
+          .select('*')
+          .eq('mis', mis)
+          .single();
+          
+        if (misError || !projectByMis) {
+          console.error('Error fetching project by MIS:', misError);
+          return res.status(404).json({ message: 'Project not found', error: misError?.message });
+        }
+        
+        projectData = projectByMis;
+        projectId = projectByMis.id;
+      }
+    } else {
+      // Non-numeric MIS, use standard lookup
+      const { data: projectByMis, error: misError } = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('mis', mis)
+        .single();
+        
+      if (misError || !projectByMis) {
+        console.error('Error fetching project by MIS:', misError);
+        return res.status(404).json({ message: 'Project not found', error: misError?.message });
+      }
+      
+      projectData = projectByMis;
+      projectId = projectByMis.id;
+    }
     
     // Fetch all related data in parallel for optimal performance
     const [
