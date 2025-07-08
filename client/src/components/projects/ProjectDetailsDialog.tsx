@@ -172,6 +172,24 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   const projectIndexData = completeProjectData?.index;
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
+  
+  // Use complete project data if available, fallback to prop data
+  const enhancedProjectData = React.useMemo(() => {
+    if (completeProjectData?.project) {
+      return completeProjectData.project;
+    }
+    return projectData;
+  }, [completeProjectData, projectData]);
+
+  // Extract ΝΑ271 code from formulations if not in main project data
+  const extractedNA271 = React.useMemo(() => {
+    if (enhancedProjectData?.na271) return enhancedProjectData.na271;
+    if (formulationsData && Array.isArray(formulationsData)) {
+      const na271Formulation = formulationsData.find(f => f.sa_type === 'ΝΑ271');
+      return na271Formulation?.enumeration_code || null;
+    }
+    return null;
+  }, [enhancedProjectData, formulationsData]);
 
   const isLoading = isCompleteDataLoading || budgetLoading;
   const hasErrors = completeDataError || budgetError;
@@ -295,24 +313,24 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
       >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-gray-800">
-            Λεπτομέρειες Έργου: {safeText(projectData?.project_title)}
+            Λεπτομέρειες Έργου: {safeText(enhancedProjectData?.project_title)}
           </DialogTitle>
           <div id="project-details-description" className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-            <span>MIS: {safeText(projectData?.mis)}</span>
+            <span>MIS: {safeText(enhancedProjectData?.mis)}</span>
             <span>•</span>
-            <span>NA853: {safeText(projectData?.na853)}</span>
-            {projectData?.status && (
+            <span>NA853: {safeText(enhancedProjectData?.na853)}</span>
+            {enhancedProjectData?.status && (
               <>
                 <span>•</span>
                 <Badge variant="outline" className="text-xs">
-                  {projectData.status}
+                  {enhancedProjectData.status}
                 </Badge>
               </>
             )}
-            {projectId && (
+            {enhancedProjectData?.id && (
               <>
                 <span>•</span>
-                <span className="text-xs">ID: {projectId}</span>
+                <span className="text-xs">ID: {enhancedProjectData.id}</span>
               </>
             )}
           </div>
@@ -363,16 +381,16 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Συμβάν:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {safeText(projectData?.event_description)}
+                              {safeText(enhancedProjectData?.event_description)}
                             </p>
                           </div>
                           
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Έτος εκδήλωσης:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {Array.isArray(projectData?.event_year) 
-                                ? projectData.event_year.join(', ') 
-                                : safeText(projectData?.event_year)}
+                              {Array.isArray(enhancedProjectData?.event_year) 
+                                ? enhancedProjectData.event_year.join(', ') 
+                                : safeText(enhancedProjectData?.event_year)}
                             </p>
                           </div>
                           
@@ -388,7 +406,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">MIS:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm font-mono">
-                              {safeText(projectData?.mis)}
+                              {safeText(enhancedProjectData?.mis)}
                             </p>
                           </div>
                           
@@ -402,7 +420,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Κωδ. Ενάριθμος na853:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm font-mono">
-                              {safeText(projectData?.na853)}
+                              {safeText(enhancedProjectData?.na853)}
                             </p>
                           </div>
                         </div>
@@ -411,48 +429,48 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Έτος ένταξης:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {Array.isArray(projectData?.event_year) && projectData.event_year.length > 0
-                                ? projectData.event_year[0] 
-                                : safeText(projectData?.event_year)}
+                              {Array.isArray(enhancedProjectData?.event_year) && enhancedProjectData.event_year.length > 0
+                                ? enhancedProjectData.event_year[0] 
+                                : safeText(enhancedProjectData?.event_year)}
                             </p>
                           </div>
                           
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Τίτλος έργου:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {safeText(projectData?.project_title)}
+                              {safeText(enhancedProjectData?.project_title)}
                             </p>
                           </div>
                           
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Συνοπτική περιγραφή:</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {safeText(projectData?.event_description)}
+                              {safeText(enhancedProjectData?.event_description)}
                             </p>
                           </div>
                           
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Δαπάνες έργου:</span>
                             <div className="space-y-2">
-                              {projectData?.budget_na853 && (
+                              {enhancedProjectData?.budget_na853 && (
                                 <div className="bg-green-50 p-2 rounded text-sm">
                                   <span className="font-medium">ΝΑ853: </span>
-                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_na853)}</span>
+                                  <span className="font-bold text-green-800">{formatCurrency(enhancedProjectData.budget_na853)}</span>
                                 </div>
                               )}
-                              {projectData?.budget_na271 && (
+                              {enhancedProjectData?.budget_na271 && (
                                 <div className="bg-green-50 p-2 rounded text-sm">
                                   <span className="font-medium">ΝΑ271: </span>
-                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_na271)}</span>
+                                  <span className="font-bold text-green-800">{formatCurrency(enhancedProjectData.budget_na271)}</span>
                                 </div>
                               )}
-                              {projectData?.budget_e069 && (
+                              {enhancedProjectData?.budget_e069 && (
                                 <div className="bg-green-50 p-2 rounded text-sm">
                                   <span className="font-medium">E069: </span>
-                                  <span className="font-bold text-green-800">{formatCurrency(projectData.budget_e069)}</span>
+                                  <span className="font-bold text-green-800">{formatCurrency(enhancedProjectData.budget_e069)}</span>
                                 </div>
                               )}
-                              {!projectData?.budget_na853 && !projectData?.budget_na271 && !projectData?.budget_e069 && (
+                              {!enhancedProjectData?.budget_na853 && !enhancedProjectData?.budget_na271 && !enhancedProjectData?.budget_e069 && (
                                 <p className="text-gray-500 bg-gray-50 p-2 rounded text-sm">
                                   Δεν υπάρχουν διαθέσιμα στοιχεία δαπανών
                                 </p>
@@ -464,7 +482,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                             <span className="font-medium text-green-700 block mb-1">Κατάσταση έργου:</span>
                             <div className="bg-green-50 p-2 rounded">
                               <Badge variant="outline" className="text-green-700 border-green-300">
-                                {safeText(projectData?.status)}
+                                {safeText(enhancedProjectData?.status)}
                               </Badge>
                             </div>
                           </div>
@@ -761,53 +779,53 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">ID Έργου:</span>
-                          <p className="text-gray-900 font-mono">{safeText(projectData?.id)}</p>
+                          <p className="text-gray-900 font-mono">{safeText(enhancedProjectData?.id)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">MIS:</span>
-                          <p className="text-gray-900 font-mono">{safeText(projectData?.mis)}</p>
+                          <p className="text-gray-900 font-mono">{safeText(enhancedProjectData?.mis)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Κωδικός E069:</span>
-                          <p className="text-gray-900 font-mono">{safeText(projectData?.e069)}</p>
+                          <p className="text-gray-900 font-mono">{safeText(enhancedProjectData?.e069)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Κωδικός ΝΑ271:</span>
-                          <p className="text-gray-900 font-mono">{safeText(projectData?.na271)}</p>
+                          <p className="text-gray-900 font-mono">{safeText(extractedNA271)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Κωδικός ΝΑ853:</span>
-                          <p className="text-gray-900 font-mono">{safeText(projectData?.na853)}</p>
+                          <p className="text-gray-900 font-mono">{safeText(enhancedProjectData?.na853)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Κατάσταση:</span>
-                          <Badge variant="outline">{safeText(projectData?.status)}</Badge>
+                          <Badge variant="outline">{safeText(enhancedProjectData?.status)}</Badge>
                         </div>
                         <div className="col-span-full space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Περιγραφή Γεγονότος:</span>
-                          <p className="text-gray-900 bg-gray-50 p-2 rounded text-sm">{safeText(projectData?.event_description)}</p>
+                          <p className="text-gray-900 bg-gray-50 p-2 rounded text-sm">{safeText(enhancedProjectData?.event_description)}</p>
                         </div>
                         <div className="col-span-full space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Τίτλος Έργου:</span>
-                          <p className="text-gray-900 bg-gray-50 p-2 rounded text-sm">{safeText(projectData?.project_title)}</p>
+                          <p className="text-gray-900 bg-gray-50 p-2 rounded text-sm">{safeText(enhancedProjectData?.project_title)}</p>
                         </div>
-                        {projectData?.event_year && (
+                        {enhancedProjectData?.event_year && (
                           <div className="col-span-full space-y-1">
                             <span className="font-medium text-gray-700 block text-sm">Έτη Εκδήλωσης:</span>
                             <p className="text-gray-900 bg-gray-50 p-2 rounded text-sm">
-                              {Array.isArray(projectData.event_year) 
-                                ? projectData.event_year.join(', ') 
-                                : safeText(projectData.event_year)}
+                              {Array.isArray(enhancedProjectData.event_year) 
+                                ? enhancedProjectData.event_year.join(', ') 
+                                : safeText(enhancedProjectData.event_year)}
                             </p>
                           </div>
                         )}
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Δημιουργήθηκε:</span>
-                          <p className="text-gray-900 text-sm">{formatDate(projectData?.created_at)}</p>
+                          <p className="text-gray-900 text-sm">{formatDate(enhancedProjectData?.created_at)}</p>
                         </div>
                         <div className="space-y-1">
                           <span className="font-medium text-gray-700 block text-sm">Τελευταία Ενημέρωση:</span>
-                          <p className="text-gray-900 text-sm">{formatDate(projectData?.updated_at)}</p>
+                          <p className="text-gray-900 text-sm">{formatDate(enhancedProjectData?.updated_at)}</p>
                         </div>
                       </div>
                     </div>
