@@ -818,15 +818,27 @@ export default function ComprehensiveEditFixed() {
             
             // Group by kallikratis and implementing agency
             projectIndexData.forEach(indexItem => {
-              const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              const unit = typedUnitsData.find(u => u.id === indexItem.unit_id);
-              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
+              // First try joined data from backend, then fallback to manual lookup
+              const kallikratis = indexItem.kallikratis || typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
+              const unit = indexItem.Monada || typedUnitsData.find(u => u.id === indexItem.monada_id);
+              const eventType = indexItem.event_types || typedEventTypesData.find(et => et.id === indexItem.event_types_id);
+              const expenditureType = indexItem.expediture_types || typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
               
-              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.unit_id || 'no-unit'}`;
+              console.log('DEBUG Enhanced project_index data:', {
+                indexItem,
+                joinedKallikratis: indexItem.kallikratis,
+                joinedUnit: indexItem.Monada,
+                joinedEventType: indexItem.event_types,
+                joinedExpenditureType: indexItem.expediture_types,
+                kallikratis,
+                unit,
+                eventType,
+                expenditureType
+              });
+              
+              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
               
               if (!locationDetailsMap.has(key)) {
-                // Get event type from project index data  
-                const eventType = typedEventTypesData.find(et => et.id === indexItem.event_type_id);
                 
                 // Use geographic code logic to determine what to display
                 const geographicCode = indexItem.geographic_code;

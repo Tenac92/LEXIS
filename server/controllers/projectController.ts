@@ -568,7 +568,13 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     ] = await Promise.all([
       supabase.from('project_decisions').select('*').eq('project_id', projectId),
       supabase.from('project_formulations').select('*').eq('project_id', projectId),
-      supabase.from('project_index').select('*').eq('project_id', projectId),
+      supabase.from('project_index').select(`
+        *,
+        Monada:monada_id (id, unit, unit_name, email, manager, address),
+        event_types:event_types_id (id, name),
+        expediture_types:expediture_type_id (id, expediture_types, expediture_types_minor),
+        kallikratis:kallikratis_id (id, kodikos_neou_ota, eidos_neou_ota, onoma_neou_ota, kodikos_perifereiakis_enotitas, perifereiaki_enotita, kodikos_perifereias, perifereia)
+      `).eq('project_id', projectId),
       supabase.from('event_types').select('*').limit(100),
       supabase.from('Monada').select('*').limit(50),
       supabase.from('kallikratis').select('*').limit(2000),
