@@ -1836,10 +1836,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // For now, filter by user's units to get relevant suggestions
         const userUnits = (req as any).user?.units || [];
         
+        // Use documents table instead of generated_documents which doesn't exist
         let query = supabase
-          .from('generated_documents')
+          .from('documents')
           .select('esdian, project_na853, expenditure_type')
-          .in('unit', userUnits)
           .not('esdian', 'is', null)
           .order('created_at', { ascending: false });
 
