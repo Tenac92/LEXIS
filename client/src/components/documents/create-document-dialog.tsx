@@ -1640,13 +1640,13 @@ export function CreateDocumentDialog({
 
   // Fix validation logic: Allow submission if validation is null/undefined (no validation needed)
   // Only block if validation explicitly says error or canCreate is false
-  const isSubmitDisabled =
-    validationResult?.status === "error" || 
-    (validationResult && validationResult.canCreate === false);
+  const isSubmitDisabled = validationResult?.status === "error" || (validationResult?.canCreate === false);
     
   // Debug validation issues
   console.log("[DocumentValidation] Validation result:", validationResult);
   console.log("[DocumentValidation] Submit disabled:", isSubmitDisabled);
+  console.log("[DocumentValidation] Recipients length:", recipients.length);
+  console.log("[DocumentValidation] Loading state:", loading);
   console.log("[DocumentValidation] Budget data:", budgetData);
   console.log("[DocumentValidation] Selected project ID:", selectedProjectId);
   console.log("[DocumentValidation] Form project ID:", formData.project_id);
@@ -3177,9 +3177,9 @@ export function CreateDocumentDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        className="max-w-5xl"
+        className="max-w-5xl max-h-[90vh] flex flex-col overflow-hidden"
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
           <DialogDescription>
             Φόρμα δημιουργίας νέου εγγράφου με βήματα για την επιλογή μονάδας,
@@ -3188,7 +3188,9 @@ export function CreateDocumentDialog({
         </DialogHeader>
         <StepIndicator currentStep={currentStep} />
         <Form {...form}>
-          <div className="space-y-6">{renderStepContent()}</div>
+          <div className="flex-1 overflow-y-auto">
+            <div className="space-y-6">{renderStepContent()}</div>
+          </div>
         </Form>
         {/* Hidden close button with ref for programmatic closing */}
         <DialogClose
