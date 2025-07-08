@@ -1,0 +1,62 @@
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared
+[CreateDocument] Project selection handler called with: null
+[CreateDocument] Project selection cleared

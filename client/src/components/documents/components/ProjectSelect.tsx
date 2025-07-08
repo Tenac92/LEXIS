@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, forwardRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, forwardRef, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -29,14 +29,22 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     const [isSearching, setIsSearching] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
     const { toast } = useToast();
+    const prevSelectedUnitRef = useRef<string>("");
 
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
-    // Reset search when unit changes
+    // Reset search when unit actually changes (not when function reference changes)
     useEffect(() => {
-      setSearchQuery("");
-      onProjectSelect(null);
-    }, [selectedUnit, onProjectSelect]);
+      if (prevSelectedUnitRef.current !== selectedUnit) {
+        console.log("[ProjectSelect] Unit changed from", prevSelectedUnitRef.current, "to", selectedUnit);
+        setSearchQuery("");
+        // Only clear selection if unit actually changed and we're not just initializing
+        if (prevSelectedUnitRef.current !== "" || !selectedUnit) {
+          onProjectSelect(null);
+        }
+        prevSelectedUnitRef.current = selectedUnit;
+      }
+    }, [selectedUnit]);
 
     const normalizeText = useCallback((text: string) => {
       return text
