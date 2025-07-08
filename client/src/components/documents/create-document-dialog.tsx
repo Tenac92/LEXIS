@@ -326,8 +326,11 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
     
+    // Convert selectedUnit to number for comparison since monada data uses numeric unit IDs
+    const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
+    
     return monada
-      .filter((unit: any) => unit.unit === selectedUnit && unit.director && unit.director.name)
+      .filter((unit: any) => unit.unit === selectedUnitNumber && unit.director && unit.director.name)
       .map((unit: any) => ({
         unit: unit.unit,
         director: unit.director
@@ -339,9 +342,12 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
     
+    // Convert selectedUnit to number for comparison since monada data uses numeric unit IDs
+    const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
+    
     const managers: any[] = [];
     monada.forEach((unit: any) => {
-      if (unit.unit === selectedUnit && unit.parts && typeof unit.parts === 'object') {
+      if (unit.unit === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
             managers.push({
