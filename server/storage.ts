@@ -247,52 +247,47 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // Apply unit-based access control by filtering budget history through user documents
+      // Apply unit-based access control - managers see data for projects in their units
       let allowedMisIds: number[] = [];
       if (userUnits && userUnits.length > 0) {
         console.log('[Storage] Applying unit-based access control for units:', userUnits);
         
-        // Get documents created by users from the same units to determine accessible MIS codes
-        console.log('[Storage] Searching for users with units overlapping:', userUnits);
+        // Find projects that belong to the user's units via project_index table
+        console.log('[Storage] Finding projects for user units:', userUnits);
         
-        // Fix JSONB array overlap query - use contains for each unit
-        let allUserIds: number[] = [];
-        for (const unit of userUnits) {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id, name, units')
-            .contains('units', [unit]);
-            
-          if (!userError && userData && userData.length > 0) {
-            const userIds = userData.map(u => u.id);
-            allUserIds.push(...userIds);
-          }
-        }
+        // Get unit IDs for the user's units
+        const { data: unitData, error: unitError } = await supabase
+          .from('Monada')
+          .select('id, unit_name')
+          .in('unit_name', userUnits);
         
-        // Remove duplicates
-        const uniqueUserIds = [...new Set(allUserIds)];
-        console.log('[Storage] Found users in same units:', uniqueUserIds.length, uniqueUserIds);
-        
-        if (uniqueUserIds.length > 0) {
-          console.log('[Storage] Found user IDs in same units:', uniqueUserIds);
+        if (!unitError && unitData && unitData.length > 0) {
+          const unitIds = unitData.map(u => u.id);
+          console.log('[Storage] Found unit IDs:', unitIds);
           
-          // Get budget history entries created by users from the same units
-          const { data: budgetData, error: budgetError } = await supabase
-            .from('budget_history')
-            .select('mis')
-            .in('created_by', uniqueUserIds);
-            
-          if (!budgetError && budgetData && budgetData.length > 0) {
-            const uniqueMisIds = new Set(budgetData.map(b => parseInt(b.mis)).filter(id => !isNaN(id)));
-            allowedMisIds = Array.from(uniqueMisIds);
-            console.log('[Storage] Found allowed MIS codes for units:', allowedMisIds.length, allowedMisIds);
+          // Get projects associated with these units
+          const { data: projectIndexData, error: projectIndexError } = await supabase
+            .from('project_index')
+            .select('DISTINCT Projects!inner(mis)')
+            .in('monada_id', unitIds);
+          
+          if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+            const projectMisIds = projectIndexData
+              .map(p => p.Projects?.mis)
+              .filter(mis => mis != null)
+              .map(mis => parseInt(String(mis)))
+              .filter(id => !isNaN(id));
+            allowedMisIds = [...new Set(projectMisIds)];
+            console.log('[Storage] Found allowed MIS codes for user units:', allowedMisIds.length, allowedMisIds);
           } else {
-            console.log('[Storage] No budget history found for unit users');
-            allowedMisIds = [-1]; // Use impossible MIS to ensure empty results
+            console.log('[Storage] No projects found for user units, allowing all budget history');
+            // If no projects found via unit association, don't restrict (show all)
+            allowedMisIds = [];
           }
         } else {
-          console.log('[Storage] No users found for units:', userUnits);
-          allowedMisIds = [-1]; // Use impossible MIS to ensure empty results
+          console.log('[Storage] No unit IDs found for units:', userUnits, ', allowing all budget history');
+          // If unit lookup fails, don't restrict (show all)
+          allowedMisIds = [];
         }
       }
       
