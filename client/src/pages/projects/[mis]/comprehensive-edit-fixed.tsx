@@ -589,10 +589,18 @@ export default function ComprehensiveEditFixed() {
             let connectedDecisions: string[] = [];
             if (formulation.connected_decision_ids && Array.isArray(formulation.connected_decision_ids)) {
               // Map decision IDs back to form indices by finding them in decisionsData
+              console.log(`[ConnectedDecisions] Processing for formulation ${formulation.sa_type}:`, {
+                connected_decision_ids: formulation.connected_decision_ids,
+                decisionsData_available: !!decisionsData,
+                decisionsData_length: decisionsData?.length || 0,
+                available_decision_ids: decisionsData?.map(d => d.id) || []
+              });
+              
               connectedDecisions = formulation.connected_decision_ids
                 .map((decisionId: number) => {
                   const decisionIndex = decisionsData?.findIndex((d: any) => d.id === decisionId);
-                  return decisionIndex !== -1 ? String(decisionIndex) : null;
+                  console.log(`[ConnectedDecisions] Mapping ID ${decisionId} to index ${decisionIndex}`);
+                  return decisionIndex !== -1 && decisionIndex !== undefined ? String(decisionIndex) : null;
                 })
                 .filter((index: string | null) => index !== null) as string[];
             }
@@ -600,7 +608,8 @@ export default function ComprehensiveEditFixed() {
             console.log(`[FormulationInit] Formulation ${formulation.sa_type}:`, {
               connected_decision_ids: formulation.connected_decision_ids,
               mapped_to_indices: connectedDecisions,
-              decisions_available: decisionsData?.length || 0
+              decisions_available: decisionsData?.length || 0,
+              final_connected_decisions: connectedDecisions
             });
 
             return {
