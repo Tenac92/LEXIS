@@ -357,7 +357,7 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       name: req.body.name?.trim() || null,
       email: req.body.email?.trim() || null,
       role: req.body.role?.trim() || null,
-      units: Array.isArray(req.body.units) ? req.body.units : [],
+      unit_id: Array.isArray(req.body.unit_id) ? req.body.unit_id : [],
       telephone: req.body.telephone?.trim() || null,
       department: req.body.department?.trim() || null
     };
@@ -369,9 +369,9 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       }
     });
 
-    // Ensure units is always an array
-    if (updateData.units && !Array.isArray(updateData.units)) {
-      updateData.units = [];
+    // Ensure unit_id is always an array
+    if (updateData.unit_id && !Array.isArray(updateData.unit_id)) {
+      updateData.unit_id = [];
     }
     
     // Only update password if it's provided
@@ -474,15 +474,15 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
 // Get users with matching units
 router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.user?.units || req.user.units.length === 0) {
+    if (!req.user?.unit_id || req.user.unit_id.length === 0) {
       return res.status(400).json({ message: 'User has no assigned units' });
     }
 
-    console.log('[Users] Fetching users with matching units for units:', req.user.units);
+    console.log('[Users] Fetching users with matching units for units:', req.user.unit_id);
     // Get all users except the current user
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, name, units, role')
+      .select('id, email, name, unit_id, role')
       .neq('id', req.user.id)  
       .order('name');
 
@@ -493,8 +493,8 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
 
     // Filter users to only include those that have at least one matching unit
     const filteredUsers = users?.filter(user => {
-      if (!user.units || !Array.isArray(user.units) || !req.user?.units) return false;
-      return user.units.some((unit: string) => req.user!.units!.includes(unit));
+      if (!user.unit_id || !Array.isArray(user.unit_id) || !req.user?.unit_id) return false;
+      return user.unit_id.some((unit: number) => req.user!.unit_id!.includes(unit));
     }) || [];
 
     console.log('[Users] Found matching users:', filteredUsers.length);

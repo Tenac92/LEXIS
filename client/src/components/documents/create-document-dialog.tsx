@@ -892,8 +892,10 @@ export function CreateDocumentDialog({
         
         // If the user only has access to one unit, track it for auto-selection
         let userSingleUnit = "";
-        if (user?.units?.length === 1) {
-          userSingleUnit = user.units[0];
+        if (user?.unit_id?.length === 1) {
+          // Convert unit ID to unit name by finding matching unit
+          const userUnitData = data.find((item: any) => item.id === user.unit_id[0]);
+          userSingleUnit = userUnitData?.unit || "";
         }
         
         const processedUnits = data.map((item: any) => {
@@ -906,7 +908,8 @@ export function CreateDocumentDialog({
           let unitId = item.id || item.unit || '';
           
           // Ensure the unit ID matches the expected format if it's abbreviated
-          if (user?.units?.includes(unitId) || Object.keys(unitAbbreviations).includes(unitId)) {
+          const userHasAccessToUnit = user?.unit_id?.includes(item.id);
+          if (userHasAccessToUnit || Object.keys(unitAbbreviations).includes(unitId)) {
             // Keep the unit ID as is - it's already in the correct format
           } else if (unitId.length > 20) {
             // For long unit IDs, try to find the abbreviated form
@@ -1003,7 +1006,12 @@ export function CreateDocumentDialog({
       console.log("[CreateDocument] Starting fresh document creation");
       
       // Don't reset the unit if user has one assigned - preserve auto-selection
-      const defaultUnit = user?.units && user.units.length > 0 ? user.units[0] : "";
+      let defaultUnit = "";
+      if (user?.unit_id && user.unit_id.length > 0) {
+        // Convert user's unit ID to unit name for form
+        const userUnitData = data.find((item: any) => item.id === user.unit_id[0]);
+        defaultUnit = userUnitData?.unit || "";
+      }
       
       // Reset form to default values for new document, but preserve unit
       form.reset({
@@ -1159,7 +1167,12 @@ export function CreateDocumentDialog({
     if (!user || !open) return;
     
     const currentUnit = form.getValues().unit;
-    const userUnit = user?.units?.[0];
+    // Convert user's unit ID to unit name for auto-selection
+    let userUnit = "";
+    if (user?.unit_id && user.unit_id.length > 0) {
+      const userUnitData = units.find((unit: any) => unit.id === user.unit_id[0]);
+      userUnit = userUnitData?.unit || "";
+    }
     
     // Auto-select if no unit is selected but user has a unit assigned
     if (!currentUnit && userUnit && !unitAutoSelectionRef.current.hasSelected) {

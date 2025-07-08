@@ -21,11 +21,11 @@ const router = Router();
  */
 router.get('/pending', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.user || !req.user.units) {
+    if (!req.user || !req.user.unit_id) {
       return res.status(401).json({ message: 'Μη εξουσιοδοτημένη πρόσβαση' });
     }
 
-    const notifications = await getPendingNotifications(req.user.units);
+    const notifications = await getPendingNotifications(req.user.unit_id);
     
     log(`[Notifications] Found ${notifications.length} pending notifications for user ${req.user.id}`, 'info');
     

@@ -43,10 +43,10 @@ export function UserDashboard() {
 
   // Get unit-specific dashboard stats for ΔΑΕΦΚ-ΚΕ
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats", user?.units?.[0]],
+    queryKey: ["/api/dashboard/stats", user?.unit_id?.[0]],
     retry: 2,
     refetchOnWindowFocus: false,
-    enabled: !!user?.units?.[0] // Only fetch when user has units
+    enabled: !!user?.unit_id?.[0] // Only fetch when user has units
   });
   
   // Query for user's recent documents with safe fallback
@@ -96,7 +96,7 @@ export function UserDashboard() {
   }
 
   // Calculate user's activity stats
-  const userUnits = user?.units || [];
+  const userUnits = user?.unit_id || [];
   const userUnitCounts = userUnits.reduce((acc: Record<string, number>, unit: string) => {
     acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
     return acc;

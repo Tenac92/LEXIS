@@ -88,7 +88,7 @@ export function Dashboard() {
     queryKey: ["/api/documents/user", "recent"],
     queryFn: async () => {
       try {
-        if (!user?.units || user.units.length === 0) return [];
+        if (!user?.unit_id || user.unit_id.length === 0) return [];
         
         const response = await fetch('/api/documents/user', {
           method: 'GET',
@@ -124,7 +124,7 @@ export function Dashboard() {
     },
     retry: 1,
     refetchOnWindowFocus: false,
-    enabled: !!user?.units && user.units.length > 0
+    enabled: !!user?.unit_id && user.unit_id.length > 0
   });
 
   // Make sure userDocs is always an array
@@ -151,7 +151,7 @@ export function Dashboard() {
   }
 
   // Calculate user's activity stats
-  const userUnits = user?.units || [];
+  const userUnits = user?.unit_id || [];
   const userUnitCounts = userUnits.reduce((acc: Record<string, number>, unit: string) => {
     acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
     return acc;

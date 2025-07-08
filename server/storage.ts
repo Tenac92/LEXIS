@@ -15,7 +15,7 @@ export interface IStorage {
     page?: number, 
     limit?: number, 
     changeType?: string,
-    userUnits?: string[],
+    userUnits?: number[],
     dateFrom?: string,
     dateTo?: string,
     creator?: string
@@ -241,7 +241,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: string[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
+  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
     try {
       console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
       

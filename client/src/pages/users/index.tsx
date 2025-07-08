@@ -295,7 +295,7 @@ export default function UsersPage() {
     // Convert unit IDs to unit abbreviations for storage in the database
     const modifiedData = {
       ...data,
-      units: data.units?.map((unitId) => {
+      unit_id: data.unit_id?.map((unitId) => {
         const unit = units.find(u => u.id === unitId);
         return unit ? unit.id : unitId; // Store abbreviation (id) instead of full name
       })
@@ -320,8 +320,8 @@ export default function UsersPage() {
       !search ||
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      (user.units && Array.isArray(user.units) && 
-        user.units.some(unit => 
+      (user.unit_id && Array.isArray(user.unit_id) && 
+        user.unit_id.some(unit => 
           typeof unit === 'string' && unit.toLowerCase().includes(search.toLowerCase())
         ));
 
@@ -416,7 +416,7 @@ export default function UsersPage() {
                     <TableCell>
                       <span className="capitalize">{user.role}</span>
                     </TableCell>
-                    <TableCell>{getDisplayUnits(user.units).join(", ") || "-"}</TableCell>
+                    <TableCell>{getDisplayUnits(user.unit_id).join(", ") || "-"}</TableCell>
                     <TableCell>{user.telephone || "-"}</TableCell>
                     <TableCell>{user.department || "-"}</TableCell>
                     <TableCell className="text-right flex justify-end space-x-1">
@@ -429,7 +429,7 @@ export default function UsersPage() {
                           setEditUserDialogOpen(true);
                           
                           // Map user's unit names to unit IDs for the form
-                          const userUnitIds = (user.units || []).map(unitName => {
+                          const userUnitIds = (user.unit_id || []).map(unitId => {
                             const unit = units.find(u => u.name === unitName);
                             return unit ? unit.id : "";
                           }).filter(id => id !== "");
