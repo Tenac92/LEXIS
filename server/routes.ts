@@ -1723,60 +1723,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return 4;
     };
     
-    // Set up specific budget routes first
-    // Budget history route - must be registered BEFORE the MIS lookup route
-    log('[Routes] Setting up budget history route...');
-    app.get('/api/budget/history', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        console.log('[Budget] Handling dedicated history endpoint request');
-        
-        // Check authentication
-        if (!req.user?.id) {
-          return res.status(401).json({
-            status: 'error',
-            message: 'Authentication required',
-            data: [],
-            pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-          });
-        }
-        
-        // Parse query parameters
-        const page = parseInt(req.query.page as string) || 1;
-        const limit = parseInt(req.query.limit as string) || 10;
-        const mis = req.query.mis as string | undefined;
-        const changeType = req.query.change_type as string | undefined;
-        const dateFrom = req.query.date_from as string | undefined;
-        const dateTo = req.query.date_to as string | undefined;
-        const creator = req.query.creator as string | undefined;
-        
-        // Get user units for access control
-        const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
-        
-        console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
-        
-        // Use the enhanced storage method with pagination and access control
-        const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnits, dateFrom, dateTo, creator);
-        
-        console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
-        
-        return res.json({
-          status: 'success',
-          data: result.data,
-          pagination: result.pagination,
-          statistics: result.statistics
-        });
-      } catch (error) {
-        console.error('[Budget] History fetch error:', error);
-        return res.status(500).json({
-          status: 'error',
-          message: 'Failed to fetch budget history',
-          details: error instanceof Error ? error.message : 'Unknown error',
-          data: [],
-          pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-        });
-      }
-    });
-    log('[Routes] Budget history route registered');
+    // Budget history route is now handled in routes/budget.ts to avoid conflicts
+    // Removed duplicate route definition
     
     // Budget history Excel export route
     app.get('/api/budget/history/export', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
@@ -1970,15 +1918,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/budget/upload', authenticateSession, budgetUploadRouter);
     log('[Routes] Budget upload routes setup complete');
     
-    // Allow public access to budget data by MIS for document creation
-    // Using our specialized controller function for MIS lookups
-    // This MUST come AFTER more specific routes like /api/budget/history
-    app.get('/api/budget/:mis', getBudgetByMis);
-    
     // Use authentication for all other budget routes
-    // This MUST come after more specific /api/budget/* routes
+    // This MUST come BEFORE the MIS lookup route to prevent conflicts
     app.use('/api/budget', authenticateSession, budgetRouter);
     log('[Routes] Main budget routes registered');
+    
+    // Allow public access to budget data by MIS for document creation
+    // Using our specialized controller function for MIS lookups
+    // This MUST come AFTER the budget router to avoid intercepting /history routes
+    app.get('/api/budget/:mis', getBudgetByMis);
 
     // Public monada data endpoint for signature selection
     app.get('/api/public/monada', async (req: Request, res: Response) => {

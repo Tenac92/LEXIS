@@ -254,10 +254,10 @@ router.get('/records', authenticateSession, async (req: AuthenticatedRequest, re
   }
 });
 
-// Get budget history with pagination
+// Get budget history with pagination and proper user unit filtering
 router.get('/history', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[Budget] Fetching budget history');
+    console.log('[Budget] Handling budget history request');
     
     // Check authentication
     if (!req.user?.id) {
@@ -269,40 +269,33 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
       });
     }
     
-    // Temporarily allow all authenticated users to access budget history
     console.log(`[Budget] User ${req.user.id} with role ${req.user.role} accessing budget history`);
-    
-    // Original role check (commented out for debugging)
-    /*
-    if (req.user.role !== 'admin' && req.user.role !== 'manager') {
-      console.log(`[Budget] Unauthorized access attempt by user ${req.user.id} with role ${req.user.role}`);
-      return res.status(403).json({
-        status: 'error',
-        message: 'Insufficient permissions to access budget history',
-        data: [],
-        pagination: { total: 0, page: 1, limit: 10, pages: 0 }
-      });
-    }
-    */
 
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const mis = req.query.mis as string | undefined;
     const changeType = req.query.change_type as string | undefined;
-
-    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}`);
+    const dateFrom = req.query.date_from as string | undefined;
+    const dateTo = req.query.date_to as string | undefined;
+    const creator = req.query.creator as string | undefined;
+    
+    // Get user units for access control - admins see all data, others see only their units
+    const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
+    
+    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
 
     try {
-      // Use the enhanced storage method with pagination
-      const result = await storage.getBudgetHistory(mis, page, limit, changeType);
+      // Use the enhanced storage method with pagination and user unit filtering
+      const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnits, dateFrom, dateTo, creator);
       
       console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
 
       return res.json({
         status: 'success',
         data: result.data,
-        pagination: result.pagination
+        pagination: result.pagination,
+        statistics: result.statistics
       });
     } catch (storageError) {
       console.error('[Budget] Error from storage.getBudgetHistory:', storageError);
