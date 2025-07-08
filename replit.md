@@ -187,6 +187,16 @@ This is a full-stack web application built for Greek government budget and docum
   - Project ID lookups are faster than text-based MIS lookups
   - Forms and modals now load instantly when data is cached
 
+### January 8, 2025 - Beneficiary Payments Table Schema Migration & Database Optimization
+- **MAJOR DATABASE IMPROVEMENT: Updated beneficiary_payments table to use proper foreign key relationships**
+- Replaced text fields (unit_code, na853_code, expenditure_type, protocol_number) with foreign key columns
+- **Enhanced Data Integrity:** Added foreign key constraints to unit_id, expediture_type_id, document_id, project_id
+- **Schema Benefits:** Proper relational design with references to Monada, expenditure_types, generated_documents, and Projects tables
+- **Migration Strategy:** Created SQL migration script for safe database schema update
+- **Code Updates:** Updated shared/schema.ts with new table structure and proper Drizzle ORM definitions
+- **Performance Improvement:** Foreign key relationships enable better query performance and data consistency
+- **Data Normalization:** Eliminated redundant text fields in favor of normalized ID-based relationships
+
 ### January 13, 2025 - Form Dropdown Investigation & Data Integrity
 - **Dropdown Issue Root Cause Identified:** Event Type, Implementing Agency, and Expenditure Type dropdowns showing empty not due to code bug
 - **Database Investigation Results:**

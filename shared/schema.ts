@@ -400,23 +400,24 @@ export const beneficiaries = pgTable("beneficiaries", {
 
 /**
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
- * Normalized financial data with proper relationships
+ * Normalized financial data with proper foreign key relationships
  */
 export const beneficiaryPayments = pgTable("beneficiary_payments", {
   id: serial("id").primaryKey(),
   beneficiary_id: integer("beneficiary_id")
-    .notNull()
     .references(() => beneficiaries.id, { onDelete: "cascade" }),
-  unit_code: text("unit_code").notNull(),
-  na853_code: text("na853_code").notNull(),
-  expenditure_type: text("expenditure_type").notNull(),
   installment: text("installment").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }),
   status: text("status").default("pending"),
-  protocol_number: text("protocol_number"),
   payment_date: date("payment_date"),
   created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
+  updated_at: timestamp("updated_at").defaultNow(),
+  
+  // Foreign key relationships
+  unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
+  expediture_type_id: integer("expediture_type_id").references(() => expenditureTypes.id),
+  document_id: bigint("document_id", { mode: "number" }).references(() => generatedDocuments.id),
+  project_id: integer("project_id").references(() => projects.id),
 });
 
 /**
@@ -765,11 +766,12 @@ export const insertBeneficiarySchema = createInsertSchema(beneficiaries, {
 export const insertBeneficiaryPaymentSchema = createInsertSchema(
   beneficiaryPayments,
   {
-    unit_code: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
-    na853_code: z.string().min(1, "Ο κωδικός NA853 είναι υποχρεωτικός"),
-    expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
     installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
     amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
+    unit_id: z.number().int().optional(),
+    expediture_type_id: z.number().int().optional(),
+    document_id: z.number().int().optional(),
+    project_id: z.number().int().optional(),
   },
 );
 
