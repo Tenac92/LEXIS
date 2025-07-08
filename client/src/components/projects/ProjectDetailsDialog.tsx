@@ -289,12 +289,15 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
+      <DialogContent 
+        className="max-w-5xl max-h-[90vh] flex flex-col"
+        aria-describedby="project-details-description"
+      >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold text-gray-800">
             Λεπτομέρειες Έργου: {safeText(projectData?.project_title)}
           </DialogTitle>
-          <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+          <div id="project-details-description" className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
             <span>MIS: {safeText(projectData?.mis)}</span>
             <span>•</span>
             <span>NA853: {safeText(projectData?.na853)}</span>
