@@ -737,8 +737,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 name: expenditureType.expediture_types
               } : null,
               enhanced_unit: {
-                id: targetMonada.id,
-                name: targetMonada.unit
+                id: targetUnitId,
+                name: monadaData.find(m => m.id === targetUnitId)?.unit || `Unit ${targetUnitId}`
               },
               // Add expenditure_types array for document creation dialog (includes fallback)
               expenditure_types: finalExpenditureTypes
