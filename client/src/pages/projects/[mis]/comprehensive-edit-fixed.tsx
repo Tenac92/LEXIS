@@ -698,12 +698,26 @@ export default function ComprehensiveEditFixed() {
                 const key = `${kallikratisData.region}-${kallikratisData.regionalUnit}-${kallikratisData.municipality}`;
                 
                 if (!locationDetailsMap.has(key)) {
+                  // Debug the values we're trying to set
+                  console.log('DEBUG - Location Detail Init:', {
+                    unitValue: unit?.unit || "",
+                    eventTypeValue: eventType?.name || "",
+                    kallikratisRegion: kallikratisData.region || "",
+                    expenditureTypeValue: expenditureType?.expediture_types || "",
+                    unitFromDB: unit,
+                    eventTypeFromDB: eventType
+                  });
+                  
+                  // For null values from database, try to get from enhanced project data
+                  const implementingAgencyValue = unit?.unit || typedProjectData.enhanced_unit?.unit || "";
+                  const eventTypeValue = eventType?.name || typedProjectData.enhanced_event_type?.name || "";
+                  
                   const locationDetail = {
                     municipality: kallikratisData.municipality || "",
                     regional_unit: kallikratisData.regionalUnit || "",
                     region: kallikratisData.region || "",
-                    implementing_agency: unit?.unit_name || typedProjectData.enhanced_unit?.name || "",
-                    event_type: eventType?.name || typedProjectData.enhanced_event_type?.name || "",
+                    implementing_agency: implementingAgencyValue,
+                    event_type: eventTypeValue,
                     expenditure_types: [] as string[],
                     geographic_level: geoInfo.level,
                     geographic_code: kallikratisData.geographic_code

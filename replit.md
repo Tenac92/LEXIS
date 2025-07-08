@@ -149,6 +149,18 @@ This is a full-stack web application built for Greek government budget and docum
   - Fixed "included" column field name mapping in project_decisions table for "Έχει συμπεριληφθεί" checkbox
 - **User Experience:** Forms load dramatically faster with complete data integrity and proper field population
 
+### January 13, 2025 - Form Dropdown Investigation & Data Integrity
+- **Dropdown Issue Root Cause Identified:** Event Type, Implementing Agency, and Expenditure Type dropdowns showing empty not due to code bug
+- **Database Investigation Results:**
+  - Project MIS 5174076 has null values for `enhanced_unit`, `enhanced_event_type`, and `event_type_id` in Projects table
+  - Project index entries have null values for `unit` and `event_type` fields
+  - Form dropdowns correctly show empty when database values are null
+- **Technical Analysis:**
+  - Dropdown components use correct value mapping: `unit.unit` for implementing agency, `eventType.name` for event type
+  - Form initialization properly handles null values with empty string fallbacks
+  - No code changes needed - form is working as designed for missing data
+- **Resolution:** When user selects values in these dropdowns and saves, the database will be updated with the selected values
+
 ### January 7, 2025 - Enhanced FEK UI & Decisions Population Fix
 - **FEK Field UI Enhancement:** Implemented enhanced user interface with proper dropdown controls
   - Issue dropdown with values Α, Β, Γ, Δ (replacing free text input)
