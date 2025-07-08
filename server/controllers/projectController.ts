@@ -493,6 +493,7 @@ router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
 // This endpoint was removed to prevent database column errors
 
 // Get complete project data in one call (optimized for performance)
+// This endpoint is public as it's used for read-only viewing
 router.get('/:mis/complete', async (req: Request, res: Response) => {
   try {
     const { mis } = req.params;

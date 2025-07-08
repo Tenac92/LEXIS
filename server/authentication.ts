@@ -51,7 +51,9 @@ export const PUBLIC_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
   '/api/auth/me',
-  '/api/users/units'
+  '/api/users/units',
+  '/api/projects', // Read-only project list endpoint
+  '/api/projects/*/complete' // Read-only project details endpoint
 ];
 
 // Maximum session age in milliseconds (24 hours)
@@ -113,7 +115,15 @@ export const authLimiter = rateLimit({
 export const authenticateSession = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     // Check if the request path is in the public routes list
-    const isPublicRoute = PUBLIC_ROUTES.some(route => req.path.startsWith(route));
+    const isPublicRoute = PUBLIC_ROUTES.some(route => {
+      // Handle wildcard routes
+      if (route.includes('*')) {
+        const pattern = route.replace('*', '[^/]+');
+        const regex = new RegExp(`^${pattern}$`);
+        return regex.test(req.path);
+      }
+      return req.path.startsWith(route);
+    });
     
     // Security: Minimal authentication logging
 
