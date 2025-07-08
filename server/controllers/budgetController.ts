@@ -107,7 +107,34 @@ export async function getBudgetByMis(req: Request, res: Response) {
     
     let budgetFound = false;
     
-    // ===== APPROACH 1: For alphanumeric codes, check Projects table to get numeric MIS =====
+    // ===== APPROACH 1: OPTIMIZED - For numeric values, try direct project_id lookup first =====
+    if (/^\d+$/.test(decodedMis)) {
+      console.log(`[Budget] OPTIMIZED: Attempting direct project_id lookup for: ${decodedMis}`);
+      
+      try {
+        // Try optimized project_id lookup first (integer index)
+        const { data: budgetData, error: budgetError } = await supabase
+          .from('project_budget')
+          .select('*')
+          .eq('project_id', parseInt(decodedMis))
+          .single();
+        
+        if (!budgetError && budgetData) {
+          console.log(`[Budget] ✓ OPTIMIZED SUCCESS: Found budget via project_id: ${decodedMis}`);
+          budgetFound = true;
+          return res.status(200).json({
+            status: 'success',
+            data: formatBudgetData(budgetData)
+          });
+        } else {
+          console.log(`[Budget] Optimized lookup failed, trying legacy MIS lookup for: ${decodedMis}`);
+        }
+      } catch (err) {
+        console.log(`[Budget] Optimized lookup error:`, err);
+      }
+    }
+    
+    // ===== APPROACH 2: For alphanumeric codes, check Projects table to get numeric MIS =====
     if (!/^\d+$/.test(decodedMis)) {
       console.log(`[Budget] Handling alphanumeric code: ${decodedMis}`);
       

@@ -55,41 +55,18 @@ export function useBudgetUpdates(
       }
 
       try {
-        // Fetching budget data for project
+        // Fetching budget data using optimized project_id lookup
+        console.log(`[Budget] Fetching budget for project identifier: ${projectId}`);
         
-        // Find the project to get its MIS
-        let projectData;
-        try {
-          // First, get all projects
-          const allProjects = await queryClient.fetchQuery({
-            queryKey: ["/api/projects"]
-          });
-          
-          // Project data fetched successfully
-          
-          // Find the specific project that matches either the ID or na853
-          if (Array.isArray(allProjects)) {
-            projectData = allProjects.find(
-              (p: any) => 
-                String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
-                String(p?.mis) === String(projectId)
-            );
-            // Found matching project for budget data
-          } else {
-            projectData = allProjects;
-          }
-        } catch (projectError) {
-          console.error(`[Budget] Error fetching project data for ID: ${projectId}`, projectError);
-          
-          // Store debug info about the error
-          const errorInfo = {
-            projectId: projectId,
-            error: projectError instanceof Error ? projectError.message : 'Unknown error',
-            timestamp: new Date().toISOString()
-          };
-          console.error('[Budget] Project fetch error info:', errorInfo);
-          
-          // Return empty budget data with error flag when we can't fetch project
+        // Use direct budget API call - the backend will handle project_id optimization
+        const budgetResponse = await fetch(`/api/budget/data/${projectId}`, {
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        if (!budgetResponse.ok) {
+          console.error(`[Budget] API request failed with status: ${budgetResponse.status}`);
+          // Return empty budget data structure on error
           return {
             user_view: 0,
             total_budget: 0,
@@ -101,84 +78,14 @@ export function useBudgetUpdates(
             total_spent: 0,
             available_budget: 0,
             quarter_available: 0,
-            yearly_available: 0,
-            _error: 'Σφάλμα κατά τη λήψη δεδομένων έργου. Δοκιμάστε ξανά αργότερα.'
+            yearly_available: 0
           };
         }
         
-        // Type checking and field extraction
-        const project = projectData as { mis?: string, na853?: string } | null | undefined;
+        // Parse the budget response
+        const responseData = await budgetResponse.json();
         
-        // Get the MIS from either the mis field or na853 field (for backward compatibility)
-        const misValue = project?.mis || project?.na853;
-        
-        if (!project || !misValue) {
-          console.error(`[Budget] Project or MIS not found for ID: ${projectId}`, project);
-          // Return empty budget instead of throwing - allow UI to still function
-          return {
-            user_view: 0,
-            total_budget: 0,
-            annual_budget: 0,
-            katanomes_etous: 0,
-            ethsia_pistosi: 0,
-            current_budget: 0,
-            q1: 0, q2: 0, q3: 0, q4: 0,
-            total_spent: 0,
-            available_budget: 0,
-            quarter_available: 0,
-            yearly_available: 0,
-            _error: 'Δεν βρέθηκε το MIS του έργου. Επιλέξτε έγκυρο έργο.'
-          };
-        }
-
-        // Fetch budget data from API - no need to convert to numeric MIS anymore
-        // The server-side has been updated to handle both numeric and alphanumeric MIS values
-        
-        // Fetching budget data for project's MIS
-        
-        // For MIS values with special characters or Greek letters, encode the URI component
-        const encodedMisValue = encodeURIComponent(misValue);
-        
-        // Use the correct endpoint path - this public endpoint doesn't require authentication
-        const response = await fetch(`/api/budget/data/${encodedMisValue}`);
-        
-        // Check if the response is ok before trying to parse JSON
-        if (!response.ok) {
-          console.error(`[Budget] API error: ${response.status} ${response.statusText}`);
-          // Try to get error details if possible
-          try {
-            const errorText = await response.text();
-            console.error('[Budget] Error response:', errorText);
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-          } catch (textError) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-          }
-        }
-        
-        // Check if the response is actually JSON before parsing
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          console.error(`[Budget] Received non-JSON response: ${contentType}`, response);
-          try {
-            const text = await response.text();
-            console.error('[Budget] Non-JSON response body:', text.substring(0, 500) + (text.length > 500 ? '...' : ''));
-            throw new Error(`Expected JSON response but received ${contentType || 'unknown content-type'}`);
-          } catch (textError) {
-            throw new Error(`Expected JSON response but received ${contentType || 'unknown content-type'}`);
-          }
-        }
-        
-        // Parse the response data
-        let responseData;
-        try {
-          responseData = await response.json();
-          // Received raw budget response from API
-        } catch (jsonError) {
-          console.error('[Budget] Failed to parse JSON response:', jsonError);
-          throw new Error('Invalid JSON response from server');
-        }
-      
-        // Extract data based on response structure
+        // Extract budget data based on response structure
         let budgetData: Record<string, any> = {}; 
         
         if (responseData?.status === 'success' && responseData.data) {
