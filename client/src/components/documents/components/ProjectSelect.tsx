@@ -260,7 +260,12 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
                         <CommandItem
                           key={project.id}
                           value={project.id}
-                          onSelect={() => handleProjectSelect(project)}
+                          onSelect={() => {
+                            console.log("[ProjectSelect] Project selected:", project);
+                            onProjectSelect(project);
+                            setIsFocused(false);
+                            setSearchQuery("");
+                          }}
                           className="flex flex-col items-start p-3 cursor-pointer hover:bg-gray-50"
                         >
                           <div className="flex justify-between w-full items-start">
