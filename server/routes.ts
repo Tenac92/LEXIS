@@ -162,12 +162,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // VERSION 2 DOCUMENT CREATION ENDPOINT - Direct access for client-side
     // This is the endpoint that the create-document-dialog.tsx component uses
     // TODO: Refactor - Move to DocumentsController and standardize with the v1 endpoint
-    app.post('/api/v2-documents', async (req: Request, res: Response) => {
+    app.post('/api/v2-documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE_V2] Document creation request with body:', req.body);
         
-        // Check if there's a session but don't require auth for testing
-        console.log('[DIRECT_ROUTE_V2] Session info:', (req as any).session);
+        if (!req.user?.id) {
+          return res.status(401).json({ message: 'Authentication required' });
+        }
+        
+        console.log('[DIRECT_ROUTE_V2] Authenticated user:', req.user.id);
         
         const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], region, esdian = [], director_signature } = req.body;
         
@@ -279,10 +282,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Log user authentication status
         console.log('[DIRECT_ROUTE_V2] User info for document creation:', {
-          hasSession: !!(req as any).session,
-          hasUser: !!(req as any).session?.user,
-          userId: (req as any).session?.user?.id,
-          userDepartment: (req as any).session?.user?.department
+          hasSession: !!req.user,
+          hasUser: !!req.user,
+          userId: req.user?.id,
+          userDepartment: req.user?.department
         });
 
         // Create document payload
@@ -296,8 +299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           total_amount: parseFloat(String(total_amount)) || 0,
           attachments: attachments || [],
           region: region || null, // Add region field
-          generated_by: (req as any).session?.user?.id || null, // Add user ID if available
-          department: (req as any).session?.user?.department || null, // Add department if available
+          generated_by: req.user?.id || null, // Add user ID if available
+          department: req.user?.department || null, // Add department if available
           esdian: esdian || [], // Add esdian fields for internal distribution
           director_signature: director_signature || null, // Add signature field from step 3
           created_at: now,
@@ -2215,6 +2218,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Use authentication for other units routes
     app.use('/api/units', authenticateSession, unitsRouter);
+    
+    // Public units endpoint for signature selection (doesn't require auth)
+    app.get('/api/public/units', async (req: Request, res: Response) => {
+      try {
+        console.log('[Routes] Public units endpoint requested');
+        
+        const { data: units, error } = await supabase
+          .from('Monada')
+          .select('*')
+          .order('unit');
+          
+        if (error) {
+          console.error('[Routes] Error fetching units:', error);
+          return res.status(500).json({ message: 'Failed to fetch units' });
+        }
+        
+        console.log(`[Routes] Successfully fetched ${units?.length || 0} units`);
+        res.json(units || []);
+      } catch (error) {
+        console.error('[Routes] Public units endpoint error:', error);
+        res.status(500).json({ message: 'Server error fetching units' });
+      }
+    });
     log('[Routes] Units routes registered');
     
     // Budget notifications routes
