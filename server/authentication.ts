@@ -138,7 +138,10 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
     }
 
     if (!req.session?.user?.id) {
-      // Security: Minimal logging without sensitive data
+      console.log('[Auth] No user in session for path:', req.path);
+      console.log('[Auth] Session ID:', req.sessionID);
+      console.log('[Auth] Session exists:', !!req.session);
+      console.log('[Auth] Session user:', req.session?.user);
       
       // Create an error object with status code to be handled by our error middleware
       const authError = new Error('Authentication required');
