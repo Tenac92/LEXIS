@@ -23,8 +23,8 @@ export async function getDashboardStats(req: Request, res: Response) {
     
     const { data: documentsData, error: documentsError } = await supabase
       .from('generated_documents')
-      .select('status, unit')
-      .eq('unit', primaryUnitId) // Only show documents from user's authorized unit (using unit ID)
+      .select('status, unit_id')
+      .eq('unit_id', primaryUnitId) // Only show documents from user's authorized unit (using unit ID)
       .order('created_at', { ascending: false });
 
     if (documentsError) {

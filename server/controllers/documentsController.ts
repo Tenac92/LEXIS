@@ -84,7 +84,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     // Create document with exact schema match and set initial status to pending
     const documentPayload = {
-      unit,
+      unit_id: parseInt(unit), // Convert unit to unit_id as integer
       mis: project_id, // This matches the 'mis' field in the database table
       project_na853: projectData.na853 || projectData.budget_na853, // Use na853 if available, otherwise fallback to budget_na853
       expenditure_type,
@@ -238,7 +238,7 @@ router.post('/v2', async (req: Request, res: Response) => {
     
     // Create document with exact schema match and default values where needed
     const documentPayload = {
-      unit,
+      unit_id: parseInt(unit), // Convert unit to unit_id as integer
       mis: project_id, // Explicitly set the MIS field to match project_id
       project_na853,
       expenditure_type,
@@ -289,7 +289,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     // Starting document fetch with filters
     const filters = {
-      unit: req.query.unit as string,
+      unit_id: req.query.unit ? parseInt(req.query.unit as string) : undefined,
       status: req.query.status as string,
       dateFrom: req.query.dateFrom as string,
       dateTo: req.query.dateTo as string,
@@ -305,8 +305,8 @@ router.get('/', async (req: Request, res: Response) => {
       .select('*');
 
     // Apply filters only if they exist
-    if (filters.unit) {
-      query = query.eq('unit', filters.unit);
+    if (filters.unit_id) {
+      query = query.eq('unit_id', filters.unit_id);
     }
     if (filters.status) {
       query = query.eq('status', filters.status);
@@ -355,9 +355,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     // Check if user has access to this document's unit
-    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-    //  return res.status(403).json({ error: 'Access denied to this document' });
-    //}
+    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit_id)) {
+      return res.status(403).json({ error: 'Access denied to this document' });
+    }
 
     res.json(document);
   } catch (error) {
@@ -468,12 +468,12 @@ router.patch('/generated/:id/protocol', async (req: AuthenticatedRequest, res: R
     }
 
     // Check if user has access to this document's unit
-    //if (req.user?.role === 'user' && !req.user.units?.includes(document.unit)) {
-    //  return res.status(403).json({
-    //    success: false,
-    //    message: 'Access denied to this document'
-    //  });
-    //}
+    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit_id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied to this document'
+      });
+    }
 
     // Update the document
     const updateData: any = {
@@ -618,7 +618,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
 
     // Create document with exact schema match and set initial status to pending
     const documentPayload = {
-      unit,
+      unit_id: parseInt(unit), // Convert unit to unit_id as integer
       mis: project_id, 
       project_na853,
       expenditure_type,
