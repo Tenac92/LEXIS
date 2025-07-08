@@ -2543,7 +2543,7 @@ export function CreateDocumentDialog({
                     </Button>
                   </div>
 
-                  <div className="space-y-3 max-h-[calc(70vh-150px)] overflow-y-auto pr-2">
+                  <div className="space-y-3">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
@@ -3187,11 +3187,11 @@ export function CreateDocumentDialog({
           </DialogDescription>
         </DialogHeader>
         <StepIndicator currentStep={currentStep} />
-        <Form {...form}>
-          <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
+          <Form {...form}>
             <div className="space-y-6">{renderStepContent()}</div>
-          </div>
-        </Form>
+          </Form>
+        </div>
         {/* Hidden close button with ref for programmatic closing */}
         <DialogClose
           ref={dialogCloseRef}
