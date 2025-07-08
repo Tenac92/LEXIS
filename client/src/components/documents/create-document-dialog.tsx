@@ -1631,6 +1631,10 @@ export function CreateDocumentDialog({
 
   const isSubmitDisabled =
     validationResult?.status === "error" || !validationResult?.canCreate;
+    
+  // Debug validation issues
+  console.log("[DocumentValidation] Validation result:", validationResult);
+  console.log("[DocumentValidation] Submit disabled:", isSubmitDisabled);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -2956,7 +2960,13 @@ export function CreateDocumentDialog({
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => form.handleSubmit(handleSubmit)()}
+                    onClick={() => {
+                      console.log("[DocumentSubmit] Submit button clicked");
+                      console.log("[DocumentSubmit] Recipients count:", recipients.length);
+                      console.log("[DocumentSubmit] Loading state:", loading);
+                      console.log("[DocumentSubmit] Recipients data:", recipients);
+                      form.handleSubmit(handleSubmit)();
+                    }}
                     disabled={loading || recipients.length === 0}
                   >
                     {loading ? (

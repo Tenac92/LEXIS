@@ -138,6 +138,10 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     }
     
     // Get the abbreviated unit code using the helper function
+    // Get user's unit name from the user data
+    const userFullUnitName = req.user?.unit_id && req.user.unit_id.length > 0 ? 
+      `Unit ${req.user.unit_id[0]}` : 'Unknown Unit';
+    
     const userUnit = await getUnitAbbreviation(userFullUnitName);
     
     console.log(`[Beneficiaries] User full unit name: "${userFullUnitName}"`);
