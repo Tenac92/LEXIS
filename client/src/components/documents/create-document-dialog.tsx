@@ -2379,7 +2379,12 @@ export function CreateDocumentDialog({
         });
 
         // Reset entire form after successful document creation
-        const defaultUnit = user?.units && user.units.length > 0 ? user.units[0] : "";
+        // Convert user's unit ID to unit name for form default
+        let defaultUnit = "";
+        if (user?.unit_id && user.unit_id.length > 0 && units.length > 0) {
+          const userUnitData = units.find((unit: any) => unit.id === user.unit_id[0]);
+          defaultUnit = userUnitData?.unit || "";
+        }
         
         form.reset({
           unit: defaultUnit,
@@ -2532,10 +2537,10 @@ export function CreateDocumentDialog({
     if (units?.length === 1) {
       console.log("[CreateDocument] Auto-selected the only available unit:", units[0].id);
       form.setValue("unit", units[0].id);
-    } else if (user?.units?.length === 1 && units?.length > 0) {
+    } else if (user?.unit_id?.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
-      const userUnit = user?.units?.[0] || "";
-      const matchingUnit = units.find((unit) => unit.id === userUnit);
+      const userUnitId = user?.unit_id?.[0] || "";
+      const matchingUnit = units.find((unit) => unit.id === userUnitId);
       if (matchingUnit) {
         console.log("[CreateDocument] Auto-selected user's unit:", matchingUnit.id);
         form.setValue("unit", matchingUnit.id);
@@ -2895,8 +2900,10 @@ export function CreateDocumentDialog({
                       {field.value && <p className="text-xs text-muted-foreground mt-1 font-medium">
                         Επιλεγμένη μονάδα: {Array.isArray(units) && units.length > 0 
                           ? (units.find((u: any) => u.id === field.value)?.name || 
-                             (user?.units?.length === 1 ? user.units[0] : field.value))
-                          : (user?.units?.length === 1 ? user.units[0] : field.value)}
+                             (user?.unit_id?.length === 1 ? 
+                               (units.find(u => u.id === user.unit_id[0])?.unit || field.value) : field.value))
+                          : (user?.unit_id?.length === 1 ? 
+                               (units.find(u => u.id === user.unit_id[0])?.unit || field.value) : field.value)}
                       </p>}
                     </FormItem>
                   )}
@@ -3521,11 +3528,13 @@ export function CreateDocumentDialog({
   
   useEffect(() => {
     // Only run this once to avoid infinite loops
-    if (user?.units?.length === 1 && !unitInitializedRef.current) {
+    if (user?.unit_id?.length === 1 && !unitInitializedRef.current) {
       unitInitializedRef.current = true;
       
       // Set the unit value immediately without delay
-      const unitValue = user.units[0];
+      // Convert user's unit ID to unit name for display
+      const userUnitData = units.find(u => u.id === user.unit_id[0]);
+      const unitValue = userUnitData?.unit || "";
       form.setValue("unit", unitValue, { 
         shouldDirty: false,
         shouldValidate: false

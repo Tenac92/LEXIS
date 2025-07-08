@@ -6,10 +6,10 @@ export async function getDashboardStats(req: Request, res: Response) {
     console.log('[Dashboard] Starting to fetch dashboard statistics...');
 
     // Get document counts filtered by user's unit - SECURITY CRITICAL
-    const userUnits = (req as any).user?.units || [];
-    const primaryUnit = userUnits[0];
+    const userUnitIds = (req as any).user?.unit_id || [];
+    const primaryUnitId = userUnitIds[0];
     
-    if (!primaryUnit) {
+    if (!primaryUnitId) {
       console.log('[Dashboard] No unit assigned to user');
       return res.status(200).json({
         totalDocuments: 0,
@@ -24,7 +24,7 @@ export async function getDashboardStats(req: Request, res: Response) {
     const { data: documentsData, error: documentsError } = await supabase
       .from('generated_documents')
       .select('status, unit')
-      .eq('unit', primaryUnit) // Only show documents from user's authorized unit
+      .eq('unit', primaryUnitId) // Only show documents from user's authorized unit (using unit ID)
       .order('created_at', { ascending: false });
 
     if (documentsError) {
@@ -61,7 +61,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       completed: completedDocuments
     };
     
-    console.log(`[Dashboard] Unit ${primaryUnit}: ${totalDocuments} total, ${pendingDocuments} pending, ${completedDocuments} completed`);
+    console.log(`[Dashboard] Unit ${primaryUnitId}: ${totalDocuments} total, ${pendingDocuments} pending, ${completedDocuments} completed`);
 
     // Calculate project stats with null safety
     const projectStats = {

@@ -93,13 +93,14 @@ export default function DocumentsPage() {
 
   // Ensure unit filter defaults to user's unit when authentication completes
   useEffect(() => {
-    if (user?.units?.[0] && !filters.unit) {
+    if (user?.unit_id?.[0] && !filters.unit) {
+      // Convert user's unit ID to unit name for filter
       setFilters(prev => ({
         ...prev,
-        unit: user.units[0]
+        unit: user.unit_id[0].toString() // Use unit ID as filter value
       }));
     }
-  }, [user?.units, filters.unit]);
+  }, [user?.unit_id, filters.unit]);
   
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -159,18 +160,18 @@ export default function DocumentsPage() {
         // Always enforce unit filter - users can only see their assigned units
         if (filters.unit) {
           // Verify the selected unit is in user's authorized units
-          if (user?.units?.includes(filters.unit)) {
+          if (user?.unit_id?.includes(parseInt(filters.unit))) {
             queryParams.append('unit', filters.unit);
           } else {
             // If unauthorized unit, default to first authorized unit
-            if (user?.units?.[0]) {
-              queryParams.append('unit', user.units[0]);
+            if (user?.unit_id?.[0]) {
+              queryParams.append('unit', user.unit_id[0].toString());
             }
           }
         } else {
           // If no unit selected, default to first authorized unit
-          if (user?.units?.[0]) {
-            queryParams.append('unit', user.units[0]);
+          if (user?.unit_id?.[0]) {
+            queryParams.append('unit', user.unit_id[0].toString());
           }
         }
         

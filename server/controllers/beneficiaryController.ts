@@ -129,8 +129,8 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     }
 
     // Get user's unit for filtering
-    const userFullUnitName = req.user?.units?.[0]; // Get first unit from user's units array
-    if (!userFullUnitName) {
+    const userUnitId = req.user?.unit_id?.[0]; // Get first unit ID from user's unit_id array
+    if (!userUnitId) {
       return res.status(403).json({
         success: false,
         message: 'Δεν βρέθηκε μονάδα για τον χρήστη'
@@ -288,8 +288,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       afm: req.body.afm ? parseInt(req.body.afm) : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
-      // Set unit from user's authenticated units
-      monada: req.user?.units?.[0] || req.body.monada
+      // Set unit from user's authenticated units (use unit ID)
+      monada: req.user?.unit_id?.[0] || req.body.monada
     };
 
     // If we have financial data, structure it properly for the oikonomika field
@@ -364,8 +364,8 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       afm: req.body.afm ? parseInt(req.body.afm) : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
-      // Set unit from user's authenticated units
-      monada: req.user?.units?.[0] || req.body.monada
+      // Set unit from user's authenticated units (use unit ID)
+      monada: req.user?.unit_id?.[0] || req.body.monada
     };
 
     // If we have financial data, structure it properly for the oikonomika field

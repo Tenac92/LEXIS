@@ -307,7 +307,7 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
       name: req.user.name,
       email: req.user.email,
       role: req.user.role,
-      units: req.user.units,
+      unit_id: req.user.unit_id,
       department: req.user.department,
       sessionID: req.sessionID
     });
@@ -393,7 +393,7 @@ export async function authenticateUser(email: string, password: string): Promise
       email: userData?.email,
       role: userData?.role,
       unit_id: userData?.unit_id,
-      units: userData?.units // Check if old field still exists
+      unit_id: userData?.unit_id // Use the new unit_id field
     });
 
     if (userError) {

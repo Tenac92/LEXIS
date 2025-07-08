@@ -58,7 +58,7 @@ const useUnitUsers = (userUnits: string[] | undefined) => {
         if (!response.ok) return [];
         const data = await response.json();
         return data.filter((user: any) => 
-          user.units && user.units.some((unit: string) => userUnits.includes(unit))
+          user.unit_id && user.unit_id.some((unitId: number) => userUnits.includes(unitId.toString()))
         );
       } catch (error) {
         console.error('Error fetching unit users:', error);
