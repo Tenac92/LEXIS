@@ -1588,6 +1588,20 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
       return res.status(404).json({ message: "Project not found" });
     }
 
+    // Get existing decisions for this project to map indices to IDs
+    const { data: existingDecisions, error: decisionsError } = await supabase
+      .from('project_decisions')
+      .select('id')
+      .eq('project_id', project.id)
+      .order('decision_sequence');
+
+    if (decisionsError) {
+      console.error(`[ProjectFormulations] Error fetching decisions for mapping:`, decisionsError);
+      return res.status(500).json({ message: "Failed to fetch decisions for mapping" });
+    }
+
+    console.log(`[ProjectFormulations] Found ${existingDecisions?.length || 0} decisions for mapping connected decisions`);
+
     // Delete existing formulations for this project
     const { error: deleteError } = await supabase
       .from('project_formulations')
@@ -1639,17 +1653,15 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
           change_type: formulation.change_type || 'Έγκριση',
           connected_decision_ids: Array.isArray(formulation.connected_decisions) 
             ? formulation.connected_decisions
-                .map((decision: string) => {
-                  // Extract decision ID from format "0--4588/Β/2021-" 
-                  if (typeof decision === 'string') {
-                    const parts = decision.split('--');
-                    if (parts.length > 0) {
-                      const idPart = parts[0];
-                      const parsedId = parseInt(idPart);
-                      return !isNaN(parsedId) ? parsedId : null;
-                    }
+                .map((indexStr: string) => {
+                  const index = parseInt(indexStr);
+                  if (!isNaN(index) && existingDecisions && index < existingDecisions.length) {
+                    const decisionId = existingDecisions[index]?.id;
+                    console.log(`[ProjectFormulations] Mapping connected decision index ${index} to ID ${decisionId}`);
+                    return decisionId;
                   }
-                  return typeof decision === 'number' ? decision : null;
+                  console.log(`[ProjectFormulations] Invalid connected decision index: ${indexStr}`);
+                  return null;
                 })
                 .filter((id: number | null) => id !== null)
             : [],
