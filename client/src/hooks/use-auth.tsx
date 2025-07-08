@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: userData.name || "Guest User",
             email: userData.email,
             role: userData.role,
-            units: userData.units || []
+            unit_id: userData.unit_id || []
           };
           
           return user;

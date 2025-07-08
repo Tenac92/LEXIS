@@ -1,0 +1,11 @@
+id,name,email,role,password,telephone,department,details,unit_id
+49,KONSTANTINOS KYRIAKOU,kkiriakou92@gmail.com,admin,$2b$10$PYu9ij.V07n2wyXRHeRCZ.zMrY6SxnnrORpO96UUQBt0M1me/W0jC,,,,[2]
+75,Νικόλαος Αποστόλου,napostolou@civilprotection.gr,admin,$2b$10$S3jUTN/6HIrRFvouLK4KMedwHDuXI8tTwN7aZ3CnCxqW.o48NlZx6,0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),,[2]
+76,Ιωάννης Αβραμόπουλος,iavramopoulos@civilprotection.gr,manager,$2b$10$eA7.rdxiw0n8XTEsieZUweD2qIOQpuMPSnIXCMeYe2lmksknhQXd6,0,ΤΜΗΜΑ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ & ΕΚΠΑΙΔΕΥΣΗΣ (Π.Α.Ε.),,[2]
+79,Δημήτριος Καραβίας,dkaravias@civilprotection.gr,user,$2b$10$LJmtODzUKekcWGlU4waCkuuD/NBcEtbbVSzCSL0/CJX3V9KpLusVy,2131331391,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""male"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}",[2]
+80,Νικόλαος Βεστάρχης,nvestarchis@civilprotection.gr,user,$2b$10$yskS.TlYSzEkLWzmUX5OQeLcRDz/lO7RcpBSMqFIOU6c5mG2J26mi,2131331388,ΤΜΗΜΑ ΕΠΟΠΤΕΙΑΣ ΚΑΙ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""male"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}",[2]
+83,Στεφανία Ανδριοπούλου,sandriopoulou@civilprotection.gr,user,$2b$10$kecNgK2d5dElXjHIoGyvb.pJh0Fvwyh0mpIq6E8pSXwUZc/8Kr5By,2610589115,,"{""gender"":""female"",""specialty"":""ΠΕ ΜΗΧΑΝΙΚΩΝ""}",[5]
+84,Δόλγυρα Αικατερίνη,kdolgyra@civilprotection.gr,user,$2b$10$EohZS4T8/4KfwdqjC78RpOoQHUazktdFIYF5Lj4mU7oPFKstMxL9G,2131331472,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}",[3]
+86,ΠΕΠΠΑ ΟΛΓΑ,opeppa@civilprotection.gr,manager,$2b$10$f9HcSO1YXXBVawM3et9.o.VlI8W0caYsiRuolnGXnMz0bQiDyD0t6,,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}",[3]
+87,Μπουλαμάτση Σοφία,sboulamatsi@civilprotection.gr,user,$2b$10$naX70.3Ti75qxEgPQgnl8OB1W9NBBPjFEMGLj0Cx2wAii60CNr/8W,2131331476,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}",[3]
+88,Άννα Μαρία Γεωργίου,amgeorgiou@civilprotection.gr,user,$2b$10$.xZYtZ/NbnaBcXYc8qSnL.0GSz9YjrnNf0NAMY0ZwCygDpg6BQOdi,2131331263,ΤΜΗΜΑ ΥΛΟΠΟΙΗΣΗΣ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ,"{""gender"":""female"",""specialty"":""ΠΕ ΔΙΟΙΚΗΤΙΚΩΝ""}",[3]

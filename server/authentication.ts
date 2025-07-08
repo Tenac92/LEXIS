@@ -427,7 +427,6 @@ export async function authenticateUser(email: string, password: string): Promise
       email: userData.email,
       name: userData.name,
       role: userData.role,
-      units: userData.units || [],
       unit_id: userData.unit_id || [],
       department: userData.department || undefined,
       telephone: userData.telephone || undefined,
@@ -730,7 +729,6 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
-        units: sessionUser.units,
         unit_id: sessionUser.unit_id,
         sessionID: req.sessionID
       });
@@ -741,7 +739,6 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name || '',
         email: sessionUser.email,
         role: sessionUser.role,
-        units: sessionUser.units || [],
         unit_id: sessionUser.unit_id || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,
