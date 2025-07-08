@@ -509,7 +509,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       <div className="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                           <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                            <span className="font-medium text-blue-700 block mb-2">Εθσια Πίστωση:</span>
+                            <span className="font-medium text-blue-700 block mb-2">Ετήσια Πίστωση:</span>
                             <p className="text-2xl font-bold text-blue-900">{formatCurrency(budgetInfo.ethsia_pistosi)}</p>
                           </div>
                           <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
@@ -547,14 +547,14 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                         </div>
                         
                         <div className="mt-6 flex items-center justify-between">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <span className="font-medium text-gray-700">Προβολή Χρήστη: </span>
-                              <span className="text-gray-900">{formatCurrency(budgetInfo.user_view)}</span>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                              <span className="font-medium text-purple-700 block mb-2">Υπόλοιπο Κατανομών:</span>
+                              <p className="text-xl font-semibold text-purple-900">{formatCurrency(budgetInfo.user_view)}</p>
                             </div>
-                            <div>
-                              <span className="font-medium text-gray-700">Τελευταίος Έλεγχος: </span>
-                              <Badge variant="secondary">{safeText(budgetInfo.last_quarter_check)}</Badge>
+                            <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                              <span className="font-medium text-gray-700 block mb-2">Τελευταίος Έλεγχος:</span>
+                              <Badge variant="secondary" className="text-sm">{safeText(budgetInfo.last_quarter_check)}</Badge>
                             </div>
                           </div>
                           <div className="text-sm text-gray-500">
