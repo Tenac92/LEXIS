@@ -42,7 +42,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
       if (!project.mis) return null;
       
       try {
-        const response = await apiRequest(`/api/budget/${encodeURIComponent(project.mis)}`);
+        const response = await apiRequest(`/api/budget/lookup/${encodeURIComponent(project.mis)}`);
         if (!response || (typeof response === 'object' && 'status' in response && response.status === 'error')) {
           return null;
         }

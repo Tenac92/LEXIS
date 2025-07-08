@@ -1925,8 +1925,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Allow public access to budget data by MIS for document creation
     // Using our specialized controller function for MIS lookups
-    // This MUST come AFTER the budget router to avoid intercepting /history routes
-    app.get('/api/budget/:mis', getBudgetByMis);
+    // Moved to /lookup endpoint to avoid conflicts with /history routes
+    app.get('/api/budget/lookup/:mis', getBudgetByMis);
 
     // Public monada data endpoint for signature selection
     app.get('/api/public/monada', async (req: Request, res: Response) => {

@@ -159,7 +159,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
 
   // Additional budget query for now (can be integrated into complete endpoint later)
   const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery({
-    queryKey: [`/api/budget/${projectMis}`],
+    queryKey: [`/api/budget/lookup/${projectMis}`],
     enabled: !!projectMis && open,
     retry: 1,
     staleTime: 30 * 60 * 1000, // 30 minutes cache

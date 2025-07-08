@@ -39,7 +39,7 @@ async function testBudgetLookup() {
     
     try {
       // Make the API request
-      const url = `${BASE_URL}/api/budget/${encodeURIComponent(testCase.mis)}`;
+      const url = `${BASE_URL}/api/budget/lookup/${encodeURIComponent(testCase.mis)}`;
       console.log(`Request URL: ${url}`);
       
       const response = await fetch(url);
