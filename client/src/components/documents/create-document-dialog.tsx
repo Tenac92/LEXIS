@@ -235,13 +235,12 @@ export function CreateDocumentDialog({
         // Get current values directly from the form
         const formValues = form.getValues();
         
-        // Removed debug logging for better performance
+        // Preserve form state during step transitions
         
         // Create a timeout to push these updates outside the current render cycle
         // This prevents the Maximum update depth exceeded error
         setTimeout(() => {
-          // Always save ALL form field values to context before changing steps
-          // This is the critical fix for the unit reset issue
+          // Save form values to context during step changes
           updateFormData({
             unit: formValues.unit,
             project_id: formValues.project_id,
@@ -689,7 +688,7 @@ export function CreateDocumentDialog({
     
     // Auto-select if no unit is selected but user has a unit assigned
     if (!currentUnit && userUnit && !unitAutoSelectionRef.current.hasSelected) {
-      console.log("[CreateDocument] Auto-selected user's unit:", userUnit);
+      // Auto-selected user's unit
       
       // Set in form with immediate effect
       form.setValue("unit", userUnit, { shouldValidate: false });
@@ -705,7 +704,7 @@ export function CreateDocumentDialog({
         const currentValue = form.getValues().unit;
         if (!currentValue || currentValue !== userUnit) {
           form.setValue("unit", userUnit, { shouldValidate: false });
-          console.log("[CreateDocument] Re-enforced unit selection:", userUnit);
+          // Re-enforced unit selection
         }
       }, 500);
     }
@@ -715,7 +714,7 @@ export function CreateDocumentDialog({
         unitAutoSelectionRef.current.selectedUnit && 
         !currentUnit) {
       form.setValue("unit", unitAutoSelectionRef.current.selectedUnit, { shouldValidate: false });
-      console.log("[CreateDocument] Restored cleared unit:", unitAutoSelectionRef.current.selectedUnit);
+      // Restored cleared unit
     }
   }, [user, open, form]);
   
@@ -817,24 +816,13 @@ export function CreateDocumentDialog({
   // Effect to trigger form sync when state changes - COMPLETELY DISABLED TO PREVENT INFINITE LOOP
   // The form state will only sync when explicitly called by user actions (form submission, step changes)
   // This prevents the circular dependency that was causing infinite re-renders
-  /*
-  useEffect(() => {
-    // This useEffect was causing infinite loops - disabled
-    // Form sync now happens only on explicit user actions
-  }, []);
-  */
+  // Removed redundant useEffect that was disabled and causing infinite loops
 
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
 
-  // Debug log only occasionally to reduce console noise
-  useEffect(() => {
-    if (recipients.length > 0) {
-      // Only log when recipients change and at a reasonable frequency
-      // Recipients updated in budget form
-    }
-  }, [recipients.length]);
+  // Removed redundant logging useEffect for recipients updates
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
@@ -1174,11 +1162,8 @@ export function CreateDocumentDialog({
             
             // Updating form context with modified recipient data
             
-            // Update form context directly with this single change
-            // but don't trigger the normal useEffect
-            updateFormData({
-              recipients: manuallyUpdatedRecipients
-            });
+            // Update form context with updated recipients
+            updateFormData({ recipients: manuallyUpdatedRecipients });
           }
         }, 100);
       } finally {
@@ -1927,7 +1912,7 @@ export function CreateDocumentDialog({
         // Reset to first step
         setCurrentStep(0);
         
-        console.log("[CreateDocument] Form completely reset after successful document creation");
+        // Form completely reset after successful document creation
         
         // Force close the dialog
         onClose();
@@ -2048,14 +2033,14 @@ export function CreateDocumentDialog({
     
     // Auto-select unit based on available options (stabilized to prevent infinite loops)
     if (units?.length === 1) {
-      console.log("[CreateDocument] Auto-selected the only available unit:", units[0].id);
+      // Auto-selected the only available unit
       form.setValue("unit", units[0].id);
     } else if (user?.unit_id?.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
       const userUnitId = user?.unit_id?.[0] || "";
       const matchingUnit = units.find((unit) => unit.id === userUnitId);
       if (matchingUnit) {
-        console.log("[CreateDocument] Auto-selected user's unit:", matchingUnit.id);
+        // Auto-selected user's unit
         form.setValue("unit", matchingUnit.id);
       }
     }
@@ -2094,7 +2079,7 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        // Handle the nested structure of the response
+        // Handle the actual API response format
         try {
           let processedRegions: Array<{
             id: string;
@@ -2103,99 +2088,41 @@ export function CreateDocumentDialog({
           }> = [];
           const typedResponse = response as Record<string, any>;
 
-          // Handle object with nested arrays
-          if (typedResponse.region && Array.isArray(typedResponse.region)) {
-            console.log(
-              "Processing region data with format:",
-              typeof typedResponse.region[0],
-            );
-
-            // Handle case where typedResponse.region contains region objects
-            if (
-              typedResponse.region.length > 0 &&
-              typeof typedResponse.region[0] === "object"
-            ) {
-              // Extract and flatten the regional_unit values if available
-              for (const regionItem of typedResponse.region as Record<
-                string,
-                any
-              >[]) {
-                if (
-                  regionItem.regional_unit &&
-                  Array.isArray(regionItem.regional_unit)
-                ) {
-                  // Process regional_unit values first (preferred)
-                  for (const unit of regionItem.regional_unit as string[]) {
-                    if (typeof unit === "string" && unit.trim()) {
-                      processedRegions.push({
-                        id: unit,
-                        name: unit,
-                        type: "regional_unit",
-                      });
-                    }
+          // Handle the standard regions API response format: {"regions": [...]}
+          if (typedResponse.regions && Array.isArray(typedResponse.regions)) {
+            // Processing regions from API response
+            
+            for (const regionItem of typedResponse.regions) {
+              if (regionItem && typeof regionItem === "object") {
+                // Extract region information based on available fields
+                const regionName = regionItem.name || regionItem.regional_unit || regionItem.region;
+                const regionId = regionItem.id || regionName;
+                
+                if (regionName) {
+                  // Determine type based on the level field or available data
+                  let regionType = "region";
+                  if (regionItem.level === "municipality" || regionItem.regional_unit) {
+                    regionType = "regional_unit";
                   }
-                }
-
-                // If no regional_unit found, fall back to region values
-                if (
-                  processedRegions.length === 0 &&
-                  regionItem.region &&
-                  Array.isArray(regionItem.region)
-                ) {
-                  for (const region of regionItem.region as string[]) {
-                    if (typeof region === "string" && region.trim()) {
-                      processedRegions.push({
-                        id: region,
-                        name: region,
-                        type: "region",
-                      });
-                    }
-                  }
-                }
-              }
-            }
-            // Handle case where typedResponse.region is a direct array of strings
-            else if (
-              typedResponse.region.length > 0 &&
-              typeof typedResponse.region[0] === "string"
-            ) {
-              for (const region of typedResponse.region as string[]) {
-                if (typeof region === "string" && region.trim()) {
+                  
                   processedRegions.push({
-                    id: region,
-                    name: region,
-                    type: "region",
+                    id: String(regionId),
+                    name: String(regionName),
+                    type: regionType,
                   });
                 }
               }
             }
           }
 
-          // Also check for regional_unit at the top level
-          if (
-            processedRegions.length === 0 &&
-            typedResponse.regional_unit &&
-            Array.isArray(typedResponse.regional_unit)
-          ) {
-            for (const unit of typedResponse.regional_unit as string[]) {
-              if (typeof unit === "string" && unit.trim()) {
-                processedRegions.push({
-                  id: unit,
-                  name: unit,
-                  type: "regional_unit",
-                });
-              }
-            }
-          }
-
-          // If we found any regions in any format, return them
+          // If we found any regions, return them
           if (processedRegions.length > 0) {
-            console.log("Processed region data:", processedRegions);
+            // Successfully processed region data
             return processedRegions;
           }
 
           // No valid regions were found
-          console.log("No regions found for project:", project.mis);
+          // No regions found for project
           return [];
         } catch (err) {
           console.error("Error processing region data:", err);
@@ -2222,7 +2149,7 @@ export function CreateDocumentDialog({
   const handleNext = async () => {
     try {
       // SIMPLIFIED: Basic validation only - allow more flexible navigation
-      console.log("[CreateDocument] Moving to next step from:", currentStep);
+      // Moving to next step
       
       // Save current form state before proceeding
       const formValues = form.getValues();
@@ -2312,7 +2239,7 @@ export function CreateDocumentDialog({
   };
 
   const handlePrevious = () => {
-    console.log("[CreateDocument] Moving to previous step from:", currentStep);
+    // Moving to previous step
     
     // Save form state when going back
     const formValues = form.getValues();
@@ -2444,7 +2371,7 @@ export function CreateDocumentDialog({
                         <ProjectSelect
                           selectedUnit={selectedUnit || ""}
                           onProjectSelect={(project) => {
-                            console.log("[CreateDocument] Project selection handler called with:", project);
+                            // Project selection handler called
                             
                             if (project) {
                               // Update the form field
@@ -2456,7 +2383,7 @@ export function CreateDocumentDialog({
                                 project_id: project.id
                               });
                               
-                              console.log("[CreateDocument] Project selected successfully:", project.id);
+                              // Project selected successfully
                             } else {
                               // Clear selection
                               field.onChange("");
@@ -2465,7 +2392,7 @@ export function CreateDocumentDialog({
                                 project_id: ""
                               });
                               
-                              console.log("[CreateDocument] Project selection cleared");
+                              // Project selection cleared
                             }
                           }}
                           value={field.value}
@@ -3089,7 +3016,7 @@ export function CreateDocumentDialog({
         unitInitializationRef.current.defaultUnit = unitValue;
       }
       
-      console.log("[CreateDocument] Auto-selected the only available unit:", unitValue);
+      // Auto-selected the only available unit
     }
   }, [user?.units]); // Removed form, formData, updateFormData from dependencies
 
@@ -3113,20 +3040,7 @@ export function CreateDocumentDialog({
     }
   }, [selectedProjectId, currentAmount, broadcastUpdate]);
 
-  // Add budget debugging effect
-  useEffect(() => {
-    // This is a safe place to log budget data (won't cause React rendering issues)
-    console.log("[Budget Debug] budgetData state:", {
-      available: !!budgetData,
-      currentStep,
-      projectId: selectedProjectId,
-      currentAmount,
-    });
-
-    if (budgetData) {
-      console.log("[Budget Debug] Budget data details:", budgetData);
-    }
-  }, [budgetData, currentStep, selectedProjectId, currentAmount]);
+  // Budget data availability tracking (removed excessive logging for performance)
 
   // Add an effect for enhanced dialog close handling with form state preservation
   useEffect(() => {
@@ -3149,11 +3063,7 @@ export function CreateDocumentDialog({
           esdian_field2: formValues.esdian_field2 || ""
         });
         
-        console.log("[CreateDocument] Form state preserved on dialog close:", {
-          expenditure_type: formValues.expenditure_type,
-          project_id: formValues.project_id,
-          step: currentStep
-        });
+        // Form state preserved on dialog close
       } catch (error) {
         console.error("[CreateDocument] Error preserving form state on close:", error);
       }
@@ -3222,11 +3132,7 @@ export function CreateDocumentDialog({
           esdian_field2: formValues.esdian_field2 || ""
         });
         
-        console.log("[CreateDocument] Form state preserved on dialog close (click outside):", {
-          expenditure_type: formValues.expenditure_type,
-          project_id: formValues.project_id,
-          step: currentStep
-        });
+        // Form state preserved on dialog close (click outside)
       } catch (error) {
         console.error("[CreateDocument] Error preserving form state on dialog close:", error);
       }
