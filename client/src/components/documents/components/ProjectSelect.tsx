@@ -38,11 +38,6 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       onProjectSelect(null);
     }, [selectedUnit, onProjectSelect]);
 
-    const selectedProject = useMemo(() => 
-      projects?.find(p => p.id === value) || null,
-      [projects, value]
-    );
-
     const normalizeText = useCallback((text: string) => {
       return text
         .toLowerCase()
@@ -119,6 +114,11 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         });
       }
     });
+
+    const selectedProject = useMemo(() => 
+      projects?.find(p => p.id === value) || null,
+      [projects, value]
+    );
 
     const filteredProjects = useMemo(() => {
       if (!projects || projects.length === 0) return [];
