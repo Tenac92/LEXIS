@@ -247,47 +247,29 @@ export class DatabaseStorage implements IStorage {
       
       const offset = (page - 1) * limit;
       
-      // Apply unit-based access control - managers see data for projects in their units
+      // Apply unit-based access control using unit_id array
       let allowedMisIds: number[] = [];
       if (userUnits && userUnits.length > 0) {
-        console.log('[Storage] Applying unit-based access control for units:', userUnits);
+        console.log('[Storage] Applying unit-based access control for unit IDs:', userUnits);
         
-        // Find projects that belong to the user's units via project_index table
-        console.log('[Storage] Finding projects for user units:', userUnits);
+        // Since userUnits is now unit_id array, we can use it directly
+        // Get projects associated with these unit IDs
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('DISTINCT Projects!inner(mis)')
+          .in('monada_id', userUnits);
         
-        // Get unit IDs for the user's units
-        const { data: unitData, error: unitError } = await supabase
-          .from('Monada')
-          .select('id, unit_name')
-          .in('unit_name', userUnits);
-        
-        if (!unitError && unitData && unitData.length > 0) {
-          const unitIds = unitData.map(u => u.id);
-          console.log('[Storage] Found unit IDs:', unitIds);
-          
-          // Get projects associated with these units
-          const { data: projectIndexData, error: projectIndexError } = await supabase
-            .from('project_index')
-            .select('DISTINCT Projects!inner(mis)')
-            .in('monada_id', unitIds);
-          
-          if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
-            const projectMisIds = projectIndexData
-              .map(p => p.Projects?.mis)
-              .filter(mis => mis != null)
-              .map(mis => parseInt(String(mis)))
-              .filter(id => !isNaN(id));
-            allowedMisIds = [...new Set(projectMisIds)];
-            console.log('[Storage] Found allowed MIS codes for user units:', allowedMisIds.length, allowedMisIds);
-          } else {
-            console.log('[Storage] No projects found for user units, allowing all budget history');
-            // If no projects found via unit association, don't restrict (show all)
-            allowedMisIds = [];
-          }
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectMisIds = projectIndexData
+            .map(p => p.Projects?.mis)
+            .filter(mis => mis != null)
+            .map(mis => parseInt(String(mis)))
+            .filter(id => !isNaN(id));
+          allowedMisIds = [...new Set(projectMisIds)];
+          console.log('[Storage] Found allowed MIS codes for unit IDs:', allowedMisIds.length, allowedMisIds);
         } else {
-          console.log('[Storage] No unit IDs found for units:', userUnits, ', allowing all budget history');
-          // If unit lookup fails, don't restrict (show all)
-          allowedMisIds = [];
+          console.log('[Storage] No projects found for unit IDs:', userUnits);
+          allowedMisIds = [-1]; // Use impossible MIS to ensure empty results
         }
       }
       

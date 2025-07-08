@@ -280,14 +280,14 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
     const dateTo = req.query.date_to as string | undefined;
     const creator = req.query.creator as string | undefined;
     
-    // Get user units for access control - admins see all data, others see only their units
-    const userUnits = req.user.role === 'admin' ? undefined : (req.user.units || undefined);
+    // Get user unit IDs for access control - admins see all data, others see only their units
+    const userUnitIds = req.user.role === 'admin' ? undefined : (req.user.unit_id || undefined);
     
-    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnits=${userUnits?.join(',') || 'admin'}`);
+    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnitIds=${userUnitIds?.join(',') || 'admin'}`);
 
     try {
-      // Use the enhanced storage method with pagination and user unit filtering
-      const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnits, dateFrom, dateTo, creator);
+      // Use the enhanced storage method with pagination and user unit ID filtering
+      const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnitIds, dateFrom, dateTo, creator);
       
       console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
 

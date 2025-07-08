@@ -50,6 +50,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: text("role").notNull().default("user"),
   units: text("units").array(),
+  unit_id: integer("unit_id").array(),
   department: text("department"),
   telephone: text("telephone"),
   descr: text("descr"),
