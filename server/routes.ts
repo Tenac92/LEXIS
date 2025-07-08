@@ -636,21 +636,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         console.log(`[ProjectsWorking] DEBUG: Sample project_index data:`, indexData.slice(0, 3));
         
-        // Filter projects by unit using project_index and Monada tables
-        const targetMonada = monadaData.find(m => m.unit === unitName);
-        if (!targetMonada) {
-          console.log(`[ProjectsWorking] Unit ${unitName} not found in Monada table`);
-          return res.json([]);
+        // Filter projects by unit using project_index directly
+        let targetUnitId;
+        if (/^\d+$/.test(unitName)) {
+          // If unitName is numeric, treat it as unit ID
+          targetUnitId = parseInt(unitName);
+          console.log(`[ProjectsWorking] Looking for unit ID: ${targetUnitId}`);
+        } else {
+          // If unitName is text, find the unit ID from Monada table
+          const targetMonada = monadaData.find(m => m.unit === unitName);
+          if (!targetMonada) {
+            console.log(`[ProjectsWorking] Unit ${unitName} not found in Monada table`);
+            console.log(`[ProjectsWorking] Available units:`, monadaData.map(m => ({ id: m.id, unit: m.unit })));
+            return res.json([]);
+          }
+          targetUnitId = targetMonada.id;
+          console.log(`[ProjectsWorking] Looking for unit name: ${unitName}, found ID: ${targetUnitId}`);
         }
         
-        console.log(`[ProjectsWorking] DEBUG: Target monada:`, targetMonada);
-        
-        // Find project IDs that belong to this unit
+        // Find project IDs that belong to this unit using project_index directly
         const unitProjectIds = indexData
-          .filter(idx => idx.monada_id === targetMonada.id)
+          .filter(idx => idx.monada_id === targetUnitId)
           .map(idx => idx.project_id);
         
-        console.log(`[ProjectsWorking] DEBUG: Found ${unitProjectIds.length} project IDs for unit ${unitName}`);
+        console.log(`[ProjectsWorking] DEBUG: Found ${unitProjectIds.length} project IDs for unit ${unitName} (ID: ${targetUnitId})`);
+        console.log(`[ProjectsWorking] DEBUG: Project IDs:`, unitProjectIds);
         
         // Get projects for this unit with enhanced data
         const filteredProjects = projects
