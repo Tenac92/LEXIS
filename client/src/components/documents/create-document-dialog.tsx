@@ -180,7 +180,7 @@ const signatureSchema = z.object({
 });
 
 const createDocumentSchema = z.object({
-  unit: z.string().min(1, "Η μονάδα είναι υποχρεωτική"),
+  unit: z.union([z.string(), z.number()]).transform(val => String(val)),
   project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
   region: z.string().optional(),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
@@ -287,7 +287,7 @@ export function CreateDocumentDialog({
   // CRITICAL FIX: Υλοποίηση σωστού συγχρονισμού του context με τη φόρμα
   // Διασφάλιση ότι οι τιμές που έρχονται από το context δεν θα χαθούν με χρήση useEffect
   const formDefaultValues = useMemo(() => ({
-    unit: formData.unit || "",
+    unit: formData.unit || 0,
     project_id: formData.project_id || "",
     region: formData.region || "",
     expenditure_type: formData.expenditure_type || "",
