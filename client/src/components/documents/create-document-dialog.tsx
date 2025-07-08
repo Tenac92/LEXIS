@@ -2441,10 +2441,10 @@ export function CreateDocumentDialog({
                       <FormItem className="flex flex-col">
                         <FormLabel>Έργο</FormLabel>
                         <ProjectSelect
+                          selectedUnit={selectedUnit || ""}
+                          onProjectSelect={(project) => field.onChange(project?.id || "")}
                           value={field.value}
-                          onChange={field.onChange}
-                          projects={projects}
-                          disabled={!selectedUnit || projectsLoading}
+                          placeholder="Επιλέξτε έργο..."
                         />
                         <FormMessage />
                       </FormItem>
