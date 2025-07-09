@@ -133,12 +133,16 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
  * Document creation route (V2)
  * Alternative endpoint with different input validation
  */
-router.post('/v2', async (req: Request, res: Response) => {
+router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[DocumentsController] V2 Document creation request with body:', req.body);
     
-    // Check if there's a session but don't require auth for testing
-    console.log('[DocumentsController] V2 Session info:', (req as any).session);
+    // Proper authentication check
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
     
     const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
     
