@@ -251,11 +251,51 @@ router.post('/v2', async (req: Request, res: Response) => {
       console.log('[DocumentsController] V2 Could not fetch director signature:', error);
     }
 
+    // Resolve project_index_id before creating document
+    let projectIndexId = null;
+    let actualProjectId = null;
+    
+    // Try to resolve project_id from na853 
+    try {
+      const { data: projectData, error: projectError } = await supabase
+        .from('Projects')
+        .select('id')
+        .eq('na853', project_na853)
+        .single();
+      
+      if (projectData) {
+        actualProjectId = projectData.id;
+        console.log('[DocumentsController] V2 Resolved project_id:', actualProjectId, 'from na853:', project_na853);
+      }
+    } catch (projectError) {
+      console.log('[DocumentsController] V2 Could not resolve project_id from na853:', project_na853, projectError);
+    }
+    
+    // Find existing project_index entry for this project and unit
+    if (actualProjectId) {
+      try {
+        const { data: projectIndexData } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('project_id', actualProjectId)
+          .eq('monada_id', parseInt(unit))
+          .limit(1);
+        
+        if (projectIndexData && projectIndexData.length > 0) {
+          projectIndexId = projectIndexData[0].id;
+          console.log('[DocumentsController] V2 Found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', unit);
+        }
+      } catch (indexError) {
+        console.log('[DocumentsController] V2 No project_index found for project_id:', actualProjectId, 'unit:', unit, 'Error:', indexError);
+      }
+    }
+
     // Create document with exact schema match and default values where needed
     const documentPayload = {
       unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
+      project_index_id: projectIndexId, // Add project_index_id to document
       status: 'pending', // Always set initial status to pending
       protocol_date: new Date().toISOString().split('T')[0], // Set current date
       protocol_number_input: `${Date.now()}`, // Generate protocol number
@@ -293,42 +333,8 @@ router.post('/v2', async (req: Request, res: Response) => {
     try {
       console.log('[DocumentsController] V2 Creating beneficiary payments for', formattedRecipients.length, 'recipients');
       
-      // First, resolve the actual project_id from the project lookup
-      let actualProjectId = null;
-      try {
-        const { data: projectData } = await supabase
-          .from('Projects')
-          .select('id')
-          .eq('na853', project_na853)
-          .single();
-        
-        if (projectData) {
-          actualProjectId = projectData.id;
-          console.log('[DocumentsController] V2 Resolved project_id:', actualProjectId, 'from na853:', project_na853);
-        }
-      } catch (projectError) {
-        console.log('[DocumentsController] V2 Could not resolve project_id from na853:', project_na853, projectError);
-      }
-      
-      // Then, try to find existing project_index entry for this project and unit
-      let projectIndexId = null;
-      if (actualProjectId) {
-        try {
-          const { data: projectIndexData } = await supabase
-            .from('project_index')
-            .select('id')
-            .eq('project_id', actualProjectId)
-            .eq('monada_id', parseInt(unit))
-            .limit(1);
-          
-          if (projectIndexData && projectIndexData.length > 0) {
-            projectIndexId = projectIndexData[0].id;
-            console.log('[DocumentsController] V2 Found existing project_index_id:', projectIndexId);
-          }
-        } catch (indexError) {
-          console.log('[DocumentsController] V2 No existing project_index found for project_id:', actualProjectId, 'unit:', unit, 'Error:', indexError);
-        }
-      }
+      // Use the project_index_id already resolved for the document
+      console.log('[DocumentsController] V2 Using project_index_id for payments:', projectIndexId);
       
       for (const recipient of formattedRecipients) {
         // Step 1: Look up or create beneficiary
