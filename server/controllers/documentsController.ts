@@ -240,7 +240,7 @@ router.post('/v2', async (req: Request, res: Response) => {
       const { data: monadaData } = await supabase
         .from('Monada')
         .select('director')
-        .eq('id', unit) // Use unit directly as string since monada.id is text
+        .eq('id', parseInt(unit)) // Parse unit as integer since monada.id is now bigint
         .single();
       
       if (monadaData && monadaData.director) {
@@ -253,7 +253,7 @@ router.post('/v2', async (req: Request, res: Response) => {
 
     // Create document with exact schema match and default values where needed
     const documentPayload = {
-      unit_id: String(unit), // Ensure unit is string to match monada.id type
+      unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
       status: 'pending', // Always set initial status to pending
@@ -288,10 +288,48 @@ router.post('/v2', async (req: Request, res: Response) => {
     
     console.log('[DocumentsController] V2 Document created successfully:', data.id);
     
-    // Create beneficiary payments for each recipient
+    // Create beneficiary payments for each recipient using project_index_id
     const beneficiaryPaymentsIds = [];
     try {
       console.log('[DocumentsController] V2 Creating beneficiary payments for', formattedRecipients.length, 'recipients');
+      
+      // First, resolve the actual project_id from the project lookup
+      let actualProjectId = null;
+      try {
+        const { data: projectData } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('na853', project_na853)
+          .single();
+        
+        if (projectData) {
+          actualProjectId = projectData.id;
+          console.log('[DocumentsController] V2 Resolved project_id:', actualProjectId, 'from na853:', project_na853);
+        }
+      } catch (projectError) {
+        console.log('[DocumentsController] V2 Could not resolve project_id from na853:', project_na853, projectError);
+      }
+      
+      // Then, try to find existing project_index entry for this project and unit
+      let projectIndexId = null;
+      if (actualProjectId) {
+        try {
+          const { data: projectIndexData } = await supabase
+            .from('project_index')
+            .select('id')
+            .eq('project_id', actualProjectId)
+            .eq('monada_id', parseInt(unit))
+            .limit(1)
+            .single();
+          
+          if (projectIndexData) {
+            projectIndexId = projectIndexData.id;
+            console.log('[DocumentsController] V2 Found existing project_index_id:', projectIndexId);
+          }
+        } catch (indexError) {
+          console.log('[DocumentsController] V2 No existing project_index found for project_id:', actualProjectId, 'unit:', unit);
+        }
+      }
       
       for (const recipient of formattedRecipients) {
         const beneficiaryPayment = {
@@ -300,8 +338,8 @@ router.post('/v2', async (req: Request, res: Response) => {
           amount: recipient.amount,
           status: 'pending',
           installment: recipient.installment,
-          unit_id: String(unit), // Ensure unit is string to match monada.id type
-          project_id: null, // Will need project lookup
+          unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
+          project_index_id: projectIndexId, // Use project_index.id for faster queries
           created_at: now,
           updated_at: now
         };

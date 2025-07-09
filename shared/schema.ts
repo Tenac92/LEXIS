@@ -289,7 +289,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   project_index_id: integer("project_index_id").references(
     () => projectIndex.id,
   ),
-  unit_id: text("unit_id").references(() => monada.id),
+  unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
 });
 
 /**
@@ -345,7 +345,7 @@ export const documentTemplates = pgTable("document_templates", {
  * Contains information about organizational units
  */
 export const monada = pgTable("Monada", {
-  id: text("id").primaryKey(),
+  id: bigint("id", { mode: "number" }).primaryKey(),
   unit: text("unit").notNull(),
   unit_name: jsonb("unit_name").notNull(),
   parts: jsonb("parts"),
@@ -405,6 +405,7 @@ export const beneficiaries = pgTable("beneficiaries", {
 /**
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
  * Enhanced normalized financial data with proper foreign key relationships
+ * Now references project_index.id for faster querying
  */
 export const beneficiaryPayments = pgTable(
   "beneficiary_payments",
@@ -421,15 +422,14 @@ export const beneficiaryPayments = pgTable(
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
 
-    // Enhanced foreign key relationships
-    unit_id: text("unit_id").references(() => monada.id),
-    expediture_type_id: integer("expediture_type_id").references(
-      () => expenditureTypes.id,
-    ),
+    // Enhanced foreign key relationships using project_index.id
+    unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
     document_id: bigint("document_id", { mode: "number" }).references(
       () => generatedDocuments.id,
     ),
-    project_id: integer("project_id").references(() => projects.id),
+    project_index_id: integer("project_index_id").references(
+      () => projectIndex.id,
+    ),
   },
   (table) => ({
     // Index on status for pending records performance optimization
@@ -461,28 +461,46 @@ export const userPreferences = pgTable("user_preferences", {
 /**
  * Project Index Table
  * Contains normalized project relationships with reference tables
+ * Enhanced with identity column for faster references
  */
 export const projectIndex = pgTable(
   "project_index",
   {
+    id: serial("id").primaryKey(), // Auto-increment identity column for fast references
     project_id: integer("project_id")
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
-    monada_id: integer("monada_id").references(() => monada.id),
-    kallikratis_id: integer("kallikratis_id").references(() => kallikratis.id),
+    monada_id: integer("monada_id")
+      .notNull()
+      .references(() => monada.id),
+    kallikratis_id: bigint("kallikratis_id", { mode: "number" })
+      .notNull()
+      .references(() => kallikratis.id),
     event_types_id: integer("event_types_id")
       .notNull()
       .references(() => eventTypes.id),
-    expediture_type_id: integer("expediture_type_id").notNull(),
+    expediture_type_id: integer("expediture_type_id")
+      .notNull()
+      .references(() => expenditureTypes.id),
     geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
   },
   (table) => ({
-    // Create unique constraint instead of primary key to allow NULL values
-    unique_project_entry: unique("project_index_unique").on(
+    // Create unique constraint on id
+    uniqueId: unique("project_index_id_key").on(table.id),
+    // Performance indexes
+    projectMonadaIndex: index("idx_project_index_project_monada").on(
       table.project_id,
       table.monada_id,
+    ),
+    kallikratisIndex: index("idx_project_index_kallikratis_id").on(
       table.kallikratis_id,
+    ),
+    projectIdIndex: index("idx_project_index_project_id").on(table.project_id),
+    monadaIdIndex: index("idx_project_index_monada_id").on(table.monada_id),
+    eventTypesIndex: index("idx_project_index_event_types_id").on(
       table.event_types_id,
+    ),
+    expenditureTypeIndex: index("idx_project_index_expediture_type_id").on(
       table.expediture_type_id,
     ),
   }),
