@@ -288,29 +288,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userDepartment: req.user?.department
         });
 
-        // Create document payload with normalized foreign key structure
+        // Create document payload with enhanced foreign key structure
         const documentPayload = {
           // Core document fields
           status: 'pending',
-          recipients: formattedRecipients, // Legacy field, will be phased out
           total_amount: parseFloat(String(total_amount)) || 0,
-          attachments: attachments || [],
-          region: region || null,
           esdian: esdian || [],
           director_signature: director_signature || null,
           created_at: now,
           updated_at: now,
           
-          // New normalized foreign key relationships
+          // Enhanced foreign key relationships
           generated_by: req.user?.id || null,
           unit_id: unit ? parseInt(unit) : null, // Foreign key to monada table
-          project_id: project_id ? parseInt(project_id) : null, // Foreign key to Projects table
-          mis: req.body.project_mis ? parseInt(req.body.project_mis) : parseInt(project_id), // Foreign key to Projects.mis
-          expediture_type_id: null, // Will be mapped from expenditure_type string later
+          project_index_id: null, // Will be populated after project index lookup
+          attachments_id: null, // Will be populated after attachment processing
           beneficiary_payments_id: [], // Will be populated after beneficiary processing
         };
         
-        console.log('[DIRECT_ROUTE_V2] Inserting document with payload:', documentPayload);
+        // Payload logging removed for cleaner console output
         
         // Insert into database - Use explicit ID generation with max+1 to avoid conflicts
         // First check if we need to handle a conflict case
@@ -323,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Get the max ID and add 1
         const newId = (maxIdData?.id || 0) + 100; // Add 100 to ensure we're well clear of any existing IDs
-        console.log('[DIRECT_ROUTE_V2] Found max ID:', maxIdData?.id, 'Using new ID:', newId);
+        // ID generation logging removed for cleaner console output
         
         // Create a copy of document payload with an explicit new ID
         const finalPayload = { 
@@ -331,22 +327,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: newId
         };
         
-        // Map expenditure_type to proper ID before insertion
-        let expenditureTypeId = null;
-        if (expenditure_type) {
-          const { data: expenditureTypeData, error: expenditureTypeError } = await supabase
-            .from('expediture_types')
+        // Map project to project_index_id for enhanced schema
+        let projectIndexId = null;
+        if (project_id) {
+          const { data: projectIndexData, error: projectIndexError } = await supabase
+            .from('project_index')
             .select('id')
-            .eq('name', expenditure_type)
+            .eq('project_id', parseInt(project_id))
             .single();
           
-          if (!expenditureTypeError && expenditureTypeData) {
-            expenditureTypeId = expenditureTypeData.id;
+          if (!projectIndexError && projectIndexData) {
+            projectIndexId = projectIndexData.id;
           }
         }
 
-        // Update the final payload with the proper expenditure type ID
-        finalPayload.expediture_type_id = expenditureTypeId;
+        // Update the final payload with the proper project index ID
+        finalPayload.project_index_id = projectIndexId;
 
         // Insert into database with explicit ID
         const { data, error } = await supabase
@@ -364,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        console.log('[DIRECT_ROUTE_V2] Document created successfully with ID:', data.id);
+        // Success logging removed for cleaner console output
         
         // Create or update beneficiaries in the Beneficiary table
         console.log('[DIRECT_ROUTE_V2] Starting beneficiary processing for recipients:', formattedRecipients.length);

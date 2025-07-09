@@ -21,7 +21,7 @@ export default router;
  */
 router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[DocumentsController] Document creation request received:', JSON.stringify(req.body));
+    // Request logging removed for cleaner console output
 
     if (!req.user?.id) {
       return res.status(401).json({ message: 'Authentication required' });
@@ -67,7 +67,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const kallikratisItem = projectIndexItems.length > 0 ? 
       kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
     
-    console.log('[DocumentsController] Retrieved project data:', projectData);
+    // Project data logging removed for cleaner console output
 
     // Format recipients data
     const formattedRecipients = recipients.map((r: any) => ({
@@ -82,27 +82,24 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     const now = new Date().toISOString();
 
-    // Create document with new normalized schema structure
+    // Create document with enhanced normalized schema structure
     const documentPayload = {
       // Core document fields
       status: 'pending',
-      recipients: formattedRecipients, // Legacy field, will be phased out
       total_amount: parseFloat(String(total_amount)) || 0,
-      attachments: attachments || [],
       esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
       created_at: now,
       updated_at: now,
       
-      // New normalized foreign key relationships
+      // Enhanced foreign key relationships
       generated_by: req.user.id,
       unit_id: parseInt(unit), // Foreign key to monada table
-      project_id: projectData.id, // Foreign key to Projects table
-      mis: parseInt(project_id), // Foreign key to Projects.mis
-      expediture_type_id: expenditureTypeData?.id || null, // Map to expenditure_types table
+      project_index_id: projectIndexItems.length > 0 ? projectIndexItems[0].id : null, // Foreign key to project_index table
+      attachments_id: null, // Will be populated after attachment processing
       beneficiary_payments_id: [], // Will be populated after beneficiary processing
     };
 
-    console.log('[DocumentsController] Document payload prepared:', documentPayload);
+    // Payload logging removed for cleaner console output
 
     // Insert into database
     const { data, error } = await supabase
@@ -120,7 +117,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    console.log('[DocumentsController] Document created successfully:', data.id);
+    // Success logging removed for cleaner console output
     res.status(201).json({ id: data.id });
   } catch (error) {
     console.error('[DocumentsController] Error creating document:', error);
