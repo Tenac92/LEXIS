@@ -283,9 +283,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   beneficiary_payments_id: integer("beneficiary_payments_id").array(),
 
   // Enhanced foreign key relationships
-  attachments_id: bigint("attachments_id", { mode: "number" }).references(
-    () => attachmentsRows.id,
-  ),
+  attachment_id: integer("attachment_id").array(), // Array of attachment IDs
   project_index_id: integer("project_index_id").references(
     () => projectIndex.id,
   ),
@@ -294,18 +292,12 @@ export const generatedDocuments = pgTable("generated_documents", {
 
 /**
  * Attachments Table
- * Stores document attachment metadata
+ * Stores attachment metadata with expenditure type associations
  */
 export const attachmentsRows = pgTable("attachments", {
-  id: serial("id").primaryKey(),
-  document_id: integer("document_id").notNull(),
-  file_path: text("file_path").notNull(),
-  file_name: text("file_name").notNull(),
-  file_type: text("file_type").notNull(),
-  file_size: integer("file_size"),
-  content_type: text("content_type"),
-  uploaded_by: integer("uploaded_by"),
-  created_at: timestamp("created_at").defaultNow(),
+  id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+  atachments: text("atachments"), // Note: keeping the typo from the database schema
+  expediture_type_id: integer("expediture_type_id").array(),
 });
 
 /**

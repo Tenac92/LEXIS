@@ -290,12 +290,38 @@ router.post('/v2', async (req: Request, res: Response) => {
       }
     }
 
+    // Process attachments: Convert selected attachment names to IDs
+    let attachmentIds = [];
+    if (attachments && attachments.length > 0) {
+      try {
+        // Get all attachments from database to map names to IDs
+        const { data: allAttachments, error: attachmentError } = await supabase
+          .from('attachments')
+          .select('id, atachments');
+        
+        if (attachmentError) {
+          console.error('[DocumentsController] V2 Error fetching attachments:', attachmentError);
+        } else {
+          // Map selected attachment names to IDs
+          attachmentIds = allAttachments
+            .filter(attachment => attachments.includes(attachment.atachments))
+            .map(attachment => attachment.id);
+          
+          console.log('[DocumentsController] V2 Selected attachments:', attachments);
+          console.log('[DocumentsController] V2 Mapped to attachment IDs:', attachmentIds);
+        }
+      } catch (error) {
+        console.error('[DocumentsController] V2 Error processing attachments:', error);
+      }
+    }
+
     // Create document with exact schema match and default values where needed
     const documentPayload = {
       unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
       project_index_id: projectIndexId, // Add project_index_id to document
+      attachment_id: attachmentIds, // Array of attachment IDs
       status: 'pending', // Always set initial status to pending
       protocol_date: new Date().toISOString().split('T')[0], // Set current date
       protocol_number_input: `${Date.now()}`, // Generate protocol number

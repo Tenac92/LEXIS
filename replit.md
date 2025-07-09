@@ -127,30 +127,29 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### January 13, 2025 - Document Creation Data Persistence Fix Complete
-- **CRITICAL DATA INTEGRITY FIXED: Resolved beneficiary_id and beneficiary_payments_id persistence issues**
-- **Beneficiary ID Linking Fix:**
-  - Fixed document creation controller to properly look up existing beneficiaries by AFM
-  - Added automatic beneficiary creation when AFM doesn't exist in database
-  - Enhanced beneficiary_payments table to properly link beneficiary_id instead of storing null values
-  - Improved error handling for beneficiary lookup and creation processes
-- **Payment ID Array Fix:**
-  - Fixed generated_documents table to properly store beneficiary_payments_id arrays
-  - Enhanced update logic to always populate payment arrays even when empty
-  - Added comprehensive error handling and logging for payment ID updates
-  - Resolved issue where documents had empty payment arrays despite successful payment creation
-- **Project Index Lookup Fix:**
-  - Fixed project_index lookup in document creation controller to handle multiple entries correctly
-  - Changed from `.single()` to `.limit(1)` to prevent failures when multiple project_index entries exist
-  - Enhanced error handling and logging for project_index resolution
-  - Ensured project_index_id is properly populated during payment creation
+### July 9, 2025 - Attachments Schema Update & Enhanced Document Creation
+- **ATTACHMENTS TABLE MODERNIZATION: Successfully updated to new schema with expenditure type integration**
+- **Schema Updates:**
+  - Updated attachments table to use `id bigint identity`, `atachments text`, `expediture_type_id integer[]`
+  - Changed generated_documents table from `attachments_id` to `attachment_id integer[]` for proper array support
+  - Enhanced document creation controller to map selected attachment names to attachment IDs
+  - Implemented proper attachment processing with database lookup and ID mapping
+- **Document Creation Enhancement:**
+  - Added attachment name-to-ID mapping during document creation
+  - Implemented proper attachment_id array saving in generated_documents table
+  - Enhanced attachment selection processing with error handling and logging
+  - Documents now properly store attachment relationships for reporting and auditing
+- **Project Index ID Population Fix:**
+  - Fixed project_index_id population in both generated_documents and beneficiary_payments tables
+  - Enhanced project resolution logic to properly find and use project_index entries
+  - Eliminated duplicate project lookups for better performance
+  - Added comprehensive logging for project_index_id resolution debugging
 - **Data Integrity Results:**
-  - All new documents now properly store beneficiary_payments_id arrays
-  - All new payments properly link to beneficiary records via beneficiary_id
-  - Project index relationships correctly established for faster queries
-  - Historical data preserved while new functionality works correctly
-  - Database foreign key relationships functioning as designed
-- **Testing Verification:** Fixed missing payments for Documents 500 and 700 with proper beneficiary linking
+  - All new documents now properly populate project_index_id (4 or 334 for test project)
+  - Attachment selections correctly mapped to attachment IDs and stored in database
+  - Beneficiary payments automatically link to project_index_id for optimized queries
+  - Enhanced foreign key relationships throughout document creation process
+- **Testing Verification:** Fixed automatic beneficiary payment creation with proper project_index_id linking
 
 ### January 7, 2025 - Performance Optimization: Unified API Endpoint & Complete Modal/Form Fixes
 - **MAJOR PERFORMANCE BREAKTHROUGH: Reduced form and modal loading time from 5+ seconds to sub-second**
