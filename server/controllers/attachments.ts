@@ -22,56 +22,56 @@ async function fetchAttachments(expenditureType: string) {
   console.log(`[Attachments] Fetching attachments for type: ${expenditureType}`);
   
   try {
-    // Try to fetch specific attachments for this expenditure type
-    const { data, error } = await supabase
-      .from('attachments')
-      .select('*')
-      .eq('expediture_type', expenditureType)  // Note the column name: expediture_type (without 'n')
+    // First, get the expenditure type ID
+    const { data: expenditureTypeData, error: expenditureTypeError } = await supabase
+      .from('expediture_types')
+      .select('id')
+      .eq('expediture_types', expenditureType)
       .single();
     
-    if (error) {
-      if (error.code !== 'PGRST116') { // Not found error is expected
-        console.error('[Attachments] Database error:', error);
-      }
-      console.log(`[Attachments] No attachments found for ${expenditureType}`);
-    }
-    
-    // Return specific attachments if found
-    if (data?.attachments) {
-      console.log(`[Attachments] Found attachments for ${expenditureType}`);
+    if (expenditureTypeError) {
+      console.log(`[Attachments] Expenditure type not found: ${expenditureType}`);
       return { 
         status: 'success',
-        attachments: data.attachments 
+        message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
+        attachments: []
       };
     }
     
-    // Try to fetch default attachments
-    console.log(`[Attachments] No specific attachments found for ${expenditureType}, using defaults`);
-    const { data: defaultData, error: defaultError } = await supabase
+    const expenditureTypeId = expenditureTypeData.id;
+    console.log(`[Attachments] Found expenditure type ID: ${expenditureTypeId} for ${expenditureType}`);
+    
+    // Fetch attachments that have this expenditure type ID in their array
+    const { data: attachmentsData, error: attachmentsError } = await supabase
       .from('attachments')
-      .select('*')
-      .eq('expediture_type', 'default')
-      .single();
+      .select('id, atachments, expediture_type_id')
+      .contains('expediture_type_id', [expenditureTypeId]);
     
-    if (defaultError) {
-      console.error('[Attachments] Error fetching default attachments:', defaultError);
-    }
-    
-    // Return default attachments if found
-    if (defaultData?.attachments) {
-      console.log('[Attachments] Using default attachments');
+    if (attachmentsError) {
+      console.error('[Attachments] Error fetching attachments:', attachmentsError);
       return { 
         status: 'success',
-        attachments: defaultData.attachments 
+        message: 'Σφάλμα κατά την εύρεση συνημμένων.',
+        attachments: DEFAULT_ATTACHMENTS
+      };
+    }
+    
+    if (attachmentsData && attachmentsData.length > 0) {
+      console.log(`[Attachments] Found ${attachmentsData.length} attachments for ${expenditureType}`);
+      const attachmentNames = attachmentsData.map(attachment => attachment.atachments);
+      
+      return { 
+        status: 'success',
+        attachments: attachmentNames
       };
     }
     
     // Return empty attachments with message if nothing found
-    console.log('[Attachments] Falling back to hardcoded default attachments');
+    console.log(`[Attachments] No attachments found for ${expenditureType}`);
     return { 
       status: 'success',
       message: 'Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης.',
-      attachments: DEFAULT_ATTACHMENTS
+      attachments: []
     };
     
   } catch (error) {

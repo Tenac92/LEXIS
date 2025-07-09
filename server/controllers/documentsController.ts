@@ -95,7 +95,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       generated_by: req.user.id,
       unit_id: parseInt(unit), // Foreign key to monada table
       project_index_id: projectIndexItems.length > 0 ? projectIndexItems[0].id : null, // Foreign key to project_index table
-      attachments_id: null, // Will be populated after attachment processing
+      attachment_id: [], // Will be populated after attachment processing
       beneficiary_payments_id: [], // Will be populated after beneficiary processing
     };
 
@@ -408,36 +408,73 @@ router.post('/v2', async (req: Request, res: Response) => {
           console.error('[DocumentsController] V2 Error during beneficiary lookup/creation:', beneficiaryError);
         }
         
-        // Step 2: Create beneficiary payment with proper beneficiary_id
+        // Step 2: Create separate beneficiary payment records for each installment
         if (beneficiaryId) {
-          const beneficiaryPayment = {
-            document_id: data.id,
-            beneficiary_id: beneficiaryId, // Now properly linked
-            amount: recipient.amount,
-            status: 'pending',
-            installment: recipient.installment,
-            unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
-            project_index_id: projectIndexId, // Use project_index.id for faster queries (can be null)
-            created_at: now,
-            updated_at: now
-          };
-          
-          console.log('[DocumentsController] V2 Inserting beneficiary payment:', beneficiaryPayment);
-          
-          const { data: paymentData, error: paymentError } = await supabase
-            .from('beneficiary_payments')
-            .insert([beneficiaryPayment])
-            .select('id')
-            .single();
-          
-          if (paymentError) {
-            console.error('[DocumentsController] V2 Error creating beneficiary payment:', paymentError);
-            console.error('[DocumentsController] V2 Error details:', paymentError.details);
-            console.error('[DocumentsController] V2 Error hint:', paymentError.hint);
-            console.error('[DocumentsController] V2 Error code:', paymentError.code);
+          // Check if recipient has installments array and amounts
+          if (recipient.installments && recipient.installmentAmounts) {
+            console.log('[DocumentsController] V2 Creating', recipient.installments.length, 'installment payments for', recipient.afm);
+            
+            // Create one payment record per installment
+            for (const installmentName of recipient.installments) {
+              const installmentAmount = recipient.installmentAmounts[installmentName];
+              
+              if (installmentAmount > 0) {
+                const beneficiaryPayment = {
+                  document_id: data.id,
+                  beneficiary_id: beneficiaryId,
+                  amount: installmentAmount,
+                  status: 'pending',
+                  installment: installmentName, // Use specific installment name
+                  unit_id: parseInt(unit),
+                  project_index_id: projectIndexId,
+                  created_at: now,
+                  updated_at: now
+                };
+                
+                console.log('[DocumentsController] V2 Creating installment payment:', installmentName, 'Amount:', installmentAmount);
+                
+                const { data: paymentData, error: paymentError } = await supabase
+                  .from('beneficiary_payments')
+                  .insert([beneficiaryPayment])
+                  .select('id')
+                  .single();
+                
+                if (paymentError) {
+                  console.error('[DocumentsController] V2 Error creating installment payment:', paymentError);
+                } else {
+                  beneficiaryPaymentsIds.push(paymentData.id);
+                  console.log('[DocumentsController] V2 Created installment payment:', paymentData.id, 'for', installmentName);
+                }
+              }
+            }
           } else {
-            beneficiaryPaymentsIds.push(paymentData.id);
-            console.log('[DocumentsController] V2 Created beneficiary payment:', paymentData.id, 'with beneficiary_id:', beneficiaryId);
+            // Fallback: create single payment record (legacy behavior)
+            const beneficiaryPayment = {
+              document_id: data.id,
+              beneficiary_id: beneficiaryId,
+              amount: recipient.amount,
+              status: 'pending',
+              installment: recipient.installment,
+              unit_id: parseInt(unit),
+              project_index_id: projectIndexId,
+              created_at: now,
+              updated_at: now
+            };
+            
+            console.log('[DocumentsController] V2 Creating single payment (fallback):', beneficiaryPayment);
+            
+            const { data: paymentData, error: paymentError } = await supabase
+              .from('beneficiary_payments')
+              .insert([beneficiaryPayment])
+              .select('id')
+              .single();
+            
+            if (paymentError) {
+              console.error('[DocumentsController] V2 Error creating single payment:', paymentError);
+            } else {
+              beneficiaryPaymentsIds.push(paymentData.id);
+              console.log('[DocumentsController] V2 Created single payment:', paymentData.id);
+            }
           }
         } else {
           console.error('[DocumentsController] V2 Cannot create payment: beneficiary_id is null for AFM:', recipient.afm);
