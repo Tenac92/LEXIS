@@ -234,21 +234,36 @@ router.post('/v2', async (req: Request, res: Response) => {
     
     const now = new Date().toISOString();
     
+    // Get director signature from Monada table
+    let directorSignature = null;
+    try {
+      const { data: monadaData } = await supabase
+        .from('Monada')
+        .select('director')
+        .eq('id', parseInt(unit))
+        .single();
+      
+      if (monadaData && monadaData.director) {
+        directorSignature = monadaData.director;
+        console.log('[DocumentsController] V2 Found director signature:', directorSignature);
+      }
+    } catch (error) {
+      console.log('[DocumentsController] V2 Could not fetch director signature:', error);
+    }
+
     // Create document with exact schema match and default values where needed
     const documentPayload = {
       unit_id: parseInt(unit), // Convert unit to unit_id as integer
-      mis: project_id, // Explicitly set the MIS field to match project_id
-      project_na853,
-      expenditure_type,
-      status: 'pending', // Always set initial status to pending
-      recipients: formattedRecipients,
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
-      department: (req as any).user?.department || null,
-      contact_number: (req as any).user?.telephone || null,
-      user_name: (req as any).user?.name || null,
-      attachments: attachments || [],
+      status: 'pending', // Always set initial status to pending
+      protocol_date: new Date().toISOString().split('T')[0], // Set current date
+      protocol_number_input: `${Date.now()}`, // Generate protocol number
+      is_correction: false,
+      comments: `Document created for project ${project_id}`,
       esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
+      director_signature: directorSignature,
+      beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
       created_at: now,
       updated_at: now
     };
@@ -272,7 +287,59 @@ router.post('/v2', async (req: Request, res: Response) => {
     }
     
     console.log('[DocumentsController] V2 Document created successfully:', data.id);
-    res.status(201).json({ id: data.id, message: 'Document created successfully' });
+    
+    // Create beneficiary payments for each recipient
+    const beneficiaryPaymentsIds = [];
+    try {
+      for (const recipient of formattedRecipients) {
+        const beneficiaryPayment = {
+          document_id: data.id,
+          beneficiary_id: null, // Will need to be matched later
+          amount: recipient.amount,
+          status: 'pending',
+          installment: recipient.installment,
+          unit_id: parseInt(unit),
+          project_id: null, // Will need project lookup
+          created_at: now,
+          updated_at: now
+        };
+        
+        const { data: paymentData, error: paymentError } = await supabase
+          .from('beneficiary_payments')
+          .insert([beneficiaryPayment])
+          .select('id')
+          .single();
+        
+        if (paymentError) {
+          console.error('[DocumentsController] V2 Error creating beneficiary payment:', paymentError);
+        } else {
+          beneficiaryPaymentsIds.push(paymentData.id);
+          console.log('[DocumentsController] V2 Created beneficiary payment:', paymentData.id);
+        }
+      }
+      
+      // Update document with beneficiary payments IDs
+      if (beneficiaryPaymentsIds.length > 0) {
+        const { error: updateError } = await supabase
+          .from('generated_documents')
+          .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
+          .eq('id', data.id);
+        
+        if (updateError) {
+          console.error('[DocumentsController] V2 Error updating document with beneficiary payment IDs:', updateError);
+        } else {
+          console.log('[DocumentsController] V2 Updated document with beneficiary payment IDs:', beneficiaryPaymentsIds);
+        }
+      }
+    } catch (beneficiaryError) {
+      console.error('[DocumentsController] V2 Error creating beneficiary payments:', beneficiaryError);
+    }
+    
+    res.status(201).json({ 
+      id: data.id, 
+      message: 'Document created successfully',
+      beneficiary_payments_count: beneficiaryPaymentsIds.length
+    });
   } catch (error) {
     console.error('[DocumentsController] V2 Error creating document:', error);
     res.status(500).json({ 

@@ -1,0 +1,2 @@
+id,created_at,generated_by,protocol_date,total_amount,status,protocol_number_input,original_protocol_number,original_protocol_date,is_correction,comments,updated_by,updated_at,esdian,director_signature,beneficiary_payments_id,attachments_id,project_index_id,unit_id
+100,2025-07-09 04:57:58.504+00,79,,900.00,pending,,,,false,,,2025-07-09 04:57:58.504+00,"[""aaa"",""aaaa""]",,[],,,2

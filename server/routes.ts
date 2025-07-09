@@ -1858,7 +1858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         let query = supabase
           .from('generated_documents')
-          .select('esdian, project_na853, expenditure_type, unit_id')
+          .select('esdian, unit_id, created_at')
           .not('esdian', 'is', null)
           .order('created_at', { ascending: false });
           
@@ -1909,8 +1909,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process actual documents
           documents?.forEach(doc => {
             if (doc.esdian && Array.isArray(doc.esdian)) {
-              const isContextMatch = (projectId && doc.project_na853 === projectId) || 
-                                   (expenditureType && doc.expenditure_type === expenditureType);
+              // Context matching removed since project_na853 column doesn't exist
+              // Focus on unit_id context matching
+              const isContextMatch = (userUnitId && doc.unit_id === userUnitId);
               
               doc.esdian.forEach((item: string) => {
                 if (item && item.trim()) {
