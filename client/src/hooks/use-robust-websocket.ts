@@ -84,8 +84,9 @@ export function useRobustWebSocket() {
     try {
       // Construct WebSocket URL with protocol detection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws?t=${Date.now()}`;
+      const hostname = window.location.hostname;
+      const port = window.location.port || (window.location.protocol === 'https:' ? '443' : '80');
+      const wsUrl = `${protocol}//${hostname}:${port}/ws?t=${Date.now()}`;
 
       const ws = new WebSocket(wsUrl, ['notifications']);
       wsRef.current = ws;

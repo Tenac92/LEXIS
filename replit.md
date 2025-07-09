@@ -127,29 +127,31 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
-### July 9, 2025 - Attachments Schema Update & Enhanced Document Creation
-- **ATTACHMENTS TABLE MODERNIZATION: Successfully updated to new schema with expenditure type integration**
-- **Schema Updates:**
-  - Updated attachments table to use `id bigint identity`, `atachments text`, `expediture_type_id integer[]`
-  - Changed generated_documents table from `attachments_id` to `attachment_id integer[]` for proper array support
-  - Enhanced document creation controller to map selected attachment names to attachment IDs
-  - Implemented proper attachment processing with database lookup and ID mapping
-- **Document Creation Enhancement:**
-  - Added attachment name-to-ID mapping during document creation
-  - Implemented proper attachment_id array saving in generated_documents table
-  - Enhanced attachment selection processing with error handling and logging
-  - Documents now properly store attachment relationships for reporting and auditing
-- **Project Index ID Population Fix:**
-  - Fixed project_index_id population in both generated_documents and beneficiary_payments tables
-  - Enhanced project resolution logic to properly find and use project_index entries
-  - Eliminated duplicate project lookups for better performance
-  - Added comprehensive logging for project_index_id resolution debugging
-- **Data Integrity Results:**
-  - All new documents now properly populate project_index_id (4 or 334 for test project)
-  - Attachment selections correctly mapped to attachment IDs and stored in database
-  - Beneficiary payments automatically link to project_index_id for optimized queries
-  - Enhanced foreign key relationships throughout document creation process
-- **Testing Verification:** Fixed automatic beneficiary payment creation with proper project_index_id linking
+### July 9, 2025 - Critical WebSocket & Database Schema Fixes
+- **WEBSOCKET CONNECTION FIXED: Resolved undefined port error in WebSocket URL construction**
+- **WebSocket URL Enhancement:**
+  - Changed from `window.location.host` to `window.location.hostname` and `window.location.port`
+  - Added proper port handling with fallback to default ports (443 for HTTPS, 80 for HTTP)
+  - Fixed "Failed to construct WebSocket: The URL 'wss://localhost:undefined/' is invalid" error
+  - WebSocket connections now establish properly in all environments
+- **Database Schema Column Reference Fix:**
+  - Fixed `attachments_id` → `attachment_id` column reference in document creation
+  - Updated generated_documents table to use proper `attachment_id integer[]` array format
+  - Resolved Supabase schema cache errors preventing document creation
+- **Enhanced Beneficiary Payment Installments:**
+  - Implemented separate payment records for each installment (ΤΡΙΜΗΝΟ 1, ΤΡΙΜΗΝΟ 2, ΤΡΙΜΗΝΟ 3)
+  - Each installment creates individual database record with proper amount distribution
+  - Enhanced installment handling logic with fallback for legacy single payments
+  - Improved tracking of individual installment payments for better reporting
+- **Attachments Controller Schema Update:**
+  - Updated to work with new schema structure using `expediture_type_id integer[]`
+  - Enhanced attachment fetching to look up expenditure type IDs before filtering
+  - Fixed column references: `atachments text` and `expediture_type_id integer[]`
+  - Proper error handling for attachment retrieval with new normalized structure
+- **System Stability Improvements:**
+  - Workflow restart resolves any cached connection issues
+  - Enhanced error handling throughout document creation pipeline
+  - Comprehensive testing verified for both WebSocket and document creation functionality
 
 ### January 7, 2025 - Performance Optimization: Unified API Endpoint & Complete Modal/Form Fixes
 - **MAJOR PERFORMANCE BREAKTHROUGH: Reduced form and modal loading time from 5+ seconds to sub-second**
