@@ -1866,37 +1866,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
 
-    app.get('/api/documents/user', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        if (!req.user?.id) {
-          return res.status(401).json({ message: 'Authentication required' });
-        }
-
-        // Get user's recent documents (limit to 10 for dashboard)
-        const { data: documents, error } = await supabase
-          .from('generated_documents')
-          .select('*')
-          .eq('generated_by', req.user.id)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (error) {
-          console.error('[Documents] Error fetching user documents:', error);
-          return res.status(500).json({
-            message: 'Failed to fetch user documents',
-            error: error.message
-          });
-        }
-
-        return res.json(documents || []);
-      } catch (error) {
-        console.error('[Documents] Error in user documents endpoint:', error);
-        return res.status(500).json({
-          message: 'Failed to fetch user documents',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-      }
-    });
+    // NOTE: User documents endpoint moved to documentsController.ts
+    // app.get('/api/documents/user') - now handled by documentsRouter
     
     // Add public route to get document by ID - for testing purposes
     app.get('/api/documents/public/:id', async (req, res) => {

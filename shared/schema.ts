@@ -263,7 +263,7 @@ export const budgetNotifications = pgTable("budget_notifications", {
 export const generatedDocuments = pgTable("generated_documents", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  generated_by: bigint("generated_by", { mode: "number" }).references(
+  generated_by: integer("generated_by").references(
     () => users.id,
   ),
   protocol_date: date("protocol_date"),

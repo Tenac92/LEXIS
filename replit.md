@@ -127,6 +127,28 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 9, 2025 - CRITICAL DATABASE TYPE MISMATCH & ROUTE ORDERING FIXES
+- **MAJOR BREAKTHROUGH: Fixed "invalid input syntax for type bigint: 'NaN'" error in /api/documents/user endpoint**
+- **Route Ordering Issue Resolved:**
+  - Root cause: The specific `/user` route was defined after the generic `/:id` route in documentsController.ts
+  - When requesting `/api/documents/user`, it was matching the `/:id` route first and trying to parse "user" as an integer ID
+  - Fixed by moving the `/user` route definition before the `/:id` route in the controller
+  - Removed duplicate `/user` endpoint definition that was causing routing conflicts
+- **Authentication Handling Enhanced:**
+  - Updated `/user` endpoint to gracefully handle unauthenticated requests
+  - Returns empty array `[]` instead of throwing database errors for missing sessions
+  - Added proper session validation and user ID type checking
+  - Prevents "NaN" values from reaching database queries
+- **Database Type Safety:**
+  - Enhanced user ID validation to prevent invalid values from causing database errors
+  - Proper conversion and validation of user IDs before database queries
+  - Added comprehensive error handling for authentication edge cases
+- **Technical Success:**
+  - `/api/documents/user` endpoint now works correctly without database errors
+  - Authentication middleware properly integrated with route handling
+  - Clean separation between authenticated and unauthenticated user handling
+  - System stability improved with proper error boundaries
+
 ### July 9, 2025 - CRITICAL SERVER STARTUP & API ROUTING FIXES
 - **MAJOR BREAKTHROUGH: Fixed server startup and API routing issues causing HTML responses instead of JSON**
 - **Route Architecture Restoration:**

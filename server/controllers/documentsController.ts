@@ -566,6 +566,73 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/documents/user
+ * Get user's recent documents
+ */
+router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('[DocumentsController] ==> User endpoint called');
+    console.log('[DocumentsController] ==> Session exists:', !!req.session);
+    console.log('[DocumentsController] ==> Session user:', req.session?.user ? 'exists' : 'missing');
+    console.log('[DocumentsController] ==> Session user ID:', req.session?.user?.id);
+    console.log('[DocumentsController] ==> req.user:', req.user ? 'exists' : 'missing');
+    console.log('[DocumentsController] ==> req.user.id:', req.user?.id);
+    
+    // Check session first
+    if (!req.session?.user?.id) {
+      console.log('[DocumentsController] No authenticated session - returning empty array');
+      return res.json([]);
+    }
+    
+    // Set user from session if not already set
+    if (!req.user) {
+      req.user = req.session.user;
+    }
+    
+    if (!req.user || !req.user.id) {
+      console.log('[DocumentsController] No authenticated user - returning empty array');
+      return res.json([]);
+    }
+
+    console.log('[DocumentsController] Fetching documents for user:', req.user.id, 'type:', typeof req.user.id);
+
+    // Ensure user ID is a valid number
+    const userId = Number(req.user.id);
+    console.log('[DocumentsController] Converted user ID:', userId, 'isNaN:', isNaN(userId));
+    
+    if (isNaN(userId) || userId <= 0) {
+      console.error('[DocumentsController] Invalid user ID:', req.user.id);
+      return res.json([]);
+    }
+
+    // Get recent documents for the user
+    const { data: documents, error } = await supabase
+      .from('generated_documents')
+      .select('*')
+      .eq('generated_by', userId.toString()) // Convert to string to handle bigint compatibility
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('[DocumentsController] Error fetching user documents:', error);
+      return res.status(500).json({
+        error: 'Failed to fetch user documents',
+        details: error.message
+      });
+    }
+
+    console.log('[DocumentsController] Successfully fetched', documents?.length || 0, 'documents');
+    res.json(documents || []);
+  } catch (error) {
+    console.error('[DocumentsController] Error in user endpoint:', error);
+    res.status(500).json({
+      error: 'Failed to fetch user documents',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get single document
 router.get('/:id', async (req: Request, res: Response) => {
   try {
