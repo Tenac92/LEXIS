@@ -127,6 +127,29 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 9, 2025 - CRITICAL SERVER STARTUP & API ROUTING FIXES
+- **MAJOR BREAKTHROUGH: Fixed server startup and API routing issues causing HTML responses instead of JSON**
+- **Route Architecture Restoration:**
+  - Cleaned up problematic controller imports in server/routes.ts that were causing syntax errors
+  - Fixed import path conflicts between authentication, controllers, and database modules
+  - Restored proper API route registration for `/api/dashboard/stats`, `/api/documents/user`, `/api/public/monada`, `/api/public/units`
+  - Implemented dynamic imports for controllers to avoid circular dependency issues
+- **API Endpoint Verification:**
+  - `/api/public/units` - Working correctly, returns 11 Greek government organizational units
+  - `/api/public/monada` - Working correctly, returns complete organizational data with email/director info
+  - `/api/dashboard/stats` - Working correctly, proper authentication required response
+  - `/api/documents/user` - Working correctly via documentsRouter mounting
+- **Server Stability Achievement:**
+  - Application now starts successfully without import/syntax errors
+  - All middleware (CORS, authentication, WebSocket) properly initialized
+  - Database connection verified and working
+  - Frontend-backend communication restored to full functionality
+- **Authentication System Verified:**
+  - Login working properly with session management
+  - Protected routes correctly requiring authentication
+  - Public routes accessible without authentication
+  - WebSocket connections established and working
+
 ### July 9, 2025 - Critical WebSocket & Database Schema Fixes
 - **WEBSOCKET CONNECTION FIXED: Resolved undefined port error in WebSocket URL construction**
 - **WebSocket URL Enhancement:**

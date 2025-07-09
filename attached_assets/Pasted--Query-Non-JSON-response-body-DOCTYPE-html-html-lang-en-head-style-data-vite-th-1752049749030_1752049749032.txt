@@ -1,0 +1,72 @@
+[Query] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", queryInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[StableWebSocket] Creating new connection
+[StableWebSocket] Connected successfully
+[Query] Received non-JSON response: text/html; charset=utf-8
+[Query] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", queryInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[Query] Received non-JSON response: text/html; charset=utf-8
+[Query] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;style data-vite-theme=&quot;&quot; data-inject-first=&quot;&quot;&gt;:root {
+--background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[Query] Request failed: 
+Error {queryInfo: {…}, originalError: Error, isQueryError: true}
+
+[Query] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", queryInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}

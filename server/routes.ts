@@ -115,8 +115,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes handled by authentication.ts
   log('[Routes] Authentication routes handled by authentication.ts setupAuth()');
 
-  // Mount routers - routes are handled directly in server/index.ts
-  log('[Routes] Core routes registered');
+  // Import and mount API controllers
+  const { getDashboardStats } = await import('./controllers/dashboard');
+  const { router: documentsRouter } = await import('./controllers/documentsController');
+  const { router: usersRouter } = await import('./controllers/usersController');
+  
+  // Mount API routes
+  app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
+  app.use('/api/documents', documentsRouter);
+  app.use('/api/users', usersRouter);
+  
+  // Public API routes
+  app.get('/api/public/monada', async (req: Request, res: Response) => {
+    try {
+      const { data: monada, error } = await supabase
+        .from('Monada')
+        .select('*')
+        .order('id');
+      
+      if (error) {
+        console.error('[API] Error fetching monada:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(monada);
+    } catch (error) {
+      console.error('[API] Error in monada endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  app.get('/api/public/units', async (req: Request, res: Response) => {
+    try {
+      const { data: units, error } = await supabase
+        .from('Monada')
+        .select('unit_name')
+        .order('id');
+      
+      if (error) {
+        console.error('[API] Error fetching units:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      // Extract unique unit names
+      const uniqueUnits = new Set<string>();
+      units?.forEach(unit => {
+        if (unit.unit_name?.name && typeof unit.unit_name.name === 'string') {
+          uniqueUnits.add(unit.unit_name.name);
+        }
+      });
+      
+      const unitsList = Array.from(uniqueUnits).sort().map(unitName => ({
+        id: unitName,
+        name: unitName
+      }));
+      
+      res.json(unitsList);
+    } catch (error) {
+      console.error('[API] Error in units endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  log('[Routes] API routes registered');
   
   // Additional project endpoints
   app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
