@@ -332,9 +332,55 @@ router.post('/v2', async (req: Request, res: Response) => {
       }
       
       for (const recipient of formattedRecipients) {
+        // Step 1: Look up or create beneficiary
+        let beneficiaryId = null;
+        try {
+          // Try to find existing beneficiary by AFM
+          const { data: existingBeneficiary, error: findError } = await supabase
+            .from('beneficiaries')
+            .select('id')
+            .eq('afm', recipient.afm)
+            .single();
+          
+          if (existingBeneficiary) {
+            beneficiaryId = existingBeneficiary.id;
+            console.log('[DocumentsController] V2 Found existing beneficiary:', beneficiaryId, 'for AFM:', recipient.afm);
+          } else if (findError && findError.code === 'PGRST116') {
+            // Beneficiary not found, create new one
+            const newBeneficiary = {
+              afm: recipient.afm,
+              surname: recipient.lastname,
+              name: recipient.firstname,
+              fathername: recipient.fathername,
+              region: 1, // Default region
+              date: new Date().toISOString().split('T')[0],
+              created_at: now,
+              updated_at: now
+            };
+            
+            const { data: createdBeneficiary, error: createError } = await supabase
+              .from('beneficiaries')
+              .insert([newBeneficiary])
+              .select('id')
+              .single();
+            
+            if (createError) {
+              console.error('[DocumentsController] V2 Error creating beneficiary:', createError);
+            } else {
+              beneficiaryId = createdBeneficiary.id;
+              console.log('[DocumentsController] V2 Created new beneficiary:', beneficiaryId, 'for AFM:', recipient.afm);
+            }
+          } else {
+            console.error('[DocumentsController] V2 Error finding beneficiary:', findError);
+          }
+        } catch (beneficiaryError) {
+          console.error('[DocumentsController] V2 Error during beneficiary lookup/creation:', beneficiaryError);
+        }
+        
+        // Step 2: Create beneficiary payment with proper beneficiary_id
         const beneficiaryPayment = {
           document_id: data.id,
-          beneficiary_id: null, // Will need to be matched later
+          beneficiary_id: beneficiaryId, // Now properly linked
           amount: recipient.amount,
           status: 'pending',
           installment: recipient.installment,
@@ -359,22 +405,24 @@ router.post('/v2', async (req: Request, res: Response) => {
           console.error('[DocumentsController] V2 Error code:', paymentError.code);
         } else {
           beneficiaryPaymentsIds.push(paymentData.id);
-          console.log('[DocumentsController] V2 Created beneficiary payment:', paymentData.id);
+          console.log('[DocumentsController] V2 Created beneficiary payment:', paymentData.id, 'with beneficiary_id:', beneficiaryId);
         }
       }
       
-      // Update document with beneficiary payments IDs
-      if (beneficiaryPaymentsIds.length > 0) {
-        const { error: updateError } = await supabase
-          .from('generated_documents')
-          .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
-          .eq('id', data.id);
-        
-        if (updateError) {
-          console.error('[DocumentsController] V2 Error updating document with beneficiary payment IDs:', updateError);
-        } else {
-          console.log('[DocumentsController] V2 Updated document with beneficiary payment IDs:', beneficiaryPaymentsIds);
-        }
+      // Always update document with beneficiary payments IDs, even if array is empty
+      console.log('[DocumentsController] V2 Updating document with beneficiary payment IDs:', beneficiaryPaymentsIds);
+      
+      const { error: updateError } = await supabase
+        .from('generated_documents')
+        .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
+        .eq('id', data.id);
+      
+      if (updateError) {
+        console.error('[DocumentsController] V2 Error updating document with beneficiary payment IDs:', updateError);
+        console.error('[DocumentsController] V2 Update error details:', updateError.details);
+        console.error('[DocumentsController] V2 Update error hint:', updateError.hint);
+      } else {
+        console.log('[DocumentsController] V2 Successfully updated document with beneficiary payment IDs:', beneficiaryPaymentsIds);
       }
     } catch (beneficiaryError) {
       console.error('[DocumentsController] V2 Error creating beneficiary payments:', beneficiaryError);

@@ -127,6 +127,25 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### January 13, 2025 - Document Creation Data Persistence Fix Complete
+- **CRITICAL DATA INTEGRITY FIXED: Resolved beneficiary_id and beneficiary_payments_id persistence issues**
+- **Beneficiary ID Linking Fix:**
+  - Fixed document creation controller to properly look up existing beneficiaries by AFM
+  - Added automatic beneficiary creation when AFM doesn't exist in database
+  - Enhanced beneficiary_payments table to properly link beneficiary_id instead of storing null values
+  - Improved error handling for beneficiary lookup and creation processes
+- **Payment ID Array Fix:**
+  - Fixed generated_documents table to properly store beneficiary_payments_id arrays
+  - Enhanced update logic to always populate payment arrays even when empty
+  - Added comprehensive error handling and logging for payment ID updates
+  - Resolved issue where documents had empty payment arrays despite successful payment creation
+- **Data Integrity Results:**
+  - All new documents now properly store beneficiary_payments_id arrays
+  - All new payments properly link to beneficiary records via beneficiary_id
+  - Historical data preserved while new functionality works correctly
+  - Database foreign key relationships functioning as designed
+- **Testing Verification:** Confirmed fixes working with Payment 38 showing proper beneficiary_id=25 linking
+
 ### January 7, 2025 - Performance Optimization: Unified API Endpoint & Complete Modal/Form Fixes
 - **MAJOR PERFORMANCE BREAKTHROUGH: Reduced form and modal loading time from 5+ seconds to sub-second**
 - **Unified API Endpoint:** Created `/api/projects/:mis/complete` that fetches all project data in one call
