@@ -64,6 +64,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   try {
     // TODO: Refactor - Move these direct document routes to the consolidated DocumentController
     // IMPORTANT: Register direct document creation route first to bypass any routing conflicts
+    
+    // DELETE route for document deletion
+    app.delete('/api/documents/generated/:id', authenticateSession, async (req: AuthenticatedRequest, res) => {
+      try {
+        const { id } = req.params;
+        
+        const { error } = await supabase
+          .from('generated_documents')
+          .delete()
+          .eq('id', parseInt(id));
+        
+        if (error) {
+          console.error('Error deleting document:', error);
+          return res.status(500).json({ message: 'Failed to delete document' });
+        }
+        
+        res.json({ message: 'Document deleted successfully' });
+      } catch (error) {
+        console.error('Unexpected error deleting document:', error);
+        res.status(500).json({ message: 'Failed to delete document' });
+      }
+    });
+    
     app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('[DIRECT_ROUTE] Document creation request received:', JSON.stringify(req.body));
@@ -308,6 +331,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Payload logging removed for cleaner console output
         
+        // Get project_index_id for enhanced schema
+        if (project_id) {
+          const { data: projectIndexData } = await supabase
+            .from('project_index')
+            .select('id')
+            .eq('project_id', parseInt(project_id))
+            .single();
+          
+          if (projectIndexData) {
+            documentPayload.project_index_id = projectIndexData.id;
+          }
+        }
+        
         // Insert into database - Use explicit ID generation with max+1 to avoid conflicts
         // First check if we need to handle a conflict case
         const { data: maxIdData } = await supabase
@@ -327,22 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: newId
         };
         
-        // Map project to project_index_id for enhanced schema
-        let projectIndexId = null;
-        if (project_id) {
-          const { data: projectIndexData, error: projectIndexError } = await supabase
-            .from('project_index')
-            .select('id')
-            .eq('project_id', parseInt(project_id))
-            .single();
-          
-          if (!projectIndexError && projectIndexData) {
-            projectIndexId = projectIndexData.id;
-          }
-        }
-
-        // Update the final payload with the proper project index ID
-        finalPayload.project_index_id = projectIndexId;
+        // project_index_id mapping already handled above
 
         // Insert into database with explicit ID
         const { data, error } = await supabase

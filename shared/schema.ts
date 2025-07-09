@@ -30,7 +30,9 @@ import {
   jsonb,
   bigint,
   unique,
+  index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { number, z } from "zod";
 import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
@@ -399,7 +401,7 @@ export const beneficiaries = pgTable("beneficiaries", {
 
 /**
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
- * Normalized financial data with proper foreign key relationships
+ * Enhanced normalized financial data with proper foreign key relationships
  */
 export const beneficiaryPayments = pgTable("beneficiary_payments", {
   id: serial("id").primaryKey(),
@@ -412,12 +414,16 @@ export const beneficiaryPayments = pgTable("beneficiary_payments", {
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
   
-  // Foreign key relationships
+  // Enhanced foreign key relationships
   unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
   expediture_type_id: integer("expediture_type_id").references(() => expenditureTypes.id),
   document_id: bigint("document_id", { mode: "number" }).references(() => generatedDocuments.id),
   project_id: integer("project_id").references(() => projects.id),
-});
+}, (table) => ({
+  // Index on status for pending records performance optimization
+  pendingStatusIndex: index("idx_beneficiary_payments_pending").on(table.status).where(sql`${table.status} = 'pending'`),
+  uniqueId: unique("beneficiary_payments_id_key").on(table.id),
+}));
 
 /**
  * User Preferences Table

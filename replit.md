@@ -190,6 +190,28 @@ This is a full-stack web application built for Greek government budget and docum
   - Proper foreign key cascading for data consistency
   - Enhanced column definitions with appropriate data types and defaults
 
+### January 9, 2025 - Enhanced Beneficiary Payments Schema & DELETE Route Implementation
+- **MAJOR SCHEMA ENHANCEMENT: Successfully implemented enhanced beneficiary_payments table structure**
+- **Beneficiary Payments Enhancement:**
+  - Updated table to use serial ID with proper foreign key relationships
+  - Added numeric(12,2) precision for amount fields
+  - Added performance index on status field for pending records
+  - Enhanced foreign key relationships: unit_id → Monada.id, expediture_type_id → expenditure_types.id
+  - Project relationships through project_id → Projects.id and document_id → generated_documents.id
+  - Beneficiary relationships through beneficiary_id → beneficiaries.id
+- **Application Fix:**
+  - Fixed timestamp validation issues by updating project schema to handle string timestamps
+  - Added missing DELETE route for document deletion at `/api/documents/generated/:id`
+  - Proper error handling and response formatting for document deletion
+- **Database Modernization Complete:**
+  - Both generated_documents and beneficiary_payments tables now use enhanced normalized structure
+  - Proper foreign key relationships throughout the system
+  - Enhanced data integrity with serial IDs and proper constraints
+- **Technical Improvements:**
+  - Resolved validation errors in project controller
+  - Fixed missing API endpoints for document management
+  - Enhanced error handling and debugging capabilities
+
 ### January 13, 2025 - Performance Optimization Complete & Project ID Enhancement
 - **MAJOR PERFORMANCE OPTIMIZATION IMPLEMENTED: Both edit form and details modal now use enhanced caching and project_id lookups**
 - **Cache Configuration Enhanced:**

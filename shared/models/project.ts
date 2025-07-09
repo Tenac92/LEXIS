@@ -23,8 +23,8 @@ export const projectSchema = z.object({
   budget_na271: z.number().nullable().optional(),
   budget_na853: z.number().nullable().optional(),
   status: z.string().nullable().default("pending"),
-  created_at: z.date().nullable().default(() => new Date()),
-  updated_at: z.date().nullable().default(() => new Date()),
+  created_at: z.union([z.date(), z.string()]).nullable().default(() => new Date()),
+  updated_at: z.union([z.date(), z.string()]).nullable().default(() => new Date()),
   // Enhanced fields from project_index joins
   enhanced_event_type: z.object({
     id: z.number(),
