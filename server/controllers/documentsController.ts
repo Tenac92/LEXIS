@@ -319,15 +319,14 @@ router.post('/v2', async (req: Request, res: Response) => {
             .select('id')
             .eq('project_id', actualProjectId)
             .eq('monada_id', parseInt(unit))
-            .limit(1)
-            .single();
+            .limit(1);
           
-          if (projectIndexData) {
-            projectIndexId = projectIndexData.id;
+          if (projectIndexData && projectIndexData.length > 0) {
+            projectIndexId = projectIndexData[0].id;
             console.log('[DocumentsController] V2 Found existing project_index_id:', projectIndexId);
           }
         } catch (indexError) {
-          console.log('[DocumentsController] V2 No existing project_index found for project_id:', actualProjectId, 'unit:', unit);
+          console.log('[DocumentsController] V2 No existing project_index found for project_id:', actualProjectId, 'unit:', unit, 'Error:', indexError);
         }
       }
       

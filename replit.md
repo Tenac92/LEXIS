@@ -139,12 +139,18 @@ This is a full-stack web application built for Greek government budget and docum
   - Enhanced update logic to always populate payment arrays even when empty
   - Added comprehensive error handling and logging for payment ID updates
   - Resolved issue where documents had empty payment arrays despite successful payment creation
+- **Project Index Lookup Fix:**
+  - Fixed project_index lookup in document creation controller to handle multiple entries correctly
+  - Changed from `.single()` to `.limit(1)` to prevent failures when multiple project_index entries exist
+  - Enhanced error handling and logging for project_index resolution
+  - Ensured project_index_id is properly populated during payment creation
 - **Data Integrity Results:**
   - All new documents now properly store beneficiary_payments_id arrays
   - All new payments properly link to beneficiary records via beneficiary_id
+  - Project index relationships correctly established for faster queries
   - Historical data preserved while new functionality works correctly
   - Database foreign key relationships functioning as designed
-- **Testing Verification:** Confirmed fixes working with Payment 38 showing proper beneficiary_id=25 linking
+- **Testing Verification:** Fixed missing payments for Documents 500 and 700 with proper beneficiary linking
 
 ### January 7, 2025 - Performance Optimization: Unified API Endpoint & Complete Modal/Form Fixes
 - **MAJOR PERFORMANCE BREAKTHROUGH: Reduced form and modal loading time from 5+ seconds to sub-second**
