@@ -240,7 +240,7 @@ router.post('/v2', async (req: Request, res: Response) => {
       const { data: monadaData } = await supabase
         .from('Monada')
         .select('director')
-        .eq('id', parseInt(unit))
+        .eq('id', unit) // Use unit directly as string since monada.id is text
         .single();
       
       if (monadaData && monadaData.director) {
@@ -253,7 +253,7 @@ router.post('/v2', async (req: Request, res: Response) => {
 
     // Create document with exact schema match and default values where needed
     const documentPayload = {
-      unit_id: parseInt(unit), // Convert unit to unit_id as integer
+      unit_id: String(unit), // Ensure unit is string to match monada.id type
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
       status: 'pending', // Always set initial status to pending
@@ -291,6 +291,8 @@ router.post('/v2', async (req: Request, res: Response) => {
     // Create beneficiary payments for each recipient
     const beneficiaryPaymentsIds = [];
     try {
+      console.log('[DocumentsController] V2 Creating beneficiary payments for', formattedRecipients.length, 'recipients');
+      
       for (const recipient of formattedRecipients) {
         const beneficiaryPayment = {
           document_id: data.id,
@@ -298,11 +300,13 @@ router.post('/v2', async (req: Request, res: Response) => {
           amount: recipient.amount,
           status: 'pending',
           installment: recipient.installment,
-          unit_id: parseInt(unit),
+          unit_id: String(unit), // Ensure unit is string to match monada.id type
           project_id: null, // Will need project lookup
           created_at: now,
           updated_at: now
         };
+        
+        console.log('[DocumentsController] V2 Inserting beneficiary payment:', beneficiaryPayment);
         
         const { data: paymentData, error: paymentError } = await supabase
           .from('beneficiary_payments')
@@ -312,6 +316,9 @@ router.post('/v2', async (req: Request, res: Response) => {
         
         if (paymentError) {
           console.error('[DocumentsController] V2 Error creating beneficiary payment:', paymentError);
+          console.error('[DocumentsController] V2 Error details:', paymentError.details);
+          console.error('[DocumentsController] V2 Error hint:', paymentError.hint);
+          console.error('[DocumentsController] V2 Error code:', paymentError.code);
         } else {
           beneficiaryPaymentsIds.push(paymentData.id);
           console.log('[DocumentsController] V2 Created beneficiary payment:', paymentData.id);

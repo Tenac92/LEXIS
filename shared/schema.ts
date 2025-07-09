@@ -289,7 +289,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   project_index_id: integer("project_index_id").references(
     () => projectIndex.id,
   ),
-  unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
+  unit_id: text("unit_id").references(() => monada.id),
 });
 
 /**
@@ -422,7 +422,7 @@ export const beneficiaryPayments = pgTable(
     updated_at: timestamp("updated_at").defaultNow(),
 
     // Enhanced foreign key relationships
-    unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
+    unit_id: text("unit_id").references(() => monada.id),
     expediture_type_id: integer("expediture_type_id").references(
       () => expenditureTypes.id,
     ),

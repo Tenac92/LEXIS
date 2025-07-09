@@ -164,6 +164,24 @@ This is a full-stack web application built for Greek government budget and docum
 - **Functionality Verified:** Dialog continues working properly during optimization process - no breaking changes
 - **Code Quality Improvements:** Better organization, reduced file complexity, improved code reusability
 
+### January 13, 2025 - Database Schema Fixes & Beneficiary Payments Implementation
+- **CRITICAL FIX: Resolved data type mismatch between monada.id and beneficiary_payments.unit_id**
+- **Schema Alignment:** Fixed inconsistent field types in database relationships
+  - Updated beneficiary_payments.unit_id from bigint to text to match monada.id
+  - Updated generated_documents.unit_id from bigint to text for consistency
+  - Corrected all foreign key references to use proper text data types
+- **Beneficiary Payments Creation Enhancement:**
+  - Added proper beneficiary payments creation for each document recipient
+  - Enhanced debugging and error logging for payment creation process
+  - Fixed director signature lookup to use correct string ID format
+  - Improved error handling with detailed error messages and debugging info
+- **Document Creation Improvements:**
+  - Added comprehensive protocol_date, protocol_number_input, and metadata fields
+  - Enhanced document payload structure with proper field mapping
+  - Improved foreign key relationships for better data integrity
+- **Database Consistency:** All unit_id fields now consistently use text type matching monada.id
+- **Testing Verification:** Created comprehensive test that confirms beneficiary payments are being saved successfully to database
+
 ### January 13, 2025 - Enhanced Database Schema Implementation & Document Creation Fix
 - **MAJOR DATABASE ENHANCEMENT: Successfully implemented enhanced generated_documents table structure**
 - **Schema Modernization Complete:**
