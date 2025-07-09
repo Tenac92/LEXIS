@@ -82,23 +82,24 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     const now = new Date().toISOString();
 
-    // Create document with exact schema match and set initial status to pending
+    // Create document with new normalized schema structure
     const documentPayload = {
-      unit_id: parseInt(unit), // Convert unit to unit_id as integer
-      mis: project_id, // This matches the 'mis' field in the database table
-      project_na853: projectData.na853 || projectData.budget_na853, // Use na853 if available, otherwise fallback to budget_na853
-      expenditure_type,
-      status: 'pending', // Always set initial status to pending
-      recipients: formattedRecipients,
+      // Core document fields
+      status: 'pending',
+      recipients: formattedRecipients, // Legacy field, will be phased out
       total_amount: parseFloat(String(total_amount)) || 0,
-      generated_by: req.user.id,
-      department: req.user.department || null,
-      contact_number: req.user.telephone || null,
-      user_name: req.user.name || null,
       attachments: attachments || [],
       esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
       created_at: now,
-      updated_at: now
+      updated_at: now,
+      
+      // New normalized foreign key relationships
+      generated_by: req.user.id,
+      unit_id: parseInt(unit), // Foreign key to monada table
+      project_id: projectData.id, // Foreign key to Projects table
+      mis: parseInt(project_id), // Foreign key to Projects.mis
+      expediture_type_id: expenditureTypeData?.id || null, // Map to expenditure_types table
+      beneficiary_payments_id: [], // Will be populated after beneficiary processing
     };
 
     console.log('[DocumentsController] Document payload prepared:', documentPayload);

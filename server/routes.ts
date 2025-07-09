@@ -288,25 +288,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userDepartment: req.user?.department
         });
 
-        // Create document payload
+        // Create document payload with normalized foreign key structure
         const documentPayload = {
-          unit,
-          mis: req.body.project_mis || project_id, // Use numeric project_mis if available
-          project_na853,
-          expenditure_type,
-          status: 'pending', // Always set initial status to pending
-          recipients: formattedRecipients,
+          // Core document fields
+          status: 'pending',
+          recipients: formattedRecipients, // Legacy field, will be phased out
           total_amount: parseFloat(String(total_amount)) || 0,
           attachments: attachments || [],
-          region: region || null, // Add region field
-          generated_by: req.user?.id || null, // Add user ID if available
-          department: req.user?.department || null, // Add department if available
-          esdian: esdian || [], // Add esdian fields for internal distribution
-          director_signature: director_signature || null, // Add signature field from step 3
+          region: region || null,
+          esdian: esdian || [],
+          director_signature: director_signature || null,
           created_at: now,
-          updated_at: now
-          // Τα πεδία installments και installmentAmounts αφορούν τους παραλήπτες και όχι το έγγραφο,
-          // έχουν ήδη προστεθεί στο formattedRecipients παραπάνω
+          updated_at: now,
+          
+          // New normalized foreign key relationships
+          generated_by: req.user?.id || null,
+          unit_id: unit ? parseInt(unit) : null, // Foreign key to monada table
+          project_id: project_id ? parseInt(project_id) : null, // Foreign key to Projects table
+          mis: req.body.project_mis ? parseInt(req.body.project_mis) : parseInt(project_id), // Foreign key to Projects.mis
+          expediture_type_id: null, // Will be mapped from expenditure_type string later
+          beneficiary_payments_id: [], // Will be populated after beneficiary processing
         };
         
         console.log('[DIRECT_ROUTE_V2] Inserting document with payload:', documentPayload);
@@ -330,6 +331,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: newId
         };
         
+        // Map expenditure_type to proper ID before insertion
+        let expenditureTypeId = null;
+        if (expenditure_type) {
+          const { data: expenditureTypeData, error: expenditureTypeError } = await supabase
+            .from('expediture_types')
+            .select('id')
+            .eq('name', expenditure_type)
+            .single();
+          
+          if (!expenditureTypeError && expenditureTypeData) {
+            expenditureTypeId = expenditureTypeData.id;
+          }
+        }
+
+        // Update the final payload with the proper expenditure type ID
+        finalPayload.expediture_type_id = expenditureTypeId;
+
         // Insert into database with explicit ID
         const { data, error } = await supabase
           .from('generated_documents')

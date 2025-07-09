@@ -262,30 +262,37 @@ export const budgetNotifications = pgTable("budget_notifications", {
 export const generatedDocuments = pgTable("generated_documents", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  generated_by: bigint("generated_by", { mode: "number" }),
-  recipients: jsonb("recipients").notNull(),
+  generated_by: bigint("generated_by", { mode: "number" })
+    .references(() => users.id),
+  recipients: jsonb("recipients").notNull(), // Legacy field, will be phased out
   protocol_date: date("protocol_date"),
   total_amount: decimal("total_amount", { precision: 10, scale: 2 }),
   document_date: date("document_date"),
   status: varchar("status", { length: 50 }).default("pending"),
   protocol_number_input: text("protocol_number_input").unique(),
-  expenditure_type: text("expenditure_type"),
-  mis: text("mis"), // Changed to text to match actual table
-  project_na853: text("project_na853"),
+  mis: integer("mis")
+    .references(() => projects.mis, { onUpdate: "cascade" }),
   original_protocol_number: varchar("original_protocol_number", { length: 255 }),
   original_protocol_date: date("original_protocol_date"),
   is_correction: boolean("is_correction").default(false),
-  department: text("department"),
   comments: text("comments"),
-  original_document_id: bigint("original_document_id", { mode: "number" }),
   updated_by: text("updated_by"),
   attachments: jsonb("attachments").array(),
   updated_at: timestamp("updated_at", { withTimezone: true }),
   region: jsonb("region"),
   esdian: text("esdian").array(),
   director_signature: jsonb("director_signature"),
-  unit_id: integer("unit_id"), // Added unit_id field as per actual table
-  updated_at: timestamp("updated_at", { withTimezone: true }),
+  
+  // New normalized foreign key relationships
+  unit_id: bigint("unit_id", { mode: "number" })
+    .references(() => monada.id),
+  beneficiary_payments_id: integer("beneficiary_payments_id").array(),
+  project_id: integer("project_id")
+    .references(() => projects.id),
+  attachments_id: bigint("attachments_id", { mode: "number" })
+    .references(() => attachmentsRows.id),
+  expediture_type_id: integer("expediture_type_id")
+    .references(() => expenditureTypes.id, { onUpdate: "cascade" }),
 });
 
 /**

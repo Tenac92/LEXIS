@@ -261,7 +261,7 @@ export function CreateDocumentDialog({
                   broadcastUpdate(currentAmount || 0);
                 }
               } catch (e) {
-
+                // Silent catch for broadcast errors
               }
             }
           }
@@ -1104,7 +1104,7 @@ export function CreateDocumentDialog({
         // Check if the number is unreasonably large (more than 1 billion)
         // This prevents scientific notation or overflow display issues
         if (!isFinite(amount) || amount > 1000000000) {
-          console.warn("[Budget Form] Prevented invalid amount entry:", amount);
+          // Budget form warning logging removed for cleaner console
           // Show a warning toast to user
           toast({
             title: "Μη έγκυρο ποσό",
@@ -1323,9 +1323,7 @@ export function CreateDocumentDialog({
         let projectsArray: any[] = [];
 
         if (!response) {
-          console.error(
-            "[Projects] Error fetching projects: No response received",
-          );
+          // Error logging removed for cleaner console output
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
@@ -1346,10 +1344,7 @@ export function CreateDocumentDialog({
           // Handle wrapped API response {data: [...]}
           projectsArray = response.data;
         } else {
-          console.error(
-            "[Projects] Error fetching projects: Invalid response format",
-            response,
-          );
+          // Error logging removed for cleaner console output
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης έργων. Μη έγκυρη μορφή απάντησης.",
@@ -1383,7 +1378,7 @@ export function CreateDocumentDialog({
           // Try optimized schema first (expenditure_types array)
           if (item.expenditure_types && Array.isArray(item.expenditure_types)) {
             expenditureTypes = item.expenditure_types;
-            console.log(`[Projects] Using optimized schema expenditure_types for ${item.mis}:`, expenditureTypes);
+            // Debug logging removed for cleaner console output
           }
           // Fallback to legacy format (expenditure_type string/array)
           else if (item.expenditure_type) {
@@ -1394,11 +1389,7 @@ export function CreateDocumentDialog({
                 expenditureTypes = item.expenditure_type;
               }
             } catch (e) {
-              console.error(
-                "[Projects] Error parsing expenditure_type for project:",
-                item.mis,
-                e,
-              );
+              // Error logging removed for cleaner console output
             }
           }
 
@@ -1416,7 +1407,7 @@ export function CreateDocumentDialog({
           };
         });
       } catch (error) {
-        console.error("[Projects] Projects fetch error:", error);
+        // Error logging removed for cleaner console output
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
@@ -1442,14 +1433,7 @@ export function CreateDocumentDialog({
   // Αυτό διορθώνει το πρόβλημα όπου το προϋπολογισμός δε φαίνεται στο βήμα 2 (παραλήπτες)
   } = useBudgetUpdates(selectedProjectId || formData.project_id, 0); // Fixed: Use static value to prevent infinite loop
   
-  console.log("[DocumentValidation] useBudgetUpdates inputs:", {
-    projectId: selectedProjectId || formData.project_id,
-    amount: 0,
-    isBudgetLoading,
-    isValidationLoading,
-    budgetError,
-    validationError
-  });
+  // Debug logging removed for cleaner console output
   
   // Budget data validation and tracking - DISABLED to prevent infinite loops
   /*
@@ -1483,7 +1467,7 @@ export function CreateDocumentDialog({
 
         // Handle authentication errors (401)
         if (response.status === 401) {
-          console.warn("Authentication required for attachments");
+          // Authentication warning logging removed for cleaner console
           // Show authentication error message instead of hardcoded defaults
           return [
             {
@@ -1498,7 +1482,7 @@ export function CreateDocumentDialog({
 
         // Handle other errors
         if (!response.ok) {
-          console.error("Attachments request failed:", response.status);
+          // Attachments request error logging removed for cleaner console
           // Show error message instead of hardcoded defaults
           return [
             {
@@ -1597,7 +1581,7 @@ export function CreateDocumentDialog({
           },
         ];
       } catch (error) {
-        console.error("Error fetching attachments:", error);
+        // Error logging removed for cleaner console output
         // Return a message about the error instead of hardcoded defaults
         return [
           {
@@ -1648,14 +1632,7 @@ export function CreateDocumentDialog({
   // Only block if validation explicitly says error or canCreate is false
   const isSubmitDisabled = validationResult?.status === "error" || (validationResult?.canCreate === false);
     
-  // Debug validation issues
-  console.log("[DocumentValidation] Validation result:", validationResult);
-  console.log("[DocumentValidation] Submit disabled:", isSubmitDisabled);
-  console.log("[DocumentValidation] Recipients length:", recipients.length);
-  console.log("[DocumentValidation] Loading state:", loading);
-  console.log("[DocumentValidation] Budget data:", budgetData);
-  console.log("[DocumentValidation] Selected project ID:", selectedProjectId);
-  console.log("[DocumentValidation] Form project ID:", formData.project_id);
+  // Debug validation issues - logging removed for cleaner console
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
@@ -1723,10 +1700,7 @@ export function CreateDocumentDialog({
         throw new Error("Δεν βρέθηκε το MIS του έργου");
       }
 
-      console.log("Found project for submission:", {
-        id: projectForSubmission.id,
-        mis: projectForSubmission.mis,
-      });
+      // Project validation logging removed for cleaner console
 
       const totalAmount = data.recipients.reduce<number>((sum, r) => sum + r.amount, 0);
 
@@ -1751,7 +1725,7 @@ export function CreateDocumentDialog({
 
         // Handle authorization issues gracefully
         if (budgetValidationResponse.status === 401) {
-          console.warn("Auth warning for budget validation during submit");
+          // Auth warning logging removed for cleaner console
           toast({
             title: "Προειδοποίηση",
             description:
@@ -1761,10 +1735,7 @@ export function CreateDocumentDialog({
         }
         // Handle other errors gracefully
         else if (!budgetValidationResponse.ok) {
-          console.error(
-            "Budget validation failed:",
-            budgetValidationResponse.status,
-          );
+          // Budget validation error logging removed for cleaner console
           toast({
             title: "Προειδοποίηση",
             description:
@@ -1784,7 +1755,7 @@ export function CreateDocumentDialog({
           }
         }
       } catch (validationError) {
-        console.error("Budget validation error:", validationError);
+        // Budget validation error logging removed for cleaner console
         toast({
           title: "Προειδοποίηση",
           description:
@@ -1853,7 +1824,7 @@ export function CreateDocumentDialog({
         director_signature: data.director_signature || null,
       };
 
-      console.log("Sending payload to create document:", payload);
+      // Debug logging removed for cleaner console output
 
       // Attempt document creation with v2 API endpoint
       try {
@@ -1878,7 +1849,7 @@ export function CreateDocumentDialog({
           );
         }
 
-        console.log("Document created successfully with ID:", response.id);
+        // Success logging removed for cleaner console output
 
         // Invalidate queries and show success message before returning
         await Promise.all([
@@ -1950,7 +1921,7 @@ export function CreateDocumentDialog({
         // Return response after dialog closing logic
         return response;
       } catch (error) {
-        console.error("Document creation failed:", error);
+        // Error logging removed for cleaner console output
         throw new Error(
           error instanceof Error
             ? error.message
@@ -1961,7 +1932,7 @@ export function CreateDocumentDialog({
       // Nothing needed here as the document creation logic
       // and dialog closing are all handled in the try-catch block above
     } catch (error) {
-      console.error("Document creation error:", error);
+      // Error logging removed for cleaner console output
       toast({
         title: "Σφάλμα",
         description:
