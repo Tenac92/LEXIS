@@ -7,6 +7,8 @@ import { router as recipientsRouter } from './recipientsController';
 import { router as usersRouter } from './usersController';
 import { router as projectRouter } from './projectController';
 import { router as beneficiaryRouter } from './beneficiaryController';
+import { errorHandler, asyncHandler } from '../middleware/errorHandler';
+import expenditureTypesController from './expenditureTypesController';
 
 const router = express.Router();
 
@@ -19,6 +21,16 @@ router.use('/recipients', authenticateSession, recipientsRouter);
 router.use('/users', authenticateSession, usersRouter);
 router.use('/projects', authenticateSession, projectRouter);
 router.use('/beneficiaries', authenticateSession, beneficiaryRouter);
+
+// Add expenditure types routes
+router.get('/expenditure-types', authenticateSession, expenditureTypesController.getExpenditureTypes);
+router.get('/expenditure-types/:id', authenticateSession, expenditureTypesController.getExpenditureTypeById);
+router.post('/expenditure-types', authenticateSession, expenditureTypesController.createExpenditureType);
+router.put('/expenditure-types/:id', authenticateSession, expenditureTypesController.updateExpenditureType);
+router.delete('/expenditure-types/:id', authenticateSession, expenditureTypesController.deleteExpenditureType);
+
+// Public expenditure types endpoint for forms
+router.get('/public/expenditure-types', expenditureTypesController.getExpenditureTypesForFilter);
 
 // Healthcheck endpoint
 router.get('/health', (_req, res) => {
@@ -38,16 +50,7 @@ router.use('*', (req, res, next) => {
   });
 });
 
-// Global error handler
-router.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('API Error:', err);
-
-  res.status(err.status || 500).json({
-    error: err.name || 'InternalServerError',
-    message: err.message || 'An unexpected error occurred',
-    timestamp: new Date().toISOString(),
-    ...(process.env.NODE_ENV === 'development' ? { stack: err.stack } : {})
-  });
-});
+// Global error handler with enhanced error handling
+router.use(errorHandler);
 
 export default router;

@@ -30,6 +30,7 @@ import { SessionKeeper } from "@/components/auth/SessionKeeper";
 import { SessionWarning } from "@/components/auth/SessionWarning";
 import SessionInit from "@/components/auth/SessionInit";
 import { DocumentFormProvider } from "@/contexts/document-form-context";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 
 function Router(): JSX.Element {
   return (
@@ -64,16 +65,18 @@ function Router(): JSX.Element {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <DocumentFormProvider>
-          <Router />
-          <SessionKeeper />
-          <SessionInit />
-          <Toaster />
-        </DocumentFormProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <DocumentFormProvider>
+            <Router />
+            <SessionKeeper />
+            <SessionInit />
+            <Toaster />
+          </DocumentFormProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -1,211 +1,282 @@
 /**
- * Enhanced Error Handling Middleware
- * 
- * This middleware provides comprehensive error handling for the application,
- * with special focus on Supabase and database connection issues.
+ * Enhanced Error Handler Middleware
+ * Provides comprehensive error handling for database and application errors
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { log } from '../vite';
-import { markFailedConnection, testConnection } from '../config/db';
+import { ZodError } from 'zod';
 
-interface ErrorWithCode extends Error {
-  code?: string;
-  status?: number;
-  supabaseError?: boolean;
+// Error types
+export enum ErrorType {
+  VALIDATION = 'VALIDATION_ERROR',
+  DATABASE = 'DATABASE_ERROR',
+  AUTHENTICATION = 'AUTHENTICATION_ERROR',
+  AUTHORIZATION = 'AUTHORIZATION_ERROR',
+  NOT_FOUND = 'NOT_FOUND_ERROR',
+  CONFLICT = 'CONFLICT_ERROR',
+  INTERNAL = 'INTERNAL_ERROR',
+  SUPABASE = 'SUPABASE_ERROR'
 }
 
-/**
- * Determines if an error is related to a database connection issue
- * 
- * @param error The error to check
- * @returns true if the error is a database connection issue
- */
-function isDatabaseConnectionError(error: ErrorWithCode): boolean {
-  // Common database connection errors
-  const connectionErrorCodes = [
-    'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'ENETUNREACH',
-    'connection_error', 'socket_closed', 'socket_hang_up', 'ECONNRESET',
-    '28P01', // Postgres authentication errors
-    '28000', // Invalid auth specification
-    '3D000', // Database does not exist
-    '57P01', // Database shut down
-    '57P02', // Database connection interrupted
-    '57P03', // Cannot connect now
-    '08006', // Connection failed
-    '08001', // SQL client unable to establish connection
-    '08004', // Server rejected the connection
-    'PGCONNECTION', // Generic Postgres connection error
-    '40P01', // Deadlock detected
-    'connection_closed', // Supabase specific connection error
-    'pool_timeout', // Connection pool timeout
-  ];
-  
-  // Check for common connection error patterns in the message or code
-  const connectionErrorPatterns = [
-    'connection', 'timeout', 'timed out', 'could not connect',
-    'database connection', 'postgres connection', 'socket', 'connect ECONNREFUSED',
-    'network error', 'EOF', 'end of file', 'terminated', 'closed', 'unable to connect',
-    'unavailable', 'unreachable', 'broken pipe', 'access denied', 'authentication failed',
-    'supabase', 'password authentication', 'pg client',
-  ];
-  
-  // Check error code
-  if (error.code && connectionErrorCodes.includes(error.code)) {
-    return true;
+export interface AppError extends Error {
+  type: ErrorType;
+  statusCode: number;
+  details?: any;
+  timestamp: string;
+}
+
+// Create application error
+export function createAppError(
+  type: ErrorType,
+  message: string,
+  statusCode: number,
+  details?: any
+): AppError {
+  const error = new Error(message) as AppError;
+  error.type = type;
+  error.statusCode = statusCode;
+  error.details = details;
+  error.timestamp = new Date().toISOString();
+  return error;
+}
+
+// Database error detection
+export function isDatabaseError(error: any): boolean {
+  return (
+    error?.code?.startsWith('P') || // Prisma errors
+    error?.code?.startsWith('23') || // PostgreSQL constraint errors
+    error?.message?.includes('duplicate key') ||
+    error?.message?.includes('violates foreign key constraint') ||
+    error?.message?.includes('violates not-null constraint') ||
+    error?.message?.includes('violates unique constraint') ||
+    error?.message?.includes('Connection terminated') ||
+    error?.message?.includes('ECONNREFUSED') ||
+    error?.message?.includes('timeout')
+  );
+}
+
+// Supabase error detection
+export function isSupabaseError(error: any): boolean {
+  return (
+    error?.message?.includes('JWT') ||
+    error?.message?.includes('API key') ||
+    error?.message?.includes('RLS') ||
+    error?.message?.includes('Row Level Security') ||
+    error?.details?.includes('permission denied') ||
+    error?.code === 'PGRST'
+  );
+}
+
+// Parse database error details
+export function parseDatabaseError(error: any): {
+  type: ErrorType;
+  message: string;
+  statusCode: number;
+  details?: any;
+} {
+  // Handle Supabase specific errors
+  if (isSupabaseError(error)) {
+    return {
+      type: ErrorType.SUPABASE,
+      message: 'Database access error',
+      statusCode: 403,
+      details: {
+        supabaseError: error.message,
+        code: error.code
+      }
+    };
   }
   
-  // Check error message patterns
-  if (error.message) {
-    const lowerCaseMessage = error.message.toLowerCase();
-    for (const pattern of connectionErrorPatterns) {
-      if (lowerCaseMessage.includes(pattern.toLowerCase())) {
-        return true;
-      }
+  // Handle PostgreSQL constraint errors
+  if (error?.code?.startsWith('23')) {
+    switch (error.code) {
+      case '23505': // unique_violation
+        return {
+          type: ErrorType.CONFLICT,
+          message: 'Duplicate entry detected',
+          statusCode: 409,
+          details: {
+            constraint: error.constraint,
+            detail: error.detail
+          }
+        };
+      case '23503': // foreign_key_violation
+        return {
+          type: ErrorType.VALIDATION,
+          message: 'Invalid reference to related record',
+          statusCode: 400,
+          details: {
+            constraint: error.constraint,
+            detail: error.detail
+          }
+        };
+      case '23502': // not_null_violation
+        return {
+          type: ErrorType.VALIDATION,
+          message: 'Required field missing',
+          statusCode: 400,
+          details: {
+            column: error.column,
+            table: error.table
+          }
+        };
+      default:
+        return {
+          type: ErrorType.DATABASE,
+          message: 'Database constraint error',
+          statusCode: 400,
+          details: {
+            code: error.code,
+            detail: error.detail
+          }
+        };
     }
   }
   
-  // Supabase-specific flag
-  if (error.supabaseError) {
-    return true;
+  // Handle connection errors
+  if (error?.message?.includes('Connection terminated') || 
+      error?.message?.includes('ECONNREFUSED')) {
+    return {
+      type: ErrorType.DATABASE,
+      message: 'Database connection failed',
+      statusCode: 503,
+      details: {
+        originalError: error.message
+      }
+    };
   }
   
-  return false;
+  // Generic database error
+  return {
+    type: ErrorType.DATABASE,
+    message: 'Database operation failed',
+    statusCode: 500,
+    details: {
+      originalError: error.message
+    }
+  };
 }
 
-/**
- * Main error handler middleware
- */
-export function errorHandler(err: ErrorWithCode, req: Request, res: Response, _next: NextFunction) {
-  // Log the error for debugging
-  console.error('[Error Handler] Caught error:', {
-    message: err.message,
-    stack: err.stack,
-    code: err.code,
-    status: err.status
+// Main error handler middleware
+export function errorHandler(
+  error: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  console.error('[ErrorHandler] Error caught:', {
+    error: error.message,
+    stack: error.stack,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString()
   });
   
-  let statusCode = err.status || 500;
-  let errorMessage = err.message || 'Internal Server Error';
-  let userMessage = 'Σφάλμα εφαρμογής. Παρακαλώ προσπαθήστε ξανά σε λίγο.';
-  
-  // Special handling for database connection errors
-  if (isDatabaseConnectionError(err)) {
-    console.warn('[Error Handler] Database connection error detected');
+  // Handle Zod validation errors
+  if (error instanceof ZodError) {
+    const validationErrors = error.errors.map(err => ({
+      field: err.path.join('.'),
+      message: err.message,
+      code: err.code
+    }));
     
-    // Mark the connection as failed for health monitoring
-    markFailedConnection();
-    
-    // Test the connection in the background
-    testConnection(1, 5000).catch(() => {
-      // Ignore any errors - we're already handling an error
-    });
-    
-    // Database errors should always be internal server errors
-    statusCode = 503;
-    userMessage = 'Η βάση δεδομένων δεν είναι προσωρινά διαθέσιμη. Παρακαλώ προσπαθήστε ξανά σε λίγο.';
-    
-    // Add more specific error messages for common errors
-    if (err.message && err.message.includes('password authentication')) {
-      userMessage = 'Σφάλμα ταυτοποίησης στη βάση δεδομένων. Παρακαλώ επικοινωνήστε με τον διαχειριστή.';
-    } else if (err.message && err.message.toLowerCase().includes('limit')) {
-      userMessage = 'Υπέρβαση ορίου σύνδεσης βάσης δεδομένων. Παρακαλώ προσπαθήστε ξανά σε λίγο.';
-    }
-  }
-  
-  // Special handling for authentication errors
-  if (err.message && err.message.includes('Authentication')) {
-    statusCode = 401;
-    userMessage = 'Απαιτείται σύνδεση για αυτή την ενέργεια. Παρακαλώ συνδεθείτε και προσπαθήστε ξανά.';
-  }
-  
-  // Special handling for not found errors 
-  if (statusCode === 404 || (err.message && err.message.includes('not found'))) {
-    statusCode = 404;
-    userMessage = 'Δεν βρέθηκε η ζητούμενη πληροφορία ή πόρος.';
-  }
-  
-  // API endpoints get JSON response
-  if (req.path.startsWith('/api') || req.accepts('json')) {
-    return res.status(statusCode).json({
-      error: true,
-      message: userMessage,
-      details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    return res.status(400).json({
+      status: 'error',
+      type: ErrorType.VALIDATION,
+      message: 'Validation failed',
+      errors: validationErrors,
+      timestamp: new Date().toISOString()
     });
   }
   
-  // All other requests get HTML response
-  const htmlErrorMessage = `
-    <html>
-      <head>
-        <title>Σφάλμα Εφαρμογής</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 2rem;
-            max-width: 600px;
-            margin: 0 auto;
-            line-height: 1.5;
-          }
-          h1 { color: #e53e3e; }
-          .error-box {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 1rem;
-            margin: 1rem 0;
-          }
-          .back-button {
-            display: inline-block;
-            background-color: #4299e1;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            text-decoration: none;
-            margin-top: 1rem;
-          }
-        </style>
-      </head>
-      <body>
-        <h1>Σφάλμα Εφαρμογής</h1>
-        <p>${userMessage}</p>
-        <div class="error-box">
-          <p>Κωδικός σφάλματος: ${statusCode}</p>
-          ${process.env.NODE_ENV === 'development' ? `<p>Λεπτομέρειες: ${errorMessage}</p>` : ''}
-        </div>
-        <a href="/" class="back-button">Επιστροφή στην αρχική σελίδα</a>
-      </body>
-    </html>
-  `;
+  // Handle application errors
+  if (error.type && error.statusCode) {
+    return res.status(error.statusCode).json({
+      status: 'error',
+      type: error.type,
+      message: error.message,
+      details: error.details,
+      timestamp: error.timestamp
+    });
+  }
   
-  return res.status(statusCode).send(htmlErrorMessage);
+  // Handle database errors
+  if (isDatabaseError(error)) {
+    const dbError = parseDatabaseError(error);
+    return res.status(dbError.statusCode).json({
+      status: 'error',
+      type: dbError.type,
+      message: dbError.message,
+      details: dbError.details,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle authentication errors
+  if (error.message?.includes('Unauthorized') || 
+      error.message?.includes('Authentication')) {
+    return res.status(401).json({
+      status: 'error',
+      type: ErrorType.AUTHENTICATION,
+      message: 'Authentication required',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle authorization errors
+  if (error.message?.includes('Forbidden') || 
+      error.message?.includes('Access denied')) {
+    return res.status(403).json({
+      status: 'error',
+      type: ErrorType.AUTHORIZATION,
+      message: 'Access forbidden',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Handle not found errors
+  if (error.message?.includes('not found') || 
+      error.message?.includes('Not found')) {
+    return res.status(404).json({
+      status: 'error',
+      type: ErrorType.NOT_FOUND,
+      message: 'Resource not found',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  // Generic internal server error
+  res.status(500).json({
+    status: 'error',
+    type: ErrorType.INTERNAL,
+    message: 'Internal server error',
+    timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV === 'development' && {
+      details: {
+        originalError: error.message,
+        stack: error.stack
+      }
+    })
+  });
 }
 
-/**
- * Async error handler wrapper
- * Catches errors in async route handlers and forwards them to the error handler
- * 
- * @example
- * app.get('/api/data', asyncHandler(async (req, res) => {
- *   // Your async code here
- * }));
- */
-export function asyncHandler(fn: Function) {
+// Async error wrapper
+export function asyncHandler(
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
 
-/**
- * Export single middleware function to wrap routes with error handling
- * This uses both async handling and applies the error handler middleware
- */
-export function withErrorHandling(app: any) {
-  return {
-    get: (path: string, handler: Function) => app.get(path, asyncHandler(handler)),
-    post: (path: string, handler: Function) => app.post(path, asyncHandler(handler)),
-    put: (path: string, handler: Function) => app.put(path, asyncHandler(handler)),
-    delete: (path: string, handler: Function) => app.delete(path, asyncHandler(handler)),
-    patch: (path: string, handler: Function) => app.patch(path, asyncHandler(handler)),
-  };
+// Not found handler
+export function notFoundHandler(req: Request, res: Response): void {
+  res.status(404).json({
+    status: 'error',
+    type: ErrorType.NOT_FOUND,
+    message: `Route ${req.originalUrl} not found`,
+    path: req.originalUrl,
+    method: req.method,
+    timestamp: new Date().toISOString()
+  });
 }
