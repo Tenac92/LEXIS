@@ -104,10 +104,13 @@ export async function getDashboardStats(req: Request, res: Response) {
       }
     });
 
-    // Get recent budget history with limit and enhanced info
+    // Get recent budget history with limit and enhanced info using correct schema
     const { data: historyData, error: historyError } = await supabase
       .from('budget_history')
-      .select('id, change_type, mis, previous_amount, new_amount, created_at, created_by, document_id, change_reason')
+      .select(`
+        id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
+        project:Projects!budget_history_project_id_fkey(mis, project_title)
+      `)
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -146,8 +149,9 @@ export async function getDashboardStats(req: Request, res: Response) {
         ? `αύξηση κατά ${Math.abs(difference).toFixed(2)}€` 
         : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
       
-      // Create a more meaningful description
-      let description = `Έργο ${activity.mis}: `;
+      // Create a more meaningful description using project data
+      const projectMis = activity.project?.mis || activity.project_id;
+      let description = `Έργο ${projectMis}: `;
       
       if (activity.change_type === 'admin_update') {
         description += `Διοικητική ενημέρωση προϋπολογισμού (${changeText})`;

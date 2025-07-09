@@ -141,7 +141,6 @@ export const budgetHistory = pgTable("budget_history", {
   project_id: integer("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  mis: integer("mis"), // Legacy field for migration compatibility
   previous_amount: decimal("previous_amount", {
     precision: 12,
     scale: 2,
@@ -264,13 +263,16 @@ export const budgetNotifications = pgTable("budget_notifications", {
 export const generatedDocuments = pgTable("generated_documents", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  generated_by: bigint("generated_by", { mode: "number" })
-    .references(() => users.id),
+  generated_by: bigint("generated_by", { mode: "number" }).references(
+    () => users.id,
+  ),
   protocol_date: date("protocol_date"),
   total_amount: decimal("total_amount", { precision: 10, scale: 2 }),
   status: varchar("status", { length: 50 }).default("pending"),
   protocol_number_input: text("protocol_number_input").unique(),
-  original_protocol_number: varchar("original_protocol_number", { length: 255 }),
+  original_protocol_number: varchar("original_protocol_number", {
+    length: 255,
+  }),
   original_protocol_date: date("original_protocol_date"),
   is_correction: boolean("is_correction").default(false),
   comments: text("comments"),
@@ -279,14 +281,15 @@ export const generatedDocuments = pgTable("generated_documents", {
   esdian: text("esdian").array(),
   director_signature: jsonb("director_signature"),
   beneficiary_payments_id: integer("beneficiary_payments_id").array(),
-  
+
   // Enhanced foreign key relationships
-  attachments_id: bigint("attachments_id", { mode: "number" })
-    .references(() => attachmentsRows.id),
-  project_index_id: integer("project_index_id")
-    .references(() => projectIndex.id),
-  unit_id: bigint("unit_id", { mode: "number" })
-    .references(() => monada.id),
+  attachments_id: bigint("attachments_id", { mode: "number" }).references(
+    () => attachmentsRows.id,
+  ),
+  project_index_id: integer("project_index_id").references(
+    () => projectIndex.id,
+  ),
+  unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
 });
 
 /**
@@ -403,27 +406,39 @@ export const beneficiaries = pgTable("beneficiaries", {
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
  * Enhanced normalized financial data with proper foreign key relationships
  */
-export const beneficiaryPayments = pgTable("beneficiary_payments", {
-  id: serial("id").primaryKey(),
-  beneficiary_id: integer("beneficiary_id")
-    .references(() => beneficiaries.id, { onDelete: "cascade" }),
-  installment: text("installment").notNull(),
-  amount: decimal("amount", { precision: 12, scale: 2 }),
-  status: text("status").default("pending"),
-  payment_date: date("payment_date"),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-  
-  // Enhanced foreign key relationships
-  unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
-  expediture_type_id: integer("expediture_type_id").references(() => expenditureTypes.id),
-  document_id: bigint("document_id", { mode: "number" }).references(() => generatedDocuments.id),
-  project_id: integer("project_id").references(() => projects.id),
-}, (table) => ({
-  // Index on status for pending records performance optimization
-  pendingStatusIndex: index("idx_beneficiary_payments_pending").on(table.status).where(sql`${table.status} = 'pending'`),
-  uniqueId: unique("beneficiary_payments_id_key").on(table.id),
-}));
+export const beneficiaryPayments = pgTable(
+  "beneficiary_payments",
+  {
+    id: serial("id").primaryKey(),
+    beneficiary_id: integer("beneficiary_id").references(
+      () => beneficiaries.id,
+      { onDelete: "cascade" },
+    ),
+    installment: text("installment").notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }),
+    status: text("status").default("pending"),
+    payment_date: date("payment_date"),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+
+    // Enhanced foreign key relationships
+    unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
+    expediture_type_id: integer("expediture_type_id").references(
+      () => expenditureTypes.id,
+    ),
+    document_id: bigint("document_id", { mode: "number" }).references(
+      () => generatedDocuments.id,
+    ),
+    project_id: integer("project_id").references(() => projects.id),
+  },
+  (table) => ({
+    // Index on status for pending records performance optimization
+    pendingStatusIndex: index("idx_beneficiary_payments_pending")
+      .on(table.status)
+      .where(sql`${table.status} = 'pending'`),
+    uniqueId: unique("beneficiary_payments_id_key").on(table.id),
+  }),
+);
 
 /**
  * User Preferences Table

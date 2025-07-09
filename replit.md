@@ -212,6 +212,27 @@ This is a full-stack web application built for Greek government budget and docum
   - Fixed missing API endpoints for document management
   - Enhanced error handling and debugging capabilities
 
+### January 9, 2025 - Critical Dashboard Fix & Database Schema Correction
+- **CRITICAL DATABASE FIX: Fixed budget_history table schema reference errors**
+- **Dashboard Error Resolution:**
+  - Fixed "column budget_history.mis does not exist" error causing dashboard 500 responses
+  - Updated dashboard controller to use correct budget_history schema with project_id instead of mis
+  - Added proper foreign key joins to Projects table for MIS data retrieval
+  - Enhanced recent activity display with project data from foreign key relationships
+- **Database Schema Alignment:**
+  - Updated budget_history queries to use project_id foreign key references
+  - Added proper joins to Projects table for MIS and project_title information
+  - Fixed all references to removed mis column in budget_history table
+  - Enhanced activity tracking with complete project information
+- **API Response Fix:**
+  - Dashboard stats endpoint now returns proper data structure
+  - Fixed budget history activity display with correct project information
+  - Resolved 500 error responses preventing dashboard functionality
+- **Console Log Cleanup:**
+  - Continued systematic reduction of debug statements across controllers
+  - Maintained essential error logging while removing verbose debug output
+  - Improved production readiness through cleaner console output
+
 ### January 13, 2025 - Performance Optimization Complete & Project ID Enhancement
 - **MAJOR PERFORMANCE OPTIMIZATION IMPLEMENTED: Both edit form and details modal now use enhanced caching and project_id lookups**
 - **Cache Configuration Enhanced:**
