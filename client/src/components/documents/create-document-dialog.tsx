@@ -346,8 +346,15 @@ export function CreateDocumentDialog({
     const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
     
     const managers: any[] = [];
+    
+    // Add safety check for monada data
+    if (!monada || !Array.isArray(monada)) {
+      console.warn('Monada data is not available or not an array:', monada);
+      return [];
+    }
+    
     monada.forEach((unit: any) => {
-      if (unit.unit === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
+      if (unit && unit.unit === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
             managers.push({
@@ -390,7 +397,7 @@ export function CreateDocumentDialog({
         const data = await response.json();
         
         if (!data || !Array.isArray(data)) {
-
+          console.error('Invalid units data received:', data);
           toast({
             title: "Σφάλμα",
             description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",
@@ -423,7 +430,7 @@ export function CreateDocumentDialog({
         const processedUnits = data.map((item: any) => {
           // For debugging purposes
           if (!item.unit && !item.id) {
-
+            console.warn('Unit item missing both unit and id:', item);
           }
           
           // First handle the ID
@@ -476,7 +483,7 @@ export function CreateDocumentDialog({
         
         return processedUnits;
       } catch (error) {
-
+        console.error('Error fetching units:', error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης μονάδων. Παρακαλώ δοκιμάστε ξανά.",

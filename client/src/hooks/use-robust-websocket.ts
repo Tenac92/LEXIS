@@ -92,7 +92,7 @@ export function useRobustWebSocket() {
         port = window.location.protocol === 'https:' ? '443' : '80';
       }
       
-      // Always use the current host (which includes port if non-standard)
+      // Construct WebSocket URL - use window.location.host which includes port
       const wsUrl = `${protocol}//${window.location.host}/ws?t=${Date.now()}`;
 
       const ws = new WebSocket(wsUrl, ['notifications']);
