@@ -1406,14 +1406,10 @@ export function CreateDocumentDialog({
             }
           }
 
-          // Store both MIS and NA853 for proper querying
-          const projectId = item.na853 || String(item.mis);
-          const name = item.na853
-            ? `${item.na853} - ${item.event_description || item.project_title || "No description"}`
-            : item.event_description || item.project_title || "No description";
+          const name = item.project_title || item.event_description || `Project ${item.mis}`;
 
           return {
-            id: projectId,
+            id: item.id, // Use the numeric project_id from database
             mis: String(item.mis), // Store MIS separately
             name,
             expenditure_types: expenditureTypes || [],
