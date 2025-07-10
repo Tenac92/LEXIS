@@ -176,6 +176,30 @@ This is a full-stack web application built for Greek government budget and docum
   - Comprehensive database schema alignment with actual Supabase structure
   - Performance-optimized API endpoints with proper caching strategies
 
+### July 10, 2025 - Unit Autoselect & Projects-Working API Fix Complete
+- **MAJOR BREAKTHROUGH: Fixed unit autoselect and projects retrieval for authenticated users**
+- **Projects-Working Endpoint Enhancement:**
+  - Updated endpoint to handle both numeric unit IDs and unit names properly
+  - Fixed issue where unit ID 2 returned 0 projects, now correctly returns 58 projects
+  - Added intelligent ID/name mapping: numeric ID 2 → unit name "ΔΑΕΦΚ-ΚΕ" → 58 projects
+  - Enhanced debugging to show unit mapping process for better troubleshooting
+- **Unit Autoselect Success:**
+  - Verified unit autoselect correctly selects unit 2 for authenticated user
+  - User "Δημήτριος Καραβίας" with unit_id [2] properly mapped to "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"
+  - Project selection dropdown now properly populates with 58 available projects
+- **API Consistency Improvements:**
+  - Fixed units API to return consistent numeric IDs alongside Greek names
+  - Enhanced project filtering logic to work with both ID and name-based queries
+  - Maintained backward compatibility with existing unit name-based queries
+- **Database Query Optimization:**
+  - Budget API fixed to handle Greek character NA853 codes without SQL type errors
+  - Enhanced project lookup to support both numeric and text-based identifiers
+  - All geographic data (regions, municipalities) working correctly with project_index data
+- **User Experience Success:**
+  - Document creation dialog now properly auto-selects user's unit
+  - Project dropdown populates with actual projects from user's department
+  - All API endpoints return proper JSON responses with authentic Greek government data
+
 ### July 9, 2025 - CRITICAL DATABASE TYPE MISMATCH & ROUTE ORDERING FIXES
 - **MAJOR BREAKTHROUGH: Fixed "invalid input syntax for type bigint: 'NaN'" error in /api/documents/user endpoint**
 - **Route Ordering Issue Resolved:**

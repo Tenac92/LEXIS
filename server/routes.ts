@@ -584,18 +584,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   log('[Routes] API routes registered');
   
   // Additional project endpoints
-  app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/projects-working/:unitIdentifier', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      let { unitName } = req.params;
+      let { unitIdentifier } = req.params;
       
       // Decode URL-encoded Greek characters
       try {
-        unitName = decodeURIComponent(unitName);
+        unitIdentifier = decodeURIComponent(unitIdentifier);
       } catch (decodeError) {
-        console.log(`[ProjectsWorking] URL decode failed, using original: ${unitName}`);
+        console.log(`[ProjectsWorking] URL decode failed, using original: ${unitIdentifier}`);
       }
       
-      console.log(`[ProjectsWorking] Fetching projects for unit: ${unitName}`);
+      console.log(`[ProjectsWorking] Fetching projects for unit: ${unitIdentifier}`);
       
       // Get projects with enhanced data using optimized schema
       const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, indexRes] = await Promise.all([
@@ -620,16 +620,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expenditureTypes = expenditureTypesRes.data || [];
       const indexData = indexRes.data || [];
       
+      // Determine if unitIdentifier is numeric ID or unit name
+      const isNumericId = /^\d+$/.test(unitIdentifier);
+      let targetUnitId = null;
+      let targetUnitName = null;
+      
+      if (isNumericId) {
+        // If numeric, find the unit name from Monada table
+        targetUnitId = parseInt(unitIdentifier);
+        const unitData = monadaData.find(m => m.id === targetUnitId);
+        if (unitData) {
+          targetUnitName = unitData.unit;
+          console.log(`[ProjectsWorking] Numeric ID ${targetUnitId} maps to unit: ${targetUnitName}`);
+        } else {
+          console.log(`[ProjectsWorking] No unit found for ID: ${targetUnitId}`);
+          return res.json([]);
+        }
+      } else {
+        // If not numeric, use as unit name directly
+        targetUnitName = unitIdentifier;
+        const unitData = monadaData.find(m => m.unit === targetUnitName);
+        if (unitData) {
+          targetUnitId = unitData.id;
+          console.log(`[ProjectsWorking] Unit name ${targetUnitName} maps to ID: ${targetUnitId}`);
+        }
+      }
+      
       // Filter projects by unit using project_index directly
       const unitProjects = projects.filter(project => {
         const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
         return projectIndexEntries.some(idx => {
-          const unitData = monadaData.find(m => m.id === idx.monada_id);
-          return unitData && unitData.unit === unitName;
+          // Match by either unit ID or unit name
+          return idx.monada_id === targetUnitId || 
+                 (monadaData.find(m => m.id === idx.monada_id)?.unit === targetUnitName);
         });
       });
       
-      console.log(`[ProjectsWorking] Found ${unitProjects.length} projects for unit ${unitName}`);
+      console.log(`[ProjectsWorking] Found ${unitProjects.length} projects for unit ${unitIdentifier} (ID: ${targetUnitId}, Name: ${targetUnitName})`);
       
       res.json(unitProjects);
     } catch (error) {
