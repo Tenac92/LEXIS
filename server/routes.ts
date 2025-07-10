@@ -658,7 +658,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`[ProjectsWorking] Found ${unitProjects.length} projects for unit ${unitIdentifier} (ID: ${targetUnitId}, Name: ${targetUnitName})`);
       
-      res.json(unitProjects);
+      // Enhance projects with expenditure_types array
+      const enhancedProjects = unitProjects.map(project => {
+        // Get all project_index entries for this project
+        const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
+        
+        // Extract unique expenditure type IDs
+        const expenditureTypeIds = [...new Set(projectIndexEntries
+          .map(idx => idx.expediture_type_id)
+          .filter(id => id !== null && id !== undefined))];
+        
+        // Map expenditure type IDs to names
+        const expenditureTypeNames = expenditureTypeIds
+          .map(id => {
+            const expType = expenditureTypes.find(et => et.id === id);
+            return expType ? expType.expediture_types : null;
+          })
+          .filter(name => name !== null);
+        
+        return {
+          ...project,
+          expenditure_types: expenditureTypeNames,
+          expenditure_type: expenditureTypeNames // Keep for backward compatibility
+        };
+      });
+      
+      res.json(enhancedProjects);
     } catch (error) {
       console.error(`[ProjectsWorking] Error:`, error);
       res.status(500).json({
