@@ -319,60 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // V2 Documents endpoint
-  app.post('/api/v2-documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      if (!req.user?.id) {
-        return res.status(401).json({ message: 'Authentication required' });
-      }
-
-      const { unit, project_id, expenditure_type, recipients, total_amount, attachments, esdian_field1, esdian_field2 } = req.body;
-
-      if (!recipients?.length || !project_id || !unit || !expenditure_type) {
-        return res.status(400).json({
-          message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
-        });
-      }
-
-      // Create document with enhanced normalized schema structure
-      const documentPayload = {
-        status: 'pending',
-        total_amount: parseFloat(String(total_amount)) || 0,
-        esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        generated_by: req.user.id,
-        unit_id: parseInt(unit),
-        attachment_id: [],
-        beneficiary_payments_id: [],
-      };
-
-      const { data, error } = await supabase
-        .from('generated_documents')
-        .insert([documentPayload])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[V2Documents] Error creating document:', error);
-        return res.status(500).json({ 
-          message: 'Error creating document', 
-          error: error.message 
-        });
-      }
-
-      res.status(201).json({ 
-        id: data.id, 
-        message: 'Document created successfully'
-      });
-    } catch (error) {
-      console.error('[V2Documents] Error in v2-documents endpoint:', error);
-      res.status(500).json({ 
-        message: 'Error creating document', 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      });
-    }
-  });
+  // V2 Documents endpoint is handled by documentsController router
   // Basic expenditure types endpoint  
   app.get('/api/expenditure-types', async (req: Request, res: Response) => {
     try {

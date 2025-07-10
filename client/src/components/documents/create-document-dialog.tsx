@@ -1848,7 +1848,7 @@ export function CreateDocumentDialog({
         };
 
         // Use the v2-documents endpoint which handles document creation with proper error handling
-        const response = (await apiRequest("/api/v2-documents", {
+        const response = (await apiRequest("/api/documents/v2", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
