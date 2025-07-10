@@ -45,6 +45,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { default: attachmentsRouter } = await import('./controllers/attachments');
   app.use('/api/attachments', attachmentsRouter);
   
+  const { router: beneficiariesRouter } = await import('./controllers/beneficiaryController');
+  app.use('/api/beneficiaries', beneficiariesRouter);
+  
   // Basic document creation endpoint (legacy)
   app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
