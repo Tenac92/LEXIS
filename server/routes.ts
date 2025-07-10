@@ -48,6 +48,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: beneficiariesRouter } = await import('./controllers/beneficiaryController');
   app.use('/api/beneficiaries', beneficiariesRouter);
   
+  // Beneficiary payments endpoint for enhanced display
+  app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user?.unit_id) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      // Get all beneficiaries for user's units first
+      const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0]);
+      
+      // Get payments for all these beneficiaries
+      const allPayments = [];
+      for (const beneficiary of beneficiaries) {
+        const payments = await storage.getBeneficiaryPayments(beneficiary.id);
+        allPayments.push(...payments);
+      }
+
+      res.json(allPayments);
+    } catch (error) {
+      console.error('[Beneficiary Payments] Error fetching payments:', error);
+      res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
+    }
+  });
+  
   // Basic document creation endpoint (legacy)
   app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
