@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import { supabase } from '../database/supabase';
+import { supabase } from '../config/db';
 import { asyncHandler } from '../middleware/errorHandler';
 
 /**

@@ -119,13 +119,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { getDashboardStats } = await import('./controllers/dashboard');
   const { router: documentsRouter } = await import('./controllers/documentsController');
   const { router: usersRouter } = await import('./controllers/usersController');
+  // Remove problematic expenditure types router for now
   
   // Mount API routes
   app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
   app.use('/api/documents', documentsRouter);
   app.use('/api/users', usersRouter);
+  // Basic expenditure types endpoint  
+  app.get('/api/expenditure-types', async (req: Request, res: Response) => {
+    try {
+      const { data: expenditureTypes, error } = await supabase
+        .from('expediture_types')
+        .select('*')
+        .order('id');
+      
+      if (error) {
+        console.error('[API] Error fetching expenditure types:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(expenditureTypes || []);
+    } catch (error) {
+      console.error('[API] Error in expenditure types endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   
+  // Health check endpoint
+  app.get('/api/health', async (req: Request, res: Response) => {
+    try {
+      // Test database connection
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        return res.status(500).json({
+          status: 'error',
+          message: 'Database connection failed',
+          error: error.message
+        });
+      }
+      
+      res.json({
+        status: 'success',
+        message: 'API is healthy',
+        timestamp: new Date().toISOString(),
+        database: 'connected'
+      });
+    } catch (error) {
+      console.error('[Health] Health check failed:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Health check failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Public API routes
+  app.get('/api/public/expenditure-types', async (req: Request, res: Response) => {
+    try {
+      const { data: expenditureTypes, error } = await supabase
+        .from('expediture_types')
+        .select('*')
+        .order('id');
+      
+      if (error) {
+        console.error('[API] Error fetching public expenditure types:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(expenditureTypes || []);
+    } catch (error) {
+      console.error('[API] Error in public expenditure types endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   app.get('/api/public/monada', async (req: Request, res: Response) => {
     try {
       const { data: monada, error } = await supabase
@@ -306,6 +378,154 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message || 'SQL execution failed',
         executionTime: Date.now() - Date.now()
       });
+    }
+  });
+
+  // Budget endpoints
+  app.get('/api/budget/data/:projectId', async (req: Request, res: Response) => {
+    try {
+      const { projectId } = req.params;
+      
+      // Try to find project by ID or MIS
+      let projectQuery = supabase
+        .from('Projects')
+        .select('id, mis')
+        .or(`id.eq.${projectId},mis.eq.${projectId}`)
+        .single();
+      
+      const { data: project, error: projectError } = await projectQuery;
+      
+      if (projectError || !project) {
+        console.log(`[Budget] Project not found for ID: ${projectId}`);
+        return res.json({
+          status: 'success',
+          data: {
+            user_view: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: 0,
+            ethsia_pistosi: 0,
+            current_budget: 0,
+            q1: 0,
+            q2: 0,
+            q3: 0,
+            q4: 0,
+            total_spent: 0,
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0
+          }
+        });
+      }
+      
+      // Get budget data
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('project_budget')
+        .select('*')
+        .eq('project_id', project.id)
+        .single();
+      
+      if (budgetError || !budgetData) {
+        console.log(`[Budget] Budget not found for project: ${project.id}`);
+        return res.json({
+          status: 'success',
+          data: {
+            user_view: 0,
+            total_budget: 0,
+            annual_budget: 0,
+            katanomes_etous: budgetData?.katanomes_etous || 0,
+            ethsia_pistosi: budgetData?.ethsia_pistosi || 0,
+            current_budget: 0,
+            q1: budgetData?.q1 || 0,
+            q2: budgetData?.q2 || 0,
+            q3: budgetData?.q3 || 0,
+            q4: budgetData?.q4 || 0,
+            total_spent: 0,
+            available_budget: 0,
+            quarter_available: 0,
+            yearly_available: 0
+          }
+        });
+      }
+      
+      // Calculate budget metrics
+      const totalBudget = (budgetData.q1 || 0) + (budgetData.q2 || 0) + (budgetData.q3 || 0) + (budgetData.q4 || 0);
+      const annualBudget = budgetData.ethsia_pistosi || 0;
+      
+      res.json({
+        status: 'success',
+        data: {
+          user_view: budgetData.user_view || 0,
+          total_budget: totalBudget,
+          annual_budget: annualBudget,
+          katanomes_etous: budgetData.katanomes_etous || 0,
+          ethsia_pistosi: budgetData.ethsia_pistosi || 0,
+          current_budget: totalBudget,
+          q1: budgetData.q1 || 0,
+          q2: budgetData.q2 || 0,
+          q3: budgetData.q3 || 0,
+          q4: budgetData.q4 || 0,
+          total_spent: 0,
+          available_budget: totalBudget,
+          quarter_available: totalBudget,
+          yearly_available: annualBudget
+        }
+      });
+      
+    } catch (error) {
+      console.error('[Budget] Error fetching budget data:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Project regions endpoint
+  app.get('/api/projects/:id/regions', async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      // Get project data with regions from project_index
+      const { data: projectIndex, error: indexError } = await supabase
+        .from('project_index')
+        .select(`
+          *,
+          kallikratis:kallikratis_id (
+            *
+          )
+        `)
+        .eq('project_id', parseInt(id));
+      
+      if (indexError) {
+        console.error('[Projects] Error fetching project regions:', indexError);
+        return res.status(500).json({ error: indexError.message });
+      }
+      
+      // Extract unique regions
+      const regions = new Set();
+      const regionalUnits = new Set();
+      const municipalities = new Set();
+      
+      projectIndex?.forEach(index => {
+        if (index.kallikratis) {
+          const k = index.kallikratis;
+          if (k.perifereia) regions.add(k.perifereia);
+          if (k.perifereiaki_enotita) regionalUnits.add(k.perifereiaki_enotita);
+          if (k.onoma_neou_ota) municipalities.add(k.onoma_neou_ota);
+        }
+      });
+      
+      res.json({
+        regions: Array.from(regions),
+        regional_units: Array.from(regionalUnits),
+        municipalities: Array.from(municipalities),
+        project_index: projectIndex || []
+      });
+      
+    } catch (error) {
+      console.error('[Projects] Error in regions endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
     }
   });
 
