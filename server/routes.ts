@@ -40,6 +40,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register API routes
   log('[Routes] Registering API routes...');
   
+  // Import and register controllers
+  const { default: attachmentsRouter } = await import('./controllers/attachments');
+  app.use('/api/attachments', attachmentsRouter);
+  
   // Basic document creation endpoint (legacy)
   app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {

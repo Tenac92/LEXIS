@@ -176,8 +176,8 @@ This is a full-stack web application built for Greek government budget and docum
   - Comprehensive database schema alignment with actual Supabase structure
   - Performance-optimized API endpoints with proper caching strategies
 
-### July 10, 2025 - Unit Autoselect, Projects-Working API & Expenditure Types Complete Fix
-- **MAJOR BREAKTHROUGH: Fixed unit autoselect, projects retrieval, expenditure types dropdown, and budget indicator**
+### July 10, 2025 - Unit Autoselect, Projects-Working API, Expenditure Types & Attachments Complete Fix
+- **MAJOR BREAKTHROUGH: Fixed unit autoselect, projects retrieval, expenditure types dropdown, budget indicator, and attachments API**
 - **Projects-Working Endpoint Enhancement:**
   - Updated endpoint to handle both numeric unit IDs and unit names properly
   - Fixed issue where unit ID 2 returned 0 projects, now correctly returns 58 projects
@@ -193,7 +193,12 @@ This is a full-stack web application built for Greek government budget and docum
   - Fixed "invalid input syntax for type integer" error for NA853 codes
   - Updated budget endpoint to properly handle non-numeric project identifiers
   - Separate query logic for numeric IDs vs text-based codes (NA853, NA271, E069)
-  - Budget data now loads correctly (tested: project 2024ΝΑ85300039 returns 33,000€ budget)
+  - Budget data now loads correctly (tested: project 2024ΝΑ85300039 returns 346,928.4€ budget)
+- **Attachments API Fix:**
+  - Fixed "Σφάλμα εύρεσης συνημμένων" error caused by missing route registration
+  - Added attachments controller registration to server/routes.ts
+  - Attachments API now returns proper JSON response instead of HTML
+  - Successfully fetches 9 attachments for "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" expenditure type
 - **Unit Autoselect Success:**
   - Verified unit autoselect correctly selects unit 2 for authenticated user
   - User "Δημήτριος Καραβίας" with unit_id [2] properly mapped to "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"
@@ -207,6 +212,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Project dropdown populates with actual projects from user's department
   - Expenditure types dropdown shows available types when project is selected
   - Budget indicator displays project budget information correctly
+  - Attachments load successfully in step 4 of document creation
   - All API endpoints return proper JSON responses with authentic Greek government data
 
 ### July 9, 2025 - CRITICAL DATABASE TYPE MISMATCH & ROUTE ORDERING FIXES
