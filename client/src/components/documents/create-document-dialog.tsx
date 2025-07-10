@@ -538,8 +538,14 @@ export function CreateDocumentDialog({
       let defaultUnit = "";
       if (user?.unit_id && user.unit_id.length > 0) {
         // Convert user's unit ID to unit name for form
-        const userUnitData = data.find((item: any) => item.id === user.unit_id[0]);
-        defaultUnit = userUnitData?.unit || "";
+        console.log("[CreateDocument] User unit_id:", user.unit_id, "Available units:", units);
+        const userUnitData = units.find((item: any) => item.id === user.unit_id[0]);
+        if (userUnitData) {
+          defaultUnit = userUnitData.id; // Use unit ID, not unit name
+          console.log("[CreateDocument] Auto-selected unit:", defaultUnit, "for user unit_id:", user.unit_id[0]);
+        } else {
+          console.log("[CreateDocument] No matching unit found for user unit_id:", user.unit_id[0]);
+        }
       }
       
       // Reset form to default values for new document, but preserve unit

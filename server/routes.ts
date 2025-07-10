@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { data: units, error } = await supabase
         .from('Monada')
-        .select('unit_name')
+        .select('id, unit, unit_name')
         .order('id');
       
       if (error) {
@@ -229,20 +229,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: error.message });
       }
       
-      // Extract unique unit names
-      const uniqueUnits = new Set<string>();
-      units?.forEach(unit => {
-        if (unit.unit_name?.name && typeof unit.unit_name.name === 'string') {
-          uniqueUnits.add(unit.unit_name.name);
-        }
-      });
-      
-      const unitsList = Array.from(uniqueUnits).sort().map(unitName => ({
-        id: unitName,
-        name: unitName
+      // Transform the data to match the expected format
+      const transformedData = units.map(unit => ({
+        id: unit.id, // Use the numeric ID for proper mapping
+        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : unit.unit,
+        unit_name: unit.unit // Keep unit abbreviation for compatibility
       }));
       
-      res.json(unitsList);
+      res.json(transformedData);
     } catch (error) {
       console.error('[API] Error in units endpoint:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -386,14 +380,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { projectId } = req.params;
       
-      // Try to find project by ID or MIS
-      let projectQuery = supabase
-        .from('Projects')
-        .select('id, mis')
-        .or(`id.eq.${projectId},mis.eq.${projectId}`)
-        .single();
+      console.log(`[Budget] Looking for project with identifier: ${projectId}`);
+      
+      // Try to find project by ID, MIS, na853, na271, or e069
+      console.log(`[Budget] Attempting to find project with identifier: ${projectId}`);
+      
+      // Check if projectId is a number for ID comparison
+      const isNumeric = /^\d+$/.test(projectId);
+      
+      let projectQuery;
+      if (isNumeric) {
+        // If numeric, include ID in the search
+        projectQuery = supabase
+          .from('Projects')
+          .select('id, mis, na853, na271, e069')
+          .or(`id.eq.${projectId},mis.eq.${projectId},na853.eq.${projectId},na271.eq.${projectId},e069.eq.${projectId}`)
+          .single();
+      } else {
+        // If not numeric, only search text fields
+        projectQuery = supabase
+          .from('Projects')
+          .select('id, mis, na853, na271, e069')
+          .or(`mis.eq.${projectId},na853.eq.${projectId},na271.eq.${projectId},e069.eq.${projectId}`)
+          .single();
+      }
       
       const { data: project, error: projectError } = await projectQuery;
+      
+      if (projectError) {
+        console.log(`[Budget] Project lookup error:`, projectError);
+      }
+      if (project) {
+        console.log(`[Budget] Found project:`, project);
+      }
       
       if (projectError || !project) {
         console.log(`[Budget] Project not found for ID: ${projectId}`);
@@ -486,26 +505,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // Get project data with regions from project_index
+      console.log(`[Regions] Looking for project with identifier: ${id}`);
+      
+      // First find the project to get its actual ID
+      const { data: project, error: projectError } = await supabase
+        .from('Projects')
+        .select('id, mis, na853, na271, e069')
+        .or(`id.eq.${id},mis.eq.${id},na853.eq.${id},na271.eq.${id},e069.eq.${id}`)
+        .single();
+      
+      if (projectError || !project) {
+        console.log(`[Regions] Project not found for identifier: ${id}`);
+        return res.json({
+          regions: [],
+          regional_units: [],
+          municipalities: [],
+          project_index: [],
+          expenditure_types: []
+        });
+      }
+      
+      console.log(`[Regions] Found project ID: ${project.id} for identifier: ${id}`);
+      
+      // Get project data with regions from project_index using actual project ID
       const { data: projectIndex, error: indexError } = await supabase
         .from('project_index')
         .select(`
           *,
           kallikratis:kallikratis_id (
             *
+          ),
+          expediture_types:expediture_type_id (
+            *
           )
         `)
-        .eq('project_id', parseInt(id));
+        .eq('project_id', project.id);
       
       if (indexError) {
         console.error('[Projects] Error fetching project regions:', indexError);
         return res.status(500).json({ error: indexError.message });
       }
       
-      // Extract unique regions
+      // Extract unique data
       const regions = new Set();
       const regionalUnits = new Set();
       const municipalities = new Set();
+      const expenditureTypes = new Set();
       
       projectIndex?.forEach(index => {
         if (index.kallikratis) {
@@ -514,12 +559,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (k.perifereiaki_enotita) regionalUnits.add(k.perifereiaki_enotita);
           if (k.onoma_neou_ota) municipalities.add(k.onoma_neou_ota);
         }
+        if (index.expediture_types) {
+          expenditureTypes.add(index.expediture_types);
+        }
       });
+      
+      console.log(`[Regions] Found ${projectIndex?.length || 0} project_index entries for project ${project.id}`);
+      console.log(`[Regions] Extracted ${regions.size} regions, ${expenditureTypes.size} expenditure types`);
       
       res.json({
         regions: Array.from(regions),
         regional_units: Array.from(regionalUnits),
         municipalities: Array.from(municipalities),
+        expenditure_types: Array.from(expenditureTypes),
         project_index: projectIndex || []
       });
       
