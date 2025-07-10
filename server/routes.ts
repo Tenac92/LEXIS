@@ -394,14 +394,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         projectQuery = supabase
           .from('Projects')
           .select('id, mis, na853, na271, e069')
-          .or(`id.eq.${projectId},mis.eq.${projectId},na853.eq.${projectId},na271.eq.${projectId},e069.eq.${projectId}`)
+          .or(`id.eq.${projectId},mis.eq.${projectId}`)
           .single();
       } else {
-        // If not numeric, only search text fields
+        // If not numeric, only search text fields (na853, na271, e069)
         projectQuery = supabase
           .from('Projects')
           .select('id, mis, na853, na271, e069')
-          .or(`mis.eq.${projectId},na853.eq.${projectId},na271.eq.${projectId},e069.eq.${projectId}`)
+          .or(`na853.eq.${projectId},na271.eq.${projectId},e069.eq.${projectId}`)
           .single();
       }
       
