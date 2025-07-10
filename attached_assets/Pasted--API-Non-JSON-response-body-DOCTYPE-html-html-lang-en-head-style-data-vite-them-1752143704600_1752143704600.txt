@@ -1,0 +1,100 @@
+[API] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", requestInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[Budget] Error fetching budget data: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", requestInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[Budget] Error fetching budget data: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", requestInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[Budget] Error fetching budget data: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Received non-JSON response: text/html; charset=utf-8
+[API] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8", requestInfo: {…}, stack: "Error: Ο διακομιστής επέστρεψε μη έγκυρη απόκριση τύπου: text/html; charset=utf-8↵    at…"}
+
+[Budget] Error fetching budget data: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Received non-JSON response: text/html; charset=utf-8
+[API] Non-JSON response body: <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <style data-vite-theme="" data-inject-first="">:root {
+      --background: 0 0% 100%;
+--foreground: 20 14.3% 4.1%;
+--muted: 60 4.8% 95.9%;
+--muted-foreground: 25 5.3% 44.7%;
+--popover: 0 0% 100%;
+--popover-foreground: 20 14.3% 4.1%;
+--card: 0 0% 100%;
+--...
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}

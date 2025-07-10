@@ -5,6 +5,7 @@ import { supabase } from './config/db';
 import { log } from './vite';
 import { createServer } from 'http';
 import { storage } from './storage';
+import { getBudgetByMis } from './controllers/budgetController';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -218,6 +219,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Budget lookup endpoint for project cards
+  app.get('/api/budget/lookup/:mis', getBudgetByMis);
+
   // Authentication routes handled by authentication.ts
   log('[Routes] Authentication routes handled by authentication.ts setupAuth()');
 
@@ -225,11 +229,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { getDashboardStats } = await import('./controllers/dashboard');
   const { router: documentsRouter } = await import('./controllers/documentsController');
   const { router: usersRouter } = await import('./controllers/usersController');
+  const { router: projectRouter } = await import('./controllers/projectController');
   // Remove problematic expenditure types router for now
   
   // Mount API routes
   app.get('/api/dashboard/stats', authenticateSession, getDashboardStats);
   app.use('/api/documents', documentsRouter);
+  app.use('/api/projects', projectRouter);
   app.use('/api/users', usersRouter);
   // Basic expenditure types endpoint  
   app.get('/api/expenditure-types', async (req: Request, res: Response) => {

@@ -204,6 +204,11 @@ This is a full-stack web application built for Greek government budget and docum
   - Added missing project cards endpoint to server/routes.ts returning proper JSON response
   - Endpoint now returns 195 projects with enhanced data from project_index table
   - Project cards include event types, implementing agencies, expenditure types, and regional data
+- **Complete API Infrastructure Fix:**
+  - Added missing budget lookup endpoint `/api/budget/lookup/:mis` to server/routes.ts
+  - Mounted project controller router to provide `/api/projects/:mis/complete` endpoint
+  - Budget endpoint now returns proper JSON with financial data for all projects
+  - Project complete endpoint provides comprehensive project data including decisions, formulations, and reference tables
 - **Unit Autoselect Success:**
   - Verified unit autoselect correctly selects unit 2 for authenticated user
   - User "Δημήτριος Καραβίας" with unit_id [2] properly mapped to "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"
