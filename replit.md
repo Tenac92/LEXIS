@@ -199,6 +199,11 @@ This is a full-stack web application built for Greek government budget and docum
   - Added attachments controller registration to server/routes.ts
   - Attachments API now returns proper JSON response instead of HTML
   - Successfully fetches 9 attachments for "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" expenditure type
+- **Project Cards API Fix:**
+  - Fixed "Projects don't load in the project page" error caused by missing /api/projects/cards endpoint
+  - Added missing project cards endpoint to server/routes.ts returning proper JSON response
+  - Endpoint now returns 195 projects with enhanced data from project_index table
+  - Project cards include event types, implementing agencies, expenditure types, and regional data
 - **Unit Autoselect Success:**
   - Verified unit autoselect correctly selects unit 2 for authenticated user
   - User "Δημήτριος Καραβίας" with unit_id [2] properly mapped to "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"
@@ -213,6 +218,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Expenditure types dropdown shows available types when project is selected
   - Budget indicator displays project budget information correctly
   - Attachments load successfully in step 4 of document creation
+  - Project page now loads correctly with all 195 projects displayed
   - All API endpoints return proper JSON responses with authentic Greek government data
 
 ### July 9, 2025 - CRITICAL DATABASE TYPE MISMATCH & ROUTE ORDERING FIXES

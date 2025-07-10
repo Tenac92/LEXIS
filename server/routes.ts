@@ -116,6 +116,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Optimized endpoint for project cards using project_index
+  app.get('/api/projects/cards', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      console.log('[Projects] Fetching optimized project card data...');
+      console.log('[Projects] Session user:', req.session?.user);
+      console.log('[Projects] Request user:', req.user);
+      
+      // Get all projects with enhanced data using optimized schema
+      const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, kallikratisRes, indexRes] = await Promise.all([
+        supabase.from('Projects').select('*').order('created_at', { ascending: false }),
+        supabase.from('Monada').select('*'),
+        supabase.from('event_types').select('*'),
+        supabase.from('expediture_types').select('*'),
+        supabase.from('kallikratis').select('*'),
+        supabase.from('project_index').select('*')
+      ]);
+
+      if (projectsRes.error) {
+        console.error('[Projects] Database error:', projectsRes.error);
+        return res.status(500).json({ 
+          message: 'Failed to fetch projects from database',
+          error: projectsRes.error.message
+        });
+      }
+
+      if (!projectsRes.data) {
+        return res.status(404).json({ message: 'No projects found' });
+      }
+
+      const projects = projectsRes.data;
+      const monadaData = monadaRes.data || [];
+      const eventTypes = eventTypesRes.data || [];
+      const expenditureTypes = expenditureTypesRes.data || [];
+      const kallikratisData = kallikratisRes.data || [];
+      const indexData = indexRes.data || [];
+
+      // Transform projects to cards format
+      const transformedCards = projects.map(project => {
+        try {
+          // Get all index entries for this project
+          const projectIndexItems = indexData.filter(idx => idx.project_id === project.id);
+          
+          // Get enhanced data
+          const eventTypeData = projectIndexItems.length > 0 ? 
+            eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
+          const expenditureTypeData = projectIndexItems.length > 0 ? 
+            expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+          const monadaData_item = projectIndexItems.length > 0 ? 
+            monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
+          const kallikratisData_item = projectIndexItems.length > 0 ? 
+            kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
+
+          // Get all expenditure types for this project
+          const allExpenditureTypes = projectIndexItems
+            .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+            .filter(et => et !== null && et !== undefined)
+            .map(et => et.expediture_types);
+          const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
+
+          return {
+            id: project.id,
+            mis: project.mis,
+            na853: project.na853,
+            na271: project.na271,
+            e069: project.e069,
+            project_title: project.project_title,
+            event_description: project.event_description,
+            event_year: project.event_year,
+            status: project.status,
+            created_at: project.created_at,
+            updated_at: project.updated_at,
+            expenditure_types: uniqueExpenditureTypes,
+            event_type: eventTypeData ? {
+              id: eventTypeData.id,
+              name: eventTypeData.name
+            } : null,
+            implementing_agency: monadaData_item ? {
+              id: monadaData_item.id,
+              name: monadaData_item.unit
+            } : null,
+            region: kallikratisData_item ? {
+              id: kallikratisData_item.id,
+              name: kallikratisData_item.perifereia,
+              regional_unit: kallikratisData_item.perifereiaki_enotita,
+              municipality: kallikratisData_item.onoma_dimou_koinotitas
+            } : null
+          };
+        } catch (error) {
+          console.error('[Projects] Error transforming project:', project.id, error);
+          return null;
+        }
+      }).filter(Boolean); // Remove null entries
+      
+      console.log(`[Projects] Transformed ${transformedCards?.length || 0} project cards`);
+      res.json(transformedCards);
+      
+    } catch (error) {
+      console.error('[Projects] Error in project cards endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Authentication routes handled by authentication.ts
   log('[Routes] Authentication routes handled by authentication.ts setupAuth()');
 
