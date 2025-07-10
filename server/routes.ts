@@ -294,7 +294,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add project context if available
       if (projectId) {
-        query = query.or(`project_index_id.eq.${projectId}`);
+        // First find the project_index_id for the given project identifier
+        const { data: projectIndex } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('project_id', projectId)
+          .single();
+        
+        if (projectIndex) {
+          query = query.eq('project_index_id', projectIndex.id);
+        }
       }
       
       const { data: documents, error } = await query.limit(10);

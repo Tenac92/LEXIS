@@ -152,68 +152,63 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       });
     }
     
-    // Get project NA853 from Supabase if not provided
+    // Get project NA853 - try multiple lookup strategies
     let project_na853 = req.body.project_na853;
+    let projectData = null;
+    
     if (!project_na853) {
-      console.log('[DocumentsController] V2 Fetching NA853 for project with MIS:', project_id);
+      console.log('[DocumentsController] V2 Looking up project with identifier:', project_id);
       
       try {
-        // Look up in the Projects table with optimized schema - using the project_id as the MIS value
-        const [projectRes, indexRes] = await Promise.all([
-          supabase.from('Projects').select('*').eq('mis', project_id).single(),
-          supabase.from('project_index').select('*')
-        ]);
+        // Strategy 1: Try as NA853 code first (most common case)
+        let projectRes = await supabase
+          .from('Projects')
+          .select('*')
+          .eq('na853', project_id)
+          .single();
         
-        const projectData = projectRes.data;
-        const projectError = projectRes.error;
-        
-        if (!projectError && projectData) {
-          // First try to use the na853 field directly (this is the column referenced in the FK constraint)
-          if (projectData.na853) {
+        if (!projectRes.error && projectRes.data) {
+          projectData = projectRes.data;
+          project_na853 = projectData.na853;
+          console.log('[DocumentsController] V2 Found project by NA853:', project_na853);
+        } else {
+          // Strategy 2: Try as MIS number
+          projectRes = await supabase
+            .from('Projects')
+            .select('*')
+            .eq('mis', project_id)
+            .single();
+          
+          if (!projectRes.error && projectRes.data) {
+            projectData = projectRes.data;
             project_na853 = projectData.na853;
-            console.log('[DocumentsController] V2 Retrieved NA853 from Projects table:', project_na853);
-          } 
-          // If na853 is not available, try budget_na853 as a fallback
-          else if (projectData.budget_na853) {
-            project_na853 = projectData.budget_na853;
-            console.log('[DocumentsController] V2 Using budget_na853 as fallback:', project_na853);
-          } 
-          // No valid NA853 found in project data
-          else {
-            console.error('[DocumentsController] V2 No NA853 or budget_na853 available in project data');
-            // Try to use project_mis as fallback if available
+            console.log('[DocumentsController] V2 Found project by MIS, NA853:', project_na853);
+          } else {
+            // Strategy 3: Try using project_mis from request body
             if (req.body.project_mis) {
-              // Look up project by project_mis using optimized schema
-              const { data: projectByMis } = await supabase
+              projectRes = await supabase
                 .from('Projects')
-                .select('id, mis, na853, budget_na853')
+                .select('*')
                 .eq('mis', req.body.project_mis)
                 .single();
               
-              if (projectByMis && projectByMis.na853) {
-                project_na853 = projectByMis.na853;
-                console.log('[DocumentsController] V2 Found NA853 using project_mis lookup:', project_na853);
-              } else {
-                console.error('[DocumentsController] V2 Could not find valid NA853 for project');
-                return res.status(400).json({ 
-                  message: 'No valid NA853 found for the specified project', 
-                  error: 'Project NA853 could not be determined'
-                });
+              if (!projectRes.error && projectRes.data) {
+                projectData = projectRes.data;
+                project_na853 = projectData.na853;
+                console.log('[DocumentsController] V2 Found project by request MIS, NA853:', project_na853);
               }
-            } else {
-              console.error('[DocumentsController] V2 No project_mis provided for fallback lookup');
-              return res.status(400).json({ 
-                message: 'No valid NA853 found and no project_mis provided for fallback', 
-                error: 'Project NA853 could not be determined'
-              });
             }
           }
-        } else {
-          // If no data found in Projects table
-          console.error('[DocumentsController] V2 Could not find project in Projects table:', projectError);
+        }
+        
+        if (!project_na853) {
+          console.error('[DocumentsController] V2 Could not find project with any strategy. Tried:', {
+            project_id,
+            project_mis: req.body.project_mis
+          });
           return res.status(400).json({ 
             message: 'Project not found in Projects table', 
-            error: 'Project NA853 could not be determined'
+            error: 'Project could not be found using NA853, MIS, or project_mis lookup'
           });
         }
       } catch (error) {
