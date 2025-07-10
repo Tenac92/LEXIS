@@ -176,55 +176,42 @@ This is a full-stack web application built for Greek government budget and docum
   - Comprehensive database schema alignment with actual Supabase structure
   - Performance-optimized API endpoints with proper caching strategies
 
-### July 10, 2025 - Unit Autoselect, Projects-Working API, Expenditure Types & Attachments Complete Fix
-- **MAJOR BREAKTHROUGH: Fixed unit autoselect, projects retrieval, expenditure types dropdown, budget indicator, and attachments API**
-- **Projects-Working Endpoint Enhancement:**
-  - Updated endpoint to handle both numeric unit IDs and unit names properly
-  - Fixed issue where unit ID 2 returned 0 projects, now correctly returns 58 projects
-  - Added intelligent ID/name mapping: numeric ID 2 → unit name "ΔΑΕΦΚ-ΚΕ" → 58 projects
-  - Enhanced projects with expenditure_types array from project_index table relationships
-  - Projects now include both expenditure_types and expenditure_type fields for compatibility
-- **Expenditure Types Fix:**
-  - Fixed expenditure types dropdown in create document dialog not populating
-  - Enhanced projects-working endpoint to extract expenditure types from project_index entries
-  - Maps expenditure type IDs to Greek names (e.g., "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ")
-  - Properly filters unique expenditure types per project
-- **Budget Indicator Fix:**
-  - Fixed "invalid input syntax for type integer" error for NA853 codes
-  - Updated budget endpoint to properly handle non-numeric project identifiers
-  - Separate query logic for numeric IDs vs text-based codes (NA853, NA271, E069)
-  - Budget data now loads correctly (tested: project 2024ΝΑ85300039 returns 346,928.4€ budget)
-- **Attachments API Fix:**
-  - Fixed "Σφάλμα εύρεσης συνημμένων" error caused by missing route registration
-  - Added attachments controller registration to server/routes.ts
-  - Attachments API now returns proper JSON response instead of HTML
-  - Successfully fetches 9 attachments for "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" expenditure type
-- **Project Cards API Fix:**
-  - Fixed "Projects don't load in the project page" error caused by missing /api/projects/cards endpoint
-  - Added missing project cards endpoint to server/routes.ts returning proper JSON response
-  - Endpoint now returns 195 projects with enhanced data from project_index table
-  - Project cards include event types, implementing agencies, expenditure types, and regional data
-- **Complete API Infrastructure Fix:**
-  - Added missing budget lookup endpoint `/api/budget/lookup/:mis` to server/routes.ts
-  - Mounted project controller router to provide `/api/projects/:mis/complete` endpoint
-  - Budget endpoint now returns proper JSON with financial data for all projects
-  - Project complete endpoint provides comprehensive project data including decisions, formulations, and reference tables
-- **Unit Autoselect Success:**
-  - Verified unit autoselect correctly selects unit 2 for authenticated user
-  - User "Δημήτριος Καραβίας" with unit_id [2] properly mapped to "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ"
-  - Project selection dropdown now properly populates with 58 available projects
-- **API Consistency Improvements:**
-  - Fixed units API to return consistent numeric IDs alongside Greek names
-  - Enhanced project filtering logic to work with both ID and name-based queries
-  - Maintained backward compatibility with existing unit name-based queries
-- **User Experience Success:**
-  - Document creation dialog now properly auto-selects user's unit
-  - Project dropdown populates with actual projects from user's department
-  - Expenditure types dropdown shows available types when project is selected
-  - Budget indicator displays project budget information correctly
-  - Attachments load successfully in step 4 of document creation
-  - Project page now loads correctly with all 195 projects displayed
-  - All API endpoints return proper JSON responses with authentic Greek government data
+### July 10, 2025 - STANDARDIZED PROJECT_ID USAGE & DOCUMENT CREATION FIX
+- **MAJOR BREAKTHROUGH: Standardized entire application to use numeric project_id only**
+- **Project Identifier Consistency:**
+  - Fixed V2 endpoint to accept only numeric project_id from database
+  - Updated ProjectSelect component to return numeric project.id instead of NA853/MIS codes
+  - Removed project_mis field from document creation payload
+  - Frontend now uses database numeric IDs consistently throughout the application
+- **Document Creation V2 Endpoint Enhancement:**
+  - Fixed project lookup to use numeric project_id only with proper validation
+  - Enhanced project retrieval with single database query using Projects.id
+  - Removed complex MIS/NA853 lookup strategies in favor of simple numeric ID lookup
+  - Added proper validation for numeric project_id parameter
+- **Frontend Project Selection Fix:**
+  - Updated Project interface to use numeric project_id instead of string identifiers
+  - Fixed ProjectSelect mapping to use item.id (numeric) instead of NA853/E069/NA271 codes
+  - Updated search functionality to properly handle numeric project IDs
+  - Fixed budget validation cache keys to use numeric project_id
+- **User Preferences API Fix:**
+  - Enhanced user preferences endpoint authentication and project lookup logic
+  - Fixed ESDIAN suggestions endpoint to properly resolve project_index relationships
+  - Resolved "Failed to fetch suggestions" error with proper project_index_id mapping
+- **Data Flow Simplification:**
+  - All project references now use consistent numeric project_id from database
+  - Eliminated confusion between MIS codes, NA853 codes, and project_id
+  - Simplified project lookup logic throughout the application
+  - Enhanced data integrity with single source of truth for project identification
+- **API Architecture Improvements:**
+  - Standardized all endpoints to expect and return numeric project_id
+  - Removed legacy support for text-based project identifiers in V2 endpoint
+  - Enhanced error handling with clear validation messages for invalid project_id
+  - Improved performance with direct numeric ID lookups instead of text searches
+- **User Experience Enhancement:**
+  - Document creation now uses proper numeric project IDs eliminating "Project not found" errors
+  - Project selection dropdown properly maps database projects to form values
+  - Budget indicators and validation use consistent numeric project identifiers
+  - ESDIAN suggestions load correctly with proper authentication and project context
 
 ### July 9, 2025 - CRITICAL DATABASE TYPE MISMATCH & ROUTE ORDERING FIXES
 - **MAJOR BREAKTHROUGH: Fixed "invalid input syntax for type bigint: 'NaN'" error in /api/documents/user endpoint**

@@ -1841,19 +1841,13 @@ export function CreateDocumentDialog({
 
       // Attempt document creation with v2 API endpoint
       try {
-        // Prepare enhanced payload with project MIS
-        const enhancedPayload = {
-          ...payload,
-          project_mis: projectForSubmission.mis, // Ensure we always pass project_mis
-        };
-
         // Use the v2-documents endpoint which handles document creation with proper error handling
         const response = (await apiRequest("/api/documents/v2", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(enhancedPayload),
+          body: JSON.stringify(payload),
         })) as { id?: number; message?: string };
 
         if (!response || typeof response !== "object" || !response.id) {
@@ -1874,7 +1868,7 @@ export function CreateDocumentDialog({
           queryClient.invalidateQueries({
             queryKey: [
               "budget-validation",
-              projectForSubmission.mis,
+              data.project_id,
               totalAmount,
             ],
           }),

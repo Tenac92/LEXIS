@@ -144,7 +144,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
     
-    const { unit, project_id, project_mis, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
     
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
@@ -152,72 +152,44 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       });
     }
     
-    // Get project NA853 - try multiple lookup strategies
-    let project_na853 = req.body.project_na853;
-    let projectData = null;
+    // Validate that project_id is numeric
+    const numericProjectId = parseInt(project_id);
+    if (isNaN(numericProjectId)) {
+      return res.status(400).json({
+        message: 'project_id must be a valid numeric ID'
+      });
+    }
     
-    if (!project_na853) {
-      console.log('[DocumentsController] V2 Looking up project with identifier:', project_id);
+    // Get project data using numeric project_id only
+    let projectData = null;
+    let project_na853 = null;
+    
+    try {
+      console.log('[DocumentsController] V2 Looking up project with numeric ID:', numericProjectId);
       
-      try {
-        // Strategy 1: Try as NA853 code first (most common case)
-        let projectRes = await supabase
-          .from('Projects')
-          .select('*')
-          .eq('na853', project_id)
-          .single();
-        
-        if (!projectRes.error && projectRes.data) {
-          projectData = projectRes.data;
-          project_na853 = projectData.na853;
-          console.log('[DocumentsController] V2 Found project by NA853:', project_na853);
-        } else {
-          // Strategy 2: Try as MIS number
-          projectRes = await supabase
-            .from('Projects')
-            .select('*')
-            .eq('mis', project_id)
-            .single();
-          
-          if (!projectRes.error && projectRes.data) {
-            projectData = projectRes.data;
-            project_na853 = projectData.na853;
-            console.log('[DocumentsController] V2 Found project by MIS, NA853:', project_na853);
-          } else {
-            // Strategy 3: Try using project_mis from request body
-            if (req.body.project_mis) {
-              projectRes = await supabase
-                .from('Projects')
-                .select('*')
-                .eq('mis', req.body.project_mis)
-                .single();
-              
-              if (!projectRes.error && projectRes.data) {
-                projectData = projectRes.data;
-                project_na853 = projectData.na853;
-                console.log('[DocumentsController] V2 Found project by request MIS, NA853:', project_na853);
-              }
-            }
-          }
-        }
-        
-        if (!project_na853) {
-          console.error('[DocumentsController] V2 Could not find project with any strategy. Tried:', {
-            project_id,
-            project_mis: req.body.project_mis
-          });
-          return res.status(400).json({ 
-            message: 'Project not found in Projects table', 
-            error: 'Project could not be found using NA853, MIS, or project_mis lookup'
-          });
-        }
-      } catch (error) {
-        console.error('[DocumentsController] V2 Error during project lookup:', error);
-        return res.status(500).json({ 
-          message: 'Error during project lookup', 
-          error: error instanceof Error ? error.message : 'Unknown error'
+      const projectRes = await supabase
+        .from('Projects')
+        .select('*')
+        .eq('id', numericProjectId)
+        .single();
+      
+      if (projectRes.error || !projectRes.data) {
+        console.error('[DocumentsController] V2 Project not found with ID:', numericProjectId);
+        return res.status(400).json({ 
+          message: 'Project not found in Projects table', 
+          error: 'No project found with the provided project_id'
         });
       }
+      
+      projectData = projectRes.data;
+      project_na853 = projectData.na853;
+      console.log('[DocumentsController] V2 Found project:', projectData.mis, 'NA853:', project_na853);
+    } catch (error) {
+      console.error('[DocumentsController] V2 Error during project lookup:', error);
+      return res.status(500).json({ 
+        message: 'Error during project lookup', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
     
     // Format recipients data consistently

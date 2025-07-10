@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 // Project interface
 interface Project {
-  id: string;
+  id: number; // Numeric project_id from database
   mis?: string;
   name: string;
   expenditure_types: string[];
@@ -108,11 +108,10 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             }
           }
 
-          const projectId = item.na853 || item.e069 || item.na271 || String(item.mis);
           const name = item.project_title || item.event_description || `Project ${item.mis}`;
 
           return {
-            id: projectId,
+            id: item.id, // Use the numeric project_id from database
             mis: String(item.mis),
             name,
             expenditure_types: expenditureTypes || [],
@@ -155,7 +154,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         const results = projects.filter((project) => {
           const normalizedName = normalizeText(project.name);
           const normalizedMis = normalizeText(project.mis || "");
-          const normalizedId = normalizeText(project.id);
+          const normalizedId = normalizeText(String(project.id));
           
           return (
             normalizedName.includes(normalizedQuery) ||
