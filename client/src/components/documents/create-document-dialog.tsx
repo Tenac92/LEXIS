@@ -181,7 +181,7 @@ const signatureSchema = z.object({
 
 const createDocumentSchema = z.object({
   unit: z.union([z.string(), z.number()]).transform(val => String(val)),
-  project_id: z.string().min(1, "Το έργο είναι υποχρεωτικό"),
+  project_id: z.union([z.string(), z.number()]).transform(val => String(val)).refine(val => val && val.trim().length > 0, "Το έργο είναι υποχρεωτικό"),
   region: z.string().optional(),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema).optional().default([]),
@@ -288,7 +288,7 @@ export function CreateDocumentDialog({
   // Διασφάλιση ότι οι τιμές που έρχονται από το context δεν θα χαθούν με χρήση useEffect
   const formDefaultValues = useMemo(() => ({
     unit: formData.unit || "", // Fix: unit should be string, not number
-    project_id: formData.project_id || "",
+    project_id: formData.project_id ? String(formData.project_id) : "", // Ensure string conversion
     region: formData.region || "",
     expenditure_type: formData.expenditure_type || "",
     recipients: formData.recipients || [],
@@ -1816,9 +1816,16 @@ export function CreateDocumentDialog({
       // This prevents duplicate budget history entries
 
       // Prepare payload with project MIS
+      const projectId = parseInt(data.project_id);
+      
+      // Validate numeric project_id
+      if (isNaN(projectId)) {
+        throw new Error("Μη έγκυρο ID έργου. Παρακαλώ επιλέξτε έργο.");
+      }
+      
       const payload = {
         unit: data.unit,
-        project_id: parseInt(data.project_id), // Convert to numeric ID for v2 endpoint
+        project_id: projectId, // Convert to numeric ID for v2 endpoint
         project_mis: projectForSubmission.mis,
         region: data.region,
         expenditure_type: data.expenditure_type,
@@ -3031,17 +3038,19 @@ export function CreateDocumentDialog({
                       const isValid = await form.trigger();
                       console.log("[DocumentSubmit] Form validation result:", isValid);
                       
-                      if (isValid) {
-                        console.log("[DocumentSubmit] Form is valid, calling handleSubmit");
-                        form.handleSubmit(handleSubmit)();
-                      } else {
+                      if (!isValid) {
                         console.log("[DocumentSubmit] Form validation failed, showing errors");
+                        console.log("[DocumentSubmit] Specific field errors:", form.formState.errors);
                         toast({
                           title: "Σφάλμα Επικύρωσης",
                           description: "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
                           variant: "destructive",
                         });
+                        return;
                       }
+                      
+                      console.log("[DocumentSubmit] Form is valid, calling handleSubmit");
+                      form.handleSubmit(handleSubmit)();
                     }}
                     disabled={loading || recipients.length === 0}
                   >
