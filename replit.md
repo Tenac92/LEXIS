@@ -194,6 +194,34 @@ This is a full-stack web application built for Greek government budget and docum
   - Eliminated all remaining MIS code dependencies in document creation flow
   - Consistent numeric ID usage across entire application stack
 
+### July 11, 2025 - MULTI-SELECT DROPDOWNS IMPLEMENTATION COMPLETE
+- **MAJOR ENHANCEMENT: Successfully implemented multi-select dropdowns for implementing agencies and expenditure types in section 1**
+- **Frontend Multi-Select Components:**
+  - Created checkbox-based multi-select component for Φορέας υλοποίησης (implementing agencies)
+  - Created checkbox-based multi-select component for Δαπάνες που αφορά (expenditure types)
+  - Added scrollable containers (max-height 32) for better user experience with many options
+  - Enhanced form validation to handle integer arrays instead of single values
+- **Backend Array Support:**
+  - Updated project_decisions table to store implementing_agency as integer[] and expediture_type as integer[]
+  - Modified backend controller to properly process and save array data
+  - Fixed field name from expenses_covered to expediture_type to match database schema
+  - Updated ProjectDetailsDialog to display array data correctly
+- **Database Schema Alignment:**
+  - Fixed field naming inconsistency: expenses_covered → expediture_type
+  - Updated TypeScript interfaces to reflect integer array structure
+  - Enhanced schema validation to handle multi-select array data
+  - Proper foreign key relationships maintained with monada and expediture_types tables
+- **User Experience Improvements:**
+  - Visual checkboxes for each implementing agency and expenditure type
+  - Clear labeling with agency names and expenditure type descriptions
+  - Proper array handling in form initialization and submission
+  - Enhanced validation messages for multi-select fields
+- **Technical Achievements:**
+  - Complete data flow from frontend multi-select to backend array storage
+  - Proper form state management for checkbox arrays
+  - Enhanced display logic in project details modal
+  - Maintained backward compatibility with existing single-value data
+
 ### July 11, 2025 - DOCUMENT VALIDATION & REGION SELECTOR FIXES COMPLETE
 - **DOCUMENT VALIDATION SUCCESS: Fixed validation flow to provide clear error messages for missing required fields**
 - **Form Validation Enhancement:**

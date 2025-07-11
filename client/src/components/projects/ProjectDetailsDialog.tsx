@@ -85,9 +85,9 @@ interface DecisionData {
   protocol_number?: string;
   fek?: string;
   ada?: string;
-  implementing_agency?: string;
+  implementing_agency?: number[];
   decision_budget?: string | number;
-  expenses_covered?: string | number;
+  expediture_type?: number[];
   decision_date?: string;
   is_included?: boolean;
   is_active?: boolean;
@@ -636,15 +636,23 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                               <div className="space-y-2">
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">Φορέας Υλοποίησης:</span>
-                                  <p className="text-purple-900">{safeText(decision.implementing_agency)}</p>
+                                  <p className="text-purple-900">
+                                    {Array.isArray(decision.implementing_agency) && decision.implementing_agency.length > 0 
+                                      ? decision.implementing_agency.map(id => `ID: ${id}`).join(', ') 
+                                      : 'Δεν έχει καθοριστεί'}
+                                  </p>
                                 </div>
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">Προϋπολογισμός:</span>
                                   <p className="text-purple-900 font-semibold">{formatCurrency(decision.decision_budget)}</p>
                                 </div>
                                 <div>
-                                  <span className="font-medium text-purple-700 block text-sm">Καλυπτόμενες Δαπάνες:</span>
-                                  <p className="text-purple-900">{formatCurrency(decision.expenses_covered)}</p>
+                                  <span className="font-medium text-purple-700 block text-sm">Δαπάνες που αφορά:</span>
+                                  <p className="text-purple-900">
+                                    {Array.isArray(decision.expediture_type) && decision.expediture_type.length > 0 
+                                      ? decision.expediture_type.map(id => `ID: ${id}`).join(', ') 
+                                      : 'Δεν έχει καθοριστεί'}
+                                  </p>
                                 </div>
                               </div>
                               {decision.comments && (

@@ -605,9 +605,9 @@ export const projectDecisions = pgTable(
     ada: text("ada"),
 
     // Decision details
-    implementing_agency: text("implementing_agency"),
+    implementing_agency: integer("implementing_agency").array(),
     decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
-    expenses_covered: decimal("expenses_covered", { precision: 12, scale: 2 }),
+    expediture_type: integer("expediture_type").array(),
     decision_date: date("decision_date"),
 
     // Status and metadata

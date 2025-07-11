@@ -125,9 +125,9 @@ const comprehensiveProjectSchema = z.object({
       number: z.string().default(""),
     }).default({ year: "", issue: "", number: "" }),
     ada: z.string().default(""),
-    implementing_agency: z.string().default(""),
+    implementing_agency: z.array(z.number()).default([]),
     decision_budget: z.string().default(""),
-    expenses_covered: z.union([z.string(), z.number()]).transform(val => String(val)).default(""),
+    expediture_type: z.array(z.number()).default([]),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
     included: z.boolean().default(true),
     comments: z.string().default(""),
@@ -569,9 +569,9 @@ export default function ComprehensiveEditFixed() {
             protocol_number: decision.protocol_number || "",
             fek: normalizeFekData(decision.fek),
             ada: decision.ada || "",
-            implementing_agency: decision.implementing_agency || typedProjectData.enhanced_unit?.name || "",
+            implementing_agency: decision.implementing_agency || [],
             decision_budget: decision.decision_budget ? formatEuropeanNumber(decision.decision_budget) : "",
-            expenses_covered: decision.expenses_covered || "",
+            expediture_type: decision.expediture_type || [],
             decision_type: decision.decision_type || "Έγκριση" as const,
             included: decision.included ?? decision.is_included ?? true,
             comments: decision.comments || "",
@@ -580,9 +580,9 @@ export default function ComprehensiveEditFixed() {
             protocol_number: "",
             fek: { year: "", issue: "", number: "" },
             ada: "",
-            implementing_agency: typedProjectData.enhanced_unit?.name || "",
+            implementing_agency: [],
             decision_budget: "",
-            expenses_covered: "",
+            expediture_type: [],
             decision_type: "Έγκριση" as const,
             included: true,
             comments: "",
@@ -1213,18 +1213,32 @@ export default function ComprehensiveEditFixed() {
                               <FormItem>
                                 <FormLabel className="text-xs">Φορέας υλοποίησης</FormLabel>
                                 <FormControl>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="text-sm">
-                                      <SelectValue placeholder="Επιλέξτε φορέα" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {typedUnitsData?.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.name || unit.unit_name?.name || unit.unit || ""}>
+                                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                                    {typedUnitsData?.map((unit) => (
+                                      <div key={unit.id} className="flex items-center space-x-2 py-1">
+                                        <input
+                                          type="checkbox"
+                                          id={`implementing-agency-${index}-${unit.id}`}
+                                          checked={field.value?.includes(unit.id) || false}
+                                          onChange={(e) => {
+                                            const currentValue = field.value || [];
+                                            if (e.target.checked) {
+                                              field.onChange([...currentValue, unit.id]);
+                                            } else {
+                                              field.onChange(currentValue.filter(id => id !== unit.id));
+                                            }
+                                          }}
+                                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                        />
+                                        <label 
+                                          htmlFor={`implementing-agency-${index}-${unit.id}`}
+                                          className="text-sm cursor-pointer flex-1"
+                                        >
                                           {unit.name || unit.unit_name?.name || unit.unit}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                        </label>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </FormControl>
                               </FormItem>
                             )}
@@ -1254,12 +1268,37 @@ export default function ComprehensiveEditFixed() {
                         <div className="grid grid-cols-3 gap-3">
                           <FormField
                             control={form.control}
-                            name={`decisions.${index}.expenses_covered`}
+                            name={`decisions.${index}.expediture_type`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Δαπάνες που αφορά</FormLabel>
                                 <FormControl>
-                                  <Input {...field} className="text-sm" />
+                                  <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
+                                    {typedExpenditureTypesData?.map((expenditureType) => (
+                                      <div key={expenditureType.id} className="flex items-center space-x-2 py-1">
+                                        <input
+                                          type="checkbox"
+                                          id={`expediture-type-${index}-${expenditureType.id}`}
+                                          checked={field.value?.includes(expenditureType.id) || false}
+                                          onChange={(e) => {
+                                            const currentValue = field.value || [];
+                                            if (e.target.checked) {
+                                              field.onChange([...currentValue, expenditureType.id]);
+                                            } else {
+                                              field.onChange(currentValue.filter(id => id !== expenditureType.id));
+                                            }
+                                          }}
+                                          className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                        />
+                                        <label 
+                                          htmlFor={`expediture-type-${index}-${expenditureType.id}`}
+                                          className="text-sm cursor-pointer flex-1"
+                                        >
+                                          {expenditureType.expediture_types || expenditureType.expenditure_types || expenditureType.name}
+                                        </label>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </FormControl>
                               </FormItem>
                             )}

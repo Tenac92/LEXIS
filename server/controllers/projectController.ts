@@ -1527,9 +1527,9 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
           protocol_number: decision.protocol_number || null,
           fek: decision.fek || null,
           ada: decision.ada || null,
-          implementing_agency: decision.implementing_agency || null,
+          implementing_agency: decision.implementing_agency || [],
           decision_budget: parseEuropeanBudget(decision.decision_budget),
-          expenses_covered: parseEuropeanBudget(decision.expenses_covered),
+          expediture_type: decision.expediture_type || [],
           decision_date: new Date().toISOString().split('T')[0], // Today's date as default
           included: decision.included !== undefined ? decision.included : true,
           is_active: true,
