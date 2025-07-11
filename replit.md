@@ -194,7 +194,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Eliminated all remaining MIS code dependencies in document creation flow
   - Consistent numeric ID usage across entire application stack
 
-### July 11, 2025 - MULTI-SELECT DROPDOWNS IMPLEMENTATION COMPLETE
+### July 11, 2025 - MULTI-SELECT DROPDOWNS IMPLEMENTATION COMPLETE + BUDGET & DISPLAY FIXES
 - **MAJOR ENHANCEMENT: Successfully implemented multi-select dropdowns for implementing agencies and expenditure types in section 1**
 - **Frontend Multi-Select Components:**
   - Created checkbox-based multi-select component for Φορέας υλοποίησης (implementing agencies)
@@ -221,6 +221,14 @@ This is a full-stack web application built for Greek government budget and docum
   - Proper form state management for checkbox arrays
   - Enhanced display logic in project details modal
   - Maintained backward compatibility with existing single-value data
+- **Critical Bug Fixes:**
+  - **Budget Field Fix:** Resolved European number formatting issue where "10.000,12" was being saved as "10,00"
+    - Enhanced parseEuropeanNumber function to properly handle European format (comma as decimal separator)
+    - Fixed form submission to store numeric values correctly while displaying formatted values
+    - Budget field now properly converts between European display format and database numeric format
+  - **Implementing Agencies Display Fix:** Updated multi-select to show "unit" column values instead of "unit_name" for better user clarity
+    - Changed display priority from `unit.name || unit.unit_name?.name || unit.unit` to `unit.unit || unit.name || unit.unit_name?.name`
+    - Users now see abbreviated unit codes (e.g., "ΓΔΑΕΦΚ") instead of full organization names for better readability
 
 ### July 11, 2025 - DOCUMENT VALIDATION & REGION SELECTOR FIXES COMPLETE
 - **DOCUMENT VALIDATION SUCCESS: Fixed validation flow to provide clear error messages for missing required fields**

@@ -1234,7 +1234,7 @@ export default function ComprehensiveEditFixed() {
                                           htmlFor={`implementing-agency-${index}-${unit.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
-                                          {unit.name || unit.unit_name?.name || unit.unit}
+                                          {unit.unit || unit.name || unit.unit_name?.name}
                                         </label>
                                       </div>
                                     ))}
@@ -1251,13 +1251,16 @@ export default function ComprehensiveEditFixed() {
                                 <FormLabel className="text-xs">Προϋπολογισμός Απόφασης</FormLabel>
                                 <FormControl>
                                   <Input 
-                                    {...field} 
                                     className="text-sm"
                                     placeholder="0,00 €"
                                     onChange={(e) => {
                                       const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
+                                      const numericValue = parseEuropeanNumber(formatted);
+                                      
+                                      // Store the numeric value for form submission
+                                      field.onChange(numericValue);
                                     }}
+                                    value={field.value ? formatEuropeanNumber(field.value, 2) : ''}
                                   />
                                 </FormControl>
                               </FormItem>
