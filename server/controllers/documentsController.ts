@@ -895,7 +895,6 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: req.user.id,
       department: req.user.department || null,
-      attachments: attachments || [],
       created_at: now,
       updated_at: now
     };
