@@ -1737,10 +1737,21 @@ export function CreateDocumentDialog({
       // Validate that all installments have amounts entered
       console.log("[HandleSubmit] Checking installment amounts...");
       const missingInstallmentAmounts = data.recipients.some((recipient, index) => {
+        console.log(`[HandleSubmit] Checking installment amounts for recipient ${index}:`, {
+          installments: recipient.installments,
+          installmentAmounts: recipient.installmentAmounts
+        });
         return recipient.installments.some((installment) => {
           const isInvalid = !recipient.installmentAmounts ||
             typeof recipient.installmentAmounts[installment] !== "number" ||
             recipient.installmentAmounts[installment] <= 0;
+          console.log(`[HandleSubmit] Installment ${installment} validation:`, {
+            hasAmounts: !!recipient.installmentAmounts,
+            value: recipient.installmentAmounts?.[installment],
+            type: typeof recipient.installmentAmounts?.[installment],
+            isInvalid: isInvalid
+          });
+          return isInvalid;
           
           if (isInvalid) {
             console.log(`[Validation] Invalid installment amount for recipient ${index}, installment ${installment}:`, {
@@ -1753,16 +1764,22 @@ export function CreateDocumentDialog({
         });
       });
 
+      console.log("[HandleSubmit] Missing installment amounts:", missingInstallmentAmounts);
       if (missingInstallmentAmounts) {
         throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
       }
 
+      console.log("[HandleSubmit] All validations passed, setting loading state...");
+
       setLoading(true);
 
       // Find project to get MIS
+      console.log("[HandleSubmit] Looking for project with ID:", data.project_id);
+      console.log("[HandleSubmit] Available projects:", projects.map(p => ({ id: p.id, mis: p.mis })));
       const projectForSubmission = projects.find(
         (p) => p.id === data.project_id,
       );
+      console.log("[HandleSubmit] Found project:", projectForSubmission);
       if (!projectForSubmission?.mis) {
         throw new Error("Δεν βρέθηκε το MIS του έργου");
       }

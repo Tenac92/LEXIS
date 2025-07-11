@@ -135,10 +135,14 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
  */
 router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    console.log('[DocumentsController] V2 Document creation request with body:', req.body);
+    console.log('[DocumentsController] V2 Document creation request received!');
+    console.log('[DocumentsController] V2 Request body:', req.body);
+    console.log('[DocumentsController] V2 Request headers:', req.headers);
+    console.log('[DocumentsController] V2 Request user session:', req.user);
     
     // Proper authentication check
     if (!req.user?.id) {
+      console.log('[DocumentsController] V2 Authentication failed - no user ID');
       return res.status(401).json({ message: 'Authentication required' });
     }
     
