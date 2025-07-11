@@ -287,7 +287,7 @@ export function CreateDocumentDialog({
   // CRITICAL FIX: Υλοποίηση σωστού συγχρονισμού του context με τη φόρμα
   // Διασφάλιση ότι οι τιμές που έρχονται από το context δεν θα χαθούν με χρήση useEffect
   const formDefaultValues = useMemo(() => ({
-    unit: formData.unit || 0,
+    unit: formData.unit || "", // Fix: unit should be string, not number
     project_id: formData.project_id || "",
     region: formData.region || "",
     expenditure_type: formData.expenditure_type || "",
@@ -297,7 +297,7 @@ export function CreateDocumentDialog({
     esdian_field1: formData.esdian_field1 || "",
     esdian_field2: formData.esdian_field2 || "",
     director_signature: formData.director_signature || undefined,
-  }), []);
+  }), [formData]); // Fix: add dependencies to useMemo
   
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -3018,7 +3018,7 @@ export function CreateDocumentDialog({
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       console.log("[DocumentSubmit] Submit button clicked");
                       console.log("[DocumentSubmit] Recipients count:", recipients.length);
                       console.log("[DocumentSubmit] Loading state:", loading);
@@ -3026,7 +3026,22 @@ export function CreateDocumentDialog({
                       console.log("[DocumentSubmit] Form errors:", form.formState.errors);
                       console.log("[DocumentSubmit] Form is valid:", form.formState.isValid);
                       console.log("[DocumentSubmit] Form values:", form.getValues());
-                      form.handleSubmit(handleSubmit)();
+                      
+                      // First trigger form validation
+                      const isValid = await form.trigger();
+                      console.log("[DocumentSubmit] Form validation result:", isValid);
+                      
+                      if (isValid) {
+                        console.log("[DocumentSubmit] Form is valid, calling handleSubmit");
+                        form.handleSubmit(handleSubmit)();
+                      } else {
+                        console.log("[DocumentSubmit] Form validation failed, showing errors");
+                        toast({
+                          title: "Σφάλμα Επικύρωσης",
+                          description: "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
+                          variant: "destructive",
+                        });
+                      }
                     }}
                     disabled={loading || recipients.length === 0}
                   >
