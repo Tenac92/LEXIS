@@ -1779,7 +1779,7 @@ export function CreateDocumentDialog({
       // Prepare payload with project MIS
       const payload = {
         unit: data.unit,
-        project_id: data.project_id,
+        project_id: parseInt(data.project_id), // Convert to numeric ID for v2 endpoint
         project_mis: projectForSubmission.mis,
         region: data.region,
         expenditure_type: data.expenditure_type,
@@ -2092,7 +2092,14 @@ export function CreateDocumentDialog({
             // Processing regions from API response
             
             for (const regionItem of typedResponse.regions) {
-              if (regionItem && typeof regionItem === "object") {
+              if (regionItem && typeof regionItem === "string") {
+                // Handle string regions (main regions)
+                processedRegions.push({
+                  id: regionItem,
+                  name: regionItem,
+                  type: "region",
+                });
+              } else if (regionItem && typeof regionItem === "object") {
                 // Extract region information based on available fields
                 const regionName = regionItem.name || regionItem.regional_unit || regionItem.region;
                 const regionId = regionItem.id || regionName;
@@ -2110,6 +2117,19 @@ export function CreateDocumentDialog({
                     type: regionType,
                   });
                 }
+              }
+            }
+          }
+
+          // Also handle regional_units array if present
+          if (typedResponse.regional_units && Array.isArray(typedResponse.regional_units)) {
+            for (const unitItem of typedResponse.regional_units) {
+              if (unitItem && typeof unitItem === "string") {
+                processedRegions.push({
+                  id: unitItem,
+                  name: unitItem,
+                  type: "regional_unit",
+                });
               }
             }
           }
