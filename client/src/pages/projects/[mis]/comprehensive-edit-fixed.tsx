@@ -1246,25 +1246,48 @@ export default function ComprehensiveEditFixed() {
                           <FormField
                             control={form.control}
                             name={`decisions.${index}.decision_budget`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-xs">Προϋπολογισμός Απόφασης</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    className="text-sm"
-                                    placeholder="0,00 €"
-                                    onChange={(e) => {
-                                      const formatted = formatNumberWhileTyping(e.target.value);
-                                      const numericValue = parseEuropeanNumber(formatted);
-                                      
-                                      // Store the numeric value for form submission
-                                      field.onChange(numericValue);
-                                    }}
-                                    value={field.value ? formatEuropeanNumber(field.value, 2) : ''}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const [displayValue, setDisplayValue] = useState(() => {
+                                if (!field.value) return '';
+                                // If it's already a formatted string, use it as is
+                                if (typeof field.value === 'string') return field.value;
+                                // If it's a number, format it
+                                return formatEuropeanNumber(field.value, 2);
+                              });
+
+                              const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+                                const formatted = formatNumberWhileTyping(e.target.value);
+                                setDisplayValue(formatted);
+                                
+                                // Store the formatted string for form submission
+                                field.onChange(formatted);
+                              };
+
+                              const handleBlur = () => {
+                                // Format the display value when user finishes typing
+                                if (displayValue) {
+                                  const numericValue = parseEuropeanNumber(displayValue);
+                                  if (!isNaN(numericValue)) {
+                                    setDisplayValue(formatEuropeanNumber(numericValue, 2));
+                                  }
+                                }
+                              };
+
+                              return (
+                                <FormItem>
+                                  <FormLabel className="text-xs">Προϋπολογισμός Απόφασης</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      className="text-sm"
+                                      placeholder="0,00 €"
+                                      value={displayValue}
+                                      onChange={handleInputChange}
+                                      onBlur={handleBlur}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              );
+                            }}
                           />
                         </div>
                         
