@@ -2184,15 +2184,37 @@ export function CreateDocumentDialog({
             }
           }
 
-          // If we found any regions, return them
-          if (processedRegions.length > 0) {
-            // Successfully processed region data
-            return processedRegions;
-          }
+          // CRITICAL FIX: Only show regions that match the geographic level stored in project_index
+          // The regions array contains mixed levels (regions, regional_units, municipalities)
+          // We need to filter to show only the level that matches the project's geographic scope
+          
+          // Group regions by type to understand the data structure
+          const regionsByType = processedRegions.reduce((acc, region) => {
+            if (!acc[region.type]) {
+              acc[region.type] = [];
+            }
+            acc[region.type].push(region);
+            return acc;
+          }, {} as Record<string, typeof processedRegions>);
 
-          // No valid regions were found
-          // No regions found for project
-          return [];
+          console.log("Regions grouped by type:", regionsByType);
+          
+          // Determine the appropriate level based on what's available in project_index
+          // Priority: municipality > regional_unit > region
+          if (regionsByType.municipality && regionsByType.municipality.length > 0) {
+            // Show only municipalities if available
+            return regionsByType.municipality;
+          } else if (regionsByType.regional_unit && regionsByType.regional_unit.length > 0) {
+            // Show only regional units if no municipalities
+            return regionsByType.regional_unit;
+          } else if (regionsByType.region && regionsByType.region.length > 0) {
+            // Show only regions if no lower levels
+            return regionsByType.region;
+          } else {
+            // Return first available type if none of the expected types found
+            const firstType = Object.keys(regionsByType)[0];
+            return firstType ? regionsByType[firstType] : processedRegions;
+          }
         } catch (err) {
           console.error("Error processing region data:", err);
           return [];
@@ -3041,9 +3063,18 @@ export function CreateDocumentDialog({
                       if (!isValid) {
                         console.log("[DocumentSubmit] Form validation failed, showing errors");
                         console.log("[DocumentSubmit] Specific field errors:", form.formState.errors);
+                        
+                        // Show specific validation errors
+                        const errors = form.formState.errors;
+                        let errorMessage = "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά";
+                        
+                        if (errors.recipients && Array.isArray(errors.recipients)) {
+                          errorMessage = "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία των δικαιούχων (Όνομα, Επώνυμο, ΑΦΜ)";
+                        }
+                        
                         toast({
                           title: "Σφάλμα Επικύρωσης",
-                          description: "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά",
+                          description: errorMessage,
                           variant: "destructive",
                         });
                         return;
