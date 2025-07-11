@@ -167,6 +167,14 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     try {
       console.log('[DocumentsController] V2 Looking up project with numeric ID:', numericProjectId);
       
+      // First, let's check what projects exist in the database
+      const allProjectsRes = await supabase
+        .from('Projects')
+        .select('id, mis, project_title')
+        .limit(10);
+      
+      console.log('[DocumentsController] V2 Sample projects in database:', allProjectsRes.data);
+      
       const projectRes = await supabase
         .from('Projects')
         .select('*')
@@ -175,9 +183,14 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       
       if (projectRes.error || !projectRes.data) {
         console.error('[DocumentsController] V2 Project not found with ID:', numericProjectId);
+        console.error('[DocumentsController] V2 Database error:', projectRes.error);
         return res.status(400).json({ 
-          message: 'Project not found in Projects table', 
-          error: 'No project found with the provided project_id'
+          message: `Project not found in Projects table. ID ${numericProjectId} does not exist.`, 
+          error: 'No project found with the provided project_id',
+          debug: {
+            searchedId: numericProjectId,
+            dbError: projectRes.error?.message
+          }
         });
       }
       
@@ -887,14 +900,9 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     // Create document with exact schema match and set initial status to pending
     const documentPayload = {
       unit_id: parseInt(unit), // Convert unit to unit_id as integer
-      project_id: parseInt(project_id), // Use numeric project_id instead of MIS
-      project_na853,
-      expenditure_type,
       status: 'pending', // Always set initial status to pending
-      recipients: formattedRecipients,
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: req.user.id,
-      department: req.user.department || null,
       created_at: now,
       updated_at: now
     };
