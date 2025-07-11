@@ -148,7 +148,7 @@ const comprehensiveProjectSchema = z.object({
     event_type: z.string().default(""),
     expenditure_types: z.array(z.string()).default([]),
     geographic_level: z.number().optional(),
-    geographic_code: z.union([z.string(), z.number()]).optional(),
+    geographic_code: z.union([z.string(), z.number()]).nullable().optional(),
   })).default([]),
   
   // Section 3: Project details
