@@ -1774,10 +1774,10 @@ export function CreateDocumentDialog({
       setLoading(true);
 
       // Find project to get MIS
-      console.log("[HandleSubmit] Looking for project with ID:", data.project_id);
+      console.log("[HandleSubmit] Looking for project with ID:", data.project_id, "type:", typeof data.project_id);
       console.log("[HandleSubmit] Available projects:", projects.map(p => ({ id: p.id, mis: p.mis })));
       const projectForSubmission = projects.find(
-        (p) => p.id === data.project_id,
+        (p) => p.id === parseInt(data.project_id.toString()),
       );
       console.log("[HandleSubmit] Found project:", projectForSubmission);
       if (!projectForSubmission?.mis) {
