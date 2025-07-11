@@ -51,6 +51,19 @@ export function parseEuropeanNumber(value: string | number | null | undefined): 
     return parseFloat(strValue.replace(',', '.')) || 0;
   }
   
+  // Handle dots as thousands separators only: "15.000" -> 15000
+  if (strValue.includes('.') && !strValue.includes(',')) {
+    // Check if this looks like a thousands separator pattern
+    const dotCount = (strValue.match(/\./g) || []).length;
+    const afterLastDot = strValue.split('.').pop() || '';
+    
+    // If last part has exactly 3 digits, treat dots as thousands separators
+    if (afterLastDot.length === 3 || dotCount > 1) {
+      const normalized = strValue.replace(/\./g, '');
+      return parseFloat(normalized) || 0;
+    }
+  }
+  
   // Handle standard format
   return parseFloat(strValue) || 0;
 }
