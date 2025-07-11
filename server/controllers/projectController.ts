@@ -1510,8 +1510,41 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
           if (!value) return 0;
           if (typeof value === 'number') return value;
           
-          const strValue = String(value).replace(/[^\d,.-]/g, ''); // Remove currency symbols
-          return parseFloat(strValue.replace(',', '.')) || 0;
+          const strValue = String(value).trim().replace(/[^\d,.-]/g, ''); // Remove currency symbols
+          
+          // Handle European format: "15.000,12" -> 15000.12
+          if (strValue.includes('.') && strValue.includes(',')) {
+            // Remove dots (thousands separators) and replace comma with decimal point
+            const normalized = strValue.replace(/\./g, '').replace(',', '.');
+            const result = parseFloat(normalized) || 0;
+            console.log(`[ProjectDecisions] Parsed European format: "${strValue}" -> ${result}`);
+            return result;
+          }
+          
+          // Handle comma as decimal separator: "22,50" -> 22.50
+          if (strValue.includes(',') && !strValue.includes('.')) {
+            const result = parseFloat(strValue.replace(',', '.')) || 0;
+            console.log(`[ProjectDecisions] Parsed decimal format: "${strValue}" -> ${result}`);
+            return result;
+          }
+          
+          // Handle dots as thousands separators only: "15.000" -> 15000
+          if (strValue.includes('.') && !strValue.includes(',')) {
+            const dotCount = (strValue.match(/\./g) || []).length;
+            const afterLastDot = strValue.split('.').pop() || '';
+            
+            // If last part has exactly 3 digits, treat dots as thousands separators
+            if (afterLastDot.length === 3 || dotCount > 1) {
+              const result = parseFloat(strValue.replace(/\./g, '')) || 0;
+              console.log(`[ProjectDecisions] Parsed thousands format: "${strValue}" -> ${result}`);
+              return result;
+            }
+          }
+          
+          // Handle standard format
+          const result = parseFloat(strValue) || 0;
+          console.log(`[ProjectDecisions] Parsed standard format: "${strValue}" -> ${result}`);
+          return result;
         };
 
         console.log(`[ProjectDecisions] Processing decision ${index + 1}:`, { 

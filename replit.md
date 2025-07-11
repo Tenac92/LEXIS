@@ -226,10 +226,12 @@ This is a full-stack web application built for Greek government budget and docum
     - Enhanced parseEuropeanNumber function to properly handle European format (comma as decimal separator)
     - Fixed form submission to store numeric values correctly while displaying formatted values
     - Budget field now properly converts between European display format and database numeric format
-  - **European Number Parsing Fix:** Resolved critical issue where "15.000" was being saved as "1,50"
+  - **European Number Parsing Fix:** Resolved critical issue where "15.000,12" was being saved as "15"
     - Enhanced parseEuropeanNumber function to recognize dots as thousands separators when no comma is present
     - Fixed logic to properly handle thousands separators (e.g., "15.000" → 15000, not 15.0)
     - Added intelligent pattern detection for thousands separator vs decimal point usage
+    - **Backend Fix:** Updated backend parseEuropeanBudget function to match frontend parsing logic
+    - **Complete European Format Support:** Fixed both frontend and backend to handle "15.000,12" → 15000.12 correctly
     - Budget field now correctly interprets European number format during typing and saving
   - **Implementing Agencies Display Fix:** Updated multi-select to show "unit" column values instead of "unit_name" for better user clarity
     - Changed display priority from `unit.name || unit.unit_name?.name || unit.unit` to `unit.unit || unit.name || unit.unit_name?.name`
