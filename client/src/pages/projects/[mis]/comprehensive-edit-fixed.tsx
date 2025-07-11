@@ -141,14 +141,14 @@ const comprehensiveProjectSchema = z.object({
   
   // Section 2 Location details with cascading dropdowns
   location_details: z.array(z.object({
-    municipality: z.string().default(""),
-    regional_unit: z.string().default(""),
-    region: z.string().default(""),
     implementing_agency: z.string().default(""),
     event_type: z.string().default(""),
     expenditure_types: z.array(z.string()).default([]),
-    geographic_level: z.number().optional(),
-    geographic_code: z.union([z.string(), z.number()]).nullable().optional(),
+    regions: z.array(z.object({
+      region: z.string().default(""),
+      regional_unit: z.string().default(""),
+      municipality: z.string().default(""),
+    })).default([{ region: "", regional_unit: "", municipality: "" }]),
   })).default([]),
   
   // Section 3: Project details
@@ -420,27 +420,8 @@ export default function ComprehensiveEditFixed() {
           
           for (const location of data.location_details) {
             // Skip empty locations
-            if (!location.region && !location.regional_unit && !location.municipality && !location.implementing_agency) {
+            if (!location.regions || location.regions.length === 0 || !location.implementing_agency) {
               continue;
-            }
-            
-            // Find kallikratis_id and geographic_code
-            let kallikratisId = null;
-            let geographicCode = null;
-            
-            if (typedKallikratisData && location.region) {
-              const kallikratis = typedKallikratisData.find(k => 
-                k.perifereia === location.region && 
-                (!location.regional_unit || k.perifereiaki_enotita === location.regional_unit) &&
-                (!location.municipality || k.onoma_neou_ota === location.municipality)
-              );
-              
-              if (kallikratis) {
-                kallikratisId = kallikratis.id;
-                // Calculate geographic code based on what data is selected
-                geographicCode = getGeographicCodeForSave(location, kallikratis);
-              }
-              console.log("Kallikratis lookup:", { location, found: kallikratis, kallikratisId, geographicCode });
             }
             
             // Find implementing agency (monada_id)
@@ -465,21 +446,48 @@ export default function ComprehensiveEditFixed() {
               }
             }
             
-            // Create single entry with all expenditure types for this location
-            projectLines.push({
-              implementing_agency: location.implementing_agency,
-              implementing_agency_id: monadaId,
-              event_type: location.event_type,
-              event_type_id: eventTypeId,
-              expenditure_types: location.expenditure_types || [],
-              region: {
-                perifereia: location.region,
-                perifereiaki_enotita: location.regional_unit,
-                dimos: location.municipality,
-                kallikratis_id: kallikratisId,
-                geographic_code: geographicCode
+            // Create entries for each region
+            for (const region of location.regions) {
+              // Skip empty regions
+              if (!region.region && !region.regional_unit && !region.municipality) {
+                continue;
               }
-            });
+              
+              // Find kallikratis_id and geographic_code
+              let kallikratisId = null;
+              let geographicCode = null;
+              
+              if (typedKallikratisData && region.region) {
+                const kallikratis = typedKallikratisData.find(k => 
+                  k.perifereia === region.region && 
+                  (!region.regional_unit || k.perifereiaki_enotita === region.regional_unit) &&
+                  (!region.municipality || k.onoma_neou_ota === region.municipality)
+                );
+                
+                if (kallikratis) {
+                  kallikratisId = kallikratis.id;
+                  // Calculate geographic code based on what data is selected
+                  geographicCode = getGeographicCodeForSave(region, kallikratis);
+                }
+                console.log("Kallikratis lookup:", { region, found: kallikratis, kallikratisId, geographicCode });
+              }
+              
+              // Create project line for this region
+              projectLines.push({
+                implementing_agency: location.implementing_agency,
+                implementing_agency_id: monadaId,
+                event_type: location.event_type,
+                event_type_id: eventTypeId,
+                expenditure_types: location.expenditure_types || [],
+                region: {
+                  perifereia: region.region,
+                  perifereiaki_enotita: region.regional_unit,
+                  dimos: region.municipality,
+                  kallikratis_id: kallikratisId,
+                  geographic_code: geographicCode
+                }
+              });
+            }
           }
           
           if (projectLines.length > 0) {
@@ -723,51 +731,48 @@ export default function ComprehensiveEditFixed() {
                   }
                 });
 
-                const kallikratisEntry = typedKallikratisData?.find(k => k.kodikos_neou_ota === kallikratisData.geographic_code);
+                // For null values from database, try to get from enhanced project data
+                const implementingAgencyValue = unit?.unit || typedProjectData.enhanced_unit?.unit || "";
+                const eventTypeValue = eventType?.name || typedProjectData.enhanced_event_type?.name || "";
                 
-                const key = `${kallikratisData.region}-${kallikratisData.regionalUnit}-${kallikratisData.municipality}`;
+                // Create a key based on implementing agency and event type
+                const key = `${implementingAgencyValue}-${eventTypeValue}`;
                 
                 if (!locationDetailsMap.has(key)) {
-                  // Debug the values we're trying to set
-                  console.log('DEBUG - Location Detail Init:', {
-                    unitValue: unit?.unit || "",
-                    eventTypeValue: eventType?.name || "",
-                    kallikratisRegion: kallikratisData.region || "",
-                    expenditureTypeValue: expenditureType?.expediture_types || "",
-                    unitFromDB: unit,
-                    eventTypeFromDB: eventType
-                  });
-                  
-                  // For null values from database, try to get from enhanced project data
-                  const implementingAgencyValue = unit?.unit || typedProjectData.enhanced_unit?.unit || "";
-                  const eventTypeValue = eventType?.name || typedProjectData.enhanced_event_type?.name || "";
-                  
                   const locationDetail = {
-                    municipality: kallikratisData.municipality || "",
-                    regional_unit: kallikratisData.regionalUnit || "",
-                    region: kallikratisData.region || "",
                     implementing_agency: implementingAgencyValue,
                     event_type: eventTypeValue,
                     expenditure_types: [] as string[],
-                    geographic_level: geoInfo.level,
-                    geographic_code: kallikratisData.geographic_code
+                    regions: [] as Array<{
+                      region: string;
+                      regional_unit: string;
+                      municipality: string;
+                    }>
                   };
-                  
-                  console.log('Setting location fields:', {
-                    municipality: locationDetail.municipality,
-                    regional_unit: locationDetail.regional_unit,
-                    region: locationDetail.region,
-                    kallikratisId: kallikratisEntry?.id
-                  });
-                  
-                  console.log('Final locationDetail:', locationDetail);
                   
                   locationDetailsMap.set(key, locationDetail);
                 }
                 
+                const locationDetail = locationDetailsMap.get(key);
+                
+                // Add region if it doesn't exist
+                const regionKey = `${kallikratisData.region}-${kallikratisData.regionalUnit}-${kallikratisData.municipality}`;
+                const existingRegion = locationDetail.regions.find(r => 
+                  r.region === kallikratisData.region && 
+                  r.regional_unit === kallikratisData.regionalUnit && 
+                  r.municipality === kallikratisData.municipality
+                );
+                
+                if (!existingRegion) {
+                  locationDetail.regions.push({
+                    region: kallikratisData.region || "",
+                    regional_unit: kallikratisData.regionalUnit || "",
+                    municipality: kallikratisData.municipality || ""
+                  });
+                }
+                
                 // Add expenditure type if it exists
                 if (expenditureType && expenditureType.expediture_types) {
-                  const locationDetail = locationDetailsMap.get(key);
                   if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
                     locationDetail.expenditure_types.push(expenditureType.expediture_types);
                   }
@@ -778,27 +783,27 @@ export default function ComprehensiveEditFixed() {
             const locationDetailsArray = Array.from(locationDetailsMap.values());
             console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
             return locationDetailsArray.length > 0 ? locationDetailsArray : [{
-              municipality: "",
-              regional_unit: "",
-              region: "",
               implementing_agency: typedProjectData.enhanced_unit?.name || "",
               event_type: "",
               expenditure_types: [],
-              geographic_level: undefined,
-              geographic_code: undefined
+              regions: [{
+                region: "",
+                regional_unit: "",
+                municipality: ""
+              }]
             }];
           }
           
           // Default location detail if no project index data
           return [{
-            municipality: "",
-            regional_unit: "",
-            region: "",
             implementing_agency: typedProjectData.enhanced_unit?.name || "",
             event_type: "",
             expenditure_types: [],
-            geographic_level: undefined,
-            geographic_code: undefined
+            regions: [{
+              region: "",
+              regional_unit: "",
+              municipality: ""
+            }]
           }];
         })(),
         previous_entries: [],
@@ -845,66 +850,47 @@ export default function ComprehensiveEditFixed() {
           if (projectIndexData && projectIndexData.length > 0) {
             const locationDetailsMap = new Map();
             
-            // Group by kallikratis and implementing agency
+            // Group by implementing agency and event type
             projectIndexData.forEach(indexItem => {
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
               const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
               const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
               const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
               
-              const key = `${indexItem.kallikratis_id || 'no-location'}-${indexItem.monada_id || 'no-unit'}`;
+              const key = `${indexItem.monada_id || 'no-unit'}-${indexItem.event_types_id || 'no-event'}`;
               
               if (!locationDetailsMap.has(key)) {
-                // Use geographic code logic to determine what to display
-                const geographicCode = indexItem.geographic_code;
-                const geoInfo = getGeographicInfo(geographicCode);
-                
-                console.log(`DEBUG Geographic Code Analysis:`, {
-                  geographicCode,
-                  geoInfo,
-                  kallikratisFound: !!kallikratis,
-                  kallikratisData: kallikratis ? {
-                    region: kallikratis.perifereia,
-                    regionalUnit: kallikratis.perifereiaki_enotita,
-                    municipality: kallikratis.onoma_neou_ota
-                  } : null
-                });
-                
-                // Always populate all geographic fields from kallikratis data to fix dropdown issues
                 let locationDetail = {
-                  municipality: kallikratis?.onoma_neou_ota || "",
-                  regional_unit: kallikratis?.perifereiaki_enotita || "", 
-                  region: kallikratis?.perifereia || "",
                   implementing_agency: unit?.unit || unit?.name || unit?.unit_name?.name || "",
                   event_type: eventType?.name || "",
                   expenditure_types: [],
-                  geographic_code: geographicCode
+                  regions: []
                 };
                 
-                console.log(`DEBUG - Location Detail Init:`, {
-                  unitData: unit,
-                  unitValue: unit?.unit || unit?.name || unit?.unit_name?.name || "",
-                  eventTypeData: eventType,
-                  eventTypeValue: eventType?.name || "",
-                  kallikratisRegion: kallikratis?.perifereia,
-                  expenditureTypeData: expenditureType,
-                  expenditureTypeValue: expenditureType?.expediture_types || ""
-                });
-                
-                console.log(`Setting location fields:`, {
-                  municipality: locationDetail.municipality,
-                  regional_unit: locationDetail.regional_unit,
-                  region: locationDetail.region,
-                  kallikratisId: indexItem.kallikratis_id
-                });
-                
-                console.log(`Final locationDetail:`, locationDetail);
                 locationDetailsMap.set(key, locationDetail);
+              }
+              
+              const locationDetail = locationDetailsMap.get(key);
+              
+              // Add region if it doesn't exist
+              if (kallikratis) {
+                const existingRegion = locationDetail.regions.find(r => 
+                  r.region === kallikratis.perifereia && 
+                  r.regional_unit === kallikratis.perifereiaki_enotita && 
+                  r.municipality === kallikratis.onoma_neou_ota
+                );
+                
+                if (!existingRegion) {
+                  locationDetail.regions.push({
+                    region: kallikratis.perifereia || "",
+                    regional_unit: kallikratis.perifereiaki_enotita || "",
+                    municipality: kallikratis.onoma_neou_ota || ""
+                  });
+                }
               }
               
               // Add expenditure type if it exists
               if (expenditureType && expenditureType.expediture_types) {
-                const locationDetail = locationDetailsMap.get(key);
                 if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
                   locationDetail.expenditure_types.push(expenditureType.expediture_types);
                 }
@@ -914,14 +900,14 @@ export default function ComprehensiveEditFixed() {
             const locationDetailsArray = Array.from(locationDetailsMap.values());
             console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
             return locationDetailsArray.length > 0 ? locationDetailsArray : [{
-              municipality: "",
-              regional_unit: "",
-              region: "",
               implementing_agency: typedProjectData.enhanced_unit?.name || "",
               event_type: "",
               expenditure_types: [],
-              geographic_level: undefined,
-              geographic_code: undefined
+              regions: [{
+                region: "",
+                regional_unit: "",
+                municipality: ""
+              }]
             }];
           }
           
@@ -937,14 +923,14 @@ export default function ComprehensiveEditFixed() {
           console.log('DEBUG - Fallback implementing agency:', implementingAgency);
           
           return [{
-            municipality: "",
-            regional_unit: "",
-            region: "",
             implementing_agency: implementingAgency,
             event_type: "",
             expenditure_types: [],
-            geographic_level: undefined,
-            geographic_code: undefined
+            regions: [{
+              region: "",
+              regional_unit: "",
+              municipality: ""
+            }]
           }];
         })());
       form.setValue("changes", []);
@@ -1725,164 +1711,193 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {form.watch("location_details").map((location, index) => {
-                      // Get geographic level from geographic code
-                      const geoInfo = getGeographicInfo(location.geographic_code);
-                      const shouldShowRegion = true; // Always show region
-                      const shouldShowRegionalUnit = isInitializingRef.current || !geoInfo || geoInfo.level === 'municipality' || geoInfo.level === 'regional_unit';
-                      const shouldShowMunicipality = isInitializingRef.current || !geoInfo || geoInfo.level === 'municipality';
+                      // Ensure regions array exists
+                      if (!location.regions || !Array.isArray(location.regions)) {
+                        location.regions = [{
+                          region: location.region || "",
+                          regional_unit: location.regional_unit || "",
+                          municipality: location.municipality || ""
+                        }];
+                      }
                       
                       return (
                       <div key={index} className="p-4 border rounded-lg space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium text-sm text-gray-700">Τοποθεσία {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const currentLocations = form.getValues("location_details");
+                              form.setValue("location_details", currentLocations.filter((_, i) => i !== index));
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Αφαίρεση Τοποθεσίας
+                          </Button>
+                        </div>
 
-                        <div className="grid grid-cols-4 gap-4">
-                          {shouldShowRegion && (
-                            <FormField
-                              control={form.control}
-                              name={`location_details.${index}.region`}
-                              render={({ field }) => {
-                                // Get current form values directly to avoid stale watch data
-                                const currentLocationDetail = form.getValues(`location_details.${index}`);
-                                console.log(`Region field debug - Index ${index}:`, {
-                                  fieldValue: field.value,
-                                  formValue: form.getValues(`location_details.${index}.region`),
-                                  locationDetail: location,
-                                  currentFormState: currentLocationDetail
+                        {/* Regions Section */}
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <FormLabel className="text-sm font-medium">Περιοχές</FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentLocations = form.getValues("location_details");
+                                const updatedLocations = [...currentLocations];
+                                if (!updatedLocations[index].regions) {
+                                  updatedLocations[index].regions = [];
+                                }
+                                updatedLocations[index].regions.push({
+                                  region: "",
+                                  regional_unit: "",
+                                  municipality: ""
                                 });
-                                return (
-                                <FormItem>
-                                  <FormLabel className="text-sm font-medium">Περιφέρεια</FormLabel>
-                                  <FormControl>
-                                    <Select
-                                      onValueChange={(value) => {
-                                        const fieldKey = `location_details.${index}.region`;
-                                        field.onChange(value);
-                                        
-                                        // Only reset dependent fields if NOT initializing and it's a genuine user interaction
-                                        if (!isInitializingRef.current && hasInitialized.current && userInteractedFields.has(fieldKey)) {
-                                          console.log(`Region changed by user - clearing dependent fields`);
-                                          form.setValue(`location_details.${index}.regional_unit`, "");
-                                          form.setValue(`location_details.${index}.municipality`, "");
-                                        } else if (isInitializingRef.current) {
-                                          console.log(`Region change during initialization - skipping field clearing`);
-                                        }
-                                        
-                                        // Mark this field as interacted for future changes
-                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
-                                      }} 
-                                      value={field.value || ""}
-                                      key={`region-${index}-${field.value}`}
-                                    >
-                                      <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="Επιλέξτε περιφέρεια" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {(() => {
-                                          const regions = [...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean);
-                                          console.log(`Region options for field value "${field.value}":`, regions.includes(field.value), regions);
-                                          return regions.map((region, regionIndex) => (
-                                            <SelectItem key={region} value={region}>{region}</SelectItem>
-                                          ));
-                                        })()}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                </FormItem>
-                              );
+                                form.setValue("location_details", updatedLocations);
                               }}
-                            />
-                          )}
-                          {shouldShowRegionalUnit && (
-                            <FormField
-                              control={form.control}
-                              name={`location_details.${index}.regional_unit`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-sm font-medium">Περιφερειακή Ενότητα</FormLabel>
-                                  <FormControl>
-                                    <Select 
-                                      onValueChange={(value) => {
-                                        const fieldKey = `location_details.${index}.regional_unit`;
-                                        field.onChange(value);
-                                        
-                                        // Only reset dependent fields if NOT initializing and it's a genuine user interaction
-                                        if (!isInitializingRef.current && hasInitialized.current && userInteractedFields.has(fieldKey)) {
-                                          console.log(`Regional unit changed by user - clearing municipality`);
-                                          form.setValue(`location_details.${index}.municipality`, "");
-                                        } else if (isInitializingRef.current) {
-                                          console.log(`Regional unit change during initialization - skipping field clearing`);
-                                        }
-                                        
-                                        // Mark this field as interacted for future changes
-                                        setUserInteractedFields(prev => new Set(prev).add(fieldKey));
-                                      }} 
-                                      value={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.region`) && !isInitializingRef.current}
-                                      key={`regional-unit-${index}-${field.value}`}
+                              className="text-sm text-blue-600 hover:text-blue-700"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Προσθήκη Περιοχής
+                            </Button>
+                          </div>
+                          
+                          {location.regions?.map((region, regionIndex) => {
+                            const regionFieldName = `location_details.${index}.regions.${regionIndex}`;
+                            return (
+                              <div key={regionIndex} className="grid grid-cols-4 gap-4 p-3 bg-gray-50 rounded-md">
+                                <FormField
+                                  control={form.control}
+                                  name={`${regionFieldName}.region`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-sm font-medium">Περιφέρεια</FormLabel>
+                                      <FormControl>
+                                        <Select
+                                          onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset dependent fields when region changes
+                                            form.setValue(`${regionFieldName}.regional_unit`, "");
+                                            form.setValue(`${regionFieldName}.municipality`, "");
+                                          }} 
+                                          value={field.value || ""}
+                                        >
+                                          <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Επιλέξτε περιφέρεια" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {(() => {
+                                              const regions = [...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean);
+                                              return regions.map((region) => (
+                                                <SelectItem key={region} value={region}>{region}</SelectItem>
+                                              ));
+                                            })()}
+                                          </SelectContent>
+                                        </Select>
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name={`${regionFieldName}.regional_unit`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-sm font-medium">Περιφερειακή Ενότητα</FormLabel>
+                                      <FormControl>
+                                        <Select 
+                                          onValueChange={(value) => {
+                                            field.onChange(value);
+                                            // Reset municipality when regional unit changes
+                                            form.setValue(`${regionFieldName}.municipality`, "");
+                                          }} 
+                                          value={field.value || ""}
+                                          disabled={!form.watch(`${regionFieldName}.region`)}
+                                        >
+                                          <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {(() => {
+                                              const currentRegion = form.watch(`${regionFieldName}.region`);
+                                              const regionalUnits = [...new Set(typedKallikratisData
+                                                ?.filter(k => k.perifereia === currentRegion)
+                                                .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
+                                              return regionalUnits.map((unit) => (
+                                                <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                              ));
+                                            })()}
+                                          </SelectContent>
+                                        </Select>
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <FormField
+                                  control={form.control}
+                                  name={`${regionFieldName}.municipality`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-sm font-medium">Δήμος</FormLabel>
+                                      <FormControl>
+                                        <Select 
+                                          onValueChange={field.onChange} 
+                                          value={field.value || ""}
+                                          disabled={!form.watch(`${regionFieldName}.regional_unit`)}
+                                        >
+                                          <SelectTrigger className="text-sm">
+                                            <SelectValue placeholder="Επιλέξτε δήμο" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {(() => {
+                                              const currentRegion = form.watch(`${regionFieldName}.region`);
+                                              const currentRegionalUnit = form.watch(`${regionFieldName}.regional_unit`);
+                                              const municipalities = [...new Set(typedKallikratisData
+                                                ?.filter(k => 
+                                                  k.perifereia === currentRegion &&
+                                                  k.perifereiaki_enotita === currentRegionalUnit
+                                                )
+                                                .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
+                                              return municipalities.map((municipality) => (
+                                                <SelectItem key={municipality} value={municipality}>{municipality}</SelectItem>
+                                              ));
+                                            })()}
+                                          </SelectContent>
+                                        </Select>
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                                
+                                <div className="flex items-end">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      const currentLocations = form.getValues("location_details");
+                                      const updatedLocations = [...currentLocations];
+                                      if (updatedLocations[index].regions.length > 1) {
+                                        updatedLocations[index].regions.splice(regionIndex, 1);
+                                        form.setValue("location_details", updatedLocations);
+                                      }
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                    disabled={location.regions?.length <= 1}
                                   >
-                                    <SelectTrigger className="text-sm">
-                                      <SelectValue placeholder="Επιλέξτε περιφερειακή ενότητα" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {(() => {
-                                        const currentRegion = form.watch(`location_details.${index}.region`);
-                                        const regionalUnits = [...new Set(typedKallikratisData
-                                          ?.filter(k => k.perifereia === currentRegion)
-                                          .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
-                                        console.log(`Regional Unit options for region "${currentRegion}", field value "${field.value}":`, regionalUnits.includes(field.value), regionalUnits);
-                                        console.log(`Regional Unit field disabled: ${!form.watch(`location_details.${index}.region`) && !isInitializingRef.current}, initializing: ${isInitializingRef.current}`);
-                                        return regionalUnits.map((unit, unitIndex) => (
-                                          <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                                        ));
-                                      })()}
-                                    </SelectContent>
-                                  </Select>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          )}
-                          {shouldShowMunicipality && (
-                            <FormField
-                              control={form.control}
-                              name={`location_details.${index}.municipality`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-sm font-medium">Δήμος</FormLabel>
-                                  <FormControl>
-                                    <Select 
-                                      onValueChange={(value) => {
-                                        field.onChange(value);
-                                      }} 
-                                      value={field.value || ""}
-                                      disabled={!form.watch(`location_details.${index}.regional_unit`) && !isInitializingRef.current}
-                                      key={`municipality-${index}-${field.value}`}
-                                    >
-                                      <SelectTrigger className="text-sm">
-                                        <SelectValue placeholder="Επιλέξτε δήμο" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {(() => {
-                                          const currentRegion = form.watch(`location_details.${index}.region`);
-                                          const currentRegionalUnit = form.watch(`location_details.${index}.regional_unit`);
-                                          const municipalities = [...new Set(typedKallikratisData
-                                            ?.filter(k => 
-                                              k.perifereia === currentRegion &&
-                                              k.perifereiaki_enotita === currentRegionalUnit
-                                            )
-                                            .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
-                                          console.log(`Municipality options for region "${currentRegion}", regional unit "${currentRegionalUnit}", field value "${field.value}":`, municipalities.includes(field.value), municipalities);
-                                          console.log(`Municipality field disabled: ${!form.watch(`location_details.${index}.regional_unit`) && !isInitializingRef.current}, initializing: ${isInitializingRef.current}`);
-                                          return municipalities.map((municipality, muniIndex) => (
-                                            <SelectItem key={municipality} value={municipality}>{municipality}</SelectItem>
-                                          ));
-                                        })()}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          )}
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                         
                         <div className="grid grid-cols-2 gap-4">
@@ -1978,21 +1993,7 @@ export default function ComprehensiveEditFixed() {
                           </div>
                         </div>
                         
-                        <div className="flex justify-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const currentLocations = form.getValues("location_details");
-                              form.setValue("location_details", currentLocations.filter((_, i) => i !== index));
-                            }}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            Αφαίρεση
-                          </Button>
-                        </div>
+
                       </div>
                       );
                     })}
@@ -2006,7 +2007,16 @@ export default function ComprehensiveEditFixed() {
                           const currentLocations = form.getValues("location_details");
                           form.setValue("location_details", [
                             ...currentLocations,
-                            { region: "", regional_unit: "", municipality: "", implementing_agency: "", event_type: "", expenditure_types: [] }
+                            { 
+                              implementing_agency: "", 
+                              event_type: "", 
+                              expenditure_types: [],
+                              regions: [{
+                                region: "",
+                                regional_unit: "",
+                                municipality: ""
+                              }]
+                            }
                           ]);
                         }}
                         className="text-sm"
