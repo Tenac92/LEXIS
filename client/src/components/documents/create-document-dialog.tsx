@@ -1884,6 +1884,7 @@ export function CreateDocumentDialog({
       // Attempt document creation with v2 API endpoint
       try {
         console.log("[HandleSubmit] About to make API call to /api/documents/v2 with payload:", payload);
+        console.log("[HandleSubmit] Making API request now...");
         
         // Use the v2-documents endpoint which handles document creation with proper error handling
         const response = (await apiRequest("/api/documents/v2", {
@@ -1894,7 +1895,10 @@ export function CreateDocumentDialog({
           body: JSON.stringify(payload),
         })) as { id?: number; message?: string };
         
+        console.log("[HandleSubmit] API request completed successfully!");
+        
         console.log("[HandleSubmit] API response received:", response);
+        console.log("[HandleSubmit] Response type:", typeof response, "Has ID:", !!response?.id);
 
         if (!response || typeof response !== "object" || !response.id) {
           throw new Error(
