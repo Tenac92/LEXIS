@@ -1647,25 +1647,51 @@ export function CreateDocumentDialog({
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
+      console.log("[HandleSubmit] Starting form submission with data:", {
+        project_id: data.project_id,
+        recipients_count: data.recipients?.length,
+        recipients: data.recipients,
+        unit: data.unit,
+        region: data.region,
+        expenditure_type: data.expenditure_type
+      });
+
       // Begin form submission process
 
       // Basic form validation
       if (!data.project_id) {
+        console.log("[HandleSubmit] Validation failed: No project_id");
         throw new Error("Πρέπει να επιλέξετε έργο");
       }
 
       if (!data.recipients?.length) {
+        console.log("[HandleSubmit] Validation failed: No recipients");
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
       const invalidRecipients = data.recipients.some(
-        (r) =>
-          !r.firstname ||
-          !r.lastname ||
-          !r.afm ||
-          typeof r.amount !== "number" ||
-          !r.installments ||
-          r.installments.length === 0,
+        (r, index) => {
+          const isInvalid = !r.firstname ||
+            !r.lastname ||
+            !r.afm ||
+            typeof r.amount !== "number" ||
+            !r.installments ||
+            r.installments.length === 0;
+          
+          if (isInvalid) {
+            console.log(`[Validation] Invalid recipient at index ${index}:`, {
+              firstname: r.firstname,
+              lastname: r.lastname,
+              fathername: r.fathername, // fathername is optional per schema
+              afm: r.afm,
+              amount: r.amount,
+              amountType: typeof r.amount,
+              installments: r.installments,
+              installmentsLength: r.installments?.length
+            });
+          }
+          return isInvalid;
+        }
       );
 
       if (invalidRecipients) {
@@ -1673,25 +1699,38 @@ export function CreateDocumentDialog({
       }
 
       // Validate that all installments are in sequence
-      const hasInvalidSequence = data.recipients.some((r) => {
+      const hasInvalidSequence = data.recipients.some((r, index) => {
         if (r.installments.length <= 1) return false;
-        return !areInstallmentsInSequence(r.installments, data.expenditure_type);
+        const isValid = areInstallmentsInSequence(r.installments, data.expenditure_type);
+        console.log(`[Validation] Checking installment sequence for recipient ${index}:`, {
+          installments: r.installments,
+          expenditureType: data.expenditure_type,
+          isValid: isValid
+        });
+        return !isValid;
       });
 
       if (hasInvalidSequence) {
         throw new Error(
-          "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όn�ι Α+Γ)",
+          "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
         );
       }
 
       // Validate that all installments have amounts entered
-      const missingInstallmentAmounts = data.recipients.some((recipient) => {
+      const missingInstallmentAmounts = data.recipients.some((recipient, index) => {
         return recipient.installments.some((installment) => {
-          return (
-            !recipient.installmentAmounts ||
+          const isInvalid = !recipient.installmentAmounts ||
             typeof recipient.installmentAmounts[installment] !== "number" ||
-            recipient.installmentAmounts[installment] <= 0
-          );
+            recipient.installmentAmounts[installment] <= 0;
+          
+          if (isInvalid) {
+            console.log(`[Validation] Invalid installment amount for recipient ${index}, installment ${installment}:`, {
+              installmentAmounts: recipient.installmentAmounts,
+              installmentValue: recipient.installmentAmounts?.[installment],
+              installmentType: typeof recipient.installmentAmounts?.[installment]
+            });
+          }
+          return isInvalid;
         });
       });
 
@@ -1837,6 +1876,8 @@ export function CreateDocumentDialog({
 
       // Attempt document creation with v2 API endpoint
       try {
+        console.log("[HandleSubmit] About to make API call to /api/documents/v2 with payload:", payload);
+        
         // Use the v2-documents endpoint which handles document creation with proper error handling
         const response = (await apiRequest("/api/documents/v2", {
           method: "POST",
@@ -1845,6 +1886,8 @@ export function CreateDocumentDialog({
           },
           body: JSON.stringify(payload),
         })) as { id?: number; message?: string };
+        
+        console.log("[HandleSubmit] API response received:", response);
 
         if (!response || typeof response !== "object" || !response.id) {
           throw new Error(
@@ -2980,6 +3023,9 @@ export function CreateDocumentDialog({
                       console.log("[DocumentSubmit] Recipients count:", recipients.length);
                       console.log("[DocumentSubmit] Loading state:", loading);
                       console.log("[DocumentSubmit] Recipients data:", recipients);
+                      console.log("[DocumentSubmit] Form errors:", form.formState.errors);
+                      console.log("[DocumentSubmit] Form is valid:", form.formState.isValid);
+                      console.log("[DocumentSubmit] Form values:", form.getValues());
                       form.handleSubmit(handleSubmit)();
                     }}
                     disabled={loading || recipients.length === 0}
