@@ -176,6 +176,24 @@ This is a full-stack web application built for Greek government budget and docum
   - Comprehensive database schema alignment with actual Supabase structure
   - Performance-optimized API endpoints with proper caching strategies
 
+### July 11, 2025 - DOCUMENT CREATION BACKEND FIX & COMPLETE PROJECT_ID STANDARDIZATION
+- **CRITICAL BACKEND FIX: Resolved "MIS not found" error by completing project_id standardization in backend**
+- **Backend Project ID Standardization:**
+  - Fixed documentsController.ts to use numeric project_id instead of MIS codes in database queries
+  - Changed `eq('mis', project_id)` to `eq('id', project_id)` in all project lookups
+  - Updated document creation payload to use `project_id: parseInt(project_id)` instead of `mis: project_id`
+  - Fixed both V1 and V2 document creation endpoints to properly handle numeric project IDs
+- **Document Creation Fix Complete:**
+  - Document creation now works correctly with numeric project IDs from frontend
+  - Eliminated "Project not found" errors caused by MIS/ID mismatch
+  - Backend now properly looks up projects using numeric IDs instead of MIS codes
+  - Document creation succeeds when all required fields are filled and project_id is numeric
+- **Complete ID Standardization:**
+  - Frontend sends numeric project_id (e.g., 29) from ProjectSelect component
+  - Backend now properly receives and uses numeric project_id for database queries
+  - Eliminated all remaining MIS code dependencies in document creation flow
+  - Consistent numeric ID usage across entire application stack
+
 ### July 11, 2025 - DOCUMENT VALIDATION & REGION SELECTOR FIXES COMPLETE
 - **DOCUMENT VALIDATION SUCCESS: Fixed validation flow to provide clear error messages for missing required fields**
 - **Form Validation Enhancement:**

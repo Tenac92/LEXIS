@@ -37,7 +37,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     // Get project data with enhanced information using optimized schema
     const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
-      supabase.from('Projects').select('*').eq('mis', project_id).single(),
+      supabase.from('Projects').select('*').eq('id', project_id).single(),
       supabase.from('event_types').select('*'),
       supabase.from('expediture_types').select('*'),
       supabase.from('Monada').select('*'),
@@ -816,24 +816,24 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     let project_na853: string = '';
 
     try {
-      // First attempt to get from project_catalog
+      // First attempt to get from project_catalog using numeric project_id
       const result = await supabase
         .from('project_catalog')
         .select('budget_na853')
-        .eq('mis', project_id)
+        .eq('id', project_id)
         .single();
         
       projectData = result.data;
       projectError = result.error;
       
       if (projectError || !projectData) {
-        // If not found in project_catalog, try Projects table
-        console.log('[DOCUMENT_CONTROLLER] Looking up project in Projects table using MIS:', project_id);
+        // If not found in project_catalog, try Projects table using numeric ID
+        console.log('[DOCUMENT_CONTROLLER] Looking up project in Projects table using numeric ID:', project_id);
         
         const projectResult = await supabase
           .from('Projects')
           .select('id, mis, na853, budget_na853')
-          .eq('mis', project_id)
+          .eq('id', project_id)
           .single();
           
         if (projectResult.data) {
@@ -887,7 +887,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
     // Create document with exact schema match and set initial status to pending
     const documentPayload = {
       unit_id: parseInt(unit), // Convert unit to unit_id as integer
-      mis: project_id, 
+      project_id: parseInt(project_id), // Use numeric project_id instead of MIS
       project_na853,
       expenditure_type,
       status: 'pending', // Always set initial status to pending
