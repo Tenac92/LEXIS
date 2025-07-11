@@ -1659,16 +1659,19 @@ export function CreateDocumentDialog({
       // Begin form submission process
 
       // Basic form validation
+      console.log("[HandleSubmit] Checking project_id:", data.project_id);
       if (!data.project_id) {
         console.log("[HandleSubmit] Validation failed: No project_id");
         throw new Error("Πρέπει να επιλέξετε έργο");
       }
 
+      console.log("[HandleSubmit] Checking recipients:", data.recipients?.length);
       if (!data.recipients?.length) {
         console.log("[HandleSubmit] Validation failed: No recipients");
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
+      console.log("[HandleSubmit] Validating recipients individually...");
       const invalidRecipients = data.recipients.some(
         (r, index) => {
           const isInvalid = !r.firstname ||
@@ -1677,6 +1680,18 @@ export function CreateDocumentDialog({
             typeof r.amount !== "number" ||
             !r.installments ||
             r.installments.length === 0;
+          
+          console.log(`[Validation] Checking recipient ${index}:`, {
+            firstname: r.firstname,
+            lastname: r.lastname,
+            fathername: r.fathername, // fathername is optional per schema
+            afm: r.afm,
+            amount: r.amount,
+            amountType: typeof r.amount,
+            installments: r.installments,
+            installmentsLength: r.installments?.length,
+            isInvalid: isInvalid
+          });
           
           if (isInvalid) {
             console.log(`[Validation] Invalid recipient at index ${index}:`, {
@@ -1694,11 +1709,13 @@ export function CreateDocumentDialog({
         }
       );
 
+      console.log("[HandleSubmit] Invalid recipients found:", invalidRecipients);
       if (invalidRecipients) {
         throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
       }
 
       // Validate that all installments are in sequence
+      console.log("[HandleSubmit] Checking installment sequences...");
       const hasInvalidSequence = data.recipients.some((r, index) => {
         if (r.installments.length <= 1) return false;
         const isValid = areInstallmentsInSequence(r.installments, data.expenditure_type);
@@ -1710,6 +1727,7 @@ export function CreateDocumentDialog({
         return !isValid;
       });
 
+      console.log("[HandleSubmit] Invalid sequence found:", hasInvalidSequence);
       if (hasInvalidSequence) {
         throw new Error(
           "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
@@ -1717,6 +1735,7 @@ export function CreateDocumentDialog({
       }
 
       // Validate that all installments have amounts entered
+      console.log("[HandleSubmit] Checking installment amounts...");
       const missingInstallmentAmounts = data.recipients.some((recipient, index) => {
         return recipient.installments.some((installment) => {
           const isInvalid = !recipient.installmentAmounts ||
