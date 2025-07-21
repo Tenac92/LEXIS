@@ -312,7 +312,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       attachment_id: attachmentIds, // Array of attachment IDs
       status: 'pending', // Always set initial status to pending
       protocol_date: new Date().toISOString().split('T')[0], // Set current date
-      protocol_number_input: `${Date.now()}`, // Generate protocol number
+      protocol_number_input: null, // Will be set by user during document processing
       is_correction: false,
       comments: `Document created for project ${project_id}`,
       esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
@@ -540,7 +540,63 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
-    return res.json(documents || []);
+    // Enrich documents with beneficiary payment data
+    const enrichedDocuments = await Promise.all(
+      (documents || []).map(async (doc) => {
+        if (!doc.beneficiary_payments_id || !Array.isArray(doc.beneficiary_payments_id) || doc.beneficiary_payments_id.length === 0) {
+          return { ...doc, recipients: [] };
+        }
+
+        try {
+          // Fetch beneficiary payments for this document
+          const { data: payments, error: paymentsError } = await supabase
+            .from('beneficiary_payments')
+            .select(`
+              id,
+              amount,
+              installment,
+              status,
+              beneficiaries (
+                id,
+                afm,
+                surname,
+                name,
+                fathername,
+                region
+              )
+            `)
+            .in('id', doc.beneficiary_payments_id);
+
+          if (paymentsError) {
+            console.error('Error fetching payments for document', doc.id, ':', paymentsError);
+            return { ...doc, recipients: [] };
+          }
+
+          // Transform payments into recipients format
+          const recipients = (payments || []).map(payment => {
+            const beneficiary = Array.isArray(payment.beneficiaries) ? payment.beneficiaries[0] : payment.beneficiaries;
+            return {
+              id: beneficiary?.id,
+              firstname: beneficiary?.name || '',
+              lastname: beneficiary?.surname || '',
+              fathername: beneficiary?.fathername || '',
+              afm: beneficiary?.afm || '',
+              amount: parseFloat(payment.amount) || 0,
+              installment: payment.installment || '',
+              region: beneficiary?.region || '',
+              status: payment.status || 'pending'
+            };
+          });
+
+          return { ...doc, recipients };
+        } catch (err) {
+          console.error('Error enriching document', doc.id, ':', err);
+          return { ...doc, recipients: [] };
+        }
+      })
+    );
+
+    return res.json(enrichedDocuments);
   } catch (error) {
     console.error('Error fetching documents:', error);
     return res.status(500).json({
