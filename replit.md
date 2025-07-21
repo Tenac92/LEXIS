@@ -194,6 +194,28 @@ This is a full-stack web application built for Greek government budget and docum
   - Eliminated all remaining MIS code dependencies in document creation flow
   - Consistent numeric ID usage across entire application stack
 
+### July 21, 2025 - BUDGET SERVICE ERROR HANDLING FIX & MODAL SIZE ENHANCEMENT  
+- **CRITICAL FIX: Resolved BudgetService errors for projects without budget data**
+- **Budget Service Enhancement:**
+  - Fixed getBudget method to return fallback zero values instead of throwing errors when no budget data exists
+  - Changed error logging to informational logging for missing budget data (normal condition)
+  - Enhanced error handling to return proper success responses with zero-value fallback data
+  - Added graceful handling for PGRST116 "no rows returned" errors from Supabase
+  - Catch blocks now return fallback data instead of breaking UI components
+- **Create Document Dialog Enhancement:**
+  - Enhanced modal size from max-w-5xl to max-w-6xl with fixed height (h-[90vh]) for better user experience
+  - Reduced dramatic transition effects by making modal larger from step one
+  - Improved space utilization with consistent large modal dimensions
+- **Frontend Error Handling Improvements:**
+  - Enhanced budget hooks to distinguish between real errors and missing data situations
+  - Updated console logging to use informational messages instead of error messages for normal missing data
+  - Improved 404 response handling to properly extract and use backend fallback data
+- **User Experience Success:**
+  - Projects without budget allocations (like project 29) now work seamlessly
+  - Document creation modal displays properly without budget-related errors
+  - Clean console output with appropriate log levels for different situations
+  - Large modal size prevents jarring transitions during multi-step document creation
+
 ### July 21, 2025 - CRITICAL BACKEND CONSOLIDATION & QUARTER TRANSITION SYSTEM FIX
 - **MAJOR BACKEND CONSOLIDATION: Fixed critical quarter transition system conflicts and backend inconsistencies**
 - **Quarter Transition System Fix:**
