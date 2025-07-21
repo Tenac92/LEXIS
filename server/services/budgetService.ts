@@ -659,6 +659,11 @@ export class BudgetService {
       console.log(`[BudgetService] GetBudget - Parameters: mis=${mis}`);
       console.log(`[BudgetService] GetBudget - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
       
+      // DEBUG: Special logging for project 29
+      if (mis === '29') {
+        console.log(`[BudgetService] DEBUG - Special debugging for project 29`);
+      }
+      
       // Declare variables at the top to avoid "used before declaration" errors
       let budgetData: any = null;
       let budgetError: any = null;
@@ -791,6 +796,12 @@ export class BudgetService {
         // For numeric MIS, query directly against the integer column
         if (numericalMis !== null) {
           console.log(`[BudgetService] Querying project_budget with numeric MIS: ${numericalMis}`);
+          
+          // DEBUG: Special logging for project 29
+          if (numericalMis === 29) {
+            console.log(`[BudgetService] DEBUG - About to query project_budget for project 29`);
+          }
+          
           const result = await supabase
             .from('project_budget')
             .select('*')
@@ -799,6 +810,18 @@ export class BudgetService {
           
           budgetData = result.data;
           budgetError = result.error;
+          
+          // DEBUG: Special logging for project 29
+          if (numericalMis === 29) {
+            console.log(`[BudgetService] DEBUG - Project 29 result:`, {
+              data: budgetData,
+              error: budgetError,
+              hasData: !!budgetData,
+              hasError: !!budgetError,
+              errorCode: budgetError?.code,
+              errorMessage: budgetError?.message
+            });
+          }
         } else {
           // For string/project code format, try to find the corresponding project first
           console.log(`[BudgetService] Trying to find project with NA853 code: ${mis}`);
