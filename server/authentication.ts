@@ -633,7 +633,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Logout route with enhanced session cleanup
+  // Logout route optimized for faster response
   app.post("/api/auth/logout", (req, res) => {
     console.log('[Auth] Logging out user:', { 
       sessionID: req.sessionID,
@@ -642,25 +642,25 @@ export async function setupAuth(app: Express) {
     });
 
     if (req.session) {
+      // Clear cookie immediately for faster client response
+      res.clearCookie('sid', { 
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+        domain: process.env.COOKIE_DOMAIN || undefined
+      });
+      
+      // Send response immediately
+      res.json({ message: 'Logged out successfully' });
+      
+      // Destroy session in background to avoid blocking response
       req.session.destroy((err) => {
         if (err) {
-          console.error('[Auth] Logout error:', err);
-          return res.status(500).json({
-            message: 'Logout failed'
-          });
+          console.error('[Auth] Background session cleanup error:', err);
+        } else {
+          console.log('[Auth] Session destroyed successfully in background');
         }
-        
-        // Use same cookie settings as the session
-        res.clearCookie('sid', { 
-          path: '/',
-          secure: process.env.NODE_ENV === 'production',  // Match session setting
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-          httpOnly: true,
-          domain: process.env.COOKIE_DOMAIN || undefined // Use same domain as session cookie
-        });
-        
-        console.log('[Auth] Cleared session cookie with domain:', process.env.COOKIE_DOMAIN || 'default');
-        res.json({ message: 'Logged out successfully' });
       });
     } else {
       res.json({ message: 'Already logged out' });

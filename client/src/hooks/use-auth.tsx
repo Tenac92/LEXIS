@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 interface LoginCredentials {
   email: string;
@@ -110,6 +111,7 @@ function useLoginMutation() {
 
 function useLogoutMutation() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   return useMutation({
     mutationFn: async () => {
@@ -126,21 +128,23 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
-      // Immediately clear user data for faster UI response
+      // Immediately clear user data and navigate for instant UI response
       queryClient.setQueryData(["/api/auth/me"], null);
       
-      // Clear cache in background to avoid blocking UI
+      // Use client-side navigation instead of full page reload
+      navigate('/auth');
+      
+      // Clear specific auth-related queries only for better performance
+      queryClient.removeQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.removeQueries({ queryKey: ["/api/dashboard"] });
+      
+      // Show success message after navigation
       setTimeout(() => {
-        queryClient.clear();
-      }, 50);
-      
-      // Navigate immediately without waiting
-      window.location.replace('/auth');
-      
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
@@ -203,7 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     retry: false,
     refetchOnWindowFocus: false, // Disable auto-refresh on focus for faster startup
     refetchInterval: false, // Disable automatic refresh interval for now
-    staleTime: 5 * 60 * 1000, // Consider data stale after 5 minutes instead of 1
+    staleTime: 10 * 60 * 1000, // Consider data stale after 10 minutes for better caching
+    gcTime: 15 * 60 * 1000, // Keep in cache longer to avoid refetching during navigation
   });
 
   // Simplified session management for faster startup
@@ -219,16 +224,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       };
       
-      // Set up a single inactivity timer (10 minutes)
+      // Set up a single inactivity timer (15 minutes for less frequent checks)
       const resetTimer = () => {
         clearTimeout(inactivityTimer);
-        inactivityTimer = window.setTimeout(checkSession, 10 * 60 * 1000);
+        inactivityTimer = window.setTimeout(checkSession, 15 * 60 * 1000);
       };
       
-      // Listen for user activity (reduced event set)
-      const activityEvents = ['mousedown', 'keypress'];
+      // Listen for user activity (minimal event set for better performance)
+      const activityEvents = ['click', 'keydown'];
       activityEvents.forEach(event => {
-        window.addEventListener(event, resetTimer);
+        window.addEventListener(event, resetTimer, { passive: true });
       });
       
       resetTimer();
