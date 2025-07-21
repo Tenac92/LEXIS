@@ -215,10 +215,13 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { email, name, password, role, units, department, telephone } = req.body;
+    const { email, name, password, role, unit_id, units, department, telephone } = req.body;
+
+    // Support both field names for compatibility - prefer unit_id from frontend
+    const unitsToValidate = unit_id || units;
 
     // Validate required fields (department conditionally required)
-    const basicFields = { email, name, password, role, units };
+    const basicFields = { email, name, password, role, units: unitsToValidate };
     const missingFields = Object.entries(basicFields)
       .filter(([_, value]) => !value)
       .map(([key]) => key);
@@ -234,7 +237,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     }
 
     // Verify units exist
-    console.log('[Users] Verifying units:', units);
+    console.log('[Users] Verifying units:', unitsToValidate);
     
     // Get all units first
     const { data: allUnits, error: fetchError } = await supabase
@@ -255,12 +258,12 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return unit.unit_name && 
              typeof unit.unit_name === 'object' &&
              unit.unit_name.name && 
-             units.includes(unit.unit_name.name);
+             unitsToValidate.includes(unit.unit_name.name);
     });
     
     // Check if all requested units were found
-    if (!validUnits || validUnits.length !== units.length) {
-      console.error('[Users] Invalid units:', units, 'Found:', validUnits?.length || 0);
+    if (!validUnits || validUnits.length !== unitsToValidate.length) {
+      console.error('[Users] Invalid units:', unitsToValidate, 'Found:', validUnits?.length || 0);
       return res.status(400).json({
         message: 'One or more invalid units selected',
         error: 'Not all requested units are valid'
@@ -301,7 +304,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 
     // Convert full unit names to abbreviated codes for storage
     const unitCodes = validUnits.map(unit => unit.unit);
-    console.log('[Users] Converting unit names to codes:', { originalUnits: units, unitCodes });
+    console.log('[Users] Converting unit names to codes:', { originalUnits: unitsToValidate, unitCodes });
     
     // Create user - department is optional
     console.log('[Users] Creating new user:', { email, name, role, units: unitCodes, department });
@@ -311,7 +314,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       name,
       role,
       password: hashedPassword,
-      units: unitCodes, // Store abbreviated codes instead of full names
+      unit_id: unitCodes, // Store abbreviated codes instead of full names
       telephone: telephone || null
     };
     
@@ -324,7 +327,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert([userData])
-      .select('id, email, name, role, units, department, telephone')
+      .select('id, email, name, role, unit_id, department, telephone')
       .single();
 
     if (error) {
