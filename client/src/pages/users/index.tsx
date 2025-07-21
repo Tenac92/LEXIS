@@ -50,7 +50,7 @@ interface User {
   email: string;
   name: string;
   role: string;
-  units?: string[];
+  unit_id?: number[];
   created_at: string;
   telephone?: string;
   department?: string;
@@ -61,7 +61,7 @@ const baseUserSchema = {
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
-  units: z.array(z.string()).optional(),
+  unit_id: z.array(z.number()).optional(),
   telephone: z.string().optional().or(z.coerce.string()),
   department: z.string().optional(),
 };
@@ -108,7 +108,7 @@ export default function UsersPage() {
       name: "",
       password: "",
       role: "user",
-      units: [],
+      unit_id: [],
       telephone: "",
       department: ""
     },
@@ -142,18 +142,14 @@ export default function UsersPage() {
     },
   });
 
-  // Helper function to convert unit abbreviations to full names for display
-  const getDisplayUnits = (userUnits: string[] | undefined) => {
-    if (!userUnits || !units) return [];
+  // Helper function to convert unit IDs to full names for display
+  const getDisplayUnits = (userUnitIds: number[] | undefined) => {
+    if (!userUnitIds || !units) return [];
     
-    return userUnits.map(unitId => {
-      // First check if it's already a full name
-      const unitByName = units.find(u => u.name === unitId);
-      if (unitByName) return unitId;
-      
-      // Otherwise, find by abbreviation (id)
-      const unitById = units.find(u => u.id === unitId);
-      return unitById ? unitById.name : unitId;
+    return userUnitIds.map(unitId => {
+      // Find unit by numeric ID
+      const unit = units.find(u => parseInt(u.id) === unitId);
+      return unit ? unit.name : `Unit ${unitId}`;
     });
   };
 
@@ -292,12 +288,12 @@ export default function UsersPage() {
   });
 
   const onSubmit = (data: UserFormData) => {
-    // Convert unit IDs to unit abbreviations for storage in the database
+    // Convert unit string IDs to numbers for storage in the database
     const modifiedData = {
       ...data,
       unit_id: data.unit_id?.map((unitId) => {
-        const unit = units.find(u => u.id === unitId);
-        return unit ? unit.id : unitId; // Store abbreviation (id) instead of full name
+        // Convert string ID to number
+        return typeof unitId === 'string' ? parseInt(unitId) : unitId;
       })
     };
     
@@ -321,8 +317,8 @@ export default function UsersPage() {
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
       (user.unit_id && Array.isArray(user.unit_id) && 
-        user.unit_id.some(unit => 
-          typeof unit === 'string' && unit.toLowerCase().includes(search.toLowerCase())
+        getDisplayUnits(user.unit_id).some(unitName => 
+          unitName.toLowerCase().includes(search.toLowerCase())
         ));
 
     const roleMatch = selectedRole === "all" || user.role === selectedRole;
@@ -352,7 +348,7 @@ export default function UsersPage() {
               name: "",
               password: "",
               role: "user",
-              units: [],
+              unit_id: [],
               telephone: "",
               department: ""
             });
@@ -428,11 +424,8 @@ export default function UsersPage() {
                           setFormMode('edit');
                           setEditUserDialogOpen(true);
                           
-                          // Map user's unit names to unit IDs for the form
-                          const userUnitIds = (user.unit_id || []).map(unitId => {
-                            const unit = units.find(u => u.name === unitName);
-                            return unit ? unit.id : "";
-                          }).filter(id => id !== "");
+                          // Map user's unit IDs to unit IDs for the form (no conversion needed)
+                          const userUnitIds = user.unit_id || [];
                           
                           // Pre-populate form with user data
                           form.reset({
@@ -440,7 +433,7 @@ export default function UsersPage() {
                             name: user.name,
                             password: "", // Don't pre-populate password for security
                             role: user.role as "admin" | "user" | "manager",
-                            units: userUnitIds,
+                            unit_id: userUnitIds,
                             telephone: user.telephone || "",
                             department: user.department || ""
                           });
@@ -510,7 +503,7 @@ export default function UsersPage() {
               name: "",
               password: "",
               role: "user",
-              units: [],
+              unit_id: [],
               telephone: "",
               department: ""
             });
@@ -592,15 +585,15 @@ export default function UsersPage() {
               />
               <FormField
                 control={form.control}
-                name="units"
+                name="unit_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Units</FormLabel>
                     <FormControl>
                       <MultiSelect
                         options={units}
-                        value={field.value || []}
-                        onChange={field.onChange}
+                        value={(field.value || []).map(String)}
+                        onChange={(values) => field.onChange(values.map(Number))}
                         placeholder="Select units"
                         addLabel="Add more units"
                       />
@@ -626,7 +619,7 @@ export default function UsersPage() {
                 control={form.control}
                 name="department"
                 render={({ field }) => {
-                  const selectedUnitIds = form.watch('units') || [];
+                  const selectedUnitIds = form.watch('unit_id') || [];
                   const { data: departments = [] } = useQuery({
                     queryKey: ['departments', selectedUnitIds],
                     queryFn: async () => {
@@ -634,7 +627,7 @@ export default function UsersPage() {
                       
                       // Find the full unit objects from their IDs
                       const selectedUnitNames = units
-                        .filter(unit => selectedUnitIds.includes(unit.id))
+                        .filter(unit => selectedUnitIds.includes(parseInt(unit.id)))
                         .map(unit => unit.name);
                         
                       // Now use the unit names to fetch departments
@@ -791,15 +784,15 @@ export default function UsersPage() {
               />
               <FormField
                 control={form.control}
-                name="units"
+                name="unit_id"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Units</FormLabel>
                     <FormControl>
                       <MultiSelect
                         options={units}
-                        value={field.value || []}
-                        onChange={field.onChange}
+                        value={(field.value || []).map(String)}
+                        onChange={(values) => field.onChange(values.map(Number))}
                         placeholder="Select units"
                         addLabel="Add more units"
                       />
@@ -825,7 +818,7 @@ export default function UsersPage() {
                 control={form.control}
                 name="department"
                 render={({ field }) => {
-                  const selectedUnitIds = form.watch('units') || [];
+                  const selectedUnitIds = form.watch('unit_id') || [];
                   const { data: departments = [] } = useQuery({
                     queryKey: ['departments', selectedUnitIds],
                     queryFn: async () => {
@@ -833,7 +826,7 @@ export default function UsersPage() {
                       
                       // Find the full unit objects from their IDs
                       const selectedUnitNames = units
-                        .filter(unit => selectedUnitIds.includes(unit.id))
+                        .filter(unit => selectedUnitIds.includes(parseInt(unit.id)))
                         .map(unit => unit.name);
                         
                       // Now use the unit names to fetch departments
