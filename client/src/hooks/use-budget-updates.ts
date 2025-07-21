@@ -65,8 +65,39 @@ export function useBudgetUpdates(
         });
         
         if (!budgetResponse.ok) {
-          console.error(`[Budget] API request failed with status: ${budgetResponse.status}`);
-          // Return empty budget data structure on error
+          // Handle 404 specifically - this means no budget data exists for the project
+          if (budgetResponse.status === 404) {
+            console.log(`[Budget] No budget data found for project ${projectId} - using zero values`);
+            // Try to get the fallback data from the 404 response
+            try {
+              const errorData = await budgetResponse.json();
+              if (errorData.data) {
+                console.log(`[Budget] Using fallback data from 404 response`);
+                return {
+                  user_view: parseFloat(errorData.data.user_view) || 0,
+                  total_budget: parseFloat(errorData.data.total_budget) || 0,
+                  annual_budget: parseFloat(errorData.data.annual_budget) || 0,
+                  katanomes_etous: parseFloat(errorData.data.katanomes_etous) || 0,
+                  ethsia_pistosi: parseFloat(errorData.data.ethsia_pistosi) || 0,
+                  current_budget: parseFloat(errorData.data.current_budget) || 0,
+                  q1: parseFloat(errorData.data.q1) || 0,
+                  q2: parseFloat(errorData.data.q2) || 0,
+                  q3: parseFloat(errorData.data.q3) || 0,
+                  q4: parseFloat(errorData.data.q4) || 0,
+                  total_spent: parseFloat(errorData.data.total_spent) || 0,
+                  available_budget: parseFloat(errorData.data.available_budget) || 0,
+                  quarter_available: parseFloat(errorData.data.quarter_available) || 0,
+                  yearly_available: parseFloat(errorData.data.yearly_available) || 0
+                };
+              }
+            } catch (parseError) {
+              console.log(`[Budget] Could not parse 404 response, using default zeros`);
+            }
+          } else {
+            console.error(`[Budget] API request failed with status: ${budgetResponse.status}`);
+          }
+          
+          // Return empty budget data structure on any error
           return {
             user_view: 0,
             total_budget: 0,
@@ -92,7 +123,13 @@ export function useBudgetUpdates(
           budgetData = responseData.data;
           // Successfully extracted budget data from response
         } else if (responseData?.status === 'error') {
-          console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
+          // Check if this is just a "no budget data found" situation vs a real error
+          if (responseData.message === 'Budget data not found') {
+            console.log('[Budget] No budget data found for project - using fallback zeros');
+          } else {
+            console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
+          }
+          
           // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
           if (responseData.data && typeof responseData.data === 'object') {
             // Using fallback data provided in error response
@@ -151,20 +188,16 @@ export function useBudgetUpdates(
         // Extract the error message or add a detailed one for debugging
         const errorMessage = error instanceof Error 
           ? error.message 
-          : 'Unknown error fetching budget data';
+          : 'Network error fetching budget data';
           
-        console.error('[Budget] Budget data fetch error:', error);
-        console.error('[Budget] Error message:', errorMessage);
+        // Only log as error if it's a real network/server error, not just missing budget data
+        if (error instanceof Error && error.message.includes('fetch')) {
+          console.error('[Budget] Network error fetching budget data:', error);
+        } else {
+          console.log('[Budget] Budget data fetch issue (possibly no data available):', errorMessage);
+        }
         
-        // Create a debug info object to help with troubleshooting
-        const debugInfo = {
-          projectId,
-          error: errorMessage,
-          timestamp: new Date().toISOString()
-        };
-        console.error('[Budget] Debug info:', debugInfo);
-        
-        // Instead of throwing, return empty but valid budget data with error flag
+        // Instead of throwing, return empty but valid budget data
         return {
           user_view: 0,
           total_budget: 0,
@@ -179,8 +212,7 @@ export function useBudgetUpdates(
           total_spent: 0,
           available_budget: 0,
           quarter_available: 0,
-          yearly_available: 0,
-          _error: errorMessage // Add an error flag that can be detected by UI
+          yearly_available: 0
         };
       }
     },
