@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,11 @@ import {
   Clock,
   AlertCircle,
   FileEdit,
-  X
+  X,
+  Edit3
 } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
+import { EditDocumentModal } from "./edit-document-modal";
 
 interface DocumentDetailsModalProps {
   document: GeneratedDocument | null;
@@ -85,6 +88,8 @@ export function DocumentDetailsModal({
   open, 
   onOpenChange 
 }: DocumentDetailsModalProps) {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  
   if (!document) return null;
 
   const statusDetails = getStatusDetails(document.status, null);
@@ -117,12 +122,24 @@ export function DocumentDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-900">
-            Λεπτομέρειες Εγγράφου
-          </DialogTitle>
-          <DialogDescription className="text-gray-600">
-            Πλήρη στοιχεία και πληροφορίες για το επιλεγμένο έγγραφο
-          </DialogDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <DialogTitle className="text-2xl font-bold text-gray-900">
+                Λεπτομέρειες Εγγράφου
+              </DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Πλήρη στοιχεία και πληροφορίες για το επιλεγμένο έγγραφο
+              </DialogDescription>
+            </div>
+            <Button 
+              onClick={() => setEditModalOpen(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Edit3 className="w-4 h-4" />
+              Επεξεργασία
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -286,6 +303,13 @@ export function DocumentDetailsModal({
           )}
         </div>
       </DialogContent>
+      
+      {/* Edit Document Modal */}
+      <EditDocumentModal
+        document={document}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+      />
     </Dialog>
   );
 }

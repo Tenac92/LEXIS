@@ -673,6 +673,53 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+// Update single document
+router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    
+    if (isNaN(documentId)) {
+      return res.status(400).json({ message: 'Invalid document ID' });
+    }
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const updateData = {
+      ...req.body,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('generated_documents')
+      .update(updateData)
+      .eq('id', documentId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating document:', error);
+      return res.status(500).json({ 
+        message: 'Error updating document', 
+        error: error.message 
+      });
+    }
+
+    if (!data) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Error updating document:', error);
+    res.status(500).json({ 
+      message: 'Error updating document', 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 // Get single document
 router.get('/:id', async (req: Request, res: Response) => {
   try {
