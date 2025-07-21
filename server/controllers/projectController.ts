@@ -363,69 +363,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
   }
 }
 
-// Bulk update projects
-router.post('/bulk-update', async (req: Request, res: Response) => {
-  try {
-    const { updates } = req.body;
-    
-    if (!Array.isArray(updates)) {
-      return res.status(400).json({ message: 'Updates must be an array' });
-    }
-
-    const results = [];
-    const errors = [];
-
-    for (const update of updates) {
-      try {
-        // Validate that we have an MIS to identify the project
-        if (!update.mis) {
-          errors.push({ mis: 'unknown', error: 'MIS is required for updates' });
-          continue;
-        }
-
-        // Only include fields that should be updated
-        const validData = {};
-        const allowedFields = ['title', 'status', 'budget_na853', 'budget_na271', 'budget_e069'];
-        
-        allowedFields.forEach(field => {
-          if (update[field] !== undefined) {
-            (validData as any)[field] = update[field];
-          }
-        });
-
-        // Update the project
-        const { data, error } = await supabase
-          .from('Projects')
-          .update(validData)
-          .eq("mis", update.mis);
-
-        if (error) {
-          errors.push({ mis: update.mis, error: error.message });
-        } else {
-          results.push({ mis: update.mis, status: "success" });
-        }
-      } catch (error) {
-        errors.push({ 
-          mis: update.mis, 
-          error: error instanceof Error ? error.message : "Unknown error" 
-        });
-      }
-    }
-
-    res.json({
-      success: errors.length === 0,
-      results,
-      errors: errors.length > 0 ? errors : undefined
-    });
-  } catch (error) {
-    console.error("Error performing bulk update:", error);
-    res.status(500).json({ 
-      message: "Failed to perform bulk update",
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-  }
-});
-
 // Get projects by unit
 router.get('/by-unit/:unitName', async (req: Request, res: Response) => {
   try {

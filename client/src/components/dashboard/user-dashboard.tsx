@@ -9,7 +9,6 @@ import {
   AlertCircle,
   CheckCircle2,
   PlusCircle,
-  Upload,
   Euro
 } from "lucide-react";
 import React, { useState } from 'react';
@@ -120,12 +119,6 @@ export function UserDashboard() {
                 <Button>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Νέο Έργο
-                </Button>
-              </Link>
-              <Link href="/projects/bulk-update">
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Μαζική Ενημέρωση
                 </Button>
               </Link>
             </>

@@ -21,7 +21,6 @@ import AdminBudgetUploadPage from "@/pages/AdminBudgetUploadPage";
 // Fix type issue by explicitly defining component return type
 import QuarterManagementPage from "@/pages/admin/QuarterManagementPage";
 import { FC } from "react";
-import BulkUpdatePage from "@/pages/projects/bulk-update";
 import TemplatesPage from "@/pages/templates";
 
 import { ProtectedRoute } from "./lib/protected-route";
@@ -40,7 +39,6 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/documents/new" component={DocumentsPage} />
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
-        <ProtectedRoute path="/projects/bulk-update" component={BulkUpdatePage} />
         {/* Order matters: more specific routes should come first */}
         <ProtectedRoute path="/projects/:mis/comprehensive-edit-new" component={ComprehensiveEditProjectPage} />
         <ProtectedRoute path="/projects/:mis/edit" component={ComprehensiveEditProjectPage} />
