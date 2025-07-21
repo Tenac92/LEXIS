@@ -3318,7 +3318,7 @@ export function CreateDocumentDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent
-        className="max-w-6xl w-[95vw] max-h-[95vh] flex flex-col overflow-hidden"
+        className="max-w-6xl w-[95vw] h-[90vh] max-h-[98vh] flex flex-col overflow-hidden"
       >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
