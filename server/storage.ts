@@ -156,11 +156,11 @@ export class DatabaseStorage implements IStorage {
       const isNumericMis = /^\d+$/.test(mis);
       const isProjectCode = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/.test(mis); // Pattern for "2024ΝΑ85300001"
       
-      // Case 1: If the MIS is a project code (NA853), try to find it in the budget_na853_split table by na853
+      // Case 1: If the MIS is a project code (NA853), try to find it in the project_budget table by na853
       if (isProjectCode) {
         console.log(`[Storage] MIS appears to be a project code: ${mis}, searching by na853`);
         const { data: naData, error: naError } = await supabase
-          .from('budget_na853_split')
+          .from('project_budget')
           .select('*')
           .eq('na853', mis)
           .single();
@@ -173,7 +173,7 @@ export class DatabaseStorage implements IStorage {
       
       // Case 2: Try to get budget data directly using MIS as string (default approach)
       const { data, error } = await supabase
-        .from('budget_na853_split')
+        .from('project_budget')
         .select('*')
         .eq('mis', mis)
         .single();
@@ -193,7 +193,7 @@ export class DatabaseStorage implements IStorage {
           
           // Try again with the project's MIS value
           const retryResult = await supabase
-            .from('budget_na853_split')
+            .from('project_budget')
             .select('*')
             .eq('mis', projectData.mis)
             .single();

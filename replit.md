@@ -198,7 +198,7 @@ This is a full-stack web application built for Greek government budget and docum
 - **MAJOR BACKEND CONSOLIDATION: Fixed critical quarter transition system conflicts and backend inconsistencies**
 - **Quarter Transition System Fix:**
   - Consolidated dual implementations: Deprecated quarterlyTransitionService.ts in favor of schedulerService.ts
-  - Fixed database table references: Changed from `project_budget` to `budget_na853_split` throughout system
+  - Corrected database table references: Ensured consistent use of `project_budget` table throughout system
   - Enhanced budget transfer logic: Implemented proper formula `nextQuarter = nextQuarter + currentQuarter - user_view`
   - Fixed cron scheduling: Changed from quarter-start (1st day) to quarter-end timing (last day at 23:59)
   - Added proper budget calculation with transfer amounts and audit trail in budget history
@@ -208,7 +208,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Enhanced quarter transition with proper WebSocket notifications and logging
   - Added verification-only mode for mid-quarter checks without actual updates
 - **Database Architecture Alignment:**
-  - Unified all budget queries to use budget_na853_split table consistently
+  - Unified all budget queries to use project_budget table consistently
   - Fixed foreign key relationships and proper JSONB handling
   - Enhanced budget history tracking with detailed quarter transition metadata
 - **Scheduler Enhancement:**
