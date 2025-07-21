@@ -798,10 +798,6 @@ export const insertBeneficiaryPaymentSchema = createInsertSchema(
   {
     installment: z.string().min(1, "Η δόση είναι υποχρεωτική"),
     amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
-    unit_id: z.number().int().optional(),
-    expediture_type_id: z.number().int().optional(),
-    document_id: z.number().int().optional(),
-    project_id: z.number().int().optional(),
   },
 );
 

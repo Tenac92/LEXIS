@@ -37,7 +37,7 @@ export function initializeScheduledTasks(wss: WebSocketServer) {
   // Also run an immediate check to ensure everything is working
   setTimeout(() => {
     logger.info('[Scheduler] Running initial quarter verification check to ensure system is properly set up');
-    processQuarterTransition(wss, true);
+    processQuarterTransition(wss, true); // Keep verification-only for startup check
   }, 5000); // Wait 5 seconds to let everything initialize
   
   logger.info('[Scheduler] Initialized scheduled tasks');
@@ -48,20 +48,25 @@ export function initializeScheduledTasks(wss: WebSocketServer) {
  * @param wss WebSocket server for notifications
  */
 function scheduleQuarterTransition(wss: WebSocketServer) {
-  // Run at 00:01 on the first day of each quarter (Jan 1, Apr 1, Jul 1, Oct 1)
+  // Run at 23:59 on the last day of each quarter (Mar 31, Jun 30, Sep 30, Dec 31)
+  // This ensures budgets are updated at quarter end, not quarter start
   // Cron format: second(0-59) minute(0-59) hour(0-23) day(1-31) month(1-12) weekday(0-6)
-  cron.schedule('1 0 1 1,4,7,10 *', async () => {
-    logger.info('[Scheduler] Running scheduled quarter transition');
+  cron.schedule('59 23 31 3,12 *', async () => { // Mar 31, Dec 31
+    logger.info('[Scheduler] Running scheduled quarter transition (Q1/Q4 end)');
+    await processQuarterTransition(wss);
+  });
+  cron.schedule('59 23 30 6,9 *', async () => { // Jun 30, Sep 30
+    logger.info('[Scheduler] Running scheduled quarter transition (Q2/Q3 end)');
     await processQuarterTransition(wss);
   });
   
-  // Also schedule a mid-quarter check just to be safe (15th day of the first month of each quarter)
-  cron.schedule('1 0 15 1,4,7,10 *', async () => {
+  // Also schedule a mid-quarter verification check (15th day of each quarter)
+  cron.schedule('1 0 15 2,5,8,11 *', async () => {
     logger.info('[Scheduler] Running mid-quarter verification check');
-    await processQuarterTransition(wss, true);
+    await processQuarterTransition(wss, true); // verification mode only
   });
   
-  logger.info('[Scheduler] Quarter transition scheduled for 00:01 on 1st day of each quarter');
+  logger.info('[Scheduler] Quarter transition scheduled for 23:59 on last day of each quarter');
 }
 
 /**
@@ -81,7 +86,7 @@ export async function processQuarterTransition(wss: WebSocketServer, isVerificat
     
     // First, check which budgets need updating (where last_quarter_check is not equal to current quarter)
     const { data: budgetsToUpdate, error: queryError } = await supabase
-      .from('project_budget')
+      .from('budget_na853_split')
       .select('id, mis, na853, last_quarter_check, q1, q2, q3, q4, user_view, sum');
     
     if (queryError) {
@@ -158,9 +163,13 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
       case 'q4': newQuarterValue = budget.q4 || 0; break;
     }
     
-    // Calculate updated budget indicators
+    // Apply quarter transition formula: nextQuarter = nextQuarter + currentQuarter - user_view
     const userView = budget.user_view || 0;
-    const quarterAvailable = Math.max(0, newQuarterValue - userView);
+    const transferAmount = Math.max(0, oldQuarterValue - userView);
+    const updatedNewQuarterValue = newQuarterValue + transferAmount;
+    const quarterAvailable = Math.max(0, updatedNewQuarterValue - userView);
+    
+    logger.info(`[Quarter Transition] Budget ${budget.mis}: transferring ${transferAmount} from ${oldQuarterKey} to ${newQuarterKey}`);
     
     // Prepare the sum object if it doesn't exist
     let sumObject = budget.sum || {};
@@ -176,20 +185,27 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     // Record the quarter change
     sumObject.quarters[newQuarterKey] = {
       previous: oldQuarterValue,
-      new: newQuarterValue,
+      new: updatedNewQuarterValue,
+      transferred: transferAmount,
       changed_at: new Date().toISOString()
     };
     
+    // Build dynamic update object with the new quarter value
+    const updateData: any = {
+      last_quarter_check: newQuarterKey,
+      current_quarter: newQuarterKey,
+      quarter_available: quarterAvailable,
+      sum: sumObject,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Set the new quarter value
+    updateData[newQuarterKey] = updatedNewQuarterValue;
+    
     // Update the budget record
     const { error: updateError } = await supabase
-      .from('project_budget')
-      .update({
-        last_quarter_check: newQuarterKey,
-        current_quarter: newQuarterKey,
-        quarter_available: quarterAvailable,
-        sum: sumObject,
-        updated_at: new Date().toISOString()
-      })
+      .from('budget_na853_split')
+      .update(updateData)
       .eq('id', budget.id);
     
     if (updateError) {

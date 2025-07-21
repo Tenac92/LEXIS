@@ -1,6 +1,8 @@
 /**
- * Quarterly Transition Service
- * Handles automatic quarterly transitions in the budget system
+ * DEPRECATED: Quarterly Transition Service (Legacy)
+ * 
+ * This service is deprecated. Use schedulerService.ts instead.
+ * Kept for reference but not actively used.
  * 
  * Logic: At quarter end (e.g., 31/05/2025 23:59), transition Q2→Q3
  * Formula: q3 = q3 + q2 - user_view
