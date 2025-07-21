@@ -229,6 +229,12 @@ This is a full-stack web application built for Greek government budget and docum
   - Updated recipientSchema to accept both string and number AFM values with transform to string
   - Enhanced beneficiary update logic to filter out empty recipients before API call
   - Improved error handling and debugging with comprehensive form validation logging
+- **Backend Database Persistence Fix:**
+  - **MAJOR ENHANCEMENT: Fixed PUT /api/documents/:id/beneficiaries endpoint to update both tables**
+  - Enhanced backend to update beneficiaries table (firstname, lastname, fathername, afm) AND beneficiary_payments table (amount, installment, status)
+  - Added support for creating new beneficiaries and payments when adding recipients
+  - Implemented proper dual-table update logic with beneficiary_id foreign key relationship
+  - Fixed root cause: Previous implementation only updated payment amounts, not beneficiary personal data
 - **Save Functionality Enhancement:**
   - Fixed loading state management in mutation handlers (onSuccess/onError properly set isLoading)
   - Enhanced mutation to handle both document updates and beneficiary data persistence
@@ -244,6 +250,7 @@ This is a full-stack web application built for Greek government budget and docum
   - Real-time validation feedback and error messages guide users to complete required fields
   - Professional interface maintains data integrity while providing comprehensive editing capabilities
   - **CONFIRMED: Complete beneficiary editing functionality with working save/update operations**
+  - **DATABASE PERSISTENCE: Changes now properly save to both beneficiaries and beneficiary_payments tables**
 
 ### July 21, 2025 - COMPREHENSIVE DOCUMENT EDIT MODAL IMPLEMENTATION COMPLETE
 - **MAJOR ENHANCEMENT: Created comprehensive document editing system to replace limited protocol-only editing**

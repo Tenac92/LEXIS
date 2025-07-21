@@ -1226,7 +1226,40 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
     
     for (const recipient of recipients) {
       if (recipient.id) {
-        // Update existing payment
+        // First, get the existing payment to find beneficiary_id
+        const { data: existingPayment, error: fetchError } = await supabase
+          .from('beneficiary_payments')
+          .select('beneficiary_id')
+          .eq('id', recipient.id)
+          .eq('document_id', documentId)
+          .single();
+
+        if (fetchError || !existingPayment) {
+          console.error('Error fetching existing payment:', fetchError);
+          continue;
+        }
+
+        // Update beneficiary information if we have it
+        if (existingPayment.beneficiary_id && (recipient.firstname || recipient.lastname || recipient.fathername || recipient.afm)) {
+          const beneficiaryUpdate: any = {};
+          if (recipient.firstname) beneficiaryUpdate.name = recipient.firstname;
+          if (recipient.lastname) beneficiaryUpdate.surname = recipient.lastname;
+          if (recipient.fathername) beneficiaryUpdate.fathername = recipient.fathername;
+          if (recipient.afm) beneficiaryUpdate.afm = recipient.afm;
+
+          if (Object.keys(beneficiaryUpdate).length > 0) {
+            const { error: beneficiaryError } = await supabase
+              .from('beneficiaries')
+              .update(beneficiaryUpdate)
+              .eq('id', existingPayment.beneficiary_id);
+
+            if (beneficiaryError) {
+              console.error('Error updating beneficiary:', beneficiaryError);
+            }
+          }
+        }
+
+        // Update payment information
         const { data: updatedPayment, error } = await supabase
           .from('beneficiary_payments')
           .update({
@@ -1249,14 +1282,50 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
         }
 
         updatedPayments.push(updatedPayment);
+      } else if (recipient.firstname && recipient.lastname && recipient.afm) {
+        // Create new beneficiary and payment if we have required data
+        const { data: newBeneficiary, error: beneficiaryError } = await supabase
+          .from('beneficiaries')
+          .insert({
+            name: recipient.firstname,
+            surname: recipient.lastname,
+            fathername: recipient.fathername || null,
+            afm: recipient.afm,
+          })
+          .select()
+          .single();
+
+        if (beneficiaryError) {
+          console.error('Error creating beneficiary:', beneficiaryError);
+          continue;
+        }
+
+        // Create new payment
+        const { data: newPayment, error: paymentError } = await supabase
+          .from('beneficiary_payments')
+          .insert({
+            document_id: documentId,
+            beneficiary_id: newBeneficiary.id,
+            amount: recipient.amount?.toString() || '0',
+            installment: recipient.installment || 'ΕΦΑΠΑΞ',
+            status: recipient.status || 'pending',
+          })
+          .select()
+          .single();
+
+        if (paymentError) {
+          console.error('Error creating beneficiary payment:', paymentError);
+          continue;
+        }
+
+        updatedPayments.push(newPayment);
       }
-      // Note: We don't handle creation of new beneficiaries here as that requires 
-      // beneficiary record creation in the beneficiaries table first
     }
 
     res.json({ 
-      message: 'Beneficiary payments updated successfully',
-      payments: updatedPayments
+      message: 'Beneficiaries and payments updated successfully',
+      payments: updatedPayments,
+      count: updatedPayments.length
     });
   } catch (error) {
     console.error('Error updating beneficiary payments:', error);
