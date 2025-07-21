@@ -21,7 +21,8 @@ import { useState, useEffect } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import { DocumentCard } from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ViewDocumentModal, EditDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
+import { ViewDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
+import { EditDocumentModal } from "@/components/documents/edit-document-modal";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
 import { FAB } from "@/components/ui/fab";
@@ -47,6 +48,7 @@ interface Filters {
 interface User {
   id: number;
   role: string;
+  unit_id?: number[];
   units?: string[];
   name?: string;
 }
@@ -97,7 +99,7 @@ export default function DocumentsPage() {
       // Convert user's unit ID to unit name for filter
       setFilters(prev => ({
         ...prev,
-        unit: user.unit_id[0].toString() // Use unit ID as filter value
+        unit: user.unit_id?.[0]?.toString() // Use unit ID as filter value
       }));
     }
   }, [user?.unit_id, filters.unit]);
@@ -516,12 +518,9 @@ export default function DocumentsPage() {
       />
 
       <EditDocumentModal
-        isOpen={modalState.edit}
-        onClose={() => setModalState(prev => ({ ...prev, edit: false }))}
-        document={selectedDocument || undefined}
-        onEdit={(id: string) => {
-          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-        }}
+        open={modalState.edit}
+        onOpenChange={(open) => setModalState(prev => ({ ...prev, edit: open }))}
+        document={selectedDocument}
       />
 
       <DeleteDocumentModal
