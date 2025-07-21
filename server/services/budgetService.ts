@@ -811,7 +811,8 @@ export class BudgetService {
               q2: budgetData.q2,
               q3: budgetData.q3,
               q4: budgetData.q4,
-              user_view: budgetData.user_view
+              user_view: budgetData.user_view,
+              last_quarter_check: budgetData.last_quarter_check
             });
           }
         } else {
@@ -978,9 +979,63 @@ export class BudgetService {
       const currentQuarterNumber = Math.ceil(currentMonth / 3);
       const quarterKey = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
       
-      // Calculate available budget - this is the correct quarter available amount
+      // Check if budget needs quarter transition
+      const lastQuarterCheck = budgetData.last_quarter_check || 'q1';
+      let effectiveBudgetData = budgetData;
+      
+      console.log(`[BudgetService] Quarter check for project_id ${mis}: current=${quarterKey}, last_check=${lastQuarterCheck}`);
+      
+      if (lastQuarterCheck !== quarterKey) {
+        console.log(`[BudgetService] Quarter transition needed: from ${lastQuarterCheck} to ${quarterKey} for project_id ${mis}`);
+        
+        // Apply quarter transition logic inline
+        // Transfer remaining budget from old quarter to new quarter
+        const oldQuarterValue = parseFloat(budgetData[lastQuarterCheck]?.toString() || '0');
+        const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
+        const userViewValue = parseFloat(userView);
+        
+        // Transfer amount is the unused portion from previous quarter
+        const transferAmount = Math.max(0, oldQuarterValue - userViewValue);
+        const updatedCurrentQuarterValue = currentQuarterValue + transferAmount;
+        
+        console.log(`[BudgetService] Quarter transition calculation:`, {
+          oldQuarter: lastQuarterCheck,
+          newQuarter: quarterKey,
+          oldQuarterValue,
+          currentQuarterValue,
+          userView: userViewValue,
+          transferAmount,
+          updatedCurrentQuarterValue
+        });
+        
+        // Create effective budget data with updated quarter values
+        effectiveBudgetData = {
+          ...budgetData,
+          [quarterKey]: updatedCurrentQuarterValue,
+          last_quarter_check: quarterKey
+        };
+        
+        // Optionally update the database (async, don't wait for it)
+        setTimeout(async () => {
+          try {
+            await supabase
+              .from('project_budget')
+              .update({
+                [quarterKey]: updatedCurrentQuarterValue,
+                last_quarter_check: quarterKey,
+                updated_at: new Date().toISOString()
+              })
+              .eq('project_id', parseInt(mis));
+            console.log(`[BudgetService] Successfully updated quarter transition in database for project_id ${mis}`);
+          } catch (error) {
+            console.error(`[BudgetService] Error updating quarter transition:`, error);
+          }
+        }, 0);
+      }
+      
+      // Calculate available budget using effective (possibly updated) budget data
       const available_budget = parseFloat(katanomesEtous) - parseFloat(userView);
-      const currentQuarterAllocation = parseFloat(budgetData[quarterKey]?.toString() || '0');
+      const currentQuarterAllocation = parseFloat(effectiveBudgetData[quarterKey]?.toString() || '0');
       const quarter_available = currentQuarterAllocation - parseFloat(userView);
       const yearly_available = parseFloat(ethsiaPistosi) - parseFloat(userView);
       
@@ -993,7 +1048,7 @@ export class BudgetService {
         available_budget
       });
       
-      // Return budget data with correct types
+      // Return budget data with correct types using effective (possibly updated) budget data
       const response: BudgetResponse = {
         status: 'success',
         data: {
@@ -1003,10 +1058,10 @@ export class BudgetService {
           ethsia_pistosi: parseFloat(ethsiaPistosi),
           katanomes_etous: parseFloat(katanomesEtous),
           current_budget: parseFloat(userView),
-          q1: parseFloat(budgetData.q1?.toString() || '0'),
-          q2: parseFloat(budgetData.q2?.toString() || '0'),
-          q3: parseFloat(budgetData.q3?.toString() || '0'),
-          q4: parseFloat(budgetData.q4?.toString() || '0'),
+          q1: parseFloat(effectiveBudgetData.q1?.toString() || '0'),
+          q2: parseFloat(effectiveBudgetData.q2?.toString() || '0'),
+          q3: parseFloat(effectiveBudgetData.q3?.toString() || '0'),
+          q4: parseFloat(effectiveBudgetData.q4?.toString() || '0'),
           total_spent: parseFloat(totalSpent),
           available_budget: available_budget,
           quarter_available: quarter_available,
