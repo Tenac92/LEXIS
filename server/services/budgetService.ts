@@ -994,18 +994,18 @@ export class BudgetService {
         const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
         const userViewValue = parseFloat(userView);
         
-        // Transfer amount is the unused portion from previous quarter
-        const transferAmount = Math.max(0, oldQuarterValue - userViewValue);
-        const updatedCurrentQuarterValue = currentQuarterValue + transferAmount;
+        // Addition logic: q3 = q2 + q3 (additive, not transfer)
+        // Add the previous quarter value to the current quarter value
+        const updatedCurrentQuarterValue = currentQuarterValue + oldQuarterValue;
         
-        console.log(`[BudgetService] Quarter transition calculation:`, {
+        console.log(`[BudgetService] Quarter transition calculation (additive):`, {
           oldQuarter: lastQuarterCheck,
           newQuarter: quarterKey,
           oldQuarterValue,
           currentQuarterValue,
           userView: userViewValue,
-          transferAmount,
-          updatedCurrentQuarterValue
+          updatedCurrentQuarterValue,
+          formula: `${quarterKey} = ${currentQuarterValue} + ${oldQuarterValue} = ${updatedCurrentQuarterValue}`
         });
         
         // Create effective budget data with updated quarter values
