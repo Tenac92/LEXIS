@@ -1,0 +1,71 @@
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+Region API response: 
+Object {regions: Array(1), regional_units: Array(1), municipalities: Array(1), expenditure_types: Array(2), project_index: Array(2)}
+Regions grouped by type: 
+Object {region: Array(1), regional_unit: Array(1)}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[DocumentForm Context] Current state: 
+Object {step: 2, projectId: 29, unit: 2, hasRecipients: false, recipientsCount: 0}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[StableWebSocket] Using existing connection
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[Budget] Broadcasting amount update: 900
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[DocumentForm Context] Current state: 
+Object {step: 1, projectId: 29, unit: 2, hasRecipients: true, recipientsCount: 1}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[ProjectSelect] Unit changed from  to 2
+[ProjectSelect] State update - selectedUnit: 2 projects: 58 isLoading: false isFocused: false
+[Budget] Broadcasting amount update: 900
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[StableWebSocket] Using existing connection
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[CreateDocument] Budget debug: 
+Object {budgetData: {…}, selectedProjectId: 29, formDataProjectId: 29, isBudgetLoading: false, budgetError: null}
+budgetData: Object
+budgetError: null
+formDataProjectId: 29
+isBudgetLoading: false
+selectedProjectId: 29
+[[Prototype]]: Object
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 0, katanomes_etous: 0, ethsia_pistosi: 0, current_budget: 0, …}
+[Budget] Broadcasting amount update: 900
