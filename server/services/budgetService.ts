@@ -1021,23 +1021,22 @@ export class BudgetService {
           last_quarter_check: quarterKey
         };
         
-        // Update the database (async, don't wait for it)
-        setTimeout(async () => {
-          try {
-            await supabase
-              .from('project_budget')
-              .update({
-                [quarterKey]: updatedCurrentQuarterValue,
-                [lastQuarterCheck]: updatedOldQuarterValue,
-                last_quarter_check: quarterKey,
-                updated_at: new Date().toISOString()
-              })
-              .eq('project_id', parseInt(mis));
-            console.log(`[BudgetService] Successfully updated quarter transition in database for project_id ${mis}`);
-          } catch (error) {
-            console.error(`[BudgetService] Error updating quarter transition:`, error);
-          }
-        }, 0);
+        // Update the database immediately (synchronous) to ensure data consistency
+        try {
+          await supabase
+            .from('project_budget')
+            .update({
+              [quarterKey]: updatedCurrentQuarterValue,
+              [lastQuarterCheck]: updatedOldQuarterValue,
+              last_quarter_check: quarterKey,
+              updated_at: new Date().toISOString()
+            })
+            .eq('project_id', parseInt(mis));
+          console.log(`[BudgetService] Successfully updated quarter transition in database for project_id ${mis}`);
+        } catch (error) {
+          console.error(`[BudgetService] Error updating quarter transition:`, error);
+          // Continue with the response even if database update fails
+        }
       }
       
       // Calculate available budget using effective (possibly updated) budget data
