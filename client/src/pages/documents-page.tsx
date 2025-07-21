@@ -49,8 +49,14 @@ interface User {
   id: number;
   role: string;
   unit_id?: number[];
-  units?: string[];
   name?: string;
+}
+
+interface Unit {
+  id: string;
+  unit: number;
+  unit_name: any;
+  name: string;
 }
 
 export default function DocumentsPage() {
@@ -80,9 +86,26 @@ export default function DocumentsPage() {
     }
   }, [location, setLocation]);
 
+  // Fetch units data for dropdown
+  const { data: allUnits = [] } = useQuery<Unit[]>({
+    queryKey: ['/api/public/units'],
+    queryFn: async () => {
+      const response = await fetch('/api/public/units');
+      if (!response.ok) {
+        throw new Error('Failed to fetch units');
+      }
+      return response.json();
+    }
+  });
+
+  // Get user's accessible units
+  const userUnits = allUnits.filter(unit => 
+    user?.unit_id?.includes(unit.unit)
+  );
+
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
-    unit: user?.units?.[0] || '',
+    unit: '',
     status: 'pending',
     user: 'all',
     dateFrom: '',
@@ -93,16 +116,16 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  // Ensure unit filter defaults to user's unit when authentication completes
+  // Ensure unit filter defaults to user's first unit when authentication completes
   useEffect(() => {
-    if (user?.unit_id?.[0] && !filters.unit) {
-      // Convert user's unit ID to unit name for filter
+    if (user?.unit_id?.[0] && !filters.unit && userUnits.length > 0) {
+      const defaultUnit = userUnits[0];
       setFilters(prev => ({
         ...prev,
-        unit: user.unit_id?.[0]?.toString() // Use unit ID as filter value
+        unit: defaultUnit.unit.toString() // Use unit ID as filter value
       }));
     }
-  }, [user?.unit_id, filters.unit]);
+  }, [user?.unit_id, filters.unit, userUnits.length]);
   
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -145,7 +168,7 @@ export default function DocumentsPage() {
       const response = await apiRequest('/api/users/matching-units');
       return response || [];
     },
-    enabled: !!user?.units
+    enabled: !!user?.unit_id
   });
 
   // Query for documents using the server API endpoint
@@ -299,8 +322,10 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    {user?.units?.map((unit: string) => (
-                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    {userUnits.map((unit) => (
+                      <SelectItem key={unit.unit} value={unit.unit.toString()}>
+                        {unit.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -102,6 +102,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  unit_id?: number[];
   units?: string[];
 }
 
