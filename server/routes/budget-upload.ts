@@ -365,6 +365,12 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           console.log(`[BudgetUpload] Setting initial user_view for new MIS ${mis} (NA853: ${na853}, Project ID: ${projectId}) to 0 (not matching katanomes_etous)`);
           
           
+          // Calculate current quarter for last_quarter_check
+          const currentDate = new Date();
+          const currentMonth = currentDate.getMonth() + 1;
+          const currentQuarterNumber = Math.ceil(currentMonth / 3);
+          const currentQuarter = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
+          
           // Prepare insert data with optional project_id
           const insertData: any = {
             mis: parseInt(mis),
@@ -376,8 +382,11 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             q4: data.q4 || 0,
             katanomes_etous: initialKatanomesEtous,
             user_view: initialUserView,
+            last_quarter_check: currentQuarter, // CRITICAL: Set to current quarter to prevent immediate transitions
             created_at: new Date().toISOString()
           };
+          
+          console.log(`[BudgetUpload] Setting last_quarter_check to ${currentQuarter} for new budget record MIS ${mis} to prevent unwanted quarter transitions`);
           
           // Only include project_id if we found a matching project
           if (projectId) {
@@ -468,6 +477,11 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             console.log(`[BudgetUpload] katanomes_etous changed by ${katanomesDifference} for MIS ${mis} (NA853: ${na853}), user_view remains unchanged at: ${newUserView}`);
           }
           
+          // CRITICAL ADDITION: Set last_quarter_check to current quarter during updates
+          // This prevents automatic quarter transitions when budget data is imported
+          const currentQuarter = `q${currentQuarterNumber}` as 'q1' | 'q2' | 'q3' | 'q4';
+          console.log(`[BudgetUpload] Setting last_quarter_check to ${currentQuarter} for MIS ${mis} during update to prevent unwanted quarter transitions`);
+          
           // Prepare the update with the sum field to store budget indicators
           let updateQuery = supabase
             .from('project_budget')
@@ -479,6 +493,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               q4: newQ4,
               katanomes_etous: newKatanomesEtous,
               user_view: newUserView,
+              last_quarter_check: currentQuarter, // CRITICAL: Prevent unwanted quarter transitions
               sum: budgetSumBeforeUpdate, // Store the pre-update state
               updated_at: new Date().toISOString()
             });
