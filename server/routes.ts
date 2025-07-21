@@ -257,6 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: documentsRouter } = await import('./controllers/documentsController');
   const { router: usersRouter } = await import('./controllers/usersController');
   const { router: projectRouter } = await import('./controllers/projectController');
+  const { default: budgetRouter } = await import('./routes/budget');
   // Remove problematic expenditure types router for now
   
   // Mount API routes
@@ -264,6 +265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/documents', documentsRouter);
   app.use('/api/projects', projectRouter);
   app.use('/api/users', usersRouter);
+  app.use('/api/budget', budgetRouter);
+  app.use('/api/budget', budgetRouter);
   
   // User preferences endpoints for ESDIAN suggestions
   app.get('/api/user-preferences/esdian', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
