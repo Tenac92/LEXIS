@@ -219,7 +219,7 @@ export class DatabaseStorage implements IStorage {
   
   async createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void> {
     try {
-      console.log(`[Storage] Creating budget history entry for MIS: ${entry.mis}`);
+      console.log(`[Storage] Creating budget history entry for project: ${entry.project_id}`);
       
       // createdAt is automatically handled by the database
       // Remove any created_at property to avoid type errors
@@ -256,16 +256,16 @@ export class DatabaseStorage implements IStorage {
         // Get projects associated with these unit IDs
         const { data: projectIndexData, error: projectIndexError } = await supabase
           .from('project_index')
-          .select('DISTINCT Projects!inner(mis)')
+          .select('project_id, Projects!inner(mis)')
           .in('monada_id', userUnits);
         
         if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
           const projectMisIds = projectIndexData
-            .map(p => p.Projects?.mis)
+            .map((p: any) => p.Projects?.mis)
             .filter(mis => mis != null)
             .map(mis => parseInt(String(mis)))
             .filter(id => !isNaN(id));
-          allowedMisIds = [...new Set(projectMisIds)];
+          allowedMisIds = Array.from(new Set(projectMisIds));
           console.log('[Storage] Found allowed MIS codes for unit IDs:', allowedMisIds.length, allowedMisIds);
         } else {
           console.log('[Storage] No projects found for unit IDs:', userUnits);

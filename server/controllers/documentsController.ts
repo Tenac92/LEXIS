@@ -753,7 +753,7 @@ router.patch('/generated/:id/protocol', async (req: AuthenticatedRequest, res: R
     }
 
     // Check if user has access to this document's unit
-    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit_id)) {
+    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied to this document'

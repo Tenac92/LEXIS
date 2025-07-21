@@ -1567,8 +1567,8 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
           included: decision.included !== undefined ? decision.included : true,
           is_active: true,
           comments: decision.comments || null,
-          created_by: req.user.id,
-          updated_by: req.user.id
+          created_by: req.user!.id,
+          updated_by: req.user!.id
         };
       });
 
