@@ -994,34 +994,41 @@ export class BudgetService {
         const currentQuarterValue = parseFloat(budgetData[quarterKey]?.toString() || '0');
         const userViewValue = parseFloat(userView);
         
-        // Addition logic: q3 = q2 + q3 (additive, not transfer)
-        // Add the previous quarter value to the current quarter value
-        const updatedCurrentQuarterValue = currentQuarterValue + oldQuarterValue;
+        // Quarter transition with spending preservation logic:
+        // 1. Transfer unused amount from old quarter to new quarter: q3 = q3 + (q2 - user_view)
+        // 2. Reduce old quarter by spent amount: q2 = q2 - (q2 - user_view) = user_view
+        const unspentAmount = Math.max(0, oldQuarterValue - userViewValue);
+        const updatedCurrentQuarterValue = currentQuarterValue + unspentAmount;
+        const updatedOldQuarterValue = userViewValue; // Keep only the spent amount in old quarter
         
-        console.log(`[BudgetService] Quarter transition calculation (additive):`, {
+        console.log(`[BudgetService] Quarter transition calculation (with spending preservation):`, {
           oldQuarter: lastQuarterCheck,
           newQuarter: quarterKey,
           oldQuarterValue,
           currentQuarterValue,
           userView: userViewValue,
+          unspentAmount,
           updatedCurrentQuarterValue,
-          formula: `${quarterKey} = ${currentQuarterValue} + ${oldQuarterValue} = ${updatedCurrentQuarterValue}`
+          updatedOldQuarterValue,
+          formula: `${quarterKey} = ${currentQuarterValue} + ${unspentAmount} = ${updatedCurrentQuarterValue}, ${lastQuarterCheck} = ${userViewValue}`
         });
         
         // Create effective budget data with updated quarter values
         effectiveBudgetData = {
           ...budgetData,
           [quarterKey]: updatedCurrentQuarterValue,
+          [lastQuarterCheck]: updatedOldQuarterValue,
           last_quarter_check: quarterKey
         };
         
-        // Optionally update the database (async, don't wait for it)
+        // Update the database (async, don't wait for it)
         setTimeout(async () => {
           try {
             await supabase
               .from('project_budget')
               .update({
                 [quarterKey]: updatedCurrentQuarterValue,
+                [lastQuarterCheck]: updatedOldQuarterValue,
                 last_quarter_check: quarterKey,
                 updated_at: new Date().toISOString()
               })

@@ -194,14 +194,15 @@ This is a full-stack web application built for Greek government budget and docum
   - Eliminated all remaining MIS code dependencies in document creation flow
   - Consistent numeric ID usage across entire application stack
 
-### July 21, 2025 - QUARTER TRANSITION SYSTEM FIX & ADDITIVE BUDGET LOGIC IMPLEMENTATION
+### July 21, 2025 - QUARTER TRANSITION SYSTEM FIX & SPENDING PRESERVATION LOGIC IMPLEMENTATION
 - **CRITICAL FIX: Resolved quarter transition system causing budget values to display as €0 instead of correct quarterly amounts**
 - **Quarter Transition Logic Enhancement:**
   - Fixed automatic quarter detection: when last_quarter_check differs from current quarter, system automatically applies transition
-  - Implemented additive formula: q3 = q2 + q3 (current quarter gets previous quarter value added to it)
+  - Implemented spending preservation formula: q2 = q2 - (q2 - user_view) to track exactly how much was spent in each quarter
+  - Enhanced unspent amount transfer: q3 = q3 + (q2 - user_view) to move unused budget to current quarter
   - Enhanced real-time quarter transition during budget API requests with immediate database updates
   - Added comprehensive logging for quarter transition calculations and database updates
-  - **VERIFIED: Project 32 now shows €33,000 in q3 (transferred from q2), Project 36 shows €11,000 in q3**
+  - **VERIFIED: Project 54 test shows q2=12,000 (spent), q3=18,000 (unspent transferred) from original q2=30,000**
 - **Database Integration Success:**
   - Quarter transitions automatically update project_budget table with new quarter values and last_quarter_check
   - Additive logic works correctly: all transitioned projects show matching q2 and q3 values
