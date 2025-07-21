@@ -38,14 +38,17 @@ import type { GeneratedDocument } from "@shared/schema";
 
 // Define recipient schema for beneficiary editing
 const recipientSchema = z.object({
-  firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
-  lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  id: z.number().optional(), // For existing beneficiary payments
+  beneficiary_id: z.number().optional(), // For linking to beneficiaries table
+  firstname: z.string().optional(),
+  lastname: z.string().optional(),
   fathername: z.string().optional(),
-  afm: z.string().min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
-  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  afm: z.string().optional(),
+  amount: z.number().min(0, "Το ποσό δεν μπορεί να είναι αρνητικό").optional(),
   installment: z.string().default("ΕΦΑΠΑΞ"),
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]),
   installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }),
+  status: z.string().optional(),
 });
 
 // Define the edit form schema
@@ -60,7 +63,7 @@ const editDocumentSchema = z.object({
   is_correction: z.boolean().default(false),
   original_protocol_number: z.string().optional(),
   original_protocol_date: z.string().optional(),
-  recipients: z.array(recipientSchema).min(1, "Πρέπει να υπάρχει τουλάχιστον ένας δικαιούχος"),
+  recipients: z.array(recipientSchema).default([]),
 });
 
 type EditDocumentForm = z.infer<typeof editDocumentSchema>;
@@ -188,6 +191,7 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
   // Update document and beneficiaries mutation
   const updateMutation = useMutation({
     mutationFn: async (data: EditDocumentForm) => {
+      console.log("Mutation function called with data:", data);
       if (!document?.id) throw new Error("No document ID");
 
       // Prepare the document update payload
@@ -204,6 +208,8 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
         updated_at: new Date().toISOString(),
       };
 
+      console.log("Sending document update payload:", documentPayload);
+
       // Update document first
       const documentResult = await apiRequest(`/api/documents/${document.id}`, {
         method: "PATCH",
@@ -213,20 +219,26 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
         body: JSON.stringify(documentPayload),
       });
 
+      console.log("Document update result:", documentResult);
+
       // Update beneficiaries if they exist and have been modified
       if (data.recipients && data.recipients.length > 0 && data.recipients.some(r => r.id)) {
-        await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
+        console.log("Updating beneficiaries:", data.recipients);
+        const beneficiaryResult = await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ recipients: data.recipients }),
         });
+        console.log("Beneficiary update result:", beneficiaryResult);
       }
 
       return documentResult;
     },
     onSuccess: () => {
+      console.log("Document update successful");
+      setIsLoading(false);
       toast({
         title: "Επιτυχία",
         description: "Το έγγραφο και οι δικαιούχοι ενημερώθηκαν επιτυχώς",
@@ -242,6 +254,7 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
     },
     onError: (error: any) => {
       console.error("Error updating document:", error);
+      setIsLoading(false);
       toast({
         title: "Σφάλμα",
         description: error?.message || "Παρουσιάστηκε σφάλμα κατά την ενημέρωση του εγγράφου",
@@ -251,9 +264,10 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
   });
 
   const handleSubmit = (data: EditDocumentForm) => {
+    console.log("Form submission started with data:", data);
     setIsLoading(true);
     updateMutation.mutate(data);
-    setIsLoading(false);
+    // Don't set isLoading to false immediately - let the mutation handle it
   };
 
   const handleClose = () => {
@@ -280,7 +294,14 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+            console.error("Form validation errors:", errors);
+            toast({
+              title: "Σφάλμα Επικύρωσης",
+              description: "Παρακαλώ ελέγξτε τα πεδία της φόρμας",
+              variant: "destructive",
+            });
+          })} className="space-y-6">
             
             {/* Document Information Card */}
             <Card>
