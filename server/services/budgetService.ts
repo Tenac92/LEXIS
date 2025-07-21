@@ -656,7 +656,7 @@ export class BudgetService {
       const isNumericString = /^\d+$/.test(mis);
       const projectCodePattern = /^\d{4}[\u0370-\u03FF\u1F00-\u1FFF]+\d+$/;
       
-      console.log(`[BudgetService] GetBudget - Parameters: mis=${mis}`);
+      console.log(`[BudgetService] GetBudget - Parameters: projectId=${mis} (parameter name is mis for compatibility but expecting project ID)`);
       console.log(`[BudgetService] GetBudget - Analysis: isNumericString=${isNumericString}, isProjectCode=${projectCodePattern.test(mis)}`);
       
       // Declare variables at the top to avoid "used before declaration" errors
@@ -788,21 +788,23 @@ export class BudgetService {
       // If we couldn't convert the MIS to a numeric value, we'll first try to find the project
 
       try {
-        // For numeric MIS, query directly against the integer column
+        // FIXED: Use project_id instead of mis field for budget lookups
+        // The mis field is only for Excel import purposes, project_id is the correct reference
+        
         if (numericalMis !== null) {
-          console.log(`[BudgetService] Querying project_budget with numeric MIS: ${numericalMis}`);
+          console.log(`[BudgetService] Querying project_budget with project_id: ${numericalMis}`);
           
           const result = await supabase
             .from('project_budget')
             .select('*')
-            .eq('mis', numericalMis) // Use the number directly for integer column
+            .eq('project_id', numericalMis) // Use project_id instead of mis
             .single();
           
           budgetData = result.data;
           budgetError = result.error;
           
           if (budgetData) {
-            console.log(`[BudgetService] SUCCESS: Found budget data for MIS ${numericalMis}:`, {
+            console.log(`[BudgetService] SUCCESS: Found budget data for project_id ${numericalMis}:`, {
               ethsia_pistosi: budgetData.ethsia_pistosi,
               katanomes_etous: budgetData.katanomes_etous,
               q1: budgetData.q1,
@@ -821,24 +823,24 @@ export class BudgetService {
             .eq('na853', mis)
             .single();
           
-          if (!projectError && projectData?.mis) {
-            // Found the project, use its numeric MIS
-            console.log(`[BudgetService] Found project with MIS: ${projectData.mis}, using for budget query`);
+          if (!projectError && projectData?.id) {
+            // Found the project, use its ID for budget query
+            console.log(`[BudgetService] Found project with ID: ${projectData.id}, using for budget query`);
             const result = await supabase
               .from('project_budget')
               .select('*')
-              .eq('mis', projectData.mis) // Use the MIS from the project
+              .eq('project_id', projectData.id) // Use project_id from the project
               .single();
             
             budgetData = result.data;
             budgetError = result.error;
           } else {
-            // Last resort: try direct query with original value
-            console.log(`[BudgetService] No project found, trying direct budget query with: ${misToSearch}`);
+            // Last resort: try direct query with original value as project_id
+            console.log(`[BudgetService] No project found, trying direct budget query with project_id: ${misToSearch}`);
             const result = await supabase
               .from('project_budget')
               .select('*')
-              .eq('mis', misToSearch)
+              .eq('project_id', misToSearch)
               .single();
             
             budgetData = result.data;
