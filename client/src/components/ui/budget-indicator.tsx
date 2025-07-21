@@ -175,9 +175,29 @@ export function BudgetIndicator({
     );
   }
   
-  // Note: We removed the zero-value check here because projects legitimately can have zero budget allocations
-  // The backend budget service correctly returns zero values for projects without budget data
-  // These should be displayed as valid zero values, not treated as "missing data"
+  // Check for projects that legitimately have no budget data (different from zero allocations)
+  if (
+    budgetData && 
+    (!budgetData.katanomes_etous || budgetData.katanomes_etous === 0) && 
+    (!budgetData.user_view || budgetData.user_view === 0) && 
+    (!budgetData.available_budget || budgetData.available_budget === 0) &&
+    (!budgetData.ethsia_pistosi || budgetData.ethsia_pistosi === 0)
+  ) {
+    // Budget data exists but has zero values, showing informative message that project has no budget allocation
+    return (
+      <div className="bg-gradient-to-br from-orange-50 to-white p-6 rounded-xl border border-orange-100/50 shadow-lg">
+        <div className="flex items-center justify-center h-20">
+          <div className="flex flex-col items-center text-center">
+            <PiggyBank className="h-8 w-8 mb-2 text-orange-300" />
+            <h3 className="text-sm font-medium text-gray-600">Δεν υπάρχουν δεδομένα προϋπολογισμού</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Το επιλεγμένο έργο δεν έχει κατανομή προϋπολογισμού
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Parse values ensuring they are numbers (handling both string and number inputs)
   const userView = typeof budgetData.user_view === 'number' 

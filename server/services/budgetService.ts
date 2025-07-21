@@ -800,6 +800,18 @@ export class BudgetService {
           
           budgetData = result.data;
           budgetError = result.error;
+          
+          if (budgetData) {
+            console.log(`[BudgetService] SUCCESS: Found budget data for MIS ${numericalMis}:`, {
+              ethsia_pistosi: budgetData.ethsia_pistosi,
+              katanomes_etous: budgetData.katanomes_etous,
+              q1: budgetData.q1,
+              q2: budgetData.q2,
+              q3: budgetData.q3,
+              q4: budgetData.q4,
+              user_view: budgetData.user_view
+            });
+          }
         } else {
           // For string/project code format, try to find the corresponding project first
           console.log(`[BudgetService] Trying to find project with NA853 code: ${mis}`);
