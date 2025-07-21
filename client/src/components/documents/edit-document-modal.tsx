@@ -33,8 +33,20 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar } from "lucide-react";
+import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
+
+// Define recipient schema for beneficiary editing
+const recipientSchema = z.object({
+  firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
+  lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
+  fathername: z.string().optional(),
+  afm: z.string().min(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία").max(9, "Το ΑΦΜ πρέπει να έχει 9 ψηφία"),
+  amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
+  installment: z.string().default("ΕΦΑΠΑΞ"),
+  installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]),
+  installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }),
+});
 
 // Define the edit form schema
 const editDocumentSchema = z.object({
@@ -48,6 +60,7 @@ const editDocumentSchema = z.object({
   is_correction: z.boolean().default(false),
   original_protocol_number: z.string().optional(),
   original_protocol_date: z.string().optional(),
+  recipients: z.array(recipientSchema).min(1, "Πρέπει να υπάρχει τουλάχιστον ένας δικαιούχος"),
 });
 
 type EditDocumentForm = z.infer<typeof editDocumentSchema>;
@@ -77,7 +90,7 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
     defaultValues: {
       protocol_number_input: "",
       protocol_date: "",
-      status: "draft",
+      status: "pending",
       comments: "",
       total_amount: 0,
       esdian_field1: "",
@@ -85,25 +98,40 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
       is_correction: false,
       original_protocol_number: "",
       original_protocol_date: "",
+      recipients: [],
     },
   });
 
-  // Get recipients data to show in the form
+  // Fetch beneficiary payments for this document
+  const { data: beneficiaryPayments, refetch: refetchPayments } = useQuery({
+    queryKey: ['/api/documents', document?.id, 'beneficiaries'],
+    queryFn: async () => {
+      if (!document?.id) return [];
+      const response = await apiRequest(`/api/documents/${document.id}/beneficiaries`);
+      return response || [];
+    },
+    enabled: !!document?.id && open,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Convert beneficiary payments to recipients format for the form
   const recipients = useMemo(() => {
-    if (!document?.recipients) return [];
+    if (!beneficiaryPayments?.length) return [];
     
-    try {
-      if (typeof document.recipients === 'string') {
-        return JSON.parse(document.recipients);
-      } else if (Array.isArray(document.recipients)) {
-        return document.recipients;
-      }
-    } catch (error) {
-      console.error('Error parsing recipients:', error);
-    }
-    
-    return [];
-  }, [document?.recipients]);
+    return beneficiaryPayments.map((payment: any) => ({
+      id: payment.id,
+      beneficiary_id: payment.beneficiary_id,
+      firstname: payment.beneficiaries?.name || '',
+      lastname: payment.beneficiaries?.surname || '',
+      fathername: payment.beneficiaries?.fathername || '',
+      afm: payment.beneficiaries?.afm || '',
+      amount: parseFloat(payment.amount) || 0,
+      installment: payment.installment || 'ΕΦΑΠΑΞ',
+      installments: [payment.installment || 'ΕΦΑΠΑΞ'],
+      installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
+      status: payment.status || 'pending',
+    }));
+  }, [beneficiaryPayments]);
 
   // Calculate total amount from recipients
   const calculatedTotal = useMemo(() => {
@@ -143,17 +171,27 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
         is_correction: Boolean(document.is_correction),
         original_protocol_number: document.original_protocol_number || "",
         original_protocol_date: originalProtocolDate,
+        recipients: recipients.length > 0 ? recipients : [{ 
+          firstname: "", 
+          lastname: "", 
+          fathername: "", 
+          afm: "", 
+          amount: 0, 
+          installment: "ΕΦΑΠΑΞ", 
+          installments: ["ΕΦΑΠΑΞ"], 
+          installmentAmounts: { ΕΦΑΠΑΞ: 0 } 
+        }],
       });
     }
-  }, [document, open, form, calculatedTotal]);
+  }, [document, open, form, calculatedTotal, recipients]);
 
-  // Update document mutation
+  // Update document and beneficiaries mutation
   const updateMutation = useMutation({
     mutationFn: async (data: EditDocumentForm) => {
       if (!document?.id) throw new Error("No document ID");
 
-      // Prepare the update payload
-      const payload = {
+      // Prepare the document update payload
+      const documentPayload = {
         protocol_number_input: data.protocol_number_input || null,
         protocol_date: data.protocol_date || null,
         status: data.status,
@@ -166,23 +204,39 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
         updated_at: new Date().toISOString(),
       };
 
-      return await apiRequest(`/api/documents/${document.id}`, {
+      // Update document first
+      const documentResult = await apiRequest(`/api/documents/${document.id}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(documentPayload),
       });
+
+      // Update beneficiaries if they exist and have been modified
+      if (data.recipients && data.recipients.length > 0 && data.recipients.some(r => r.id)) {
+        await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ recipients: data.recipients }),
+        });
+      }
+
+      return documentResult;
     },
     onSuccess: () => {
       toast({
         title: "Επιτυχία",
-        description: "Το έγγραφο ενημερώθηκε επιτυχώς",
+        description: "Το έγγραφο και οι δικαιούχοι ενημερώθηκαν επιτυχώς",
       });
       
       // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+      queryClient.invalidateQueries({ queryKey: ['/api/documents', document?.id, 'beneficiaries'] });
+      refetchPayments();
       
       onOpenChange(false);
     },
@@ -473,46 +527,176 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
               </CardContent>
             </Card>
 
-            {/* Recipients Summary Card */}
-            {recipients.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Δικαιούχοι ({recipients.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {recipients.slice(0, 3).map((recipient: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                        <div>
-                          <span className="font-medium">
-                            {recipient.lastname} {recipient.firstname}
-                          </span>
-                          <span className="text-sm text-gray-500 ml-2">
-                            ΑΦΜ: {recipient.afm}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-medium text-green-600">
-                            {new Intl.NumberFormat('el-GR', {
-                              style: 'currency',
-                              currency: 'EUR'
-                            }).format(recipient.amount || 0)}
-                          </span>
-                        </div>
+            {/* Beneficiaries Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Διαχείριση Δικαιούχων
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="recipients"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Δικαιούχοι Εγγράφου</FormLabel>
+                      <div className="space-y-4">
+                        {field.value?.map((recipient: any, index: number) => (
+                          <div key={index} className="p-4 border rounded-lg bg-gray-50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div>
+                                <label className="text-sm font-medium">Όνομα *</label>
+                                <Input
+                                  value={recipient.firstname || ''}
+                                  onChange={(e) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], firstname: e.target.value };
+                                    field.onChange(newRecipients);
+                                  }}
+                                  placeholder="Όνομα δικαιούχου"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Επώνυμο *</label>
+                                <Input
+                                  value={recipient.lastname || ''}
+                                  onChange={(e) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], lastname: e.target.value };
+                                    field.onChange(newRecipients);
+                                  }}
+                                  placeholder="Επώνυμο δικαιούχου"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Πατρώνυμο</label>
+                                <Input
+                                  value={recipient.fathername || ''}
+                                  onChange={(e) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], fathername: e.target.value };
+                                    field.onChange(newRecipients);
+                                  }}
+                                  placeholder="Πατρώνυμο"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">ΑΦΜ *</label>
+                                <Input
+                                  value={recipient.afm || ''}
+                                  onChange={(e) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], afm: e.target.value };
+                                    field.onChange(newRecipients);
+                                  }}
+                                  placeholder="123456789"
+                                  maxLength={9}
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Ποσό (€) *</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={recipient.amount || ''}
+                                  onChange={(e) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], amount: parseFloat(e.target.value) || 0 };
+                                    field.onChange(newRecipients);
+                                  }}
+                                  placeholder="0.00"
+                                  className="mt-1"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium">Δόση</label>
+                                <Select
+                                  value={recipient.installment || 'ΕΦΑΠΑΞ'}
+                                  onValueChange={(value) => {
+                                    const newRecipients = [...field.value];
+                                    newRecipients[index] = { ...newRecipients[index], installment: value };
+                                    field.onChange(newRecipients);
+                                  }}
+                                >
+                                  <SelectTrigger className="mt-1">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ΕΦΑΠΑΞ">ΕΦΑΠΑΞ</SelectItem>
+                                    <SelectItem value="ΤΡΙΜΗΝΟ 1">ΤΡΙΜΗΝΟ 1</SelectItem>
+                                    <SelectItem value="ΤΡΙΜΗΝΟ 2">ΤΡΙΜΗΝΟ 2</SelectItem>
+                                    <SelectItem value="ΤΡΙΜΗΝΟ 3">ΤΡΙΜΗΝΟ 3</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            
+                            {field.value.length > 1 && (
+                              <div className="flex justify-end mt-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newRecipients = field.value.filter((_: any, i: number) => i !== index);
+                                    field.onChange(newRecipients);
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-1" />
+                                  Αφαίρεση
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const newRecipients = [...(field.value || []), {
+                              firstname: "",
+                              lastname: "",
+                              fathername: "",
+                              afm: "",
+                              amount: 0,
+                              installment: "ΕΦΑΠΑΞ",
+                              installments: ["ΕΦΑΠΑΞ"],
+                              installmentAmounts: { ΕΦΑΠΑΞ: 0 }
+                            }];
+                            field.onChange(newRecipients);
+                          }}
+                          className="w-full"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Προσθήκη Δικαιούχου
+                        </Button>
                       </div>
-                    ))}
-                    {recipients.length > 3 && (
-                      <div className="text-sm text-gray-500 text-center py-2">
-                        ... και {recipients.length - 3} ακόμη δικαιούχοι
-                      </div>
-                    )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {/* Summary Information */}
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="font-medium">Σύνολο Δικαιούχων:</span>
+                    <span>{form.watch('recipients')?.length || 0}</span>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="flex justify-between items-center text-sm mt-1">
+                    <span className="font-medium">Συνολικό Ποσό:</span>
+                    <span>{(form.watch('recipients')?.reduce((sum: number, r: any) => sum + (parseFloat(r.amount) || 0), 0) || 0).toFixed(2)} €</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             <Separator />
 

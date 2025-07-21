@@ -1158,3 +1158,111 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     });
   }
 });
+
+// GET /api/documents/:id/beneficiaries - Get beneficiary payments for a document
+router.get('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    
+    if (isNaN(documentId)) {
+      return res.status(400).json({ message: 'Invalid document ID' });
+    }
+
+    // Get beneficiary payments for this document
+    const { data: payments, error } = await supabase
+      .from('beneficiary_payments')
+      .select(`
+        id,
+        beneficiary_id,
+        amount,
+        installment,
+        status,
+        payment_date,
+        beneficiaries (
+          id,
+          afm,
+          surname,
+          name,
+          fathername,
+          region
+        )
+      `)
+      .eq('document_id', documentId);
+
+    if (error) {
+      console.error('Error fetching beneficiary payments:', error);
+      return res.status(500).json({
+        message: 'Failed to fetch beneficiary payments',
+        error: error.message
+      });
+    }
+
+    res.json(payments || []);
+  } catch (error) {
+    console.error('Error in beneficiaries endpoint:', error);
+    res.status(500).json({
+      message: 'Failed to fetch beneficiary payments',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// PUT /api/documents/:id/beneficiaries - Update beneficiary payments for a document
+router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    const { recipients } = req.body;
+    
+    if (isNaN(documentId)) {
+      return res.status(400).json({ message: 'Invalid document ID' });
+    }
+
+    if (!Array.isArray(recipients)) {
+      return res.status(400).json({ message: 'Recipients must be an array' });
+    }
+
+    // Start a transaction-like operation by handling updates sequentially
+    const updatedPayments = [];
+    
+    for (const recipient of recipients) {
+      if (recipient.id) {
+        // Update existing payment
+        const { data: updatedPayment, error } = await supabase
+          .from('beneficiary_payments')
+          .update({
+            amount: recipient.amount?.toString(),
+            installment: recipient.installment || 'ΕΦΑΠΑΞ',
+            status: recipient.status || 'pending',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', recipient.id)
+          .eq('document_id', documentId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating beneficiary payment:', error);
+          return res.status(500).json({
+            message: 'Failed to update beneficiary payment',
+            error: error.message
+          });
+        }
+
+        updatedPayments.push(updatedPayment);
+      }
+      // Note: We don't handle creation of new beneficiaries here as that requires 
+      // beneficiary record creation in the beneficiaries table first
+    }
+
+    res.json({ 
+      message: 'Beneficiary payments updated successfully',
+      payments: updatedPayments
+    });
+  } catch (error) {
+    console.error('Error updating beneficiary payments:', error);
+    res.status(500).json({
+      message: 'Failed to update beneficiary payments',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
