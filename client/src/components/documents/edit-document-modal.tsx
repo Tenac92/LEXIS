@@ -334,10 +334,10 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
               </CardContent>
             </Card>
 
-            {/* ESDIAN Fields Card */}
+            {/* Εσωτερική Διανομή Fields Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Πεδία ΕΣΔΙΑΝ</CardTitle>
+                <CardTitle className="text-lg">Πεδία Εσωτερικής Διανομής</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,10 +346,10 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
                     name="esdian_field1"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ΕΣΔΙΑΝ Πεδίο 1</FormLabel>
+                        <FormLabel>Εσωτερική Διανομή Πεδίο 1</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Πρώτο πεδίο ΕΣΔΙΑΝ"
+                            placeholder="Πρώτο πεδίο εσωτερικής διανομής"
                             {...field}
                           />
                         </FormControl>
@@ -363,10 +363,10 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
                     name="esdian_field2"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>ΕΣΔΙΑΝ Πεδίο 2</FormLabel>
+                        <FormLabel>Εσωτερική Διανομή Πεδίο 2</FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Δεύτερο πεδίο ΕΣΔΙΑΝ"
+                            placeholder="Δεύτερο πεδίο εσωτερικής διανομής"
                             {...field}
                           />
                         </FormControl>
