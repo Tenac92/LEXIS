@@ -43,7 +43,7 @@ const recipientSchema = z.object({
   firstname: z.string().optional(),
   lastname: z.string().optional(),
   fathername: z.string().optional(),
-  afm: z.string().optional(),
+  afm: z.union([z.string(), z.number()]).transform(val => String(val)).optional(),
   amount: z.number().min(0, "Το ποσό δεν μπορεί να είναι αρνητικό").optional(),
   installment: z.string().default("ΕΦΑΠΑΞ"),
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]),
@@ -119,7 +119,7 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
 
   // Convert beneficiary payments to recipients format for the form
   const recipients = useMemo(() => {
-    if (!beneficiaryPayments?.length) return [];
+    if (!beneficiaryPayments || !Array.isArray(beneficiaryPayments) || beneficiaryPayments.length === 0) return [];
     
     return beneficiaryPayments.map((payment: any) => ({
       id: payment.id,
@@ -221,17 +221,24 @@ export function EditDocumentModal({ document, open, onOpenChange }: EditDocument
 
       console.log("Document update result:", documentResult);
 
-      // Update beneficiaries if they exist and have been modified
-      if (data.recipients && data.recipients.length > 0 && data.recipients.some(r => r.id)) {
-        console.log("Updating beneficiaries:", data.recipients);
-        const beneficiaryResult = await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ recipients: data.recipients }),
-        });
-        console.log("Beneficiary update result:", beneficiaryResult);
+      // Update beneficiaries if they exist and have data
+      if (data.recipients && data.recipients.length > 0) {
+        // Filter out completely empty recipients
+        const validRecipients = data.recipients.filter(r => 
+          r.firstname || r.lastname || r.afm || (r.amount && r.amount > 0)
+        );
+        
+        if (validRecipients.length > 0) {
+          console.log("Updating beneficiaries:", validRecipients);
+          const beneficiaryResult = await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ recipients: validRecipients }),
+          });
+          console.log("Beneficiary update result:", beneficiaryResult);
+        }
       }
 
       return documentResult;
