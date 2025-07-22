@@ -368,18 +368,21 @@ export class DocumentUtilities {
   /**
    * Get unit details from the database or API
    */
-  public static async getUnitDetails(unit: string): Promise<UnitDetails> {
+  public static async getUnitDetails(unit: string | number): Promise<UnitDetails> {
     try {
       logger.debug(`Fetching unit details for: ${unit}`);
 
       // Import database connection
       const { supabase } = await import("../config/db");
 
+      // Determine if we're searching by numeric ID or string unit code
+      const isNumericId = !isNaN(Number(unit));
+      
       // Try to fetch unit details from database
       const { data: unitData, error: unitError } = await supabase
         .from("Monada")
         .select("*")
-        .eq("unit", unit)
+        .eq(isNumericId ? "id" : "unit", isNumericId ? Number(unit) : unit)
         .single();
 
       if (unitData && !unitError) {
@@ -389,7 +392,7 @@ export class DocumentUtilities {
         const manager = unitData.manager || {};
 
         return {
-          unit,
+          unit: unitData.unit || String(unit), // Use the unit string identifier from database, fallback to input
           name: unitData.unit_name?.name || unitData.unit_name || unit,
           unit_name: unitData.unit_name || { name: unit, prop: "τη" },
           manager: {
@@ -408,6 +411,10 @@ export class DocumentUtilities {
 
       // Fallback to static mappings if database lookup fails
       const unitMappings: Record<string, { name: string; prop: string }> = {
+        "2": { // Numeric ID 2 maps to Central Greece unit
+          name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+          prop: "τη",
+        },
         "ΔΑΕΦΚ-ΚΕ": {
           name: "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
           prop: "τη",
@@ -430,13 +437,13 @@ export class DocumentUtilities {
         },
       };
 
-      const unitInfo = unitMappings[unit] || {
-        name: unit,
+      const unitInfo = unitMappings[String(unit)] || {
+        name: String(unit),
         prop: "τη",
       };
 
       return {
-        unit,
+        unit: String(unit),
         name: unitInfo.name,
         unit_name: unitInfo,
         manager: {
