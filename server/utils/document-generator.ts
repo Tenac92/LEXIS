@@ -393,6 +393,7 @@ export class DocumentGenerator {
           ? `${lastname} ${firstname}`.trim()
           : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
       const afm = recipient.afm || "";
+      console.log(`[PrimaryDocument] Processing recipient ${index + 1}: name="${fullName}", afm="${afm}"`);
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (
@@ -885,6 +886,12 @@ export class DocumentGenerator {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
+    
+    console.log('[PrimaryDocument] Footer attachments processing:', {
+      rawAttachments: documentData.attachments,
+      processedAttachments: attachments,
+      count: attachments.length
+    });
 
     for (let i = 0; i < attachments.length; i++) {
       leftColumnParagraphs.push(

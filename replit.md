@@ -177,6 +177,27 @@ This is a full-stack web application built for Greek government budget and docum
   - Application continues to run correctly after extensive file removal
   - **CONFIRMED: Comprehensive codebase cleanup successfully completed without breaking functionality**
 
+### July 22, 2025 - DOCUMENT EXPORT AFM & ATTACHMENTS DATA FLOW ENHANCED
+- **MAJOR DEBUGGING BREAKTHROUGH: Successfully verified AFM and attachments data flow through document export system**
+- **Data Flow Verification:**
+  - Added comprehensive logging throughout document export controller and generators
+  - Confirmed beneficiary AFM data (e.g., AFM: 231253432) is correctly fetched from database
+  - Verified recipients data is properly passed to both primary and secondary document generators
+  - Attachments data structure correctly processed and transformed for document inclusion
+- **Database Schema Fixes:**
+  - Fixed invalid foreign key relationship query that was causing export failures
+  - Corrected attachments field name from attachment_id to attachments_id for proper data retrieval
+  - Added fallback handling for existing attachments field in documents table
+- **Document Generator Enhancements:**
+  - Added detailed logging for AFM processing in payment table generation
+  - Enhanced attachments section logging to verify data inclusion in document footer
+  - Confirmed recipients data reaches document generators with proper name and AFM formatting
+- **Export System Success:**
+  - Document exports now work correctly without database schema errors
+  - Both primary and secondary documents generate successfully
+  - ZIP export functionality operational with proper authentication
+  - **VERIFIED: AFM data (231253432) and recipient names properly passed to document generators**
+
 ### July 22, 2025 - DOCUMENT PAGE UNIT FILTER FIX COMPLETE
 - **MAJOR FIX: Successfully resolved unit filter dropdown issue in documents page**
 - **Backend API Correction:**
