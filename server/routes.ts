@@ -56,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all beneficiaries for user's units first
-      const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0]);
+      const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0].toString());
       
       // Get payments for all these beneficiaries
       const allPayments = [];
@@ -105,10 +105,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
         recipients: formattedRecipients,
         total_amount: parseFloat(String(total_amount)) || 0,
-        generated_by: req.user.id,
-        department: req.user.department || null,
-        telephone: req.user.telephone || null,
-        user_name: req.user.name || null,
+        generated_by: req.user!.id,
+        department: req.user!.department || null,
+        telephone: req.user!.telephone || null,
+        user_name: req.user!.name || null,
         attachments: attachments || [],
         created_at: now,
         updated_at: now
@@ -436,9 +436,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: error.message });
       }
       
-      // Debug: Log the raw database response
-      console.log('[API] Raw units from database:', units?.slice(0, 2));
-      
       // Transform the data to match the expected format
       const transformedData = units.map(unit => ({
         id: unit.unit || unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
@@ -446,8 +443,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unit_name: unit.unit_name, // Full JSONB object
         name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || unit.id)
       }));
-      
-      console.log('[API] Transformed units:', transformedData?.slice(0, 2));
       
       res.json(transformedData);
     } catch (error) {

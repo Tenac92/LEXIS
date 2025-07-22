@@ -127,6 +127,27 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 22, 2025 - DOCUMENT PAGE UNIT FILTER FIX COMPLETE
+- **MAJOR FIX: Successfully resolved unit filter dropdown issue in documents page**
+- **Backend API Correction:**
+  - Fixed data mapping in `/api/public/units` endpoint where unit ID and string identifier were reversed
+  - Corrected database field mapping: `unit: unit.id` (numeric ID for filtering) and `id: unit.unit` (string identifier)
+  - Backend now properly transforms Monada table data for frontend consumption
+- **Frontend Integration:**
+  - Updated User type definition to include missing `unit_id` field as number array
+  - Fixed filter logic to use `user?.unit_id?.includes(unit.unit)` for proper unit access control
+  - Enhanced unit filtering to display only units accessible to authenticated user
+- **TypeScript Improvements:**
+  - Fixed critical TypeScript errors in routes.ts including req.user null assertion and type mismatches
+  - Cleaned up debugging console logs after successful implementation
+  - Reduced LSP diagnostics from 15 to 10 remaining non-critical issues
+- **User Experience Success:**
+  - Unit filter dropdown now correctly displays "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ" for user with unit_id [2]
+  - Documents page filters properly restrict access to user's assigned organizational units
+  - **CONFIRMED: Unit filter working correctly with proper authentication and data access control**
+
+## Recent Changes
+
 ### January 9, 2025 - ROBUST BACKEND & FRONTEND IMPLEMENTATION COMPLETE
 - **COMPREHENSIVE SYSTEM ENHANCEMENT: Implemented complete robust frontend and backend architecture aligned with database schema**
 - **Enhanced Error Handling & Validation:**

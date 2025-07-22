@@ -94,9 +94,7 @@ export default function DocumentsPage() {
       if (!response.ok) {
         throw new Error('Failed to fetch units');
       }
-      const data = await response.json();
-      console.log('[DocumentsPage] Units API response:', data);
-      return data;
+      return response.json();
     }
   });
 
@@ -105,9 +103,7 @@ export default function DocumentsPage() {
     user?.unit_id?.includes(unit.unit)
   );
   
-  console.log('[DocumentsPage] All units:', allUnits);
-  console.log('[DocumentsPage] User unit_id:', user?.unit_id);
-  console.log('[DocumentsPage] User accessible units:', userUnits);
+
 
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
