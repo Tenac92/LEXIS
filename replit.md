@@ -192,11 +192,17 @@ This is a full-stack web application built for Greek government budget and docum
   - Added detailed logging for AFM processing in payment table generation
   - Enhanced attachments section logging to verify data inclusion in document footer
   - Confirmed recipients data reaches document generators with proper name and AFM formatting
+- **Document Generator Fixes:**
+  - Fixed ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ table structure to use installment (ΤΡΙΜΗΝΟ) instead of months field
+  - Added proper configuration for generic "ΔΑΠΑΝΗ" expenditure type with ΔΟΣΗ column
+  - Enhanced comprehensive logging in both primary and secondary document generators
+  - Added detailed AFM processing logging to track recipient data through Word document generation
 - **Export System Success:**
   - Document exports now work correctly without database schema errors
   - Both primary and secondary documents generate successfully
   - ZIP export functionality operational with proper authentication
   - **VERIFIED: AFM data (231253432) and recipient names properly passed to document generators**
+  - **FIXED: ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ table now uses correct ΤΡΙΜΗΝΟ column structure**
 
 ### July 22, 2025 - DOCUMENT PAGE UNIT FILTER FIX COMPLETE
 - **MAJOR FIX: Successfully resolved unit filter dropdown issue in documents page**

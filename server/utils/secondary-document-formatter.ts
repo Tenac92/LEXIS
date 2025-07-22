@@ -591,7 +591,16 @@ export class SecondaryDocumentFormatter {
     documentData: DocumentData,
   ): Promise<Buffer> {
     try {
-      logger.debug("Generating secondary document for:", documentData);
+      logger.debug("Generating secondary document for:", documentData.id);
+      console.log('[SecondaryDocument] === DOCUMENT DATA RECEIVED ===');
+      console.log('[SecondaryDocument] Document ID:', documentData.id);
+      console.log('[SecondaryDocument] Expenditure type:', documentData.expenditure_type);
+      console.log('[SecondaryDocument] Recipients count:', documentData.recipients?.length || 0);
+      console.log('[SecondaryDocument] Recipients details:', documentData.recipients?.map(r => ({ 
+        name: `${r.firstname} ${r.lastname}`, 
+        afm: r.afm, 
+        amount: r.amount 
+      })) || []);
 
       const unitDetails = await DocumentUtilities.getUnitDetails(
         documentData.unit,

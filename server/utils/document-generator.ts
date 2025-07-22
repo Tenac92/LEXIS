@@ -91,9 +91,19 @@ export class DocumentGenerator {
   ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData.id);
-      console.log('[PrimaryDocument] Recipients data received:', documentData.recipients?.length || 0, 'recipients');
-      console.log('[PrimaryDocument] Attachments data received:', documentData.attachments?.length || 0, 'attachments');
-      console.log('[PrimaryDocument] Recipients AFM check:', documentData.recipients?.map(r => ({ name: r.firstname, afm: r.afm })) || []);
+      console.log('[PrimaryDocument] === DOCUMENT DATA RECEIVED ===');
+      console.log('[PrimaryDocument] Document ID:', documentData.id);
+      console.log('[PrimaryDocument] Expenditure type:', documentData.expenditure_type);
+      console.log('[PrimaryDocument] Project title:', documentData.project_title);
+      console.log('[PrimaryDocument] Project NA853:', documentData.project_na853);
+      console.log('[PrimaryDocument] Recipients count:', documentData.recipients?.length || 0);
+      console.log('[PrimaryDocument] Attachments count:', documentData.attachments?.length || 0);
+      console.log('[PrimaryDocument] Recipients details:', documentData.recipients?.map(r => ({ 
+        name: `${r.firstname} ${r.lastname}`, 
+        afm: r.afm, 
+        amount: r.amount,
+        installment: r.installment 
+      })) || []);
 
       // Get unit details
       const unitDetails = await DocumentUtilities.getUnitDetails(
@@ -484,11 +494,12 @@ export class DocumentGenerator {
             }),
           );
         } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+          // For ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ, use installment (ΤΡΙΜΗΝΟ) not months
           cells.push(
             new TableCell({
               children: [
                 DocumentUtilities.createCenteredParagraph(
-                  recipient.months?.toString() || "1",
+                  installment, // Use installment (ΤΡΙΜΗΝΟ 1, 2, 3) instead of months
                   {
                     size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
                   },
