@@ -178,6 +178,15 @@ This is a full-stack web application built for Greek government budget and docum
   - Fixed documents page sorting to show most recent documents first
   - Added `ORDER BY created_at DESC` to documents API endpoint
   - Users will now see their newest documents at the top of the list
+- **Auto-Refresh Fix:**
+  - Fixed documents list not refreshing after document creation
+  - Added proper React Query cache invalidation for `/api/documents` endpoint
+  - Documents page now automatically shows newly created documents without manual refresh
+- **WebSocket Real-time Updates:**
+  - Enhanced V2 document creation endpoint to broadcast document updates via WebSocket
+  - Updated WebSocket client to handle DOCUMENT_CREATED events and invalidate documents cache
+  - Added WebSocket connection to documents page for real-time collaboration
+  - All users now see new documents immediately when created by other users
 
 ### July 22, 2025 - CODEBASE CLEANUP AND UNUSED FILES REMOVAL COMPLETE
 - **MAJOR CLEANUP: Successfully identified and removed unused files throughout the codebase**

@@ -491,6 +491,14 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       console.error('[DocumentsController] V2 Error creating beneficiary payments:', beneficiaryError);
     }
     
+    // Broadcast document update to all connected clients
+    broadcastDocumentUpdate({
+      type: 'DOCUMENT_CREATED',
+      documentId: data.id,
+      userId: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
     res.status(201).json({ 
       id: data.id, 
       message: 'Document created successfully',

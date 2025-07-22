@@ -141,6 +141,9 @@ export function useRobustWebSocket() {
           } else if (data.type === 'project_update') {
             // Invalidate project-related queries
             queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+          } else if (data.type === 'DOCUMENT_CREATED') {
+            // Invalidate documents-related queries
+            queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
           }
         } catch (error) {
           console.error('[RobustWebSocket] Error parsing message:', error);

@@ -1951,6 +1951,7 @@ export function CreateDocumentDialog({
 
         // Invalidate queries and show success message before returning
         await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['/api/documents'] }),
           queryClient.invalidateQueries({ queryKey: ["documents"] }),
           queryClient.invalidateQueries({ queryKey: ["budget"] }),
           queryClient.invalidateQueries({

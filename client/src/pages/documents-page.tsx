@@ -32,6 +32,7 @@ import { CreateDocumentDialog } from "@/components/documents/create-document-dia
 // Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
 interface Filters {
   unit: string;
@@ -64,6 +65,9 @@ export default function DocumentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
+  
+  // Enable WebSocket for real-time updates
+  useWebSocketUpdates();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
