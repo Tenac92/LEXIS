@@ -127,6 +127,35 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 22, 2025 - CODEBASE CLEANUP AND UNUSED FILES REMOVAL COMPLETE
+- **MAJOR CLEANUP: Successfully identified and removed unused files throughout the codebase**
+- **Backup Files Removal:**
+  - Removed `client/src/pages/beneficiaries-page-backup.tsx` (73KB backup file)
+  - Removed `client/src/pages/beneficiaries-page-broken.tsx` (44KB broken component)
+  - Removed `server/routes-backup.ts` (112KB deprecated routes file)
+- **Deprecated Services and Routes:**
+  - Removed `server/routes/healthcheck.ts` (deprecated health check redirecting to `/api/health`)
+  - Removed `server/services/quarterlyTransitionService.ts` (deprecated in favor of schedulerService.ts)
+  - Removed `server/routes/api/test-notifications.ts` (unused test endpoint)
+  - Removed `client/src/hooks/use-websocket.ts` (deprecated hook replaced by use-websocket-updates.ts)
+- **Migration Scripts Cleanup:**
+  - Removed 60+ migration, test, and backup scripts from scripts/ directory
+  - Deleted all database backup JSON files (420KB+ each)
+  - Removed migration scripts: create-*, add-*, fix-*, populate-*, update-*, import-*, migrate-*
+  - Kept essential scripts: code-check.js, replace-console-logs.js, reset-password.js
+- **Updated References:**
+  - Fixed geoIP middleware to reference `/api/health` instead of deprecated `/api/healthcheck`
+  - Confirmed all active code references point to current implementations
+- **Codebase Size Reduction:**
+  - Removed approximately 2MB+ of unused code, tests, and backup files
+  - Streamlined scripts directory from 70+ files to 4 essential utilities
+  - Improved project maintainability by removing legacy code paths
+- **Production Ready:**
+  - All remaining files are actively used in the application
+  - No broken references or imports remain after cleanup
+  - Application continues to run correctly after extensive file removal
+  - **CONFIRMED: Comprehensive codebase cleanup successfully completed without breaking functionality**
+
 ### July 22, 2025 - DOCUMENT PAGE UNIT FILTER FIX COMPLETE
 - **MAJOR FIX: Successfully resolved unit filter dropdown issue in documents page**
 - **Backend API Correction:**

@@ -46,7 +46,7 @@ const EXEMPT_DOMAINS = [
  * Critical paths that should always be accessible
  */
 const EXEMPT_PATHS = [
-  '/api/healthcheck',
+  '/api/health',
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/me',
