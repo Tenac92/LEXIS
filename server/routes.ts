@@ -502,17 +502,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const limitMatch = query.match(/limit\s+(\d+)/i);
           const limit = limitMatch ? parseInt(limitMatch[1]) : 100;
           
-          let supabaseQuery = supabase.from(tableName);
-          
-          if (fields === '*') {
-            supabaseQuery = supabaseQuery.select('*');
-          } else {
-            supabaseQuery = supabaseQuery.select(fields);
-          }
-          
-          supabaseQuery = supabaseQuery.limit(limit);
-          
-          const { data, error } = await supabaseQuery;
+          const { data, error } = await supabase
+            .from(tableName)
+            .select(fields === '*' ? '*' : fields)
+            .limit(limit);
           
           if (error) throw error;
           
@@ -830,8 +823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Determine if unitIdentifier is numeric ID or unit name
       const isNumericId = /^\d+$/.test(unitIdentifier);
-      let targetUnitId = null;
-      let targetUnitName = null;
+      let targetUnitId: number | null = null;
+      let targetUnitName: string | null = null;
       
       if (isNumericId) {
         // If numeric, find the unit name from Monada table
@@ -872,9 +865,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
         
         // Extract unique expenditure type IDs
-        const expenditureTypeIds = [...new Set(projectIndexEntries
+        const expenditureTypeIds = Array.from(new Set(projectIndexEntries
           .map(idx => idx.expediture_type_id)
-          .filter(id => id !== null && id !== undefined))];
+          .filter(id => id !== null && id !== undefined)));
         
         // Map expenditure type IDs to names
         const expenditureTypeNames = expenditureTypeIds
