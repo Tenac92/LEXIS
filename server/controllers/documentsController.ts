@@ -6,7 +6,10 @@ import type { AuthenticatedRequest } from "../authentication"
 import { authenticateSession } from "../authentication"
 import { DocumentGenerator } from '../utils/document-generator';
 import { broadcastDocumentUpdate } from '../services/websocketService';
+import { createLogger } from '../utils/logger';
 import JSZip from 'jszip';
+
+const logger = createLogger('DocumentsController');
 
 // Create the router
 export const router = Router();
@@ -1098,11 +1101,91 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     }
 
     // Prepare document data with user name and contact information
+    // Also fetch missing data needed for document generation
+    let projectData: any = null;
+    let beneficiaryData: any[] = [];
+    let expenditureType = 'ΔΑΠΑΝΗ'; // Default fallback
+    
+    // Fetch related project data if project_index_id exists
+    if (document.project_index_id) {
+      try {
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select(`
+            id,
+            project_id,
+            Projects:project_id (
+              id,
+              na853,
+              project_title,
+              event_description,
+              mis
+            ),
+            expediture_types:expediture_type_id (
+              id,
+              expediture_types
+            )
+          `)
+          .eq('id', document.project_index_id)
+          .single();
+          
+        if (!projectIndexError && projectIndexData) {
+          projectData = projectIndexData.Projects;
+          expenditureType = (projectIndexData.expediture_types as any)?.expediture_types || 'ΔΑΠΑΝΗ';
+        }
+      } catch (error) {
+        logger.debug('Error fetching project data for document:', error);
+      }
+    }
+    
+    // Fetch beneficiary payments data
+    if (document.beneficiary_payments_id && document.beneficiary_payments_id.length > 0) {
+      try {
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('beneficiary_payments')
+          .select(`
+            id,
+            amount,
+            installment,
+            beneficiaries:beneficiary_id (
+              id,
+              afm,
+              surname,
+              name,
+              fathername
+            )
+          `)
+          .in('id', document.beneficiary_payments_id);
+          
+        if (!paymentsError && paymentsData) {
+          beneficiaryData = paymentsData.map((payment: any) => ({
+            id: payment.id,
+            firstname: (payment.beneficiaries as any)?.name || '',
+            lastname: (payment.beneficiaries as any)?.surname || '',
+            fathername: (payment.beneficiaries as any)?.fathername || '',
+            afm: (payment.beneficiaries as any)?.afm || '',
+            amount: parseFloat(payment.amount || '0'),
+            installment: payment.installment || 'ΕΦΑΠΑΞ'
+          }));
+        }
+      } catch (error) {
+        logger.debug('Error fetching beneficiary data for document:', error);
+      }
+    }
+
     const documentData = {
       ...document,
       user_name: document.generated_by?.name || 'Unknown User',
       department: document.generated_by?.department || '',
-      contact_number: document.generated_by?.telephone || ''
+      contact_number: document.generated_by?.telephone || '',
+      // Map unit_id to unit for compatibility with existing document generators
+      unit: document.unit_id?.toString() || '2', // Default to unit 2 as fallback
+      // Add project data
+      project_na853: (projectData as any)?.na853 || '',
+      project_title: (projectData as any)?.project_title || (projectData as any)?.event_description || '',
+      expenditure_type: expenditureType,
+      // Add recipients data
+      recipients: beneficiaryData
     };
 
     console.log('[DocumentsController] Document data prepared for export:', documentData.id);

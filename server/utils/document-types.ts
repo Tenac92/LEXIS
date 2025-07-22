@@ -35,8 +35,10 @@ export interface UnitDetails {
 
 export interface DocumentData {
   id: number;
-  unit: string;
+  unit: string; // Mapped from unit_id for compatibility
+  unit_id?: bigint | number; // Actual database field
   project_id?: string | number;
+  project_index_id?: number; // Reference to project_index table
   projects?: {
     id: string | number;
     name?: string;
@@ -53,6 +55,7 @@ export interface DocumentData {
     expenditure_types?: string[];
   }[];
   project_na853?: string;
+  project_title?: string;
   expenditure_type: string;
   status?: string;
   total_amount?: number;
@@ -62,6 +65,7 @@ export interface DocumentData {
   user_name?: string;
   user_id?: number;
   attachments?: string[];
+  attachment_id?: number[]; // Array of attachment IDs from database
   esdian?: string[];
   contact_number?: string;
   department?: string;
@@ -72,6 +76,7 @@ export interface DocumentData {
   original_protocol_date?: string;
   comments?: string;
   generated_by?: UserDetails;
+  beneficiary_payments_id?: number[]; // Array of beneficiary payment IDs
   director_signature?: {
     name: string;
     order: string;
