@@ -91,6 +91,9 @@ export class DocumentGenerator {
   ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData.id);
+      console.log('[PrimaryDocument] Recipients data received:', documentData.recipients?.length || 0, 'recipients');
+      console.log('[PrimaryDocument] Attachments data received:', documentData.attachments?.length || 0, 'attachments');
+      console.log('[PrimaryDocument] Recipients AFM check:', documentData.recipients?.map(r => ({ name: r.firstname, afm: r.afm })) || []);
 
       // Get unit details
       const unitDetails = await DocumentUtilities.getUnitDetails(
