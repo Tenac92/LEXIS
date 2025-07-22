@@ -115,8 +115,13 @@ type CreateDocumentForm = z.infer<typeof createDocumentSchema>;
 
 // Data validation schemas
 
-// Χρησιμοποιούμε τον ίδιο τύπο για συμβατότητα
-interface BudgetData extends BaseBudgetData {}
+// Define interface for budget data to resolve type error
+interface BudgetData {
+  totalBudget?: number;
+  usedBudget?: number;
+  remainingBudget?: number;
+  status?: string;
+}
 
 // Use the interface from the imported BudgetIndicator component
 
@@ -421,9 +426,9 @@ export function CreateDocumentDialog({
         
         // If the user only has access to one unit, track it for auto-selection
         let userSingleUnit = "";
-        if (user?.unit_id?.length === 1) {
+        if (user?.unit_id && user.unit_id.length === 1) {
           // Convert unit ID to unit name by finding matching unit
-          const userUnitData = data.find((item: any) => item.id === user.unit_id[0]);
+          const userUnitData = data.find((item: any) => item.id === user.unit_id![0]);
           userSingleUnit = userUnitData?.unit || "";
         }
         
@@ -437,7 +442,7 @@ export function CreateDocumentDialog({
           let unitId = item.id || item.unit || '';
           
           // Ensure the unit ID matches the expected format if it's abbreviated
-          const userHasAccessToUnit = user?.unit_id?.includes(item.id);
+          const userHasAccessToUnit = user?.unit_id && user.unit_id.includes(item.id);
           if (userHasAccessToUnit || Object.keys(unitAbbreviations).includes(unitId)) {
             // Keep the unit ID as is - it's already in the correct format
           } else if (unitId.length > 20) {
@@ -542,7 +547,7 @@ export function CreateDocumentDialog({
       if (user?.unit_id && user.unit_id.length > 0) {
         // Convert user's unit ID to unit name for form
         console.log("[CreateDocument] User unit_id:", user.unit_id, "Available units:", units);
-        const userUnitData = units.find((item: any) => item.id === user.unit_id[0]);
+        const userUnitData = units.find((item: any) => item.id === user.unit_id![0]);
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
           console.log("[CreateDocument] Auto-selected unit:", defaultUnit, "for user unit_id:", user.unit_id[0]);
@@ -704,8 +709,8 @@ export function CreateDocumentDialog({
     // Convert user's unit ID to unit name for auto-selection
     let userUnit = "";
     if (user?.unit_id && user.unit_id.length > 0) {
-      const userUnitData = units.find((unit: any) => unit.id === user.unit_id[0]);
-      userUnit = userUnitData?.unit || "";
+      const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
+      userUnit = userUnitData?.name || "";
     }
     
     // Auto-select if no unit is selected but user has a unit assigned
@@ -1074,7 +1079,7 @@ export function CreateDocumentDialog({
         // Update form values immediately
         form.setValue(`recipients.${index}.installments`, newInstallments);
         form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
-        form.setValue(`recipients.${index}.amount`, totalRecipientAmount);
+        form.setValue(`recipients.${index}.amount`, Number(totalRecipientAmount));
         
         // Wait a bit then update context to ensure changes are saved
         setTimeout(() => {
@@ -1761,15 +1766,6 @@ export function CreateDocumentDialog({
             isInvalid: isInvalid
           });
           return isInvalid;
-          
-          if (isInvalid) {
-            console.log(`[Validation] Invalid installment amount for recipient ${index}, installment ${installment}:`, {
-              installmentAmounts: recipient.installmentAmounts,
-              installmentValue: recipient.installmentAmounts?.[installment],
-              installmentType: typeof recipient.installmentAmounts?.[installment]
-            });
-          }
-          return isInvalid;
         });
       });
 
@@ -1786,7 +1782,7 @@ export function CreateDocumentDialog({
       console.log("[HandleSubmit] Looking for project with ID:", data.project_id, "type:", typeof data.project_id);
       console.log("[HandleSubmit] Available projects:", projects.map(p => ({ id: p.id, mis: p.mis })));
       const projectForSubmission = projects.find(
-        (p) => p.id === parseInt(data.project_id.toString()),
+        (p) => String(p.id) === String(data.project_id),
       );
       console.log("[HandleSubmit] Found project:", projectForSubmission);
       if (!projectForSubmission?.mis) {
@@ -1978,8 +1974,8 @@ export function CreateDocumentDialog({
         // Convert user's unit ID to unit name for form default
         let defaultUnit = "";
         if (user?.unit_id && user.unit_id.length > 0 && units.length > 0) {
-          const userUnitData = units.find((unit: any) => unit.id === user.unit_id[0]);
-          defaultUnit = userUnitData?.unit || "";
+          const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
+          defaultUnit = userUnitData?.name || "";
         }
         
         form.reset({
@@ -2480,10 +2476,10 @@ export function CreateDocumentDialog({
                       {field.value && <p className="text-xs text-muted-foreground mt-1 font-medium">
                         Επιλεγμένη μονάδα: {Array.isArray(units) && units.length > 0 
                           ? (units.find((u: any) => u.id === field.value)?.name || 
-                             (user?.unit_id?.length === 1 ? 
-                               (units.find(u => u.id === user.unit_id[0])?.unit || field.value) : field.value))
-                          : (user?.unit_id?.length === 1 ? 
-                               (units.find(u => u.id === user.unit_id[0])?.unit || field.value) : field.value)}
+                             (user?.unit_id && user.unit_id.length === 1 ? 
+                               (units.find(u => u.id === user.unit_id![0])?.name || field.value) : field.value))
+                          : (user?.unit_id && user.unit_id.length === 1 ? 
+                               (units.find(u => u.id === user.unit_id![0])?.name || field.value) : field.value)}
                       </p>}
                     </FormItem>
                   )}
@@ -2493,14 +2489,7 @@ export function CreateDocumentDialog({
 
             {currentStep === 1 && (
               <div className="space-y-4">
-                {/* Budget debug logging */}
-                {console.log('[CreateDocument] Budget debug:', { 
-                  budgetData: budgetData, 
-                  selectedProjectId: selectedProjectId, 
-                  formDataProjectId: formData.project_id,
-                  isBudgetLoading: isBudgetLoading,
-                  budgetError: budgetError
-                })}
+                {/* Budget debug logging removed for production */}
                 
                 {/* Always show budget indicator - handle null data inside component */}
                 <BudgetIndicator
@@ -2527,7 +2516,7 @@ export function CreateDocumentDialog({
                               // Update the form context to ensure state persistence
                               updateFormData({
                                 ...formData,
-                                project_id: project.id
+                                project_id: String(project.id)
                               });
                               
                               // Project selected successfully
@@ -2948,8 +2937,8 @@ export function CreateDocumentDialog({
                         onClick={() => {
                           // Get all valid attachment IDs (excluding error/no-data entries)
                           const validAttachmentIds = attachments
-                            .filter(att => att.file_type !== "none")
-                            .map(att => att.id);
+                            .filter((att: any) => att.file_type !== "none")
+                            .map((att: any) => att.id);
                           
                           const currentSelections = form.watch("selectedAttachments") || [];
                           
@@ -2961,13 +2950,13 @@ export function CreateDocumentDialog({
                           let newSelections;
                           if (allSelected) {
                             // Deselect all - remove all valid attachment IDs from current selection
-                            newSelections = currentSelections.filter(id => 
+                            newSelections = currentSelections.filter((id: any) => 
                               !validAttachmentIds.includes(id)
                             );
                             console.log("[SelectAll] Deselecting all attachments");
                           } else {
                             // Select all - merge current selections with all valid attachment IDs
-                            newSelections = [...new Set([...currentSelections, ...validAttachmentIds])];
+                            newSelections = Array.from(new Set([...currentSelections, ...validAttachmentIds]));
                             console.log("[SelectAll] Selecting all attachments");
                           }
                           
@@ -2986,10 +2975,10 @@ export function CreateDocumentDialog({
                       >
                         {(() => {
                           const validAttachmentIds = attachments
-                            .filter(att => att.file_type !== "none")
-                            .map(att => att.id);
+                            .filter((att: any) => att.file_type !== "none")
+                            .map((att: any) => att.id);
                           const currentSelections = form.watch("selectedAttachments") || [];
-                          const allSelected = validAttachmentIds.every(id => 
+                          const allSelected = validAttachmentIds.every((id: any) => 
                             currentSelections.includes(id)
                           );
                           return allSelected ? "Αποεπιλογή Όλων" : "Επιλογή Όλων";
@@ -3179,8 +3168,8 @@ export function CreateDocumentDialog({
       
       // Set the unit value immediately without delay
       // Convert user's unit ID to unit name for display
-      const userUnitData = units.find(u => u.id === user.unit_id[0]);
-      const unitValue = userUnitData?.unit || "";
+      const userUnitData = units.find((u: any) => u.id === user.unit_id![0]);
+      const unitValue = userUnitData?.name || "";
       form.setValue("unit", unitValue, { 
         shouldDirty: false,
         shouldValidate: false
