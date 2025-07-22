@@ -86,9 +86,13 @@ export default function DocumentsPage() {
     }
   }, [location, setLocation]);
 
-  // Fetch units data for dropdown
+  // Fetch units data for dropdown with aggressive caching
   const { data: allUnits = [], isLoading: unitsLoading, error: unitsError } = useQuery<Unit[]>({
     queryKey: ['/api/public/units'],
+    staleTime: 30 * 60 * 1000, // 30 minutes cache - units rarely change
+    gcTime: 60 * 60 * 1000, // 1 hour cache retention (v5 renamed from cacheTime)
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async () => {
       const response = await fetch('/api/public/units');
       if (!response.ok) {
@@ -163,9 +167,12 @@ export default function DocumentsPage() {
     refetch();
   };
 
-  // Fetch users with same units
+  // Fetch users with same units with caching
   const { data: matchingUsers = [] } = useQuery({
     queryKey: ['/api/users/matching-units'],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention (v5 renamed from cacheTime)
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       const response = await apiRequest('/api/users/matching-units');
       return response || [];
@@ -173,9 +180,12 @@ export default function DocumentsPage() {
     enabled: !!user?.unit_id
   });
 
-  // Query for documents using the server API endpoint
+  // Query for documents using the server API endpoint with performance optimizations
   const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', filters],
+    staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention (v5 renamed from cacheTime)
+    refetchOnMount: false, // Use cached data when available
     queryFn: async () => {
       try {
         // Fetching documents with current filters

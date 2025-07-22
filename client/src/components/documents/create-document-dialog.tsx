@@ -492,6 +492,9 @@ export function CreateDocumentDialog({
         return [];
       }
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes cache for better performance (units rarely change)
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
+    refetchOnWindowFocus: false,
     retry: 2,
   });
 
@@ -1425,6 +1428,9 @@ export function CreateDocumentDialog({
         return [];
       }
     },
+    staleTime: 3 * 60 * 1000, // 3 minutes cache for better performance
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false,
     enabled: Boolean(selectedUnit),
   });
 
@@ -1453,6 +1459,9 @@ export function CreateDocumentDialog({
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const expenditureType = form.watch("expenditure_type");

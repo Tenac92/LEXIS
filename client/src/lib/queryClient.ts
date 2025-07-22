@@ -251,17 +251,22 @@ export const getQueryFn = (
   };
 };
 
-// Create the React Query client with optimal defaults
+// Create the React Query client with performance-optimized defaults
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn(),
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
+      gcTime: 30 * 60 * 1000, // 30 minutes cache retention (v5 renamed from cacheTime)
+      retry: 1, // Single retry for better resilience
+      retryDelay: 1000, // 1 second retry delay
+      networkMode: 'online',
     },
     mutations: {
-      retry: false,
+      retry: 1, // Single retry for mutations
+      retryDelay: 1000,
+      networkMode: 'online',
     },
   },
 });

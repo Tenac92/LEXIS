@@ -228,6 +228,9 @@ export default function BudgetHistoryPage() {
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/budget/history', page, limit, changeType, appliedMisFilter, appliedDateFilter, appliedCreatorFilter],
+    staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       let url = `/api/budget/history?page=${page}&limit=${limit}`;
       
@@ -254,9 +257,6 @@ export default function BudgetHistoryPage() {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch budget history');
       const jsonData = await res.json();
-      
-      // Log the response to see its structure
-      console.log('Budget history API response:', jsonData);
       
       return jsonData;
     }

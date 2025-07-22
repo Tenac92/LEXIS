@@ -160,30 +160,43 @@ export default function BeneficiariesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch beneficiaries
+  // Fetch beneficiaries with caching
   const {
     data: beneficiaries = [],
     isLoading,
     error,
   } = useQuery<Beneficiary[]>({
     queryKey: ["/api/beneficiaries"],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch units for dropdown
+  // Fetch units for dropdown with aggressive caching
   const { data: units = [] } = useQuery<Unit[]>({
     queryKey: ["/api/public/units"],
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    gcTime: 60 * 60 * 1000, // 1 hour cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // Fetch projects for dropdown
+  // Fetch projects for dropdown with caching
   const { data: projects = [] } = useQuery({
     queryKey: ["/api/projects"],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch beneficiary payments for enhanced display
+  // Fetch beneficiary payments for enhanced display with caching
   const {
     data: beneficiaryPayments = [],
   } = useQuery({
     queryKey: ["/api/beneficiary-payments"],
+    staleTime: 3 * 60 * 1000, // 3 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false,
     enabled: beneficiaries.length > 0,
   });
 

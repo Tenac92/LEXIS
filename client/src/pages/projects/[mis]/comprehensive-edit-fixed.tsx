@@ -287,8 +287,8 @@ export default function ComprehensiveEditFixed() {
   } = useQuery({
     queryKey: [`/api/projects/${mis}/complete`],
     enabled: !!mis,
-    staleTime: 30 * 60 * 1000, // 30 minutes cache for better performance
-    cacheTime: 60 * 60 * 1000, // 1 hour cache retention
+    staleTime: 10 * 60 * 1000, // 10 minutes cache for better performance
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention (v5 renamed from cacheTime)
     refetchOnWindowFocus: false, // Prevent unnecessary refetches
     refetchOnMount: false, // Use cached data when available
   });

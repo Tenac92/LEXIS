@@ -161,6 +161,9 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, error, isLoading, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const response = await fetch('/api/auth/me', {

@@ -84,7 +84,9 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
       }
     },
     enabled: Boolean(project.mis),
-    staleTime: 60 * 1000 // Cache for 1 minute
+    staleTime: 3 * 60 * 1000, // 3 minutes cache for better performance
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false
   });
 
   const deleteMutation = useMutation({

@@ -58,6 +58,9 @@ export function ComprehensiveProjectsModal({ open, onOpenChange }: Comprehensive
 
   const { data: organizedData, isLoading, error } = useQuery<OrganizedProjectData[]>({
     queryKey: ['/api/projects/organized'],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache for better performance
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
+    refetchOnWindowFocus: false,
     enabled: open,
   });
 

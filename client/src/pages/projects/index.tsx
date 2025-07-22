@@ -52,7 +52,10 @@ export default function ProjectsPage() {
   }, [search]);
 
   const { data: projects, isLoading, error } = useQuery<OptimizedProject[]>({
-    queryKey: ["/api/projects/cards"]
+    queryKey: ["/api/projects/cards"],
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
   });
 
   const handleExport = async () => {
