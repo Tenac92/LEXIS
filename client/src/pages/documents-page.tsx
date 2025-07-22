@@ -146,28 +146,24 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  // PERFORMANCE OPTIMIZATION: Memoized filter update function
-  const setMainFilters = useCallback((newFilters: Partial<Filters>) => {
+  // For main category filters (unit, status, user) - apply immediately
+  const setMainFilters = (newFilters: Partial<Filters>) => {
     const updatedFilters = { ...filters, ...newFilters };
     setFilters(updatedFilters);
-    // Always refresh for main filters
-    refetch();
-  }, [filters, refetch]);
+  };
   
   // For advanced filters - only store the values, don't refresh
   const setAdvancedFilterValues = (newValues: Partial<typeof advancedFilters>) => {
     setAdvancedFilters(prev => ({ ...prev, ...newValues }));
   };
   
-  // Apply advanced filters only when button is clicked
+  // Apply advanced filters only when button is clicked  
   const applyAdvancedFilters = () => {
     // Update the main filters with advanced filter values
     setFilters(prev => ({
       ...prev,
       ...advancedFilters
     }));
-    // Then trigger a refresh
-    refetch();
   };
 
   // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
@@ -275,11 +271,26 @@ export default function DocumentsPage() {
     }
   });
 
-  // PERFORMANCE OPTIMIZATION: Memoized refresh handler
+  // PERFORMANCE OPTIMIZATION: Memoized refresh handler and optimized filter functions
   const handleRefresh = useCallback(() => {
     // Manual refresh triggered by user
     refetch();
   }, [refetch]);
+
+  // PERFORMANCE OPTIMIZATION: Memoized filter functions after refetch is available
+  const optimizedSetMainFilters = useCallback((newFilters: Partial<Filters>) => {
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    refetch();
+  }, [filters, refetch]);
+
+  const optimizedApplyAdvancedFilters = useCallback(() => {
+    setFilters(prev => ({
+      ...prev,
+      ...advancedFilters
+    }));
+    refetch();
+  }, [advancedFilters, refetch]);
 
   if (isLoading) {
     return (
@@ -333,7 +344,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Μονάδα</label>
                 <Select
                   value={filters.unit}
-                  onValueChange={(value: string) => setMainFilters({ unit: value })}
+                  onValueChange={(value: string) => optimizedSetMainFilters({ unit: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -352,7 +363,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Κατάσταση</label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value: string) => setMainFilters({ status: value })}
+                  onValueChange={(value: string) => optimizedSetMainFilters({ status: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
@@ -370,7 +381,7 @@ export default function DocumentsPage() {
                 <label className="text-sm font-medium text-foreground">Χρήστης</label>
                 <Select
                   value={filters.user}
-                  onValueChange={(value: string) => setMainFilters({ user: value })}
+                  onValueChange={(value: string) => optimizedSetMainFilters({ user: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
@@ -490,7 +501,7 @@ export default function DocumentsPage() {
                     Καθαρισμός
                   </Button>
                   <SheetClose asChild>
-                    <Button className="flex-1" onClick={applyAdvancedFilters}>Εφαρμογή</Button>
+                    <Button className="flex-1" onClick={optimizedApplyAdvancedFilters}>Εφαρμογή</Button>
                   </SheetClose>
                 </div>
               </SheetContent>
