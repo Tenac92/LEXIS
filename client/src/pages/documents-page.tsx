@@ -17,9 +17,9 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
-import { DocumentCard } from "@/components/documents/document-card";
+import DocumentCard from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ViewDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
 import { EditDocumentModal } from "@/components/documents/edit-document-modal";
@@ -102,10 +102,13 @@ export default function DocumentsPage() {
     }
   });
 
-  // Get user's accessible units
-  const userUnits = allUnits.filter(unit => 
-    user?.unit_id?.includes(unit.unit)
-  );
+  // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
+  const userUnits = useMemo(() => {
+    if (!user?.unit_id || !allUnits.length) return [];
+    return allUnits.filter(unit => 
+      user.unit_id?.includes(unit.unit)
+    );
+  }, [allUnits, user?.unit_id]);
   
 
 
@@ -143,13 +146,13 @@ export default function DocumentsPage() {
     afm: ''
   });
 
-  // For main category filters (unit, status, user) - apply immediately
-  const setMainFilters = (newFilters: Partial<Filters>) => {
+  // PERFORMANCE OPTIMIZATION: Memoized filter update function
+  const setMainFilters = useCallback((newFilters: Partial<Filters>) => {
     const updatedFilters = { ...filters, ...newFilters };
     setFilters(updatedFilters);
     // Always refresh for main filters
     refetch();
-  };
+  }, [filters, refetch]);
   
   // For advanced filters - only store the values, don't refresh
   const setAdvancedFilterValues = (newValues: Partial<typeof advancedFilters>) => {
@@ -167,12 +170,13 @@ export default function DocumentsPage() {
     refetch();
   };
 
-  // Fetch users with same units with caching
+  // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
   const { data: matchingUsers = [] } = useQuery({
     queryKey: ['/api/users/matching-units'],
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    gcTime: 30 * 60 * 1000, // 30 minutes cache retention (v5 renamed from cacheTime)
+    staleTime: 15 * 60 * 1000, // Increased to 15 minutes cache - users rarely change
+    gcTime: 45 * 60 * 1000, // Increased to 45 minutes cache retention
     refetchOnWindowFocus: false,
+    refetchOnMount: false, // Prevent refetching on component mount
     queryFn: async () => {
       const response = await apiRequest('/api/users/matching-units');
       return response || [];
@@ -180,12 +184,13 @@ export default function DocumentsPage() {
     enabled: !!user?.unit_id
   });
 
-  // Query for documents using the server API endpoint with performance optimizations
+  // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
   const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
     queryKey: ['/api/documents', filters],
-    staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
-    gcTime: 10 * 60 * 1000, // 10 minutes cache retention (v5 renamed from cacheTime)
+    staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
     refetchOnMount: false, // Use cached data when available
+    refetchOnWindowFocus: false, // Prevent unnecessary refetching
     queryFn: async () => {
       try {
         // Fetching documents with current filters
@@ -270,11 +275,11 @@ export default function DocumentsPage() {
     }
   });
 
-  // Handle document refresh
-  const handleRefresh = () => {
+  // PERFORMANCE OPTIMIZATION: Memoized refresh handler
+  const handleRefresh = useCallback(() => {
     // Manual refresh triggered by user
     refetch();
-  };
+  }, [refetch]);
 
   if (isLoading) {
     return (
@@ -517,7 +522,7 @@ export default function DocumentsPage() {
               <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
                 {documents.map((doc) => (
                   <DocumentCard
-                    key={doc.id}
+                    key={`doc-${doc.id}`}
                     document={doc}
                     view={viewMode}
                     onView={() => {

@@ -104,12 +104,12 @@ const DocumentCard = memo(function DocumentCard({
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [projectNa853, setProjectNa853] = useState<string>(
-    (doc as any).project_na853 || "",
+    doc.project_na853 || "",
   );
   const { toast } = useToast();
 
   // Get the MIS code from the document
-  const mis = (doc as any).project_id || (doc as any).mis || "";
+  const mis = doc.project_id || (doc as any).mis || "";
 
   // Fetch project NA853 data from our special endpoint
   const { data: na853Data } = useQuery<any>({
@@ -206,7 +206,7 @@ const DocumentCard = memo(function DocumentCard({
     }
   };
 
-  const recipients = (doc as any).recipients as Recipient[];
+  const recipients = doc.recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
   const statusDetails = getStatusDetails(
     doc.status,
@@ -251,7 +251,7 @@ const DocumentCard = memo(function DocumentCard({
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <FileText className="w-4 h-4" />
-                      <span>Μονάδα: {(doc as any).unit}</span>
+                      <span>Μονάδα: {doc.unit}</span>
                     </div>
                     {recipients?.length > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
@@ -474,12 +474,12 @@ const DocumentCard = memo(function DocumentCard({
               <div className="grid grid-cols-2 gap-2 text-sm mb-6">
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Μονάδα</span>
-                  <span className="text-gray-900 font-medium">{(doc as any).unit}</span>
+                  <span className="text-gray-900 font-medium">{doc.unit}</span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Κωδικός MIS</span>
                   <span className="text-gray-900 font-mono">
-                    {(doc as any).project_id || (doc as any).mis || "Δ/Υ"}
+                    {doc.project_id || (doc as any).mis || "Δ/Υ"}
                   </span>
                 </div>
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
@@ -621,7 +621,7 @@ const DocumentCard = memo(function DocumentCard({
                       Κωδικός ΝΑ853:
                     </span>
                     <span className="text-orange-900">
-                      {projectNa853 || (doc as any).project_na853 || "Δ/Υ"}
+                      {projectNa853 || doc.project_na853 || "Δ/Υ"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -629,7 +629,7 @@ const DocumentCard = memo(function DocumentCard({
                       Τύπος Δαπάνης:
                     </span>
                     <span className="text-orange-900">
-                      {(doc as any).expenditure_type || "-"}
+                      {doc.expenditure_type || "-"}
                     </span>
                   </div>
                 </div>
@@ -730,7 +730,7 @@ const DocumentCard = memo(function DocumentCard({
       <OrthiEpanalipsiModal
         open={showCorrectionModal}
         onClose={() => setShowCorrectionModal(false)}
-        onSubmit={(correctionData: any) => {
+        onSubmit={(correctionData) => {
           console.log("Correction submitted:", correctionData);
           // Handle the correction submission logic here
           setShowCorrectionModal(false);
@@ -748,4 +748,4 @@ const DocumentCard = memo(function DocumentCard({
   );
 });
 
-export default DocumentCard;
+export { DocumentCard };
