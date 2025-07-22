@@ -1132,10 +1132,35 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           
         if (!projectIndexError && projectIndexData) {
           projectData = projectIndexData.Projects;
-          expenditureType = (projectIndexData.expediture_types as any)?.expediture_types || 'ΔΑΠΑΝΗ';
+          const fetchedExpenditure = (projectIndexData.expediture_types as any)?.expediture_types;
+          if (fetchedExpenditure && fetchedExpenditure !== 'ΔΑΠΑΝΗ') {
+            expenditureType = fetchedExpenditure;
+            console.log('[DocumentsController] Using project expenditure type:', expenditureType);
+          } else {
+            console.log('[DocumentsController] No valid expenditure type from project, checking project_index details...');
+            console.log('[DocumentsController] ProjectIndexData:', JSON.stringify(projectIndexData, null, 2));
+          }
         }
       } catch (error) {
         logger.debug('Error fetching project data for document:', error);
+        console.log('[DocumentsController] Project data fetch error:', error);
+      }
+    } else {
+      console.log('[DocumentsController] No project_index_id found for document:', document.id);
+      console.log('[DocumentsController] Document data keys:', Object.keys(document));
+      
+      // Try alternative approaches to find expenditure type
+      console.log('[DocumentsController] Looking for expenditure type in document fields...');
+      console.log('[DocumentsController] Document total_amount:', document.total_amount);
+      console.log('[DocumentsController] Document comments:', document.comments);
+      
+      // If we have beneficiary payments, we might be able to infer the type
+      if (beneficiaryData.length > 0) {
+        const hasInstallments = beneficiaryData.some(b => b.installment && b.installment.includes('ΤΡΙΜΗΝΟ'));
+        if (hasInstallments) {
+          console.log('[DocumentsController] Found installment payments, likely ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ');
+          expenditureType = 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ';
+        }
       }
     }
     
@@ -1225,6 +1250,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       attachments: attachmentsData
     };
 
+    console.log('[DocumentsController] Final expenditure type for document generation:', expenditureType);
     console.log('[DocumentsController] Document data prepared for export:', documentData.id);
     console.log('[DocumentsController] ESDIAN Debug - Raw ESDIAN field:', document.esdian);
     console.log('[DocumentsController] ESDIAN Debug - ESDIAN type:', typeof document.esdian);

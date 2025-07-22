@@ -197,6 +197,11 @@ This is a full-stack web application built for Greek government budget and docum
   - Added proper configuration for generic "ΔΑΠΑΝΗ" expenditure type with ΔΟΣΗ column
   - Enhanced comprehensive logging in both primary and secondary document generators
   - Added detailed AFM processing logging to track recipient data through Word document generation
+- **Expenditure Type Mapping Enhancement:**
+  - Enhanced expenditure type detection logic to use actual types from expediture_types table
+  - Added intelligent fallback logic to detect ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ from installment patterns
+  - Improved logging to track expenditure type resolution process
+  - Added debugging to identify when "ΔΑΠΑΝΗ" fallback is used vs actual expenditure types
 - **Export System Success:**
   - Document exports now work correctly without database schema errors
   - Both primary and secondary documents generate successfully
