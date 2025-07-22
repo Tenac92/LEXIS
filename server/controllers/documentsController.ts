@@ -1072,7 +1072,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
   console.log('[DocumentsController] Export request for document ID:', id, 'Format:', format, 'Generate both:', generateBoth);
 
   try {
-    // Get document with user details including gender and specialty
+    // Get document with user details including gender and specialty, plus attachments
     const { data: document, error } = await supabase
       .from('generated_documents')
       .select(`
@@ -1083,6 +1083,13 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           department,
           telephone,
           details
+        ),
+        attachments:attachment_id (
+          id,
+          filename,
+          original_name,
+          mime_type,
+          file_size
         )
       `)
       .eq('id', parseInt(id))
@@ -1104,6 +1111,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     // Also fetch missing data needed for document generation
     let projectData: any = null;
     let beneficiaryData: any[] = [];
+    let attachmentsData: any[] = [];
     let expenditureType = 'ΔΑΠΑΝΗ'; // Default fallback
     
     // Fetch related project data if project_index_id exists
@@ -1172,6 +1180,28 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
         logger.debug('Error fetching beneficiary data for document:', error);
       }
     }
+    
+    // Fetch attachments data if attachment_id exists
+    if (document.attachment_id && document.attachment_id.length > 0) {
+      try {
+        const { data: attachments, error: attachmentsError } = await supabase
+          .from('attachments')
+          .select('*')
+          .in('id', document.attachment_id);
+          
+        if (!attachmentsError && attachments) {
+          // Transform attachments to the format expected by document generators
+          attachmentsData = attachments.map((att: any) => att.original_name || att.filename || att.name);
+          console.log('[DocumentsController] Fetched attachments:', attachmentsData.length, attachmentsData);
+        }
+      } catch (error) {
+        logger.debug('Error fetching attachments data for document:', error);
+      }
+    }
+
+    console.log('[DocumentsController] Beneficiary data for export:', beneficiaryData.length, 'recipients');
+    console.log('[DocumentsController] AFM data check:', beneficiaryData.map(b => ({ name: b.firstname, afm: b.afm })));
+    console.log('[DocumentsController] Attachments data for export:', attachmentsData.length, 'attachments');
 
     const documentData = {
       ...document,
@@ -1185,7 +1215,9 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       project_title: (projectData as any)?.project_title || (projectData as any)?.event_description || '',
       expenditure_type: expenditureType,
       // Add recipients data
-      recipients: beneficiaryData
+      recipients: beneficiaryData,
+      // Add attachments data
+      attachments: attachmentsData
     };
 
     console.log('[DocumentsController] Document data prepared for export:', documentData.id);
