@@ -19,8 +19,12 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
     'http://www.sdegdaefk.gr'
   ];
   
-  // Add Replit domains to allowed origins in development
+  // Add Replit domains and local development to allowed origins in development
   if (process.env.NODE_ENV !== 'production') {
+    // Allow local development
+    allowedOrigins.push('http://127.0.0.1:5000');
+    allowedOrigins.push('http://localhost:5000');
+    
     // Allow the application's own domain
     if (origin && (
       origin.includes('replit.dev') || 
@@ -44,7 +48,9 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
     (process.env.NODE_ENV !== 'production' && (
       origin.includes('replit.dev') || 
       origin.includes('replit.app') ||
-      origin.includes('repl.co')
+      origin.includes('repl.co') ||
+      origin.includes('127.0.0.1') ||
+      origin.includes('localhost')
     ))
   );
   

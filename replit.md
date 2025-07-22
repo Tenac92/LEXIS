@@ -60,6 +60,27 @@ This is a full-stack web application built for Greek government budget and docum
 - Connection management and session validation
 - Broadcast system for multi-user notifications
 
+## Recent Performance Optimizations (January 2025)
+
+### Beneficiaries Page Performance Enhancement
+- **Memoized Payment Data**: Implemented useMemo for payment calculations to avoid O(n) filtering on every render
+- **Optimized Helper Functions**: Created pre-calculated payment maps for O(1) lookup performance
+- **Enhanced Search & Pagination**: Added memoization to search filtering and pagination logic
+- **Reduced Page Size**: Decreased items per page from 60 to 24 for faster rendering
+- **Query Optimization**: Enhanced React Query configurations with aggressive caching (staleTime, gcTime)
+- **Prevented Unnecessary Refetching**: Disabled refetchOnWindowFocus for stable queries
+
+### React Query Caching Improvements
+- Documents page: 5-minute staleTime with 15-minute cache retention
+- Budget history: 3-minute staleTime with 10-minute cache retention
+- Projects: 10-minute staleTime with 30-minute cache retention
+- Authentication: 5-minute staleTime with disabled window focus refetching
+
+### CORS Configuration Updates
+- Added localhost and 127.0.0.1 support for local development
+- Enhanced origin validation for Replit domains
+- Improved connection stability between frontend and backend
+
 ## Data Flow
 
 ### Authentication Flow

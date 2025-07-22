@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -63,7 +63,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { useMemo } from "react";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
@@ -154,7 +153,7 @@ export default function BeneficiariesPage() {
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(60);
+  const [itemsPerPage] = useState(24); // Reduced from 60 to 24 for better performance
   const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] = useState(false);
   const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] = useState<Beneficiary | null>(null);
   const { toast } = useToast();
@@ -200,23 +199,46 @@ export default function BeneficiariesPage() {
     enabled: beneficiaries.length > 0,
   });
 
-  // Helper function to get payments for a specific beneficiary
+  // PERFORMANCE OPTIMIZATION: Memoized payment data to avoid recalculation on every render
+  const beneficiaryPaymentData = useMemo(() => {
+    if (!Array.isArray(beneficiaryPayments)) return new Map();
+    
+    const paymentMap = new Map();
+    
+    // Group payments by beneficiary ID for O(1) lookup
+    beneficiaryPayments.forEach((payment: any) => {
+      const id = payment.beneficiary_id;
+      if (!paymentMap.has(id)) {
+        paymentMap.set(id, {
+          payments: [],
+          totalAmount: 0,
+          expenditureTypes: new Set()
+        });
+      }
+      
+      const data = paymentMap.get(id);
+      data.payments.push(payment);
+      data.totalAmount += parseFloat(payment.amount) || 0;
+      if (payment.expenditure_type) {
+        data.expenditureTypes.add(payment.expenditure_type);
+      }
+    });
+    
+    return paymentMap;
+  }, [beneficiaryPayments]);
+
+  // Optimized helper functions using memoized data
   const getPaymentsForBeneficiary = (beneficiaryId: number) => {
-    if (!Array.isArray(beneficiaryPayments)) return [];
-    return beneficiaryPayments.filter((payment: any) => payment.beneficiary_id === beneficiaryId);
+    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
   };
 
-  // Helper function to calculate total amount for a beneficiary
   const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
-    const payments = getPaymentsForBeneficiary(beneficiaryId);
-    return payments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0), 0);
+    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
   };
 
-  // Helper function to get unique expenditure types for a beneficiary
   const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
-    const payments = getPaymentsForBeneficiary(beneficiaryId);
-    const types = payments.map((payment: any) => payment.expenditure_type).filter(Boolean);
-    return Array.from(new Set(types));
+    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
+    return types ? Array.from(types) : [];
   };
 
   // Create mutation
@@ -319,24 +341,34 @@ export default function BeneficiariesPage() {
     });
   };
 
-  // Filter beneficiaries based on search
-  const filteredBeneficiaries = beneficiaries.filter((beneficiary) => {
+  // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
+  const filteredBeneficiaries = useMemo(() => {
+    if (!searchTerm.trim()) return beneficiaries;
+    
     const searchLower = searchTerm.toLowerCase();
-    return (
-      beneficiary.surname?.toLowerCase().includes(searchLower) ||
-      beneficiary.name?.toLowerCase().includes(searchLower) ||
-      beneficiary.afm?.toString().includes(searchLower) ||
-      beneficiary.region?.toLowerCase().includes(searchLower)
-    );
-  });
+    return beneficiaries.filter((beneficiary) => {
+      return (
+        beneficiary.surname?.toLowerCase().includes(searchLower) ||
+        beneficiary.name?.toLowerCase().includes(searchLower) ||
+        beneficiary.afm?.toString().includes(searchLower) ||
+        beneficiary.region?.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [beneficiaries, searchTerm]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedBeneficiaries = filteredBeneficiaries.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  );
+  // PERFORMANCE OPTIMIZATION: Memoized pagination
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedBeneficiaries = filteredBeneficiaries.slice(
+      startIndex,
+      startIndex + itemsPerPage,
+    );
+    
+    return { totalPages, paginatedBeneficiaries };
+  }, [filteredBeneficiaries, currentPage, itemsPerPage]);
+
+  const { totalPages, paginatedBeneficiaries } = paginationData;
 
   // Handle loading state
   if (isLoading) {
@@ -1069,22 +1101,29 @@ function BeneficiaryForm({
     queryKey: ["/api/auth/me"],
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   
   const { data: unitsData, isLoading: unitsLoading } = useQuery({ 
     queryKey: ["/api/public/units"],
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
   
   const { data: projectsData } = useQuery({ 
     queryKey: ["/api/projects"],
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   
   const { data: existingPayments } = useQuery({ 
     queryKey: ["/api/beneficiary-payments", beneficiary?.id], 
+    staleTime: 2 * 60 * 1000, // 2 minutes cache
+    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
+    refetchOnWindowFocus: false,
     enabled: !!beneficiary?.id 
   });
 
