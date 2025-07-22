@@ -436,13 +436,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: error.message });
       }
       
+      // Debug: Log the raw database response
+      console.log('[API] Raw units from database:', units?.slice(0, 2));
+      
       // Transform the data to match the expected format
       const transformedData = units.map(unit => ({
-        id: unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
-        unit: unit.unit, // Numeric ID for filtering (e.g., 2)
+        id: unit.unit || unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
+        unit: unit.id, // Numeric ID for filtering (e.g., 2)
         unit_name: unit.unit_name, // Full JSONB object
-        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.id || unit.unit)
+        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || unit.id)
       }));
+      
+      console.log('[API] Transformed units:', transformedData?.slice(0, 2));
       
       res.json(transformedData);
     } catch (error) {
