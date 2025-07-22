@@ -1083,13 +1083,6 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           department,
           telephone,
           details
-        ),
-        attachments:attachment_id (
-          id,
-          filename,
-          original_name,
-          mime_type,
-          file_size
         )
       `)
       .eq('id', parseInt(id))
@@ -1181,13 +1174,13 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       }
     }
     
-    // Fetch attachments data if attachment_id exists
-    if (document.attachment_id && document.attachment_id.length > 0) {
+    // Fetch attachments data if attachments_id exists (corrected field name)
+    if (document.attachments_id && document.attachments_id.length > 0) {
       try {
         const { data: attachments, error: attachmentsError } = await supabase
           .from('attachments')
           .select('*')
-          .in('id', document.attachment_id);
+          .in('id', document.attachments_id);
           
         if (!attachmentsError && attachments) {
           // Transform attachments to the format expected by document generators
@@ -1196,6 +1189,12 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
         }
       } catch (error) {
         logger.debug('Error fetching attachments data for document:', error);
+      }
+    } else {
+      // Fallback: check if document has a simple attachments field with text array
+      if (document.attachments && Array.isArray(document.attachments)) {
+        attachmentsData = document.attachments;
+        console.log('[DocumentsController] Using existing attachments field:', attachmentsData.length, attachmentsData);
       }
     }
 
