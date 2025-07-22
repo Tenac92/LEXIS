@@ -520,10 +520,11 @@ router.get('/', async (req: Request, res: Response) => {
       afm: req.query.afm as string
     };
 
-    // Get documents from database directly
+    // Get documents from database directly, ordered by most recent first
     let query = supabase
       .from('generated_documents')
-      .select('*');
+      .select('*')
+      .order('created_at', { ascending: false });
 
     // Apply filters only if they exist
     if (filters.unit_id) {

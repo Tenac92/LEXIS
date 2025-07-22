@@ -174,6 +174,10 @@ This is a full-stack web application built for Greek government budget and docum
   - Improved error boundaries and validation consistency
   - Enhanced debugging output for production readiness
 - **VERIFIED: Document creation modal now has proper type safety and improved form state management**
+- **Document Display Enhancement:**
+  - Fixed documents page sorting to show most recent documents first
+  - Added `ORDER BY created_at DESC` to documents API endpoint
+  - Users will now see their newest documents at the top of the list
 
 ### July 22, 2025 - CODEBASE CLEANUP AND UNUSED FILES REMOVAL COMPLETE
 - **MAJOR CLEANUP: Successfully identified and removed unused files throughout the codebase**
