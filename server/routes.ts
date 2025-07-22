@@ -438,9 +438,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Transform the data to match the expected format
       const transformedData = units.map(unit => ({
-        id: unit.id, // Use the numeric ID for proper mapping
-        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : unit.unit,
-        unit_name: unit.unit // Keep unit abbreviation for compatibility
+        id: unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
+        unit: unit.unit, // Numeric ID for filtering (e.g., 2)
+        unit_name: unit.unit_name, // Full JSONB object
+        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.id || unit.unit)
       }));
       
       res.json(transformedData);

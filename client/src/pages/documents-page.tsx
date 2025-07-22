@@ -87,14 +87,16 @@ export default function DocumentsPage() {
   }, [location, setLocation]);
 
   // Fetch units data for dropdown
-  const { data: allUnits = [] } = useQuery<Unit[]>({
+  const { data: allUnits = [], isLoading: unitsLoading, error: unitsError } = useQuery<Unit[]>({
     queryKey: ['/api/public/units'],
     queryFn: async () => {
       const response = await fetch('/api/public/units');
       if (!response.ok) {
         throw new Error('Failed to fetch units');
       }
-      return response.json();
+      const data = await response.json();
+      console.log('[DocumentsPage] Units API response:', data);
+      return data;
     }
   });
 
@@ -102,6 +104,10 @@ export default function DocumentsPage() {
   const userUnits = allUnits.filter(unit => 
     user?.unit_id?.includes(unit.unit)
   );
+  
+  console.log('[DocumentsPage] All units:', allUnits);
+  console.log('[DocumentsPage] User unit_id:', user?.unit_id);
+  console.log('[DocumentsPage] User accessible units:', userUnits);
 
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
