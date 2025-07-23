@@ -153,6 +153,12 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
     
+    console.log('[DocumentsController] V2 Raw request data:', {
+      unit, project_id, expenditure_type, 
+      recipientsCount: recipients?.length,
+      total_amount, attachments, esdian_field1, esdian_field2
+    });
+    
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
@@ -220,8 +226,18 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       afm: String(r.afm || '').trim(),
       amount: parseFloat(String(r.amount || 0)),
       installment: String(r.installment || 'Α').trim(),
+      installments: r.installments || [],
+      installmentAmounts: r.installmentAmounts || {},
       secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
+    
+    console.log('[DocumentsController] V2 Formatted recipients:', formattedRecipients.map(r => ({
+      name: `${r.firstname} ${r.lastname}`,
+      afm: r.afm,
+      amount: r.amount,
+      installments: r.installments,
+      installmentAmounts: r.installmentAmounts
+    })));
     
     const now = new Date().toISOString();
     
@@ -246,21 +262,9 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     let projectIndexId = null;
     let actualProjectId = null;
     
-    // Try to resolve project_id from na853 
-    try {
-      const { data: projectData, error: projectError } = await supabase
-        .from('Projects')
-        .select('id')
-        .eq('na853', project_na853)
-        .single();
-      
-      if (projectData) {
-        actualProjectId = projectData.id;
-        console.log('[DocumentsController] V2 Resolved project_id:', actualProjectId, 'from na853:', project_na853);
-      }
-    } catch (projectError) {
-      console.log('[DocumentsController] V2 Could not resolve project_id from na853:', project_na853, projectError);
-    }
+    // Use the numeric project_id directly (already validated above)
+    actualProjectId = numericProjectId;
+    console.log('[DocumentsController] V2 Using numeric project_id:', actualProjectId);
     
     // Find existing project_index entry for this project and unit
     if (actualProjectId) {
