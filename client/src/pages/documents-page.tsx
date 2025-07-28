@@ -44,6 +44,8 @@ interface Filters {
   amountTo: string;
   recipient: string;
   afm: string;
+  expenditureType: string;
+  na853: string;
 }
 
 interface User {
@@ -126,7 +128,9 @@ export default function DocumentsPage() {
     amountFrom: '',
     amountTo: '',
     recipient: '',
-    afm: ''
+    afm: '',
+    expenditureType: '',
+    na853: ''
   });
 
   // Ensure unit filter defaults to user's first unit when authentication completes
@@ -147,7 +151,9 @@ export default function DocumentsPage() {
     amountFrom: '',
     amountTo: '',
     recipient: '',
-    afm: ''
+    afm: '',
+    expenditureType: '',
+    na853: ''
   });
 
   // For main category filters (unit, status, user) - apply immediately
@@ -249,6 +255,14 @@ export default function DocumentsPage() {
         
         if (filters.afm) {
           queryParams.append('afm', filters.afm);
+        }
+        
+        if (filters.expenditureType) {
+          queryParams.append('expenditureType', filters.expenditureType);
+        }
+        
+        if (filters.na853) {
+          queryParams.append('na853', filters.na853);
         }
         
         const url = `/api/documents?${queryParams.toString()}`;
@@ -413,7 +427,8 @@ export default function DocumentsPage() {
                   </span>
                   {(advancedFilters.dateFrom || advancedFilters.dateTo || 
                     advancedFilters.amountFrom || advancedFilters.amountTo || 
-                    advancedFilters.recipient || advancedFilters.afm) && (
+                    advancedFilters.recipient || advancedFilters.afm ||
+                    advancedFilters.expenditureType || advancedFilters.na853) && (
                     <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                       Ενεργά
                     </span>
@@ -486,6 +501,24 @@ export default function DocumentsPage() {
                       onChange={(e) => setAdvancedFilterValues({ afm: e.target.value })}
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Τύπος Δαπάνης</label>
+                    <Input
+                      placeholder="Αναζήτηση με τύπο δαπάνης"
+                      value={advancedFilters.expenditureType}
+                      onChange={(e) => setAdvancedFilterValues({ expenditureType: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Κωδικός NA853</label>
+                    <Input
+                      placeholder="Αναζήτηση με κωδικό NA853"
+                      value={advancedFilters.na853}
+                      onChange={(e) => setAdvancedFilterValues({ na853: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button 
@@ -498,7 +531,9 @@ export default function DocumentsPage() {
                         amountFrom: '',
                         amountTo: '',
                         recipient: '',
-                        afm: ''
+                        afm: '',
+                        expenditureType: '',
+                        na853: ''
                       });
                     }}
                   >

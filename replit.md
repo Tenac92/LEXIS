@@ -280,6 +280,33 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 28, 2025 - DOCUMENT FILTERING ENHANCEMENT: EXPENDITURE TYPE & NA853 SEARCH COMPLETE
+- **MAJOR FILTERING ENHANCEMENT: Successfully implemented advanced document search capabilities for expenditure types and NA853 codes**
+- **Frontend Enhanced Search Interface:**
+  - Added "Τύπος Δαπάνης" (expenditure type) search field to advanced filters section
+  - Added "Κωδικός ΝΑ853" (NA853 code) search field to advanced filters section
+  - Enhanced filter interface with proper Greek labels and responsive design
+  - Updated clear filters functionality to reset new search fields
+- **Backend API Enhancement:**
+  - Enhanced `/api/documents` endpoint to accept expenditureType and na853 query parameters
+  - Implemented client-side filtering logic after data enrichment for complex join requirements
+  - Added intelligent filtering for expenditure types through project_index table relationships
+  - Enhanced filtering for NA853 codes from Projects table data
+- **Technical Implementation:**
+  - Fixed database column reference: "expenditure_types" column in expediture_types table
+  - Maintained existing recipient and AFM filtering functionality
+  - Proper case-insensitive string matching for expenditure type searches
+  - Exact substring matching for NA853 code searches
+- **Performance Optimization:**
+  - Combined existing data enrichment process with new filtering capabilities
+  - Minimal API changes ensuring backward compatibility
+  - Efficient filtering applied after enrichment to leverage existing data relationships
+- **User Experience Success:**
+  - Document cards continue displaying proper unit names, MIS codes, NA853 codes, and expenditure types
+  - Advanced filtering now supports comprehensive search across all key document attributes
+  - Clear filter functionality properly resets all search fields including new additions
+- **VERIFIED: Complete document filtering system operational with expenditure type and NA853 search capabilities**
+
 ### July 28, 2025 - CRITICAL AFM FIELD POPULATION FIX COMPLETE
 - **MAJOR FIX: Resolved AFM field population issue in generated document tables**
 - **Root Cause Identified:** AFM field stored as `numeric` in database but handled as `string` in JavaScript code

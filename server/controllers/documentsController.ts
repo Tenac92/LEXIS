@@ -626,7 +626,9 @@ router.get('/', async (req: Request, res: Response) => {
       amountFrom: req.query.amountFrom ? parseFloat(req.query.amountFrom as string) : undefined,
       amountTo: req.query.amountTo ? parseFloat(req.query.amountTo as string) : undefined,
       recipient: req.query.recipient as string,
-      afm: req.query.afm as string
+      afm: req.query.afm as string,
+      expenditureType: req.query.expenditureType as string,
+      na853: req.query.na853 as string
     };
 
     // Get documents from database directly, ordered by most recent first
@@ -811,7 +813,46 @@ router.get('/', async (req: Request, res: Response) => {
       })
     );
 
-    return res.json(enrichedDocuments);
+    // Apply filters to enriched documents (client-side filtering for expenditure type and NA853)
+    let filteredDocuments = enrichedDocuments;
+
+    // Filter by expenditure type
+    if (filters.expenditureType) {
+      filteredDocuments = filteredDocuments.filter(doc => 
+        doc.expenditure_type && 
+        doc.expenditure_type.toLowerCase().includes(filters.expenditureType.toLowerCase())
+      );
+    }
+
+    // Filter by NA853 code
+    if (filters.na853) {
+      filteredDocuments = filteredDocuments.filter(doc => 
+        doc.project_na853 && 
+        doc.project_na853.toString().includes(filters.na853)
+      );
+    }
+
+    // Filter by recipient name (if not already applied in database filters)
+    if (filters.recipient) {
+      filteredDocuments = filteredDocuments.filter(doc => {
+        if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
+        return doc.recipients.some(recipient => 
+          `${recipient.firstname} ${recipient.lastname}`.toLowerCase().includes(filters.recipient.toLowerCase())
+        );
+      });
+    }
+
+    // Filter by AFM (if not already applied in database filters)
+    if (filters.afm) {
+      filteredDocuments = filteredDocuments.filter(doc => {
+        if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
+        return doc.recipients.some(recipient => 
+          recipient.afm && recipient.afm.includes(filters.afm)
+        );
+      });
+    }
+
+    return res.json(filteredDocuments);
   } catch (error) {
     console.error('Error fetching documents:', error);
     return res.status(500).json({
