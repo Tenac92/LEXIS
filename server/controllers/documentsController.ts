@@ -542,8 +542,10 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     broadcastDocumentUpdate({
       type: 'DOCUMENT_UPDATE',
       documentId: data.id,
-      userId: (req as any).user?.id,
-      timestamp: new Date().toISOString()
+      data: {
+        userId: (req as any).user?.id,
+        timestamp: new Date().toISOString()
+      }
     });
 
     res.status(201).json({ 
@@ -1255,17 +1257,18 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
       }
     }
     
-    // Fetch attachments data if attachments_id exists (corrected field name)
-    if (document.attachments_id && document.attachments_id.length > 0) {
+    // Fetch attachments data if attachment_id exists (corrected field name)
+    if (document.attachment_id && document.attachment_id.length > 0) {
       try {
         const { data: attachments, error: attachmentsError } = await supabase
           .from('attachments')
           .select('*')
-          .in('id', document.attachments_id);
+          .in('id', document.attachment_id);
           
         if (!attachmentsError && attachments) {
           // Transform attachments to the format expected by document generators
-          attachmentsData = attachments.map((att: any) => att.original_name || att.filename || att.name);
+          // Use 'atachments' field as per database schema (note: typo in original schema)
+          attachmentsData = attachments.map((att: any) => att.atachments || att.original_name || att.filename || att.name);
           console.log('[DocumentsController] Fetched attachments:', attachmentsData.length, attachmentsData);
         }
       } catch (error) {
