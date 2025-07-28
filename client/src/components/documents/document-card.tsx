@@ -211,7 +211,7 @@ const DocumentCard = memo(function DocumentCard({
   const statusDetails = getStatusDetails(
     doc.status,
     docAny.is_correction,
-    doc.protocol_number_input,
+    doc.protocol_number_input || null,
   );
 
   // Debug log to check values
@@ -660,10 +660,20 @@ const DocumentCard = memo(function DocumentCard({
                   <span className="text-orange-700 font-medium text-sm">
                     Δικαιούχοι ({recipients?.length || 0}):
                   </span>
-                  <div className="mt-1 max-h-24 overflow-y-auto">
+                  <div className="mt-1 max-h-32 overflow-y-auto space-y-1">
                     {recipients?.slice(0, 3).map((recipient, index) => (
-                      <div key={index} className="text-sm text-orange-900">
-                        {recipient.lastname} {recipient.firstname}
+                      <div key={index} className="text-sm text-orange-900 flex justify-between items-center">
+                        <span className="truncate">
+                          {recipient.lastname} {recipient.firstname}
+                        </span>
+                        <span className="text-orange-700 font-medium ml-2 flex-shrink-0">
+                          {recipient.amount?.toLocaleString("el-GR", {
+                            style: "currency",
+                            currency: "EUR",
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
                       </div>
                     ))}
                     {recipients?.length > 3 && (
@@ -728,15 +738,9 @@ const DocumentCard = memo(function DocumentCard({
       </div>
 
       <OrthiEpanalipsiModal
-        open={showCorrectionModal}
+        isOpen={showCorrectionModal}
         onClose={() => setShowCorrectionModal(false)}
-        onSubmit={(correctionData: any) => {
-          console.log("Correction submitted:", correctionData);
-          // Handle the correction submission logic here
-          setShowCorrectionModal(false);
-        }}
-        originalProtocolNumber={doc.protocol_number_input || ""}
-        originalProtocolDate={doc.protocol_date || ""}
+        document={doc}
       />
 
       <DocumentDetailsModal

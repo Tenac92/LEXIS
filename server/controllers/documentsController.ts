@@ -601,59 +601,130 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Enrich documents with beneficiary payment data
+    // Enrich documents with beneficiary payment data and project/unit information
     const enrichedDocuments = await Promise.all(
       (documents || []).map(async (doc) => {
-        if (!doc.beneficiary_payments_id || !Array.isArray(doc.beneficiary_payments_id) || doc.beneficiary_payments_id.length === 0) {
-          return { ...doc, recipients: [] };
-        }
-
-        try {
-          // Fetch beneficiary payments for this document
-          const { data: payments, error: paymentsError } = await supabase
-            .from('beneficiary_payments')
-            .select(`
-              id,
-              amount,
-              installment,
-              status,
-              beneficiaries (
+        let recipients: any[] = [];
+        
+        // Fetch beneficiary payments for this document
+        if (doc.beneficiary_payments_id && Array.isArray(doc.beneficiary_payments_id) && doc.beneficiary_payments_id.length > 0) {
+          try {
+            const { data: payments, error: paymentsError } = await supabase
+              .from('beneficiary_payments')
+              .select(`
                 id,
-                afm,
-                surname,
-                name,
-                fathername,
-                region
-              )
-            `)
-            .in('id', doc.beneficiary_payments_id);
+                amount,
+                installment,
+                status,
+                beneficiaries (
+                  id,
+                  afm,
+                  surname,
+                  name,
+                  fathername,
+                  region
+                )
+              `)
+              .in('id', doc.beneficiary_payments_id);
 
-          if (paymentsError) {
-            console.error('Error fetching payments for document', doc.id, ':', paymentsError);
-            return { ...doc, recipients: [] };
+            if (!paymentsError && payments) {
+              // Transform payments into recipients format
+              recipients = payments.map(payment => {
+                const beneficiary = Array.isArray(payment.beneficiaries) ? payment.beneficiaries[0] : payment.beneficiaries;
+                return {
+                  id: beneficiary?.id,
+                  firstname: beneficiary?.name || '',
+                  lastname: beneficiary?.surname || '',
+                  fathername: beneficiary?.fathername || '',
+                  afm: beneficiary?.afm ? String(beneficiary.afm) : '',
+                  amount: parseFloat(payment.amount) || 0,
+                  installment: payment.installment || '',
+                  region: beneficiary?.region || '',
+                  status: payment.status || 'pending'
+                };
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching payments for document', doc.id, ':', err);
           }
-
-          // Transform payments into recipients format
-          const recipients = (payments || []).map(payment => {
-            const beneficiary = Array.isArray(payment.beneficiaries) ? payment.beneficiaries[0] : payment.beneficiaries;
-            return {
-              id: beneficiary?.id,
-              firstname: beneficiary?.name || '',
-              lastname: beneficiary?.surname || '',
-              fathername: beneficiary?.fathername || '',
-              afm: beneficiary?.afm ? String(beneficiary.afm) : '', // Convert numeric AFM to string
-              amount: parseFloat(payment.amount) || 0,
-              installment: payment.installment || '',
-              region: beneficiary?.region || '',
-              status: payment.status || 'pending'
-            };
-          });
-
-          return { ...doc, recipients };
-        } catch (err) {
-          console.error('Error enriching document', doc.id, ':', err);
-          return { ...doc, recipients: [] };
         }
+
+        // Fetch unit information
+        let unitInfo = null;
+        if (doc.unit_id) {
+          try {
+            const { data: unitData, error: unitError } = await supabase
+              .from('Monada')
+              .select('unit, unit_name')
+              .eq('id', doc.unit_id)
+              .single();
+            
+            if (!unitError && unitData) {
+              unitInfo = unitData;
+            }
+          } catch (err) {
+            console.error('Error fetching unit for document', doc.id, ':', err);
+          }
+        }
+
+        // Fetch project information through project_index
+        let projectInfo = null;
+        let expenditureTypeInfo = null;
+        if (doc.project_index_id) {
+          try {
+            // Get project index entry with related project data
+            const { data: indexData, error: indexError } = await supabase
+              .from('project_index')
+              .select(`
+                id,
+                project_id,
+                expediture_type_id,
+                Projects (
+                  id,
+                  mis,
+                  na853,
+                  event_description,
+                  project_title
+                )
+              `)
+              .eq('id', doc.project_index_id)
+              .single();
+
+            if (!indexError && indexData && indexData.Projects) {
+              projectInfo = indexData.Projects;
+              
+              // Get expenditure type information
+              if (indexData.expediture_type_id) {
+                const { data: expTypeData, error: expTypeError } = await supabase
+                  .from('expediture_types')
+                  .select('name')
+                  .eq('id', indexData.expediture_type_id)
+                  .single();
+                
+                if (!expTypeError && expTypeData) {
+                  expenditureTypeInfo = expTypeData;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching project info for document', doc.id, ':', err);
+          }
+        }
+
+        // Return enriched document with all necessary data for cards
+        return {
+          ...doc,
+          recipients: recipients as any[],
+          // Add fields that the document cards expect
+          unit: unitInfo?.unit || '',
+          unit_name: unitInfo?.unit_name || '',
+          project_id: (projectInfo as any)?.mis || '',
+          mis: (projectInfo as any)?.mis || '',
+          project_na853: (projectInfo as any)?.na853 || '',
+          project_title: (projectInfo as any)?.project_title || '',
+          event_description: (projectInfo as any)?.event_description || '',
+          expenditure_type: expenditureTypeInfo?.name || ''
+        };
       })
     );
 
@@ -723,8 +794,130 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    console.log('[DocumentsController] Successfully fetched', documents?.length || 0, 'documents');
-    res.json(documents || []);
+    // Enrich user documents with the same project/unit information
+    const enrichedUserDocuments = await Promise.all(
+      (documents || []).map(async (doc) => {
+        let recipients: any[] = [];
+        
+        // Fetch beneficiary payments for this document
+        if (doc.beneficiary_payments_id && Array.isArray(doc.beneficiary_payments_id) && doc.beneficiary_payments_id.length > 0) {
+          try {
+            const { data: payments, error: paymentsError } = await supabase
+              .from('beneficiary_payments')
+              .select(`
+                id,
+                amount,
+                installment,
+                status,
+                beneficiaries (
+                  id,
+                  afm,
+                  surname,
+                  name,
+                  fathername,
+                  region
+                )
+              `)
+              .in('id', doc.beneficiary_payments_id);
+
+            if (!paymentsError && payments) {
+              recipients = payments.map(payment => {
+                const beneficiary = Array.isArray(payment.beneficiaries) ? payment.beneficiaries[0] : payment.beneficiaries;
+                return {
+                  id: beneficiary?.id,
+                  firstname: beneficiary?.name || '',
+                  lastname: beneficiary?.surname || '',
+                  fathername: beneficiary?.fathername || '',
+                  afm: beneficiary?.afm ? String(beneficiary.afm) : '',
+                  amount: parseFloat(payment.amount) || 0,
+                  installment: payment.installment || '',
+                  region: beneficiary?.region || '',
+                  status: payment.status || 'pending'
+                };
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching payments for user document', doc.id, ':', err);
+          }
+        }
+
+        // Fetch unit information
+        let unitInfo = null;
+        if (doc.unit_id) {
+          try {
+            const { data: unitData, error: unitError } = await supabase
+              .from('Monada')
+              .select('unit, unit_name')
+              .eq('id', doc.unit_id)
+              .single();
+            
+            if (!unitError && unitData) {
+              unitInfo = unitData;
+            }
+          } catch (err) {
+            console.error('Error fetching unit for user document', doc.id, ':', err);
+          }
+        }
+
+        // Fetch project information through project_index
+        let projectInfo = null;
+        let expenditureTypeInfo = null;
+        if (doc.project_index_id) {
+          try {
+            const { data: indexData, error: indexError } = await supabase
+              .from('project_index')
+              .select(`
+                id,
+                project_id,
+                expediture_type_id,
+                Projects (
+                  id,
+                  mis,
+                  na853,
+                  event_description,
+                  project_title
+                )
+              `)
+              .eq('id', doc.project_index_id)
+              .single();
+
+            if (!indexError && indexData && indexData.Projects) {
+              projectInfo = indexData.Projects;
+              
+              if (indexData.expediture_type_id) {
+                const { data: expTypeData, error: expTypeError } = await supabase
+                  .from('expediture_types')
+                  .select('name')
+                  .eq('id', indexData.expediture_type_id)
+                  .single();
+                
+                if (!expTypeError && expTypeData) {
+                  expenditureTypeInfo = expTypeData;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching project info for user document', doc.id, ':', err);
+          }
+        }
+
+        return {
+          ...doc,
+          recipients: recipients as any[],
+          unit: unitInfo?.unit || '',
+          unit_name: unitInfo?.unit_name || '',
+          project_id: (projectInfo as any)?.mis || '',
+          mis: (projectInfo as any)?.mis || '',
+          project_na853: (projectInfo as any)?.na853 || '',
+          project_title: (projectInfo as any)?.project_title || '',
+          event_description: (projectInfo as any)?.event_description || '',
+          expenditure_type: expenditureTypeInfo?.name || ''
+        };
+      })
+    );
+
+    console.log('[DocumentsController] Successfully fetched', enrichedUserDocuments?.length || 0, 'enriched documents');
+    res.json(enrichedUserDocuments || []);
   } catch (error) {
     console.error('[DocumentsController] Error in user endpoint:', error);
     res.status(500).json({
