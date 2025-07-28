@@ -33,6 +33,7 @@ import { CreateDocumentDialog } from "@/components/documents/create-document-dia
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
+import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
 
 interface Filters {
   unit: string;
@@ -132,6 +133,9 @@ export default function DocumentsPage() {
     expenditureType: '',
     na853: ''
   });
+
+  // Fetch expenditure types for dropdown
+  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useExpenditureTypesForFilter();
 
   // Ensure unit filter defaults to user's first unit when authentication completes
   useEffect(() => {
@@ -504,11 +508,22 @@ export default function DocumentsPage() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Τύπος Δαπάνης</label>
-                    <Input
-                      placeholder="Αναζήτηση με τύπο δαπάνης"
+                    <Select
                       value={advancedFilters.expenditureType}
-                      onChange={(e) => setAdvancedFilterValues({ expenditureType: e.target.value })}
-                    />
+                      onValueChange={(value) => setAdvancedFilterValues({ expenditureType: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={expenditureTypesLoading ? "Φόρτωση..." : "Επιλέξτε τύπο δαπάνης"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Όλοι οι τύποι</SelectItem>
+                        {expenditureTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.expediture_types || type.name || ''}>
+                            {type.expediture_types || type.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">

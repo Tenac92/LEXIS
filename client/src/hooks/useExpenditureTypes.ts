@@ -8,7 +8,9 @@ import { queryClient } from '@/lib/queryClient';
 
 export interface ExpenditureType {
   id: number;
-  name: string;
+  expediture_types: string;
+  expediture_types_minor?: string;
+  name?: string; // Keep for backward compatibility
   description?: string;
   category?: string;
   is_active?: boolean;
