@@ -9,12 +9,12 @@ import {
   AlertCircle,
   CheckCircle2,
   PlusCircle,
-  Euro
+  Euro,
+  Info
 } from "lucide-react";
 import React, { useState } from 'react';
 
 import type { DashboardStats } from "@/lib/dashboard";
-import { formatCurrency } from "@/lib/services/dashboard";
 
 // Custom number formatting function
 const formatLargeNumber = (value: number): string => {
@@ -31,37 +31,81 @@ interface DocumentItem {
   id: number;
   title?: string;
   status?: string;
+  document_type?: string;
+  protocol_number?: string;
+  created_at?: string;
+  mis?: string;
+  unit?: string;
+  protocol_number_input?: string;
+  protocol_date?: string;
 }
 
 export function UserDashboard() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
-  // State for user's documents filtered by unit
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
+  // State for user's documents filtered by unit - should be number since unit_id is number
+  const [selectedUnit, setSelectedUnit] = useState<number | null>(null);
 
-  // Get unit-specific dashboard stats for ΔΑΕΦΚ-ΚΕ
+  // Get unit-specific dashboard stats with proper caching
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats", user?.unit_id?.[0]],
+    queryKey: ["/api/dashboard/stats"],
     retry: 2,
     refetchOnWindowFocus: false,
-    enabled: !!user?.unit_id?.[0] // Only fetch when user has units
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user?.unit_id && user.unit_id.length > 0 // Only fetch when user has units
   });
   
   // Query for user's recent documents with safe fallback
   const { data: userDocs = [], isLoading: isLoadingUserDocs } = useQuery<DocumentItem[]>({
-    queryKey: ["/api/documents/user"],
-    retry: 2,
-    refetchOnWindowFocus: false
+    queryKey: ["/api/documents/user", "recent"],
+    queryFn: async () => {
+      try {
+        if (!user?.unit_id || user.unit_id.length === 0) return [];
+        
+        const response = await fetch('/api/documents/user', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch documents: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const documents = Array.isArray(data) ? data : [];
+        
+        // Process documents to create meaningful titles and ensure proper structure
+        // Limit to 5 most recent documents
+        return documents.slice(0, 5).map(doc => ({
+          ...doc,
+          title: doc.title || doc.document_type || `Έγγραφο ${doc.protocol_number || doc.id}`,
+          status: doc.status || 'pending'
+        }));
+      } catch (error) {
+        console.error('[UserDashboard] Error fetching recent documents:', error);
+        return [];
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 3 * 60 * 1000, // 3 minutes
+    enabled: !!user?.unit_id && user.unit_id.length > 0
   });
 
   // Make sure userDocs is always an array
   const userDocuments = Array.isArray(userDocs) ? userDocs : [];
   
-  // Enhanced formatting for activity display
+  // Enhanced formatting for activity display with proper error handling
   const formatActivityDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString;
       return date.toLocaleDateString('el-GR', {
         day: '2-digit',
         month: '2-digit',
@@ -69,7 +113,7 @@ export function UserDashboard() {
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (e) {
+    } catch {
       return dateString;
     }
   };
@@ -94,9 +138,9 @@ export function UserDashboard() {
     );
   }
 
-  // Calculate user's activity stats
+  // Calculate user's activity stats - units are numbers, not strings
   const userUnits = user?.unit_id || [];
-  const userUnitCounts = userUnits.reduce((acc: Record<string, number>, unit: string) => {
+  const userUnitCounts = userUnits.reduce((acc: Record<number, number>, unit: number) => {
     acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
     return acc;
   }, {});
@@ -172,7 +216,14 @@ export function UserDashboard() {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</h3>
               <p className="text-2xl font-bold mt-1">
-                {formatLargeNumber(Object.values(stats.budgetTotals || {}).reduce((a, b) => a + b, 0))}
+                {(() => {
+                  const values = Object.values(stats.budgetTotals || {});
+                  const total = values.reduce((sum: number, val: any) => {
+                    const num = typeof val === 'number' ? val : 0;
+                    return sum + num;
+                  }, 0);
+                  return formatLargeNumber(total);
+                })()}
               </p>
             </div>
           </div>
@@ -194,7 +245,7 @@ export function UserDashboard() {
                   }`}
                   onClick={() => setSelectedUnit(selectedUnit === unit ? null : unit)}
                 >
-                  <p className="font-medium">{unit}</p>
+                  <p className="font-medium">Μονάδα {unit}</p>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-sm text-muted-foreground">Εκκρεμή έγγραφα</span>
                     <span className="font-semibold text-primary">{stats.pendingDocuments}</span>
@@ -218,20 +269,47 @@ export function UserDashboard() {
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : userDocuments.length > 0 ? (
-              userDocuments.slice(0, 5).map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                  <div>
-                    <p className="font-medium">{doc.title || "Έγγραφο χωρίς τίτλο"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {doc.status === 'pending' ? 'Εκκρεμεί' : 
-                       doc.status === 'completed' ? 'Ολοκληρώθηκε' : 'Σε επεξεργασία'}
-                    </p>
+              userDocuments.map((doc) => {
+                // Generate proper document title based on status and protocol number
+                // Use protocol_number_input for completed documents, otherwise show document ID
+                const documentTitle = (doc.status === 'completed' && doc.protocol_number_input) 
+                  ? doc.protocol_number_input 
+                  : (doc.protocol_number || `Έγγραφο #${doc.id}`);
+
+                return (
+                  <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div className="flex-1">
+                      <p className="font-medium">{documentTitle}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm text-muted-foreground">
+                          {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                           doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
+                           doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
+                        </p>
+                        {doc.created_at && (
+                          <span className="text-xs text-muted-foreground">
+                            • {new Date(doc.created_at).toLocaleDateString('el-GR')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        // For now, redirect to documents page with document ID in the URL
+                        // This allows users to find and view the specific document
+                        window.location.href = `/documents?highlight=${doc.id}`;
+                      }}
+                      className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                      title="Λεπτομέρειες"
+                    >
+                      <Info className="w-4 h-4 mr-2" />
+                      Προβολή
+                    </Button>
                   </div>
-                  <Link href={`/documents/${doc.id}`}>
-                    <Button size="sm" variant="ghost">Προβολή</Button>
-                  </Link>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center p-4 text-muted-foreground">
                 <p>Δεν βρέθηκαν πρόσφατα έγγραφα</p>

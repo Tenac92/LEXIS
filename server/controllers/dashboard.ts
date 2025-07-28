@@ -109,7 +109,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       .from('budget_history')
       .select(`
         id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
-        project:Projects!budget_history_project_id_fkey(mis, project_title)
+        Projects!budget_history_project_id_fkey(mis, project_title)
       `)
       .order('created_at', { ascending: false })
       .limit(5);
@@ -150,7 +150,7 @@ export async function getDashboardStats(req: Request, res: Response) {
         : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
       
       // Create a more meaningful description using project data
-      const projectMis = activity.project?.mis || activity.project_id;
+      const projectMis = activity.Projects?.[0]?.mis || activity.project_id;
       let description = `Έργο ${projectMis}: `;
       
       if (activity.change_type === 'admin_update') {
@@ -177,7 +177,7 @@ export async function getDashboardStats(req: Request, res: Response) {
         date: activity.created_at,
         createdBy: userName,
         documentId: activity.document_id,
-        mis: activity.mis,
+        mis: projectMis,
         previousAmount,
         newAmount,
         changeAmount: difference
