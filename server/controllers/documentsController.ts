@@ -159,6 +159,34 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       total_amount, attachments, esdian_field1, esdian_field2
     });
     
+    // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
+    // Let's resolve this by looking up the unit from the Monada table
+    let numericUnitId = null;
+    try {
+      const { data: unitData, error: unitError } = await supabase
+        .from('Monada')
+        .select('id')
+        .eq('unit', unit)
+        .single();
+      
+      if (unitData) {
+        numericUnitId = unitData.id;
+        console.log('[DocumentsController] V2 Resolved unit string', unit, 'to numeric ID:', numericUnitId);
+      } else {
+        console.error('[DocumentsController] V2 Could not resolve unit:', unit, 'Error:', unitError);
+        return res.status(400).json({ 
+          message: `Unit "${unit}" not found in database`, 
+          error: 'Invalid unit identifier' 
+        });
+      }
+    } catch (error) {
+      console.error('[DocumentsController] V2 Error resolving unit:', error);
+      return res.status(500).json({ 
+        message: 'Error resolving unit identifier', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+    
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
@@ -231,7 +259,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
     
-    console.log('[DocumentsController] V2 Formatted recipients:', formattedRecipients.map(r => ({
+    console.log('[DocumentsController] V2 Formatted recipients:', formattedRecipients.map((r: any) => ({
       name: `${r.firstname} ${r.lastname}`,
       afm: r.afm,
       amount: r.amount,
@@ -247,7 +275,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       const { data: monadaData } = await supabase
         .from('Monada')
         .select('director')
-        .eq('id', parseInt(unit)) // Parse unit as integer since monada.id is now bigint
+        .eq('id', numericUnitId) // Use resolved numeric unit ID
         .single();
       
       if (monadaData && monadaData.director) {
@@ -273,15 +301,15 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           .from('project_index')
           .select('id')
           .eq('project_id', actualProjectId)
-          .eq('monada_id', parseInt(unit))
+          .eq('monada_id', numericUnitId)
           .limit(1);
         
         if (projectIndexData && projectIndexData.length > 0) {
           projectIndexId = projectIndexData[0].id;
-          console.log('[DocumentsController] V2 Found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', unit);
+          console.log('[DocumentsController] V2 Found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', numericUnitId);
         }
       } catch (indexError) {
-        console.log('[DocumentsController] V2 No project_index found for project_id:', actualProjectId, 'unit:', unit, 'Error:', indexError);
+        console.log('[DocumentsController] V2 No project_index found for project_id:', actualProjectId, 'unit:', numericUnitId, 'Error:', indexError);
       }
     }
 
@@ -312,7 +340,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
 
     // Create document with exact schema match and default values where needed
     const documentPayload = {
-      unit_id: parseInt(unit), // Parse unit as integer since unit_id is now bigint
+      unit_id: numericUnitId, // Use resolved numeric unit ID
       total_amount: parseFloat(String(total_amount)) || 0,
       generated_by: (req as any).user?.id || null,
       project_index_id: projectIndexId, // Add project_index_id to document
@@ -420,13 +448,21 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
                   amount: installmentAmount,
                   status: 'pending',
                   installment: installmentName, // Use specific installment name
-                  unit_id: parseInt(unit),
+                  unit_id: numericUnitId,
                   project_index_id: projectIndexId,
                   created_at: now,
                   updated_at: now
                 };
                 
                 console.log('[DocumentsController] V2 Creating installment payment:', installmentName, 'Amount:', installmentAmount);
+                console.log('[DocumentsController] V2 Payment payload with IDs:', {
+                  document_id: data.id,
+                  beneficiary_id: beneficiaryId,
+                  unit_id: numericUnitId,
+                  project_index_id: projectIndexId,
+                  unit_raw: unit,
+                  projectIndexId_raw: projectIndexId
+                });
                 
                 const { data: paymentData, error: paymentError } = await supabase
                   .from('beneficiary_payments')
@@ -450,13 +486,19 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
               amount: recipient.amount,
               status: 'pending',
               installment: recipient.installment,
-              unit_id: parseInt(unit),
+              unit_id: numericUnitId,
               project_index_id: projectIndexId,
               created_at: now,
               updated_at: now
             };
             
             console.log('[DocumentsController] V2 Creating single payment (fallback):', beneficiaryPayment);
+            console.log('[DocumentsController] V2 Single payment IDs check:', {
+              unit_id: numericUnitId,
+              project_index_id: projectIndexId,
+              unit_raw: unit,
+              projectIndexId_null: projectIndexId === null
+            });
             
             const { data: paymentData, error: paymentError } = await supabase
               .from('beneficiary_payments')
@@ -497,7 +539,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     // Broadcast document update to all connected clients
     broadcastDocumentUpdate({
-      type: 'DOCUMENT_CREATED',
+      type: 'DOCUMENT_UPDATE',
       documentId: data.id,
       userId: req.user.id,
       timestamp: new Date().toISOString()
