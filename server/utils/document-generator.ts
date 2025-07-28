@@ -403,7 +403,14 @@ export class DocumentGenerator {
           ? `${lastname} ${firstname}`.trim()
           : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
       const afm = recipient.afm || "";
-      console.log(`[PrimaryDocument] Processing recipient ${index + 1}: name="${fullName}", afm="${afm}"`);
+      console.log(`[PrimaryDocument] Processing recipient ${index + 1}:`, {
+        name: fullName,
+        afm: afm,
+        afm_length: afm.length,
+        afm_type: typeof afm,
+        raw_afm: recipient.afm,
+        recipient_keys: Object.keys(recipient)
+      });
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
       if (

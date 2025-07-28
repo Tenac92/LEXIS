@@ -99,6 +99,14 @@ export class SecondaryDocumentFormatter {
           : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
 
       const afm = recipient.afm || "";
+      console.log(`[SecondaryDocument] Processing recipient ${index + 1}:`, {
+        name: fullName,
+        afm: afm,
+        afm_length: afm.length,
+        afm_type: typeof afm,
+        raw_afm: recipient.afm,
+        recipient_keys: Object.keys(recipient)
+      });
       const rowNumber = (index + 1).toString() + ".";
       const amount =
         typeof recipient.amount === "number" ? recipient.amount : 0;

@@ -1279,7 +1279,13 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     }
 
     console.log('[DocumentsController] Beneficiary data for export:', beneficiaryData.length, 'recipients');
-    console.log('[DocumentsController] AFM data check:', beneficiaryData.map(b => ({ name: b.firstname, afm: b.afm })));
+    console.log('[DocumentsController] AFM data check:', beneficiaryData.map(b => ({ 
+      name: `${b.firstname} ${b.lastname}`, 
+      afm: b.afm,
+      afm_type: typeof b.afm,
+      afm_length: b.afm ? b.afm.length : 0,
+      all_fields: Object.keys(b)
+    })));
     console.log('[DocumentsController] Attachments data for export:', attachmentsData.length, 'attachments');
     console.log('[DocumentsController] Full document data being passed to generators:', {
       recipients: beneficiaryData.length,
