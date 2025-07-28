@@ -15,6 +15,58 @@ const logger = createLogger('DocumentsController');
 export const router = Router();
 
 // Export the router as default
+// Debug endpoint to check expenditure type data
+router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
+  try {
+    const docId = parseInt(req.params.docId);
+    
+    // Get document with project_index_id
+    const { data: doc, error: docError } = await supabase
+      .from('generated_documents')
+      .select('id, project_index_id')
+      .eq('id', docId)
+      .single();
+      
+    if (docError || !doc) {
+      return res.json({ error: 'Document not found', docError });
+    }
+    
+    let projectIndexData = null;
+    let expenditureTypeData = null;
+    
+    if (doc.project_index_id) {
+      // Get project index data
+      const { data: indexData, error: indexError } = await supabase
+        .from('project_index')
+        .select('id, project_id, expediture_type_id')
+        .eq('id', doc.project_index_id)
+        .single();
+        
+      projectIndexData = { indexData, indexError };
+      
+      if (indexData && indexData.expediture_type_id) {
+        // Get expenditure type data
+        const { data: expTypeData, error: expTypeError } = await supabase
+          .from('expediture_types')
+          .select('id, name')
+          .eq('id', indexData.expediture_type_id)
+          .single();
+          
+        expenditureTypeData = { expTypeData, expTypeError };
+      }
+    }
+    
+    res.json({
+      document: doc,
+      projectIndex: projectIndexData,
+      expenditureType: expenditureTypeData
+    });
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+  }
+});
+
 export default router;
 
 /**
@@ -711,6 +763,37 @@ router.get('/', async (req: Request, res: Response) => {
           }
         }
 
+        // Fallback: Try to get expenditure type from attachments if not found via project_index
+        if (!expenditureTypeInfo && doc.attachment_id && Array.isArray(doc.attachment_id) && doc.attachment_id.length > 0) {
+          try {
+            const { data: attachmentData, error: attachmentError } = await supabase
+              .from('attachments')
+              .select('expediture_type_id')
+              .in('id', doc.attachment_id)
+              .limit(1);
+              
+            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expediture_type_id) {
+              const expenditureTypeIds = Array.isArray(attachmentData[0].expediture_type_id) 
+                ? attachmentData[0].expediture_type_id 
+                : [attachmentData[0].expediture_type_id];
+                
+              if (expenditureTypeIds.length > 0) {
+                const { data: expTypeData, error: expTypeError } = await supabase
+                  .from('expediture_types')
+                  .select('name')
+                  .eq('id', expenditureTypeIds[0])
+                  .single();
+                  
+                if (!expTypeError && expTypeData) {
+                  expenditureTypeInfo = expTypeData;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching expenditure type from attachments for document', doc.id, ':', err);
+          }
+        }
+
         // Return enriched document with all necessary data for cards
         return {
           ...doc,
@@ -898,6 +981,37 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
             }
           } catch (err) {
             console.error('Error fetching project info for user document', doc.id, ':', err);
+          }
+        }
+
+        // Fallback: Try to get expenditure type from attachments if not found via project_index
+        if (!expenditureTypeInfo && doc.attachment_id && Array.isArray(doc.attachment_id) && doc.attachment_id.length > 0) {
+          try {
+            const { data: attachmentData, error: attachmentError } = await supabase
+              .from('attachments')
+              .select('expediture_type_id')
+              .in('id', doc.attachment_id)
+              .limit(1);
+              
+            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expediture_type_id) {
+              const expenditureTypeIds = Array.isArray(attachmentData[0].expediture_type_id) 
+                ? attachmentData[0].expediture_type_id 
+                : [attachmentData[0].expediture_type_id];
+                
+              if (expenditureTypeIds.length > 0) {
+                const { data: expTypeData, error: expTypeError } = await supabase
+                  .from('expediture_types')
+                  .select('name')
+                  .eq('id', expenditureTypeIds[0])
+                  .single();
+                  
+                if (!expTypeError && expTypeData) {
+                  expenditureTypeInfo = expTypeData;
+                }
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching expenditure type from attachments for user document', doc.id, ':', err);
           }
         }
 
