@@ -48,7 +48,7 @@ router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
         // Get expenditure type data
         const { data: expTypeData, error: expTypeError } = await supabase
           .from('expediture_types')
-          .select('id, name')
+          .select('id, expediture_types')
           .eq('id', indexData.expediture_type_id)
           .single();
           
@@ -749,12 +749,12 @@ router.get('/', async (req: Request, res: Response) => {
               if (indexData.expediture_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expediture_types')
-                  .select('name')
+                  .select('expediture_types')
                   .eq('id', indexData.expediture_type_id)
                   .single();
                 
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = expTypeData;
+                  expenditureTypeInfo = { name: expTypeData.expediture_types };
                 }
               }
             }
@@ -780,12 +780,12 @@ router.get('/', async (req: Request, res: Response) => {
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expediture_types')
-                  .select('name')
+                  .select('expediture_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
                   
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = expTypeData;
+                  expenditureTypeInfo = { name: expTypeData.expediture_types };
                 }
               }
             }
@@ -970,12 +970,12 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
               if (indexData.expediture_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expediture_types')
-                  .select('name')
+                  .select('expediture_types')
                   .eq('id', indexData.expediture_type_id)
                   .single();
                 
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = expTypeData;
+                  expenditureTypeInfo = { name: expTypeData.expediture_types };
                 }
               }
             }
@@ -1001,12 +1001,12 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expediture_types')
-                  .select('name')
+                  .select('expediture_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
                   
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = expTypeData;
+                  expenditureTypeInfo = { name: expTypeData.expediture_types };
                 }
               }
             }
