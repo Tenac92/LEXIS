@@ -402,13 +402,15 @@ export class DocumentGenerator {
         !fathername || fathername.trim() === ""
           ? `${lastname} ${firstname}`.trim()
           : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
-      const afm = recipient.afm || "";
+      // Convert numeric AFM to string for document display
+      const afm = recipient.afm ? String(recipient.afm) : "";
       console.log(`[PrimaryDocument] Processing recipient ${index + 1}:`, {
         name: fullName,
         afm: afm,
         afm_length: afm.length,
         afm_type: typeof afm,
         raw_afm: recipient.afm,
+        raw_afm_type: typeof recipient.afm,
         recipient_keys: Object.keys(recipient)
       });
       const rowNumber = (index + 1).toString() + ".";

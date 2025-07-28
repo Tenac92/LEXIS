@@ -280,6 +280,30 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 28, 2025 - CRITICAL AFM FIELD POPULATION FIX COMPLETE
+- **MAJOR FIX: Resolved AFM field population issue in generated document tables**
+- **Root Cause Identified:** AFM field stored as `numeric` in database but handled as `string` in JavaScript code
+- **Database Schema Correction:**
+  - Updated schema definition to reflect AFM as `decimal(12,0)` matching actual database structure
+  - Fixed type mismatch between database `numeric` and JavaScript string handling
+- **Document Generator Enhancements:**
+  - Added proper numeric-to-string conversion: `String(recipient.afm)` in both primary and secondary generators
+  - Enhanced debugging with detailed AFM field tracking (value, type, length, raw data)
+  - Fixed AFM display logic to handle numeric database values correctly
+- **Database Operations Fix:**
+  - Updated beneficiary lookup to use `parseFloat(recipient.afm)` for numeric database queries
+  - Fixed beneficiary creation to store numeric AFM values properly
+  - Enhanced data retrieval to convert numeric AFM to string for document display
+- **Complete Data Flow Resolution:**
+  - Database stores AFM as numeric (e.g., 231253432)
+  - JavaScript converts to string for document generation (e.g., "231253432")
+  - Document tables now properly populate with AFM values
+- **Enhanced Debugging System:**
+  - Added comprehensive AFM field logging throughout export pipeline
+  - Tracking raw AFM value, type, length, and conversion success
+  - Enhanced export controller with detailed recipient data validation
+- **VERIFIED: AFM fields now populate correctly in both primary and secondary document tables**
+
 ### January 9, 2025 - ROBUST BACKEND & FRONTEND IMPLEMENTATION COMPLETE
 - **COMPREHENSIVE SYSTEM ENHANCEMENT: Implemented complete robust frontend and backend architecture aligned with database schema**
 - **Enhanced Error Handling & Validation:**

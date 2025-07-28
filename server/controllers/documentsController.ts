@@ -389,11 +389,12 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         // Step 1: Look up or create beneficiary
         let beneficiaryId = null;
         try {
-          // Try to find existing beneficiary by AFM
+          // Try to find existing beneficiary by AFM (convert string to numeric for database query)
+          const numericAfm = parseFloat(recipient.afm);
           const { data: existingBeneficiary, error: findError } = await supabase
             .from('beneficiaries')
             .select('id')
-            .eq('afm', recipient.afm)
+            .eq('afm', numericAfm)
             .single();
           
           if (existingBeneficiary) {
@@ -402,11 +403,11 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           } else if (findError && findError.code === 'PGRST116') {
             // Beneficiary not found, create new one
             const newBeneficiary = {
-              afm: recipient.afm,
+              afm: numericAfm, // Use numeric AFM for database storage
               surname: recipient.lastname,
               name: recipient.firstname,
               fathername: recipient.fathername,
-              region: 1, // Default region
+              region: '1', // Region should be text according to schema
               date: new Date().toISOString().split('T')[0],
               created_at: now,
               updated_at: now
@@ -541,7 +542,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     broadcastDocumentUpdate({
       type: 'DOCUMENT_UPDATE',
       documentId: data.id,
-      userId: req.user.id,
+      userId: (req as any).user?.id,
       timestamp: new Date().toISOString()
     });
 
@@ -638,7 +639,7 @@ router.get('/', async (req: Request, res: Response) => {
               firstname: beneficiary?.name || '',
               lastname: beneficiary?.surname || '',
               fathername: beneficiary?.fathername || '',
-              afm: beneficiary?.afm || '',
+              afm: beneficiary?.afm ? String(beneficiary.afm) : '', // Convert numeric AFM to string
               amount: parseFloat(payment.amount) || 0,
               installment: payment.installment || '',
               region: beneficiary?.region || '',
