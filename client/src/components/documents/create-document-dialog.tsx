@@ -442,9 +442,10 @@ export function CreateDocumentDialog({
             return true;
           }
           
-          // Check if the unit ID matches any of the user's allowed units
-          const unitId = item.id || item.unit || '';
-          return userAllowedUnits.includes(unitId);
+          // Check if the unit number matches any of the user's allowed units
+          // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
+          const unitNumber = item.unit;
+          return userAllowedUnits.includes(unitNumber);
         });
         
         console.log("[CreateDocument] Filtered units count:", filteredUnits.length, "User unit restrictions:", userAllowedUnits);
@@ -564,7 +565,7 @@ export function CreateDocumentDialog({
       if (user?.unit_id && user.unit_id.length > 0) {
         // Convert user's unit ID to unit name for form
         console.log("[CreateDocument] User unit_id:", user.unit_id, "Available units:", units);
-        const userUnitData = units.find((item: any) => item.id === user.unit_id![0]);
+        const userUnitData = units.find((item: any) => item.unit === user.unit_id![0]);
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
           console.log("[CreateDocument] Auto-selected unit:", defaultUnit, "for user unit_id:", user.unit_id[0]);
@@ -735,7 +736,7 @@ export function CreateDocumentDialog({
       }
       // Case 2: User has only one assigned unit - auto-select it
       else if (user?.unit_id && user.unit_id.length === 1) {
-        const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
+        const userUnitData = units.find((unit: any) => unit.unit === user.unit_id![0]);
         if (userUnitData) {
           unitToSelect = userUnitData.id;
           console.log("[CreateDocument] Auto-selecting user's assigned unit:", unitToSelect);
