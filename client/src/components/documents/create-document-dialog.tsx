@@ -432,7 +432,24 @@ export function CreateDocumentDialog({
           userSingleUnit = userUnitData?.unit || "";
         }
         
-        const processedUnits = data.map((item: any) => {
+        // Filter units based on user's assigned unit_id array
+        const userAllowedUnits = user?.unit_id || [];
+        console.log("[CreateDocument] User allowed units:", userAllowedUnits, "Available units from API:", data.length);
+        
+        const filteredUnits = data.filter((item: any) => {
+          // If user has no unit restrictions, show all units (admin case)
+          if (!user?.unit_id || user.unit_id.length === 0) {
+            return true;
+          }
+          
+          // Check if the unit ID matches any of the user's allowed units
+          const unitId = item.id || item.unit || '';
+          return userAllowedUnits.includes(unitId);
+        });
+        
+        console.log("[CreateDocument] Filtered units count:", filteredUnits.length, "User unit restrictions:", userAllowedUnits);
+
+        const processedUnits = filteredUnits.map((item: any) => {
           // For debugging purposes
           if (!item.unit && !item.id) {
             console.warn('Unit item missing both unit and id:', item);
@@ -703,37 +720,54 @@ export function CreateDocumentDialog({
   
   useEffect(() => {
     // Ensure unit auto-selection happens at the right time and persists
-    if (!user || !open) return;
+    if (!user || !open || !units || units.length === 0) return;
     
     const currentUnit = form.getValues().unit;
-    // Convert user's unit ID to unit name for auto-selection
-    let userUnit = "";
-    if (user?.unit_id && user.unit_id.length > 0) {
-      const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
-      userUnit = userUnitData?.name || "";
-    }
     
-    // Auto-select if no unit is selected but user has a unit assigned
-    if (!currentUnit && userUnit && !unitAutoSelectionRef.current.hasSelected) {
-      // Auto-selected user's unit
+    // Auto-select if no unit is selected and we haven't already auto-selected
+    if (!currentUnit && !unitAutoSelectionRef.current.hasSelected) {
+      let unitToSelect = "";
       
-      // Set in form with immediate effect
-      form.setValue("unit", userUnit, { shouldValidate: false });
-      
-      // Track selection to prevent overrides
-      unitAutoSelectionRef.current = {
-        hasSelected: true,
-        selectedUnit: userUnit
-      };
-      
-      // Force the form to maintain this value
-      setTimeout(() => {
-        const currentValue = form.getValues().unit;
-        if (!currentValue || currentValue !== userUnit) {
-          form.setValue("unit", userUnit, { shouldValidate: false });
-          // Re-enforced unit selection
+      // Case 1: Only one unit available - auto-select it
+      if (units.length === 1) {
+        unitToSelect = units[0].id;
+        console.log("[CreateDocument] Auto-selecting single available unit:", unitToSelect);
+      }
+      // Case 2: User has only one assigned unit - auto-select it
+      else if (user?.unit_id && user.unit_id.length === 1) {
+        const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
+        if (userUnitData) {
+          unitToSelect = userUnitData.id;
+          console.log("[CreateDocument] Auto-selecting user's assigned unit:", unitToSelect);
         }
-      }, 500);
+      }
+      
+      // Apply the auto-selection
+      if (unitToSelect) {
+        // Set in form with immediate effect
+        form.setValue("unit", unitToSelect, { shouldValidate: false });
+        
+        // Update form context as well
+        updateFormData({
+          ...formData,
+          unit: unitToSelect
+        });
+        
+        // Track selection to prevent overrides
+        unitAutoSelectionRef.current = {
+          hasSelected: true,
+          selectedUnit: unitToSelect
+        };
+        
+        // Force the form to maintain this value
+        setTimeout(() => {
+          const currentValue = form.getValues().unit;
+          if (!currentValue || currentValue !== unitToSelect) {
+            form.setValue("unit", unitToSelect, { shouldValidate: false });
+            console.log("[CreateDocument] Re-enforced unit selection:", unitToSelect);
+          }
+        }, 500);
+      }
     }
     
     // Re-enforce selection if it was cleared but should be maintained
@@ -741,9 +775,9 @@ export function CreateDocumentDialog({
         unitAutoSelectionRef.current.selectedUnit && 
         !currentUnit) {
       form.setValue("unit", unitAutoSelectionRef.current.selectedUnit, { shouldValidate: false });
-      // Restored cleared unit
+      console.log("[CreateDocument] Restored cleared unit:", unitAutoSelectionRef.current.selectedUnit);
     }
-  }, [user, open, form]);
+  }, [user, open, units, form, formData, updateFormData]);
   
   // Reset selection tracking when dialog closes
   useEffect(() => {
@@ -2450,12 +2484,16 @@ export function CreateDocumentDialog({
                           }
                         }}
                         value={field.value}
-                        disabled={unitsLoading || user?.units?.length === 1}
+                        disabled={unitsLoading || (units && units.length <= 1)}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
                             <SelectValue 
-                              placeholder="Επιλέξτε μονάδα" 
+                              placeholder={
+                                units && units.length === 1 
+                                  ? "Αυτόματη επιλογή μονάδας" 
+                                  : "Επιλέξτε μονάδα"
+                              } 
                             />
                           </SelectTrigger>
                         </FormControl>
