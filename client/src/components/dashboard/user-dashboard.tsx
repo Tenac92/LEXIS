@@ -101,6 +101,15 @@ export function UserDashboard() {
   // Make sure userDocs is always an array
   const userDocuments = Array.isArray(userDocs) ? userDocs : [];
   
+  // Query for unit names to display proper unit information
+  const { data: units = [] } = useQuery({
+    queryKey: ["/api/public/units"],
+    staleTime: 10 * 60 * 1000, // 10 minutes - units don't change often
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 2,
+    refetchOnWindowFocus: false
+  });
+  
   // Enhanced formatting for activity display with proper error handling
   const formatActivityDate = (dateString: string) => {
     try {
@@ -144,6 +153,12 @@ export function UserDashboard() {
     acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
     return acc;
   }, {});
+  
+  // Helper function to get unit name by ID
+  const getUnitName = (unitId: number): string => {
+    const unit = Array.isArray(units) ? units.find((u: any) => u.id === unitId) : null;
+    return unit?.name || `Μονάδα ${unitId}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -245,7 +260,7 @@ export function UserDashboard() {
                   }`}
                   onClick={() => setSelectedUnit(selectedUnit === unit ? null : unit)}
                 >
-                  <p className="font-medium">Μονάδα {unit}</p>
+                  <p className="font-medium">{getUnitName(unit)}</p>
                   <div className="flex justify-between items-center mt-2">
                     <span className="text-sm text-muted-foreground">Εκκρεμή έγγραφα</span>
                     <span className="font-semibold text-primary">{stats.pendingDocuments}</span>

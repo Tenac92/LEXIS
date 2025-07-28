@@ -62,6 +62,15 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Performance Optimizations (January 2025)
 
+### Dashboard Page Improvements (January 28, 2025)
+- **Eliminated Duplicate Components**: Removed redundant dashboard.tsx, consolidated to unified UserDashboard
+- **Fixed TypeScript Errors**: Resolved type mismatches between string/number for unit IDs
+- **Enhanced Unit Display**: Now fetches and displays proper unit names instead of unit ID numbers
+- **Improved Performance**: Added React Query caching (2-min staleTime for stats, 10-min for units)
+- **Better Error Handling**: Enhanced error boundaries and user feedback
+- **Consolidated Types**: Using shared DashboardStats interface from lib/dashboard
+- **Consistent Greek Localization**: Proper date formatting and status translations
+
 ### Beneficiaries Page Performance Enhancement
 - **Memoized Payment Data**: Implemented useMemo for payment calculations to avoid O(n) filtering on every render
 - **Optimized Helper Functions**: Created pre-calculated payment maps for O(1) lookup performance
@@ -71,6 +80,7 @@ This is a full-stack web application built for Greek government budget and docum
 - **Prevented Unnecessary Refetching**: Disabled refetchOnWindowFocus for stable queries
 
 ### React Query Caching Improvements
+- Dashboard: 2-minute staleTime with 5-minute cache retention for stats, 10-minute for units
 - Documents page: 5-minute staleTime with 15-minute cache retention
 - Budget history: 3-minute staleTime with 10-minute cache retention
 - Projects: 10-minute staleTime with 30-minute cache retention
