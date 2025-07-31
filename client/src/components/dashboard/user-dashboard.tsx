@@ -111,9 +111,6 @@ export function UserDashboard() {
     enabled: !!user?.unit_id && user.unit_id.length > 0
   });
 
-  // Make sure userDocs is always an array
-  const userDocuments = Array.isArray(userDocs) ? userDocs : [];
-  
   // Query for unit names to display proper unit information
   const { data: units = [] } = useQuery({
     queryKey: ["/api/public/units"],
@@ -122,23 +119,23 @@ export function UserDashboard() {
     retry: 2,
     refetchOnWindowFocus: false
   });
-  
-  // Enhanced formatting for activity display with proper error handling
-  const formatActivityDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return dateString;
-      return date.toLocaleDateString('el-GR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch {
-      return dateString;
-    }
-  };
+
+  // Calculate completion percentage and trends - MOVED TO TOP TO FIX HOOKS ORDER
+  const completionRate = useMemo(() => {
+    if (!stats?.totalDocuments) return 0;
+    return Math.round((stats.completedDocuments / stats.totalDocuments) * 100);
+  }, [stats?.totalDocuments, stats?.completedDocuments]);
+
+  const budgetUtilization = useMemo(() => {
+    const totalBudget = Object.values(stats?.budgetTotals || {}).reduce((sum, val) => sum + val, 0);
+    const activeBudget = stats?.budgetTotals?.completed || 0;
+    if (!totalBudget) return 0;
+    return Math.round((activeBudget / totalBudget) * 100);
+  }, [stats?.budgetTotals]);
+
+  const projectsTotal = useMemo(() => {
+    return Object.values(stats?.projectStats || {}).reduce((sum, val) => sum + val, 0);
+  }, [stats?.projectStats]);
 
   // Enhanced skeleton loader component
   const DashboardSkeleton = () => (
@@ -201,33 +198,13 @@ export function UserDashboard() {
 
   // Calculate user's activity stats - units are numbers, not strings
   const userUnits = user?.unit_id || [];
-  const userUnitCounts = userUnits.reduce((acc: Record<number, number>, unit: number) => {
-    acc[unit] = stats.pendingDocuments; // We're simplifying here - ideally we'd have per-unit data
-    return acc;
-  }, {});
+  const userDocuments = Array.isArray(userDocs) ? userDocs : [];
   
   // Helper function to get unit name by ID
   const getUnitName = (unitId: number): string => {
     const unit = Array.isArray(units) ? units.find((u: any) => u.id === unitId) : null;
     return unit?.name || `Μονάδα ${unitId}`;
   };
-
-  // Calculate completion percentage and trends
-  const completionRate = useMemo(() => {
-    if (!stats.totalDocuments) return 0;
-    return Math.round((stats.completedDocuments / stats.totalDocuments) * 100);
-  }, [stats.totalDocuments, stats.completedDocuments]);
-
-  const budgetUtilization = useMemo(() => {
-    const totalBudget = Object.values(stats.budgetTotals || {}).reduce((sum, val) => sum + val, 0);
-    const activeBudget = stats.budgetTotals?.completed || 0;
-    if (!totalBudget) return 0;
-    return Math.round((activeBudget / totalBudget) * 100);
-  }, [stats.budgetTotals]);
-
-  const projectsTotal = useMemo(() => {
-    return Object.values(stats.projectStats || {}).reduce((sum, val) => sum + val, 0);
-  }, [stats.projectStats]);
 
   return (
     <div className="space-y-6">
@@ -501,10 +478,12 @@ export function UserDashboard() {
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          onClick={() => window.location.href = `/documents?highlight=${doc.id}`}
+                          asChild
                           className="shrink-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                         >
-                          <ArrowUpRight className="w-4 h-4" />
+                          <Link href={`/documents?highlight=${doc.id}`}>
+                            <ArrowUpRight className="w-4 h-4" />
+                          </Link>
                         </Button>
                       </div>
                     </div>
