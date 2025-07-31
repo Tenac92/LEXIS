@@ -26,6 +26,7 @@ import {
   Target
 } from "lucide-react";
 import React, { useState, useMemo } from 'react';
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 
 import type { DashboardStats } from "@/lib/dashboard";
 
@@ -59,6 +60,10 @@ export function UserDashboard() {
   
   // State for user's documents filtered by unit - should be number since unit_id is number
   const [selectedUnit, setSelectedUnit] = useState<number | null>(null);
+  
+  // State for document details modal
+  const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
 
   // Get unit-specific dashboard stats with proper caching
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
@@ -478,12 +483,14 @@ export function UserDashboard() {
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          asChild
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDocument(doc);
+                            setShowDocumentModal(true);
+                          }}
                           className="shrink-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                         >
-                          <Link href={`/documents?highlight=${doc.id}`}>
-                            <ArrowUpRight className="w-4 h-4" />
-                          </Link>
+                          <Info className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
@@ -640,6 +647,18 @@ export function UserDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Document Details Modal */}
+      {selectedDocument && (
+        <DocumentDetailsModal
+          open={showDocumentModal}
+          onOpenChange={(open) => {
+            setShowDocumentModal(open);
+            if (!open) setSelectedDocument(null);
+          }}
+          document={selectedDocument as any}
+        />
+      )}
     </div>
   );
 }
