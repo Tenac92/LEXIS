@@ -356,6 +356,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Admin system statistics endpoint - admin only access
+  app.get('/api/admin/system-stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Check if user has admin role
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Access denied. This operation requires admin privileges.'
+        });
+      }
+
+      console.log('[Admin] Fetching system statistics');
+
+      // Get system-wide statistics
+      const [usersRes, documentsRes, projectsRes, budgetRes] = await Promise.all([
+        supabase.from('users').select('id, role, created_at').order('created_at', { ascending: false }),
+        supabase.from('generated_documents').select('id, status, created_at').order('created_at', { ascending: false }),
+        supabase.from('Projects').select('id, created_at').order('created_at', { ascending: false }),
+        supabase.from('project_budget').select('ethsia_pistosi, katanomes_etous, user_view').order('created_at', { ascending: false })
+      ]);
+
+      if (usersRes.error || documentsRes.error || projectsRes.error || budgetRes.error) {
+        console.error('[Admin] Error fetching system stats:', {
+          users: usersRes.error,
+          documents: documentsRes.error,
+          projects: projectsRes.error,
+          budget: budgetRes.error
+        });
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to fetch system statistics'
+        });
+      }
+
+      // Calculate statistics
+      const totalUsers = usersRes.data?.length || 0;
+      const totalDocuments = documentsRes.data?.length || 0;
+      const totalProjects = projectsRes.data?.length || 0;
+      
+      // Document status breakdown
+      const documentsByStatus = documentsRes.data?.reduce((acc: Record<string, number>, doc) => {
+        acc[doc.status || 'unknown'] = (acc[doc.status || 'unknown'] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      // User role breakdown
+      const usersByRole = usersRes.data?.reduce((acc: Record<string, number>, user) => {
+        acc[user.role || 'unknown'] = (acc[user.role || 'unknown'] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      // Budget totals
+      let totalBudget = 0;
+      let allocatedBudget = 0;
+      let usedBudget = 0;
+      
+      budgetRes.data?.forEach(budget => {
+        totalBudget += parseFloat(budget.ethsia_pistosi?.toString() || '0');
+        allocatedBudget += parseFloat(budget.katanomes_etous?.toString() || '0');
+        usedBudget += parseFloat(budget.user_view?.toString() || '0');
+      });
+
+      // Recent activity (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const recentDocuments = documentsRes.data?.filter(doc => 
+        new Date(doc.created_at) > thirtyDaysAgo
+      ).length || 0;
+
+      const recentUsers = usersRes.data?.filter(user => 
+        new Date(user.created_at) > thirtyDaysAgo
+      ).length || 0;
+
+      console.log(`[Admin] System stats calculated: ${totalUsers} users, ${totalDocuments} documents, ${totalProjects} projects`);
+
+      return res.json({
+        status: 'success',
+        data: {
+          systemHealth: {
+            status: 'healthy',
+            uptime: process.uptime(),
+            memoryUsage: process.memoryUsage(),
+            nodeVersion: process.version
+          },
+          totals: {
+            users: totalUsers,
+            documents: totalDocuments,
+            projects: totalProjects,
+            budgetTotal: totalBudget,
+            budgetAllocated: allocatedBudget,
+            budgetUsed: usedBudget
+          },
+          breakdowns: {
+            documentsByStatus,
+            usersByRole
+          },
+          recentActivity: {
+            documentsLast30Days: recentDocuments,
+            usersLast30Days: recentUsers
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+    } catch (error) {
+      console.error('[Admin] Error in system stats endpoint:', error);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch system statistics',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Health check endpoint
   app.get('/api/health', async (req: Request, res: Response) => {
     try {
