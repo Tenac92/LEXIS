@@ -48,6 +48,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: beneficiariesRouter } = await import('./controllers/beneficiaryController');
   app.use('/api/beneficiaries', beneficiariesRouter);
   
+  // Register project resolver controller for NA853 and project resolution endpoints
+  const { default: projectResolverRouter } = await import('./controllers/projectResolverController');
+  app.use('/api/projects', projectResolverRouter);
+  
   // Beneficiary payments endpoint for enhanced display
   app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
