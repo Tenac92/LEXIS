@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import {
   Loader2,
@@ -10,9 +13,19 @@ import {
   CheckCircle2,
   PlusCircle,
   Euro,
-  Info
+  Info,
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Calendar,
+  Users,
+  Building,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
+  Target
 } from "lucide-react";
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import type { DashboardStats } from "@/lib/dashboard";
 
@@ -127,12 +140,51 @@ export function UserDashboard() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  // Enhanced skeleton loader component
+  const DashboardSkeleton = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-8 w-48" />
+        <div className="flex gap-2">
+          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-10 w-28" />
+        </div>
       </div>
-    );
+      
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="p-6">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-6 w-16" />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <Card key={i} className="p-6">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, j) => (
+                <div key={j} className="p-4 rounded-lg border">
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              ))}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
   }
 
   if (error || !stats) {
@@ -160,6 +212,23 @@ export function UserDashboard() {
     return unit?.name || `Μονάδα ${unitId}`;
   };
 
+  // Calculate completion percentage and trends
+  const completionRate = useMemo(() => {
+    if (!stats.totalDocuments) return 0;
+    return Math.round((stats.completedDocuments / stats.totalDocuments) * 100);
+  }, [stats.totalDocuments, stats.completedDocuments]);
+
+  const budgetUtilization = useMemo(() => {
+    const totalBudget = Object.values(stats.budgetTotals || {}).reduce((sum, val) => sum + val, 0);
+    const activeBudget = stats.budgetTotals?.completed || 0;
+    if (!totalBudget) return 0;
+    return Math.round((activeBudget / totalBudget) * 100);
+  }, [stats.budgetTotals]);
+
+  const projectsTotal = useMemo(() => {
+    return Object.values(stats.projectStats || {}).reduce((sum, val) => sum + val, 0);
+  }, [stats.projectStats]);
+
   return (
     <div className="space-y-6">
       {/* Header with quick actions */}
@@ -185,224 +254,412 @@ export function UserDashboard() {
         </div>
       </div>
 
-      {/* Main stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <FileText className="h-6 w-6 text-blue-600" />
+      {/* Enhanced Main Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {/* Documents Overview */}
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Έγγραφα</CardTitle>
+                  <p className="text-2xl font-bold text-foreground">{stats.totalDocuments}</p>
+                </div>
+              </div>
+              <Badge variant="secondary" className="text-xs">
+                {completionRate}% ολοκληρώθηκε
+              </Badge>
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Σύνολο Εγγράφων</h3>
-              <p className="text-2xl font-bold mt-1">{stats.totalDocuments}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Πρόοδος</span>
+                <span className="font-medium">{stats.completedDocuments}/{stats.totalDocuments}</span>
+              </div>
+              <Progress value={completionRate} className="h-2" />
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-100 rounded-full">
-              <AlertCircle className="h-6 w-6 text-yellow-600" />
+        {/* Pending Documents */}
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-yellow-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-50 rounded-lg">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Εκκρεμή</CardTitle>
+                  <p className="text-2xl font-bold text-foreground">{stats.pendingDocuments}</p>
+                </div>
+              </div>
+              {stats.pendingDocuments > 0 && (
+                <div className="flex items-center gap-1 text-yellow-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs">Χρειάζεται ενέργεια</span>
+                </div>
+              )}
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Εκκρεμή Έγγραφα</h3>
-              <p className="text-2xl font-bold mt-1">{stats.pendingDocuments}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="text-sm text-muted-foreground">
+              {stats.pendingDocuments === 0 ? 
+                "Όλα τα έγγραφα ολοκληρώθηκαν" : 
+                `${stats.pendingDocuments} έγγραφα περιμένουν επεξεργασία`
+              }
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-100 rounded-full">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+        {/* Projects Overview */}
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-green-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <Target className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Έργα</CardTitle>
+                  <p className="text-2xl font-bold text-foreground">{projectsTotal}</p>
+                </div>
+              </div>
+              <div className="text-right text-xs">
+                <div className="text-green-600 font-medium">{stats.projectStats?.completed || 0} ολοκληρώθηκαν</div>
+                <div className="text-yellow-600">{stats.projectStats?.pending_reallocation || 0} αναδιανομή</div>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Ολοκληρωμένα Έγγραφα</h3>
-              <p className="text-2xl font-bold mt-1">{stats.completedDocuments}</p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Ενεργά:</span>
+                <span className="font-medium">{stats.projectStats?.active || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Εκκρεμή:</span>
+                <span className="font-medium">{stats.projectStats?.pending || 0}</span>
+              </div>
             </div>
-          </div>
+          </CardContent>
         </Card>
 
-        <Card className="p-6 hover:shadow-lg transition-shadow">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-100 rounded-full">
-              <Euro className="h-6 w-6 text-purple-600" />
+        {/* Budget Overview */}
+        <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-purple-500">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <Euro className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Προϋπολογισμός</CardTitle>
+                  <p className="text-2xl font-bold text-foreground">
+                    {(() => {
+                      const values = Object.values(stats.budgetTotals || {});
+                      const total = values.reduce((sum: number, val: any) => {
+                        const num = typeof val === 'number' ? val : 0;
+                        return sum + num;
+                      }, 0);
+                      return formatLargeNumber(total);
+                    })()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {budgetUtilization > 50 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span className="text-xs font-medium">{budgetUtilization}% χρήση</span>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</h3>
-              <p className="text-2xl font-bold mt-1">
-                {(() => {
-                  const values = Object.values(stats.budgetTotals || {});
-                  const total = values.reduce((sum: number, val: any) => {
-                    const num = typeof val === 'number' ? val : 0;
-                    return sum + num;
-                  }, 0);
-                  return formatLargeNumber(total);
-                })()}
-              </p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Αξιοποίηση</span>
+                <span className="font-medium">{formatLargeNumber(stats.budgetTotals?.completed || 0)}</span>
+              </div>
+              <Progress value={budgetUtilization} className="h-2" />
             </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
 
-      {/* User's activity and documents */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* My Units */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Οι Μονάδες μου</h3>
+      {/* Enhanced User Activity Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* My Units - Enhanced */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Building className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Οι Μονάδες μου</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {userUnits.length > 0 ? (
+                userUnits.map((unit, index) => (
+                  <div 
+                    key={index} 
+                    className={`p-3 rounded-lg cursor-pointer border transition-all duration-200 ${
+                      selectedUnit === unit 
+                        ? 'bg-primary/10 border-primary shadow-sm' 
+                        : 'bg-card hover:bg-muted/50 border-border hover:shadow-sm'
+                    }`}
+                    onClick={() => setSelectedUnit(selectedUnit === unit ? null : unit)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <p className="font-medium text-sm">{getUnitName(unit)}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        ID: {unit}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">Εκκρεμή έγγραφα</span>
+                      <span className="text-sm font-semibold text-primary">{stats.pendingDocuments}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Δεν βρέθηκαν μονάδες</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Documents - Enhanced */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Πρόσφατα Έγγραφά μου</CardTitle>
+              </div>
+              <Badge variant="outline">
+                {userDocuments.length} συνολικά
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {isLoadingUserDocs ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="p-3 border rounded-lg">
+                      <Skeleton className="h-4 w-3/4 mb-2" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : userDocuments.length > 0 ? (
+                userDocuments.map((doc) => {
+                  const documentTitle = (doc.status === 'completed' && doc.protocol_number_input) 
+                    ? doc.protocol_number_input 
+                    : (doc.protocol_number || `Έγγραφο #${doc.id}`);
+
+                  return (
+                    <div key={doc.id} className="p-3 border rounded-lg hover:shadow-sm transition-all duration-200">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm truncate">{documentTitle}</p>
+                            <Badge 
+                              variant={doc.status === 'completed' ? 'default' : 
+                                     doc.status === 'pending' ? 'secondary' : 'outline'}
+                              className="text-xs shrink-0"
+                            >
+                              {doc.status === 'pending' ? 'Εκκρεμεί' : 
+                               doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
+                               doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {doc.created_at && new Date(doc.created_at).toLocaleDateString('el-GR')}
+                            {doc.mis && (
+                              <>
+                                <span>•</span>
+                                <span>MIS: {doc.mis}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => window.location.href = `/documents?highlight=${doc.id}`}
+                          className="shrink-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                        >
+                          <ArrowUpRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center p-6 text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm mb-3">Δεν βρέθηκαν πρόσφατα έγγραφα</p>
+                  <Button size="sm" asChild>
+                    <Link href="/documents">
+                      <PlusCircle className="w-4 h-4 mr-2" />
+                      Δημιουργία Εγγράφου
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
+            {userDocuments.length > 0 && (
+              <div className="mt-4 pt-3 border-t">
+                <Button variant="link" size="sm" asChild className="w-full">
+                  <Link href="/documents">
+                    Προβολή όλων των εγγράφων
+                    <ArrowUpRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enhanced Recent Activity Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Πρόσφατη Δραστηριότητα</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {stats.recentActivity?.length || 0} εγγραφές
+              </Badge>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/budget/history">
+                  Προβολή όλων
+                  <ArrowUpRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           <div className="space-y-4">
-            {userUnits.length > 0 ? (
-              userUnits.map((unit, index) => (
+            {stats.recentActivity && stats.recentActivity.length > 0 ? (
+              stats.recentActivity.map((activity, index) => (
                 <div 
-                  key={index} 
-                  className={`p-4 rounded-lg cursor-pointer border transition-colors ${
-                    selectedUnit === unit ? 'bg-primary/10 border-primary' : 'bg-card hover:bg-muted/50 border-border'
-                  }`}
-                  onClick={() => setSelectedUnit(selectedUnit === unit ? null : unit)}
+                  key={activity.id} 
+                  className="relative p-4 rounded-lg border hover:shadow-sm transition-all duration-200 bg-gradient-to-r from-card to-card/50"
                 >
-                  <p className="font-medium">{getUnitName(unit)}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-sm text-muted-foreground">Εκκρεμή έγγραφα</span>
-                    <span className="font-semibold text-primary">{stats.pendingDocuments}</span>
+                  {/* Timeline indicator */}
+                  <div className="absolute left-0 top-4 w-1 h-8 bg-primary/20 rounded-r-full"></div>
+                  
+                  <div className="pl-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm leading-relaxed mb-2">{activity.description}</p>
+                        
+                        <div className="flex flex-wrap items-center gap-2">
+                          {activity.documentId && (
+                            <Link href={`/documents/${activity.documentId}`}>
+                              <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">
+                                <FileText className="w-3 h-3 mr-1" />
+                                Έγγραφο #{activity.documentId}
+                              </Badge>
+                            </Link>
+                          )}
+                          
+                          {activity.changeAmount !== undefined && (
+                            <Badge 
+                              variant={activity.changeAmount > 0 ? "default" : "destructive"} 
+                              className="text-xs font-medium"
+                            >
+                              {activity.changeAmount > 0 ? (
+                                <TrendingUp className="w-3 h-3 mr-1" />
+                              ) : (
+                                <TrendingDown className="w-3 h-3 mr-1" />
+                              )}
+                              {activity.changeAmount > 0 ? '+' : ''}
+                              {formatLargeNumber(Math.abs(activity.changeAmount))}
+                            </Badge>
+                          )}
+                          
+                          {activity.mis && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Target className="w-3 h-3 mr-1" />
+                              MIS: {activity.mis}
+                            </Badge>
+                          )}
+                          
+                          {activity.createdBy && (
+                            <Badge variant="outline" className="text-xs">
+                              <Users className="w-3 h-3 mr-1" />
+                              {activity.createdBy}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+                        <Calendar className="w-3 h-3" />
+                        <span>{new Date(activity.date).toLocaleDateString('el-GR', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="p-4 text-center text-muted-foreground">
-                Δεν βρέθηκαν μονάδες
+              <div className="text-center p-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Δεν υπάρχει καταγεγραμμένη πρόσφατη δραστηριότητα</p>
+                <p className="text-xs mt-1">Η δραστηριότητα θα εμφανιστεί εδώ όταν γίνουν αλλαγές στον προϋπολογισμό</p>
               </div>
             )}
           </div>
-        </Card>
-
-        {/* Recent Documents */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Πρόσφατα Έγγραφά μου</h3>
-          <div className="space-y-4">
-            {isLoadingUserDocs ? (
-              <div className="flex justify-center p-6">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : userDocuments.length > 0 ? (
-              userDocuments.map((doc) => {
-                // Generate proper document title based on status and protocol number
-                // Use protocol_number_input for completed documents, otherwise show document ID
-                const documentTitle = (doc.status === 'completed' && doc.protocol_number_input) 
-                  ? doc.protocol_number_input 
-                  : (doc.protocol_number || `Έγγραφο #${doc.id}`);
-
-                return (
-                  <div key={doc.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                    <div className="flex-1">
-                      <p className="font-medium">{documentTitle}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-sm text-muted-foreground">
-                          {doc.status === 'pending' ? 'Εκκρεμεί' : 
-                           doc.status === 'completed' ? 'Ολοκληρώθηκε' : 
-                           doc.status === 'approved' ? 'Εγκεκριμένο' : 'Σε επεξεργασία'}
-                        </p>
-                        {doc.created_at && (
-                          <span className="text-xs text-muted-foreground">
-                            • {new Date(doc.created_at).toLocaleDateString('el-GR')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => {
-                        // For now, redirect to documents page with document ID in the URL
-                        // This allows users to find and view the specific document
-                        window.location.href = `/documents?highlight=${doc.id}`;
-                      }}
-                      className="ml-2 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                      title="Λεπτομέρειες"
-                    >
-                      <Info className="w-4 h-4 mr-2" />
-                      Προβολή
-                    </Button>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center p-4 text-muted-foreground">
-                <p>Δεν βρέθηκαν πρόσφατα έγγραφα</p>
-                <Button className="mt-4" size="sm" asChild>
-                  <Link href="/documents/new">Δημιουργία Εγγράφου</Link>
-                </Button>
-              </div>
-            )}
-          </div>
-          <div className="mt-4 text-right">
-            <Button variant="link" size="sm" asChild>
-              <Link href="/documents">Προβολή όλων</Link>
-            </Button>
-          </div>
-        </Card>
-      </div>
-
-      {/* Recent Activity - Expanded section */}
-      <Card className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Πρόσφατη Δραστηριότητα</h3>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/budget/history">Προβολή όλων</Link>
-          </Button>
-        </div>
-        
-        <div className="space-y-4">
-          {stats.recentActivity && stats.recentActivity.length > 0 ? (
-            stats.recentActivity.map((activity) => (
-              <div 
-                key={activity.id} 
-                className="p-4 rounded-lg border hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <p className="font-medium">{activity.description}</p>
-                    <div className="flex flex-wrap items-center mt-2 gap-2">
-                      {activity.documentId && (
-                        <Link href={`/documents/${activity.documentId}`}>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer">
-                            Έγγραφο #{activity.documentId}
-                          </span>
-                        </Link>
-                      )}
-                      {activity.changeAmount !== undefined && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          activity.changeAmount > 0 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {activity.changeAmount > 0 ? '+' : ''}
-                          {activity.changeAmount.toFixed(2)}€
-                        </span>
-                      )}
-                      {activity.mis && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                          MIS: {activity.mis}
-                        </span>
-                      )}
-                      {activity.createdBy && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                          {activity.createdBy}
-                        </span>
-                      )}
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                        {new Date(activity.date).toLocaleDateString('el-GR')}
-                      </span>
-                    </div>
-                  </div>
+          
+          {/* Summary bar at bottom */}
+          {stats.recentActivity && stats.recentActivity.length > 0 && (
+            <div className="mt-6 pt-4 border-t bg-muted/30 rounded-lg p-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Συνολική δραστηριότητα σήμερα</span>
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1">
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-green-600">
+                      {stats.recentActivity.filter(a => (a.changeAmount || 0) > 0).length} αυξήσεις
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <TrendingDown className="w-4 h-4 text-red-600" />
+                    <span className="font-medium text-red-600">
+                      {stats.recentActivity.filter(a => (a.changeAmount || 0) < 0).length} μειώσεις
+                    </span>
+                  </span>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="text-center p-6 text-muted-foreground">
-              Δεν υπάρχει καταγεγραμμένη πρόσφατη δραστηριότητα
             </div>
           )}
-        </div>
+        </CardContent>
       </Card>
     </div>
   );
