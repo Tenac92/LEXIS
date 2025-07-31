@@ -82,9 +82,18 @@ function useWebSocketUpdatesOriginal() {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws?t=${Date.now()}`;
-
+      const port = window.location.port;
+      const hostname = window.location.hostname;
+      
+      // Construct WebSocket URL with proper port handling
+      let wsUrl;
+      if (port && port !== '80' && port !== '443') {
+        wsUrl = `${protocol}//${hostname}:${port}/ws?t=${Date.now()}`;
+      } else {
+        wsUrl = `${protocol}//${hostname}/ws?t=${Date.now()}`;
+      }
+      
+      console.log('[WebSocket] Connecting to:', wsUrl);
       const ws = new WebSocket(wsUrl, ['notifications']);
       wsRef.current = ws;
 

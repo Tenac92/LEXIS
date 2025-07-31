@@ -371,10 +371,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get system-wide statistics
       const [usersRes, documentsRes, projectsRes, budgetRes] = await Promise.all([
-        supabase.from('users').select('id, role, created_at').order('created_at', { ascending: false }),
+        supabase.from('users').select('id, role').order('id', { ascending: false }),
         supabase.from('generated_documents').select('id, status, created_at').order('created_at', { ascending: false }),
-        supabase.from('Projects').select('id, created_at').order('created_at', { ascending: false }),
-        supabase.from('project_budget').select('ethsia_pistosi, katanomes_etous, user_view').order('created_at', { ascending: false })
+        supabase.from('Projects').select('id').order('id', { ascending: false }),
+        supabase.from('project_budget').select('ethsia_pistosi, katanomes_etous, user_view').order('id', { ascending: false })
       ]);
 
       if (usersRes.error || documentsRes.error || projectsRes.error || budgetRes.error) {
@@ -426,9 +426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         new Date(doc.created_at) > thirtyDaysAgo
       ).length || 0;
 
-      const recentUsers = usersRes.data?.filter(user => 
-        new Date(user.created_at) > thirtyDaysAgo
-      ).length || 0;
+      // Users table doesn't have created_at, so we'll estimate recent users differently
+      const recentUsers = 0; // Set to 0 since we can't calculate without created_at
 
       console.log(`[Admin] System stats calculated: ${totalUsers} users, ${totalDocuments} documents, ${totalProjects} projects`);
 

@@ -78,7 +78,19 @@ export function useStableWebSocket() {
 
     try {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+      const port = window.location.port;
+      const hostname = window.location.hostname;
+      
+      // Construct WebSocket URL with proper port handling
+      let wsUrl;
+      if (port && port !== '80' && port !== '443') {
+        wsUrl = `${protocol}//${hostname}:${port}/ws`;
+      } else {
+        wsUrl = `${protocol}//${hostname}/ws`;
+      }
+      
+      console.log('[StableWebSocket] Connecting to:', wsUrl);
+      const ws = new WebSocket(wsUrl);
       
       globalConnections.set(key, ws);
 

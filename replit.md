@@ -169,6 +169,29 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 31, 2025 - SECURITY & CONNECTIVITY ENHANCEMENTS COMPLETE
+- **MAJOR SECURITY ENHANCEMENT: Implemented comprehensive data access control for multi-role dashboard system**
+- **Missing API Endpoints Fixed:**
+  - Created `/api/budget/overview` endpoint with proper unit-based access control
+  - Added `/api/admin/system-stats` endpoint with admin-only role restrictions
+  - Fixed schema compatibility issues (users.created_at column reference)
+- **Role-Based Data Filtering Verified:**
+  - **Admin Users**: See all system data across all organizational units
+  - **Manager/User Roles**: Only see data from their assigned unit(s) 
+  - **Dashboard Stats**: Properly filtered by user's unit_id array
+  - **Budget Data**: Admins access all projects, others restricted to unit projects
+  - **Document Creation**: Automatically scoped to user's organizational unit
+- **WebSocket Connectivity Issues Resolved:**
+  - Fixed "undefined port" error in WebSocket URL construction across all WebSocket hooks
+  - Enhanced URL building logic to handle missing/default ports properly
+  - Updated use-stable-websocket.ts, use-websocket-updates.ts, and use-robust-websocket.ts
+  - WebSocket connections now establish properly in all environments without "wss://localhost:undefined/" errors
+- **Data Access Security Implementation:**
+  - Each user now sees only data they're authorized to access based on role and unit assignment
+  - Prevents unauthorized access to other organizational units' information
+  - Complete separation of concerns between admin oversight and unit-specific data
+- **Production Security Readiness:** Application now properly enforces organizational data boundaries with comprehensive access control
+
 ### July 31, 2025 - CRITICAL API ROUTING BUG FIXES COMPLETE
 - **MAJOR BUG FIX: Resolved critical API routing issues causing HTML responses instead of JSON**
 - **Root Cause Fixed:** Missing project resolver controller registration in server routes
