@@ -71,6 +71,17 @@ This is a full-stack web application built for Greek government budget and docum
 - **Consolidated Types**: Using shared DashboardStats interface from lib/dashboard
 - **Consistent Greek Localization**: Proper date formatting and status translations
 
+### Role-Specific Dashboard Architecture (July 31, 2025)
+- **Created Specialized Dashboards**: Separated dashboards by user role for optimal user experience
+  - **AdminDashboard**: System oversight, user management, notifications, system health monitoring
+  - **ManagerDashboard**: Team oversight, budget analysis, activity monitoring, project supervision
+  - **UserDashboard**: Document creation, personal recent documents, protocol management
+- **Role-Based Navigation**: Home page now renders appropriate dashboard based on user role
+- **Contextual FAB**: Floating Action Button only appears for regular users who create documents
+- **Enhanced Admin Features**: System alerts, user management shortcuts, comprehensive activity monitoring
+- **Manager Oversight Tools**: Budget analysis, team progress tracking, advanced filtering capabilities
+- **Improved User Experience**: Each role sees only relevant information and actions for their responsibilities
+
 ### Beneficiaries Page Performance Enhancement
 - **Memoized Payment Data**: Implemented useMemo for payment calculations to avoid O(n) filtering on every render
 - **Optimized Helper Functions**: Created pre-calculated payment maps for O(1) lookup performance
