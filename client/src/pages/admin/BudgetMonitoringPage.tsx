@@ -61,84 +61,30 @@ interface QuarterlyAnalysis {
   completion_rate: number;
 }
 
-// Mock data for demonstration - in production this would come from API
-const generateMockTrendData = (): BudgetTrendData[] => {
-  const months = ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαϊ', 'Ιουν'];
-  return months.map((month, index) => ({
-    month,
-    allocated: 8000000 + (index * 500000) + Math.random() * 1000000,
-    spent: 6000000 + (index * 400000) + Math.random() * 800000,
-    remaining: 2000000 - (index * 100000) + Math.random() * 500000,
-    projects_active: 45 + Math.floor(Math.random() * 15)
-  }));
-};
+// API data interfaces
+interface BudgetTrendsResponse {
+  status: string;
+  data: {
+    trends: BudgetTrendData[];
+    summary: {
+      total_allocated: number;
+      total_spent: number;
+      total_remaining: number;
+      active_projects: number;
+      utilization_rate: number;
+    };
+  };
+}
 
-const generateMockProjectPerformance = (): ProjectPerformance[] => {
-  return [
-    {
-      mis: '2024ΝΑ85300001',
-      name: 'Ψηφιακός Μετασχηματισμός',
-      allocated_budget: 2500000,
-      spent_budget: 1800000,
-      utilization_rate: 72,
-      completion_rate: 65,
-      variance: -300000,
-      status: 'healthy',
-      trend: 'up'
-    },
-    {
-      mis: '2024ΝΑ85300015',
-      name: 'Υπηρεσίες Πολιτών',
-      allocated_budget: 1800000,
-      spent_budget: 1950000,
-      utilization_rate: 108,
-      completion_rate: 85,
-      variance: 150000,
-      status: 'warning',
-      trend: 'up'
-    },
-    {
-      mis: '2024ΝΑ85300008',
-      name: 'Ενεργειακή Αναβάθμιση',
-      allocated_budget: 3200000,
-      spent_budget: 2100000,
-      utilization_rate: 66,
-      completion_rate: 45,
-      variance: -1100000,
-      status: 'critical',
-      trend: 'down'
-    }
-  ];
-};
+interface ProjectPerformanceResponse {
+  status: string;
+  data: ProjectPerformance[];
+}
 
-const generateQuarterlyAnalysis = (): QuarterlyAnalysis[] => {
-  return [
-    {
-      quarter: 'Q1 2024',
-      total_allocated: 12500000,
-      total_spent: 9800000,
-      efficiency_score: 84,
-      project_count: 47,
-      completion_rate: 73
-    },
-    {
-      quarter: 'Q2 2024',
-      total_allocated: 15200000,
-      total_spent: 13100000,
-      efficiency_score: 88,
-      project_count: 52,
-      completion_rate: 79
-    },
-    {
-      quarter: 'Q3 2024',
-      total_allocated: 18600000,
-      total_spent: 16400000,
-      efficiency_score: 91,
-      project_count: 58,
-      completion_rate: 82
-    }
-  ];
-};
+interface QuarterlyAnalysisResponse {
+  status: string;
+  data: QuarterlyAnalysis[];
+}
 
 export default function BudgetMonitoringPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('6months');
@@ -150,22 +96,35 @@ export default function BudgetMonitoringPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Fetch projects data for performance analysis
-  const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ['/api/projects'],
+  // Fetch real budget trends data
+  const { data: trendsResponse, isLoading: trendsLoading } = useQuery({
+    queryKey: ['/api/budget/trends'],
+    staleTime: 2 * 60 * 1000,
+  });
+
+  // Fetch real project performance data
+  const { data: performanceResponse, isLoading: performanceLoading } = useQuery({
+    queryKey: ['/api/budget/project-performance'],
+    staleTime: 3 * 60 * 1000,
+  });
+
+  // Fetch real quarterly analysis data
+  const { data: quarterlyResponse, isLoading: quarterlyLoading } = useQuery({
+    queryKey: ['/api/budget/quarterly-analysis'],
     staleTime: 5 * 60 * 1000,
   });
 
-  // Generate mock data for now - replace with real API calls
-  const trendData = useMemo(() => generateMockTrendData(), [selectedPeriod]);
-  const projectPerformance = useMemo(() => generateMockProjectPerformance(), []);
-  const quarterlyData = useMemo(() => generateQuarterlyAnalysis(), []);
+  // Extract real data from API responses
+  const trendData = (trendsResponse as BudgetTrendsResponse)?.data?.trends || [];
+  const projectPerformance = (performanceResponse as ProjectPerformanceResponse)?.data || [];
+  const quarterlyData = (quarterlyResponse as QuarterlyAnalysisResponse)?.data || [];
+  const budgetSummary = (trendsResponse as BudgetTrendsResponse)?.data?.summary;
 
-  // Calculate key metrics
-  const totalAllocated = (budgetOverview as any)?.totalBudget || 47974285;
-  const totalSpent = (budgetOverview as any)?.allocatedBudget || 28272462;
-  const utilizationRate = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0;
-  const remainingBudget = totalAllocated - totalSpent;
+  // Calculate key metrics from real data
+  const totalAllocated = budgetSummary?.total_allocated || (budgetOverview as any)?.totalBudget || 0;
+  const totalSpent = budgetSummary?.total_spent || (budgetOverview as any)?.allocatedBudget || 0;
+  const utilizationRate = budgetSummary?.utilization_rate || (totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0);
+  const remainingBudget = budgetSummary?.total_remaining || (totalAllocated - totalSpent);
 
   // Calculate trends
   const currentMonthData = trendData[trendData.length - 1];
@@ -174,7 +133,7 @@ export default function BudgetMonitoringPage() {
     ? ((currentMonthData.spent - previousMonthData.spent) / previousMonthData.spent) * 100 
     : 0;
 
-  const isLoading = budgetLoading || projectsLoading;
+  const isLoading = budgetLoading || trendsLoading || performanceLoading || quarterlyLoading;
 
   if (isLoading) {
     return (
@@ -335,8 +294,13 @@ export default function BudgetMonitoringPage() {
                   <div className="h-80 flex items-center justify-center text-muted-foreground">
                     <div className="text-center">
                       <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Γράφημα χρονικών τάσεων προϋπολογισμού</p>
-                      <p className="text-sm">Δεδομένα: Κατανομές, Δαπάνες, Διαθέσιμο υπόλοιπο</p>
+                      <p>Πραγματικά δεδομένα από τη βάση δεδομένων</p>
+                      <p className="text-sm">
+                        {trendData.length > 0 
+                          ? `${trendData.length} μήνες δεδομένων - Συνολικά: €${totalAllocated.toLocaleString('el-GR')}`
+                          : 'Φόρτωση δεδομένων τάσεων...'
+                        }
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -583,12 +547,13 @@ export default function BudgetMonitoringPage() {
                     <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
                       <div className="flex items-center gap-3 mb-3">
                         <Activity className="w-5 h-5 text-primary" />
-                        <h4 className="font-medium">Συνολική Αξιολόγηση</h4>
+                        <h4 className="font-medium">Πραγματική Αξιολόγηση Συστήματος</h4>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Βάσει της τρέχουσας ανάλυσης, η αξιοποίηση του προϋπολογισμού βρίσκεται σε υγιή επίπεδα με 
-                        ποσοστό {utilizationRate.toFixed(1)}%. Συνιστάται προσοχή στα έργα με υψηλή απόκλιση και 
-                        επανεξέταση της κατανομής για βελτιστοποίηση της απόδοσης.
+                        Βάσει των πραγματικών δεδομένων από τη βάση δεδομένων, η αξιοποίηση του προϋπολογισμού είναι 
+                        {utilizationRate.toFixed(1)}% με συνολικό προϋπολογισμό €{totalAllocated.toLocaleString('el-GR')} και 
+                        δαπάνες €{totalSpent.toLocaleString('el-GR')}. 
+                        {budgetSummary?.active_projects ? ` Ενεργά έργα: ${budgetSummary.active_projects}.` : ''}
                       </p>
                     </div>
                   </div>
