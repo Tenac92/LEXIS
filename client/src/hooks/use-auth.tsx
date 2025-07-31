@@ -161,9 +161,6 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: user, error, isLoading, refetch } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
-    staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
-    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
-    refetchOnWindowFocus: false,
     queryFn: async () => {
       try {
         const response = await fetch('/api/auth/me', {
@@ -208,10 +205,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     },
     retry: false,
-    refetchOnWindowFocus: false, // Disable auto-refresh on focus for faster startup
-    refetchInterval: false, // Disable automatic refresh interval for now
-    staleTime: 10 * 60 * 1000, // Consider data stale after 10 minutes for better caching
-    gcTime: 15 * 60 * 1000, // Keep in cache longer to avoid refetching during navigation
+    refetchOnWindowFocus: false,
+    refetchInterval: false,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000
   });
 
   // Simplified session management for faster startup

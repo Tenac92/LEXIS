@@ -836,7 +836,7 @@ router.get('/', async (req: Request, res: Response) => {
     if (filters.recipient) {
       filteredDocuments = filteredDocuments.filter(doc => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
-        return doc.recipients.some(recipient => 
+        return doc.recipients.some((recipient: any) => 
           `${recipient.firstname} ${recipient.lastname}`.toLowerCase().includes(filters.recipient.toLowerCase())
         );
       });
@@ -846,7 +846,7 @@ router.get('/', async (req: Request, res: Response) => {
     if (filters.afm) {
       filteredDocuments = filteredDocuments.filter(doc => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
-        return doc.recipients.some(recipient => 
+        return doc.recipients.some((recipient: any) => 
           recipient.afm && recipient.afm.includes(filters.afm)
         );
       });

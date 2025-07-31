@@ -2969,7 +2969,7 @@ export function CreateDocumentDialog({
                     <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
                     {/* Select All functionality - only show when there are valid attachments */}
                     {!attachmentsLoading && attachments.length > 0 && 
-                     attachments.some(att => att.file_type !== "none") && (
+                     attachments.some((att: any) => att.file_type !== "none") && (
                       <Button
                         type="button"
                         variant="outline"
@@ -2983,7 +2983,7 @@ export function CreateDocumentDialog({
                           const currentSelections = form.watch("selectedAttachments") || [];
                           
                           // Check if all valid attachments are already selected
-                          const allSelected = validAttachmentIds.every(id => 
+                          const allSelected = validAttachmentIds.every((id: any) => 
                             currentSelections.includes(id)
                           );
                           

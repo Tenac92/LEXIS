@@ -209,7 +209,7 @@ const DocumentCard = memo(function DocumentCard({
   const recipients = (doc as any).recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
   const statusDetails = getStatusDetails(
-    doc.status,
+    doc.status || "pending",
     docAny.is_correction,
     doc.protocol_number_input || null,
   );
