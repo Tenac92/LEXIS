@@ -273,12 +273,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Build the base query with the actual schema columns and join with generated_documents for protocol_number_input
+      // Build the base query with the actual schema columns and join with projects table for MIS
       let query = supabase
         .from('budget_history')
         .select(`
           id,
-          mis,
+          project_id,
           previous_amount,
           new_amount,
           change_type,
@@ -287,6 +287,10 @@ export class DatabaseStorage implements IStorage {
           created_by,
           created_at,
           updated_at,
+          Projects!budget_history_project_id_fkey (
+            mis,
+            project_title
+          ),
           generated_documents!budget_history_document_id_fkey (
             protocol_number_input,
             status
@@ -297,7 +301,29 @@ export class DatabaseStorage implements IStorage {
       if (userUnits && userUnits.length > 0) {
         if (allowedMisIds.length > 0 && !allowedMisIds.includes(-1)) {
           console.log('[Storage] Applying MIS filter for allowed MIS codes:', allowedMisIds);
-          query = query.in('mis', allowedMisIds);
+          // Need to filter by project_id instead of mis directly since we're joining with Projects table
+          const { data: allowedProjects, error: projectError } = await supabase
+            .from('Projects')
+            .select('id')
+            .in('mis', allowedMisIds);
+          
+          if (!projectError && allowedProjects && allowedProjects.length > 0) {
+            const projectIds = allowedProjects.map(p => p.id);
+            query = query.in('project_id', projectIds);
+          } else {
+            // No projects found - return empty result for security
+            console.log('[Storage] No projects found for allowed MIS codes - returning empty result for security');
+            return {
+              data: [],
+              pagination: { total: 0, page, limit, pages: 0 },
+              statistics: {
+                totalEntries: 0,
+                totalAmountChange: 0,
+                changeTypes: {},
+                periodRange: { start: '', end: '' }
+              }
+            };
+          }
         } else {
           // No MIS codes found for user's units or using security filter - return empty result
           console.log('[Storage] No valid MIS codes for user units - returning empty result for security');
@@ -316,7 +342,28 @@ export class DatabaseStorage implements IStorage {
       
       // Apply filters
       if (mis && mis !== 'all') {
-        query = query.eq('mis', mis);
+        // Need to get project_id for the MIS filter
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', mis)
+          .single();
+          
+        if (!projectError && projectData) {
+          query = query.eq('project_id', projectData.id);
+        } else {
+          // MIS not found - return empty result
+          return {
+            data: [],
+            pagination: { total: 0, page, limit, pages: 0 },
+            statistics: {
+              totalEntries: 0,
+              totalAmountChange: 0,
+              changeTypes: {},
+              periodRange: { start: '', end: '' }
+            }
+          };
+        }
       }
       
       if (changeType && changeType !== 'all') {
@@ -349,29 +396,77 @@ export class DatabaseStorage implements IStorage {
       // Get filtered data for statistics calculation (without pagination)
       let statsQuery = supabase
         .from('budget_history')
-        .select('id, previous_amount, new_amount, change_type, created_at');
+        .select('id, previous_amount, new_amount, change_type, created_at, project_id');
         
       // Apply the same filters to stats query
-      if (userUnits && userUnits.length > 0 && allowedMisIds.length > 0) {
-        statsQuery = statsQuery.in('mis', allowedMisIds);
-      } else if (userUnits && userUnits.length > 0 && allowedMisIds.length === 0) {
-        // Return empty statistics
-        const emptyStats = {
-          totalEntries: 0,
-          totalAmountChange: 0,
-          changeTypes: {},
-          periodRange: { start: '', end: '' }
-        };
-        
-        return {
-          data: [],
-          pagination: { total: 0, page, limit, pages: 0 },
-          statistics: emptyStats
-        };
+      if (userUnits && userUnits.length > 0) {
+        if (allowedMisIds.length > 0 && !allowedMisIds.includes(-1)) {
+          // Get project IDs for allowed MIS codes
+          const { data: allowedProjects, error: projectError } = await supabase
+            .from('Projects')
+            .select('id')
+            .in('mis', allowedMisIds);
+          
+          if (!projectError && allowedProjects && allowedProjects.length > 0) {
+            const projectIds = allowedProjects.map(p => p.id);
+            statsQuery = statsQuery.in('project_id', projectIds);
+          } else {
+            // Return empty statistics
+            const emptyStats = {
+              totalEntries: 0,
+              totalAmountChange: 0,
+              changeTypes: {},
+              periodRange: { start: '', end: '' }
+            };
+            
+            return {
+              data: [],
+              pagination: { total: 0, page, limit, pages: 0 },
+              statistics: emptyStats
+            };
+          }
+        } else {
+          // Return empty statistics
+          const emptyStats = {
+            totalEntries: 0,
+            totalAmountChange: 0,
+            changeTypes: {},
+            periodRange: { start: '', end: '' }
+          };
+          
+          return {
+            data: [],
+            pagination: { total: 0, page, limit, pages: 0 },
+            statistics: emptyStats
+          };
+        }
       }
       
       if (mis && mis !== 'all') {
-        statsQuery = statsQuery.eq('mis', mis);
+        // Get project_id for the MIS filter
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', mis)
+          .single();
+          
+        if (!projectError && projectData) {
+          statsQuery = statsQuery.eq('project_id', projectData.id);
+        } else {
+          // Return empty statistics
+          const emptyStats = {
+            totalEntries: 0,
+            totalAmountChange: 0,
+            changeTypes: {},
+            periodRange: { start: '', end: '' }
+          };
+          
+          return {
+            data: [],
+            pagination: { total: 0, page, limit, pages: 0 },
+            statistics: emptyStats
+          };
+        }
       }
       
       if (changeType && changeType !== 'all') {
@@ -452,12 +547,32 @@ export class DatabaseStorage implements IStorage {
         .select('*', { count: 'exact', head: true });
         
       // Apply the same filters to count query
-      if (userUnits && userUnits.length > 0 && allowedMisIds.length > 0) {
-        countQuery = countQuery.in('mis', allowedMisIds);
+      if (userUnits && userUnits.length > 0) {
+        if (allowedMisIds.length > 0 && !allowedMisIds.includes(-1)) {
+          // Get project IDs for allowed MIS codes
+          const { data: allowedProjects, error: projectError } = await supabase
+            .from('Projects')
+            .select('id')
+            .in('mis', allowedMisIds);
+          
+          if (!projectError && allowedProjects && allowedProjects.length > 0) {
+            const projectIds = allowedProjects.map(p => p.id);
+            countQuery = countQuery.in('project_id', projectIds);
+          }
+        }
       }
       
       if (mis && mis !== 'all') {
-        countQuery = countQuery.eq('mis', mis);
+        // Get project_id for the MIS filter
+        const { data: projectData, error: projectError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', mis)
+          .single();
+          
+        if (!projectError && projectData) {
+          countQuery = countQuery.eq('project_id', projectData.id);
+        }
       }
       
       if (changeType && changeType !== 'all') {
@@ -582,10 +697,14 @@ export class DatabaseStorage implements IStorage {
         
         console.log(`[Storage] Document data for entry ${entry.id}:`, documentData);
         
+        // Extract MIS from the joined Projects table
+        const projectData = entry.Projects || {};
+        const projectMis = projectData.mis || 'Unknown';
+        
         // The columns already match what the frontend expects, so we can use them directly
         return {
           id: entry.id,
-          mis: entry.mis || 'Unknown',
+          mis: projectMis,
           previous_amount: entry.previous_amount || '0',
           new_amount: entry.new_amount || '0',
           change_type: entry.change_type || '',
