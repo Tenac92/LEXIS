@@ -158,6 +158,25 @@ This is a full-stack web application built for Greek government budget and docum
 
 ## Recent Changes
 
+### July 31, 2025 - CRITICAL API ROUTING BUG FIXES COMPLETE
+- **MAJOR BUG FIX: Resolved critical API routing issues causing HTML responses instead of JSON**
+- **Root Cause Fixed:** Missing project resolver controller registration in server routes
+- **API Endpoints Fixed:**
+  - Fixed `/api/projects/na853/:identifier` endpoint - now returns proper JSON responses
+  - Fixed `/api/projects/resolve/:identifier` endpoint - now works correctly
+  - Updated frontend document-card.tsx to use correct `/api/projects/na853/` endpoint
+- **TypeScript Compilation Errors Resolved:**
+  - Fixed 6+ TypeScript compilation errors across multiple components
+  - Added proper type annotations and null safety checks
+  - Enhanced parameter type definitions for better code quality
+- **Verification Results:**
+  - NA853 API calls now return JSON: `{"na853":"2024ΝΑ85300019"}`
+  - Project resolver API working with complete project data
+  - Document cards can now fetch NA853 data without HTML response errors
+  - All frontend components loading correctly without console errors
+- **System Stability:** Application now handles project identification and NA853 lookups properly
+- **CONFIRMED: Critical routing bugs resolved - application ready for production use**
+
 ### July 22, 2025 - DOCUMENT CREATION MODAL DEBUGGING COMPLETE
 - **MAJOR FIX: Successfully resolved all 24 LSP diagnostic errors in create-document-dialog.tsx**
 - **Type Safety Improvements:**

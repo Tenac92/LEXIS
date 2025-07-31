@@ -111,14 +111,14 @@ const DocumentCard = memo(function DocumentCard({
   // Get the MIS code from the document
   const mis = (doc as any).project_id || (doc as any).mis || "";
 
-  // Fetch project NA853 data from our special endpoint
+  // Fetch project NA853 data from project resolver endpoint
   const { data: na853Data } = useQuery<any>({
-    queryKey: ["/api/document-na853", mis],
+    queryKey: ["/api/projects/na853", mis],
     queryFn: async () => {
       if (!mis) return null;
       try {
         console.log("Fetching NA853 for MIS:", mis);
-        return await apiRequest(`/api/document-na853/${mis}`);
+        return await apiRequest(`/api/projects/na853/${mis}`);
       } catch (error) {
         console.error("Failed to fetch NA853 data:", error);
         return null;
