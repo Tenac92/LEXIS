@@ -319,6 +319,126 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
   }
 });
 
+// Budget Overview endpoint - provides aggregated budget data filtered by user's unit access
+router.get('/overview', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('[Budget] Fetching budget overview');
+    
+    // Check authentication
+    if (!req.user?.id) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+    
+    console.log(`[Budget] User ${req.user.id} with role ${req.user.role} requesting budget overview`);
+
+    // For admins, show all budget data
+    // For managers and users, filter by their unit's accessible MIS codes
+    let budgetQuery = supabase.from('project_budget').select('*');
+    
+    if (req.user.role !== 'admin' && req.user.unit_id && req.user.unit_id.length > 0) {
+      // Get MIS codes accessible to user's units
+      const { data: allowedMis, error: misError } = await supabase
+        .from('project_index')
+        .select('Projects!inner(mis)')
+        .in('monada_id', req.user.unit_id);
+        
+      if (misError) {
+        console.error('[Budget] Error fetching allowed MIS codes:', misError);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to determine accessible projects'
+        });
+      }
+      
+      // Extract unique MIS codes
+      const misCodes = Array.from(new Set(
+        allowedMis
+          ?.map(item => item.Projects?.mis)
+          .filter(mis => mis !== null && mis !== undefined) || []
+      ));
+      
+      console.log(`[Budget] User unit ${req.user.unit_id[0]} has access to ${misCodes.length} MIS codes`);
+      
+      if (misCodes.length > 0) {
+        budgetQuery = budgetQuery.in('mis', misCodes);
+      } else {
+        // No accessible projects - return empty overview
+        return res.json({
+          status: 'success',
+          data: {
+            totalBudget: 0,
+            allocatedBudget: 0,
+            availableBudget: 0,
+            projectCount: 0,
+            quarterlyBreakdown: { q1: 0, q2: 0, q3: 0, q4: 0 },
+            recentUpdates: []
+          }
+        });
+      }
+    }
+    
+    const { data: budgetData, error: budgetError } = await budgetQuery
+      .order('created_at', { ascending: false });
+      
+    if (budgetError) {
+      console.error('[Budget] Error fetching budget data:', budgetError);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch budget data'
+      });
+    }
+
+    // Calculate overview metrics
+    let totalBudget = 0;
+    let allocatedBudget = 0;
+    let quarterlyBreakdown = { q1: 0, q2: 0, q3: 0, q4: 0 };
+    
+    budgetData?.forEach(budget => {
+      const ethsiaPistosi = parseFloat(budget.ethsia_pistosi?.toString() || '0');
+      const katanomesEtous = parseFloat(budget.katanomes_etous?.toString() || '0');
+      const q1 = parseFloat(budget.q1?.toString() || '0');
+      const q2 = parseFloat(budget.q2?.toString() || '0');
+      const q3 = parseFloat(budget.q3?.toString() || '0');
+      const q4 = parseFloat(budget.q4?.toString() || '0');
+      
+      totalBudget += ethsiaPistosi;
+      allocatedBudget += katanomesEtous;
+      quarterlyBreakdown.q1 += q1;
+      quarterlyBreakdown.q2 += q2;
+      quarterlyBreakdown.q3 += q3;
+      quarterlyBreakdown.q4 += q4;
+    });
+    
+    const availableBudget = totalBudget - allocatedBudget;
+    const projectCount = budgetData?.length || 0;
+
+    console.log(`[Budget] Overview calculated: ${projectCount} projects, ${totalBudget}€ total, ${allocatedBudget}€ allocated`);
+
+    return res.json({
+      status: 'success',
+      data: {
+        totalBudget,
+        allocatedBudget,
+        availableBudget,
+        projectCount,
+        quarterlyBreakdown,
+        recentUpdates: [] // Can be enhanced later with budget history
+      }
+    });
+    
+  } catch (error) {
+    console.error('[Budget] Error in overview endpoint:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch budget overview',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Route to analyze changes between budget updates (for admins only)
 router.get('/:mis/analyze-changes', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
