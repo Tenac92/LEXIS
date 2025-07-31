@@ -26,6 +26,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
@@ -73,14 +79,15 @@ export function Header() {
   }, []);
 
   return (
-    <header className={cn(
-      "sticky top-0 z-50 w-full border-b transition-all duration-200",
-      scrolled 
-        ? 'bg-background/95 backdrop-blur-md shadow-sm border-border/80' 
-        : 'bg-background/90 backdrop-blur-sm border-border/40'
-    )}>
-      <div className="container mx-auto px-4 py-3">
-        <nav className="flex items-center justify-between gap-4">
+    <TooltipProvider>
+      <header className={cn(
+        "sticky top-0 z-50 w-full border-b transition-all duration-200",
+        scrolled 
+          ? 'bg-background/95 backdrop-blur-md shadow-sm border-border/80' 
+          : 'bg-background/90 backdrop-blur-sm border-border/40'
+      )}>
+        <div className="container mx-auto px-4 py-3">
+          <nav className="flex items-center justify-between gap-4">
           {/* Left side - System Title */}
           <div className="flex-shrink-0">
             <Link href="/">
@@ -160,56 +167,70 @@ export function Header() {
 
           {/* Right side - Navigation */}
           <div className="hidden lg:flex lg:items-center lg:gap-1">
-            <Link href="/">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className={cn(
-                  "flex items-center gap-2 transition-all duration-200 px-3 py-1.5 rounded-md text-sm font-medium",
-                  location === "/" 
-                    ? "bg-primary/10 text-primary shadow-sm border border-primary/20" 
-                    : "hover:bg-accent/60 text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Home className="h-4 w-4" />
-                <span className="hidden xl:inline">Αρχική</span>
-              </Button>
-            </Link>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className={cn(
+                      "flex items-center gap-2 transition-all duration-200 px-3 py-1.5 rounded-md text-sm font-medium",
+                      location === "/" 
+                        ? "bg-primary/10 text-primary shadow-sm border border-primary/20" 
+                        : "hover:bg-accent/60 text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Home className="h-4 w-4" />
+                    <span className="hidden xl:inline">Αρχική</span>
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Αρχική Σελίδα</p>
+              </TooltipContent>
+            </Tooltip>
             
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = location === item.href;
               
               return (
-                <Link key={item.href} href={item.href}>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className={cn(
-                      "flex items-center gap-2 transition-all duration-200 px-3 py-1.5 rounded-md text-sm font-medium relative",
-                      isActive 
-                        ? "bg-primary/10 text-primary shadow-sm border border-primary/20" 
-                        : "hover:bg-accent/60 text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span className="hidden xl:inline whitespace-nowrap">{item.label}</span>
-                    {item.href === "/notifications" && userRole.isAdmin && (
-                      <motion.div
-                        className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full shadow-sm"
-                        animate={{
-                          scale: [1, 1.2, 1],
-                          opacity: [1, 0.8, 1]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                      />
-                    )}
-                  </Button>
-                </Link>
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>
+                    <Link href={item.href}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className={cn(
+                          "flex items-center gap-2 transition-all duration-200 px-3 py-1.5 rounded-md text-sm font-medium relative",
+                          isActive 
+                            ? "bg-primary/10 text-primary shadow-sm border border-primary/20" 
+                            : "hover:bg-accent/60 text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span className="hidden xl:inline whitespace-nowrap">{item.label}</span>
+                        {item.href === "/notifications" && userRole.isAdmin && (
+                          <motion.div
+                            className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full shadow-sm"
+                            animate={{
+                              scale: [1, 1.2, 1],
+                              opacity: [1, 0.8, 1]
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                          />
+                        )}
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{item.label}</p>
+                  </TooltipContent>
+                </Tooltip>
               );
             })}
           </div>
@@ -217,25 +238,32 @@ export function Header() {
           {/* Mobile Menu Button */}
           <div className="lg:hidden">
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative hover:bg-accent/50 rounded-lg">
-                  <Menu className="h-5 w-5" />
-                  {userRole.isAdmin && (
-                    <motion.div
-                      className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full shadow-sm"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [1, 0.8, 1]
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  )}
-                </Button>
-              </SheetTrigger>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon" className="relative hover:bg-accent/50 rounded-lg">
+                      <Menu className="h-5 w-5" />
+                      {userRole.isAdmin && (
+                        <motion.div
+                          className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-red-500 rounded-full shadow-sm"
+                          animate={{
+                            scale: [1, 1.2, 1],
+                            opacity: [1, 0.8, 1]
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Μενού Πλοήγησης</p>
+                </TooltipContent>
+              </Tooltip>
               <SheetContent side="right" className="w-80 p-0">
                 <div className="px-6 py-4 border-b bg-accent/20">
                   <div className="flex items-center gap-3">
@@ -337,11 +365,12 @@ export function Header() {
         </nav>
       </div>
 
-      {/* Use completely decoupled change password modal */}
-      <ChangePasswordModal
-        isOpen={isPasswordModalOpen}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
-    </header>
+        {/* Use completely decoupled change password modal */}
+        <ChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+        />
+      </header>
+    </TooltipProvider>
   );
 }
