@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   FileText,
@@ -9,11 +9,8 @@ import {
   History,
   Bell,
   Key,
-  LayoutDashboard,
-  Settings,
-  FileSpreadsheet,
-  Library,
-  ChevronDown
+  ChevronDown,
+  Home
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -29,37 +26,49 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// Import enhanced navigation menu components
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from "@/components/ui/navigation-menu";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
+import { cn } from "@/lib/utils";
+
+// Navigation configuration
+const navigationItems = [
+  { href: "/documents", icon: FileText, label: "Διαβιβαστικά", roles: ["admin", "user"] },
+  { href: "/projects", icon: FolderKanban, label: "Έργα", roles: ["admin", "user"] },
+  { href: "/budget-history", icon: History, label: "Ιστορικό Προϋπ.", roles: ["admin"] },
+  { href: "/employees", icon: Users, label: "Υπάλληλοι", roles: ["admin"] },
+  { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user"] },
+  { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
+  { href: "/notifications", icon: Bell, label: "Ειδοποιήσεις", roles: ["admin"] }
+];
 
 /**
- * Enhanced Header component that includes features from various implementations
- * while maintaining the original dashboard functionality
+ * Enhanced Header component with improved navigation and responsive design
  */
 export function Header() {
   const { user, logoutMutation } = useAuth();
+  const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Check user roles - only 'admin' and 'user' roles are supported in the schema
-  const isAdmin = user?.role === 'admin';
-  // Backward compatibility check - we'll treat any role that's not admin or user as a manager
-  const isManager = user?.role && user?.role !== 'admin' && user?.role !== 'user';
-  const isRegularUser = user?.role === 'user';
+  // Memoized role checks for better performance
+  const userRole = useMemo(() => ({
+    isAdmin: user?.role === 'admin',
+    isManager: user?.role && user?.role !== 'admin' && user?.role !== 'user',
+    isRegularUser: user?.role === 'user'
+  }), [user?.role]);
+
+  // Memoized filtered navigation items
+  const visibleNavItems = useMemo(() => {
+    return navigationItems.filter(item => 
+      item.roles.includes(user?.role || 'user')
+    );
+  }, [user?.role]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -86,26 +95,42 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  className="px-4 py-2 h-auto hover:bg-accent/50 rounded-lg transition-colors"
+                  className="px-4 py-2 h-auto hover:bg-accent/50 rounded-lg transition-all duration-200"
                 >
                   <div className="text-center">
-                    <span className="text-lg font-medium text-foreground flex items-center gap-2">
-                      {user?.name || 'Χρήστης'}
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span className="text-sm font-medium text-primary">
+                          {user?.name?.charAt(0) || 'Χ'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className="text-sm font-medium text-foreground">
+                          {user?.name || 'Χρήστης'}
+                        </span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {user?.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}
+                        </span>
+                      </div>
                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    </span>
+                    </div>
                   </div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="w-48">
+              <DropdownMenuContent align="center" className="w-56 p-2">
+                <div className="px-2 py-2 border-b mb-2">
+                  <p className="text-sm font-medium">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{user?.email}</p>
+                </div>
                 <DropdownMenuItem 
                   onClick={() => setIsPasswordModalOpen(true)}
-                  className="hover:bg-accent/80"
+                  className="hover:bg-accent/80 cursor-pointer"
                 >
                   <Key className="h-4 w-4 mr-2" />
                   Αλλαγή Κωδικού
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="text-destructive focus:text-destructive hover:bg-destructive/10" 
+                  className="text-destructive focus:text-destructive hover:bg-destructive/10 cursor-pointer" 
                   onClick={() => logoutMutation.mutate()}
                 >
                   <LogOut className="h-4 w-4 mr-2" />
@@ -116,104 +141,59 @@ export function Header() {
           </div>
 
           {/* Right side - Navigation */}
-          <div className="hidden md:flex md:items-center md:gap-3">
-            <Link href="/documents">
+          <div className="hidden md:flex md:items-center md:gap-2">
+            <Link href="/">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                className={cn(
+                  "flex items-center gap-2 transition-all duration-200 px-3 py-2 rounded-lg",
+                  location === "/" 
+                    ? "bg-primary/10 text-primary border border-primary/20" 
+                    : "hover:bg-accent/50"
+                )}
               >
-                <FileText className="h-4 w-4" />
-                Διαβιβαστικά
+                <Home className="h-4 w-4" />
+                Αρχική
               </Button>
             </Link>
-
-            <Link href="/projects">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-              >
-                <FolderKanban className="h-4 w-4" />
-                Έργα
-              </Button>
-            </Link>
-
-            {(isAdmin || isManager) && (
-              <Link href="/budget-history">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-                >
-                  <History className="h-4 w-4" />
-                  Ιστορικό Προϋπ.
-                </Button>
-              </Link>
-            )}
-
-            {(isAdmin || isManager) && (
-              <Link href="/employees">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-                >
-                  <Users className="h-4 w-4" />
-                  Υπάλληλοι
-                </Button>
-              </Link>
-            )}
-
-            {isRegularUser && (
-              <Link href="/beneficiaries">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
-                >
-                  <Users className="h-4 w-4" />
-                  Δικαιούχοι
-                </Button>
-              </Link>
-            )}
-
-            {isAdmin && (
-              <>
-                <Link href="/users">
+            
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+              
+              return (
+                <Link key={item.href} href={item.href}>
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4"
+                    className={cn(
+                      "flex items-center gap-2 transition-all duration-200 px-3 py-2 rounded-lg relative",
+                      isActive 
+                        ? "bg-primary/10 text-primary border border-primary/20" 
+                        : "hover:bg-accent/50"
+                    )}
                   >
-                    <Users className="h-4 w-4" />
-                    Χρήστες
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                    {item.href === "/notifications" && userRole.isAdmin && (
+                      <motion.div
+                        className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [1, 0.8, 1]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    )}
                   </Button>
                 </Link>
-                <Link href="/notifications">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="flex items-center gap-2 hover:bg-accent/50 transition-colors px-4 relative"
-                  >
-                    <Bell className="h-4 w-4" />
-                    Ειδοποιήσεις
-                    <motion.div
-                      className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
-                      animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [1, 0.8, 1]
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    />
-                  </Button>
-                </Link>
-              </>
-            )}
+              );
+            })}
           </div>
 
           {/* Mobile Menu Button */}
@@ -222,7 +202,7 @@ export function Header() {
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Menu className="h-6 w-6" />
-                  {isAdmin && (
+                  {userRole.isAdmin && (
                     <motion.div
                       className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full"
                       animate={{
@@ -240,82 +220,73 @@ export function Header() {
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
                 <SheetHeader>
-                  <SheetTitle>Μενού</SheetTitle>
+                  <SheetTitle className="text-left">
+                    {user?.name || 'Χρήστης'}
+                  </SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 flex flex-col gap-2">
-                  <Link href="/documents">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Διαβιβαστικά
+                  <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button 
+                      variant="ghost" 
+                      className={cn(
+                        "w-full justify-start",
+                        location === "/" && "bg-primary/10 text-primary"
+                      )}
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Αρχική
                     </Button>
                   </Link>
-                  <Link href="/projects">
-                    <Button variant="ghost" className="w-full justify-start">
-                      <FolderKanban className="h-4 w-4 mr-2" />
-                      Έργα
+                  
+                  {visibleNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location === item.href;
+                    
+                    return (
+                      <Link 
+                        key={item.href} 
+                        href={item.href} 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Button 
+                          variant="ghost" 
+                          className={cn(
+                            "w-full justify-start",
+                            isActive && "bg-primary/10 text-primary"
+                          )}
+                        >
+                          <Icon className="h-4 w-4 mr-2" />
+                          {item.label}
+                        </Button>
+                      </Link>
+                    );
+                  })}
+                  
+                  {/* Action buttons with separator */}
+                  <div className="border-t pt-4 mt-4 space-y-2">
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start hover:bg-accent/50"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        setTimeout(() => setIsPasswordModalOpen(true), 150);
+                      }}
+                    >
+                      <Key className="h-4 w-4 mr-2" />
+                      Αλλαγή Κωδικού
                     </Button>
-                  </Link>
-                  {(isAdmin || isManager) && (
-                    <Link href="/employees">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Users className="h-4 w-4 mr-2" />
-                        Υπάλληλοι
-                      </Button>
-                    </Link>
-                  )}
-                  {isRegularUser && (
-                    <Link href="/beneficiaries">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Users className="h-4 w-4 mr-2" />
-                        Δικαιούχοι
-                      </Button>
-                    </Link>
-                  )}
-                  {(isAdmin || isManager) && (
-                    <Link href="/budget-history">
-                      <Button variant="ghost" className="w-full justify-start">
-                        <History className="h-4 w-4 mr-2" />
-                        Ιστορικό Προϋπ.
-                      </Button>
-                    </Link>
-                  )}
-                  {isAdmin && (
-                    <>
-                      <Link href="/users">
-                        <Button variant="ghost" className="w-full justify-start">
-                          <Users className="h-4 w-4 mr-2" />
-                          Χρήστες
-                        </Button>
-                      </Link>
-                      <Link href="/notifications">
-                        <Button variant="ghost" className="w-full justify-start">
-                          <Bell className="h-4 w-4 mr-2" />
-                          Ειδοποιήσεις
-                        </Button>
-                      </Link>
-                    </>
-                  )}
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      // First close mobile menu
-                      setIsMobileMenuOpen(false);
-                      // Then set password modal open (our new implementation handles timing)
-                      setIsPasswordModalOpen(true);
-                    }}
-                  >
-                    <Key className="h-4 w-4 mr-2" />
-                    Αλλαγή Κωδικού
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-destructive hover:text-destructive-foreground"
-                    onClick={() => logoutMutation.mutate()}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Αποσύνδεση
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false);
+                        logoutMutation.mutate();
+                      }}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Αποσύνδεση
+                    </Button>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
