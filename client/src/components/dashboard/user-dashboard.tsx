@@ -23,10 +23,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  Target
+  Target,
+  ClipboardCheck
 } from "lucide-react";
 import React, { useState, useMemo } from 'react';
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
+import { ViewDocumentModal } from "@/components/documents/document-modals";
 
 import type { DashboardStats } from "@/lib/dashboard";
 
@@ -64,6 +66,9 @@ export function UserDashboard() {
   // State for document details modal
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  
+  // State for protocol modal
+  const [showProtocolModal, setShowProtocolModal] = useState(false);
 
   // Get unit-specific dashboard stats with proper caching
   const { data: stats, isLoading, error } = useQuery<DashboardStats>({
@@ -480,18 +485,36 @@ export function UserDashboard() {
                             )}
                           </div>
                         </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDocument(doc);
-                            setShowDocumentModal(true);
-                          }}
-                          className="shrink-0 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                        >
-                          <Info className="w-4 h-4" />
-                        </Button>
+                        <div className="flex gap-1 shrink-0">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDocument(doc);
+                              setShowDocumentModal(true);
+                            }}
+                            className="hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                            title="Λεπτομέρειες"
+                          >
+                            <Info className="w-4 h-4" />
+                          </Button>
+                          {(!doc.protocol_number_input || doc.status !== 'completed') && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDocument(doc);
+                                setShowProtocolModal(true);
+                              }}
+                              className="hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                              title="Προσθήκη Πρωτοκόλλου"
+                            >
+                              <ClipboardCheck className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -657,6 +680,18 @@ export function UserDashboard() {
             if (!open) setSelectedDocument(null);
           }}
           document={selectedDocument as any}
+        />
+      )}
+
+      {/* Protocol Modal */}
+      {selectedDocument && (
+        <ViewDocumentModal
+          isOpen={showProtocolModal}
+          onClose={() => {
+            setShowProtocolModal(false);
+            setSelectedDocument(null);
+          }}
+          document={selectedDocument}
         />
       )}
     </div>
