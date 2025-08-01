@@ -297,7 +297,7 @@ export const generatedDocuments = pgTable("generated_documents", {
 export const attachmentsRows = pgTable("attachments", {
   id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
   atachments: text("atachments"), // Note: keeping the typo from the database schema
-  expediture_type_id: integer("expediture_type_id").array(),
+  expenditure_type_id: integer("expenditure_type_id").array(),
 });
 
 /**
@@ -471,7 +471,7 @@ export const projectIndex = pgTable(
     event_types_id: integer("event_types_id")
       .notNull()
       .references(() => eventTypes.id),
-    expediture_type_id: integer("expediture_type_id")
+    expenditure_type_id: integer("expenditure_type_id")
       .notNull()
       .references(() => expenditureTypes.id),
     geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
@@ -492,8 +492,8 @@ export const projectIndex = pgTable(
     eventTypesIndex: index("idx_project_index_event_types_id").on(
       table.event_types_id,
     ),
-    expenditureTypeIndex: index("idx_project_index_expediture_type_id").on(
-      table.expediture_type_id,
+    expenditureTypeIndex: index("idx_project_index_expenditure_type_id").on(
+      table.expenditure_type_id,
     ),
   }),
 );
@@ -511,10 +511,10 @@ export const eventTypes = pgTable("event_types", {
  * Expenditure Types Table
  * Reference table for expenditure types
  */
-export const expenditureTypes = pgTable("expediture_types", {
+export const expenditureTypes = pgTable("expenditure_types", {
   id: serial("id").primaryKey(),
-  expediture_types: text("expediture_types").notNull(),
-  expediture_types_minor: text("expediture_types_minor"),
+  expenditure_types: text("expenditure_types").notNull(),
+  expenditure_types_minor: text("expenditure_types_minor"),
 });
 
 /**
@@ -607,7 +607,7 @@ export const projectDecisions = pgTable(
     // Decision details
     implementing_agency: integer("implementing_agency").array(),
     decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
-    expediture_type: integer("expediture_type").array(),
+    expenditure_type: integer("expenditure_type").array(),
     decision_date: date("decision_date"),
 
     // Status and metadata

@@ -34,7 +34,7 @@ async function updateBeneficiaryPaymentsSchema() {
     
     const alterQueries = [
       'ALTER TABLE beneficiary_payments ADD COLUMN IF NOT EXISTS unit_id bigint;',
-      'ALTER TABLE beneficiary_payments ADD COLUMN IF NOT EXISTS expediture_type_id integer;',
+      'ALTER TABLE beneficiary_payments ADD COLUMN IF NOT EXISTS expenditure_type_id integer;',
       'ALTER TABLE beneficiary_payments ADD COLUMN IF NOT EXISTS document_id bigint;',
       'ALTER TABLE beneficiary_payments ADD COLUMN IF NOT EXISTS project_id integer;'
     ];
@@ -73,7 +73,7 @@ async function updateBeneficiaryPaymentsSchema() {
     
     const constraintQueries = [
       'ALTER TABLE beneficiary_payments ADD CONSTRAINT beneficiary_payments_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES "Monada" (id);',
-      'ALTER TABLE beneficiary_payments ADD CONSTRAINT beneficiary_payments_expediture_type_id_fkey FOREIGN KEY (expediture_type_id) REFERENCES expediture_types (id);',
+      'ALTER TABLE beneficiary_payments ADD CONSTRAINT beneficiary_payments_expenditure_type_id_fkey FOREIGN KEY (expenditure_type_id) REFERENCES expenditure_types (id);',
       'ALTER TABLE beneficiary_payments ADD CONSTRAINT beneficiary_payments_document_id_fkey FOREIGN KEY (document_id) REFERENCES generated_documents (id);',
       'ALTER TABLE beneficiary_payments ADD CONSTRAINT beneficiary_payments_project_id_fkey FOREIGN KEY (project_id) REFERENCES "Projects" (id);'
     ];

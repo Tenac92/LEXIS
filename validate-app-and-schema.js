@@ -61,7 +61,7 @@ async function validateTableCounts() {
     'users',
     'kallikratis',
     'event_types',
-    'expediture_types',
+    'expenditure_types',
     'Monada'
   ];
   
@@ -136,7 +136,7 @@ async function validateReferenceData() {
   
   const checks = [
     { table: 'event_types', expectedMin: 10, field: 'event_name' },
-    { table: 'expediture_types', expectedMin: 5, field: 'expenditure_name' },
+    { table: 'expenditure_types', expectedMin: 5, field: 'expenditure_name' },
     { table: 'kallikratis', expectedMin: 900, field: 'perifereia' },
     { table: 'Monada', expectedMin: 10, field: 'unit_name' }
   ];

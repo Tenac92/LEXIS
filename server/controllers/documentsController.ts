@@ -38,18 +38,18 @@ router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
       // Get project index data
       const { data: indexData, error: indexError } = await supabase
         .from('project_index')
-        .select('id, project_id, expediture_type_id')
+        .select('id, project_id, expenditure_type_id')
         .eq('id', doc.project_index_id)
         .single();
         
       projectIndexData = { indexData, indexError };
       
-      if (indexData && indexData.expediture_type_id) {
+      if (indexData && indexData.expenditure_type_id) {
         // Get expenditure type data
         const { data: expTypeData, error: expTypeError } = await supabase
-          .from('expediture_types')
-          .select('id, expediture_types')
-          .eq('id', indexData.expediture_type_id)
+          .from('expenditure_types')
+          .select('id, expenditure_types')
+          .eq('id', indexData.expenditure_type_id)
           .single();
           
         expenditureTypeData = { expTypeData, expTypeError };
@@ -94,7 +94,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
       supabase.from('Projects').select('*').eq('id', project_id).single(),
       supabase.from('event_types').select('*'),
-      supabase.from('expediture_types').select('*'),
+      supabase.from('expenditure_types').select('*'),
       supabase.from('Monada').select('*'),
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
@@ -116,7 +116,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const eventType = projectIndexItems.length > 0 ? 
       eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
     const expenditureTypeData = projectIndexItems.length > 0 ? 
-      expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+      expenditureTypes.find(et => et.id === projectIndexItems[0].expenditure_type_id) : null;
     const monadaItem = projectIndexItems.length > 0 ? 
       monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
     const kallikratisItem = projectIndexItems.length > 0 ? 
@@ -732,7 +732,7 @@ router.get('/', async (req: Request, res: Response) => {
               .select(`
                 id,
                 project_id,
-                expediture_type_id,
+                expenditure_type_id,
                 Projects (
                   id,
                   mis,
@@ -748,15 +748,15 @@ router.get('/', async (req: Request, res: Response) => {
               projectInfo = indexData.Projects;
               
               // Get expenditure type information
-              if (indexData.expediture_type_id) {
+              if (indexData.expenditure_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
-                  .from('expediture_types')
-                  .select('expediture_types')
-                  .eq('id', indexData.expediture_type_id)
+                  .from('expenditure_types')
+                  .select('expenditure_types')
+                  .eq('id', indexData.expenditure_type_id)
                   .single();
                 
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expediture_types };
+                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
               }
             }
@@ -770,24 +770,24 @@ router.get('/', async (req: Request, res: Response) => {
           try {
             const { data: attachmentData, error: attachmentError } = await supabase
               .from('attachments')
-              .select('expediture_type_id')
+              .select('expenditure_type_id')
               .in('id', doc.attachment_id)
               .limit(1);
               
-            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expediture_type_id) {
-              const expenditureTypeIds = Array.isArray(attachmentData[0].expediture_type_id) 
-                ? attachmentData[0].expediture_type_id 
-                : [attachmentData[0].expediture_type_id];
+            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expenditure_type_id) {
+              const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id) 
+                ? attachmentData[0].expenditure_type_id 
+                : [attachmentData[0].expenditure_type_id];
                 
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
-                  .from('expediture_types')
-                  .select('expediture_types')
+                  .from('expenditure_types')
+                  .select('expenditure_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
                   
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expediture_types };
+                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
               }
             }
@@ -993,7 +993,7 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
               .select(`
                 id,
                 project_id,
-                expediture_type_id,
+                expenditure_type_id,
                 Projects (
                   id,
                   mis,
@@ -1008,15 +1008,15 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
             if (!indexError && indexData && indexData.Projects) {
               projectInfo = indexData.Projects;
               
-              if (indexData.expediture_type_id) {
+              if (indexData.expenditure_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
-                  .from('expediture_types')
-                  .select('expediture_types')
-                  .eq('id', indexData.expediture_type_id)
+                  .from('expenditure_types')
+                  .select('expenditure_types')
+                  .eq('id', indexData.expenditure_type_id)
                   .single();
                 
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expediture_types };
+                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
               }
             }
@@ -1030,24 +1030,24 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
           try {
             const { data: attachmentData, error: attachmentError } = await supabase
               .from('attachments')
-              .select('expediture_type_id')
+              .select('expenditure_type_id')
               .in('id', doc.attachment_id)
               .limit(1);
               
-            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expediture_type_id) {
-              const expenditureTypeIds = Array.isArray(attachmentData[0].expediture_type_id) 
-                ? attachmentData[0].expediture_type_id 
-                : [attachmentData[0].expediture_type_id];
+            if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expenditure_type_id) {
+              const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id) 
+                ? attachmentData[0].expenditure_type_id 
+                : [attachmentData[0].expenditure_type_id];
                 
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
-                  .from('expediture_types')
-                  .select('expediture_types')
+                  .from('expenditure_types')
+                  .select('expenditure_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
                   
                 if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expediture_types };
+                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
               }
             }
@@ -1528,9 +1528,9 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
               event_description,
               mis
             ),
-            expediture_types:expediture_type_id (
+            expenditure_types:expenditure_type_id (
               id,
-              expediture_types
+              expenditure_types
             )
           `)
           .eq('id', document.project_index_id)
@@ -1538,7 +1538,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           
         if (!projectIndexError && projectIndexData) {
           projectData = projectIndexData.Projects;
-          const fetchedExpenditure = (projectIndexData.expediture_types as any)?.expediture_types;
+          const fetchedExpenditure = (projectIndexData.expenditure_types as any)?.expenditure_types;
           if (fetchedExpenditure && fetchedExpenditure !== 'ΔΑΠΑΝΗ') {
             expenditureType = fetchedExpenditure;
             console.log('[DocumentsController] Using project expenditure type:', expenditureType);

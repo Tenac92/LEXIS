@@ -45,7 +45,7 @@ interface ProjectIndexEntry {
   monada_id?: number;
   kallikratis_id?: number;
   event_types_id?: number;
-  expediture_type_id?: number;
+  expenditure_type_id?: number;
   geographic_code?: number;
   // Related data from joins
   monada?: {
@@ -70,10 +70,10 @@ interface ProjectIndexEntry {
     id?: number;
     name?: string;
   };
-  expediture_types?: {
+  expenditure_types?: {
     id?: number;
-    expediture_types?: string;
-    expediture_types_minor?: string;
+    expenditure_types?: string;
+    expenditure_types_minor?: string;
   };
 }
 
@@ -87,7 +87,7 @@ interface DecisionData {
   ada?: string;
   implementing_agency?: number[];
   decision_budget?: string | number;
-  expediture_type?: number[];
+  expenditure_type?: number[];
   decision_date?: string;
   is_included?: boolean;
   is_active?: boolean;
@@ -649,8 +649,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">Δαπάνες που αφορά:</span>
                                   <p className="text-purple-900">
-                                    {Array.isArray(decision.expediture_type) && decision.expediture_type.length > 0 
-                                      ? decision.expediture_type.map(id => `ID: ${id}`).join(', ') 
+                                    {Array.isArray(decision.expenditure_type) && decision.expenditure_type.length > 0 
+                                      ? decision.expenditure_type.map(id => `ID: ${id}`).join(', ') 
                                       : 'Δεν έχει καθοριστεί'}
                                   </p>
                                 </div>

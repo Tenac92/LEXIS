@@ -37,3 +37,17 @@ Core architectural decisions include:
 - **Zod**: Schema validation library.
 - **SendGrid**: Email service for notifications.
 - **MaxMind GeoIP**: Geographic IP restriction middleware.
+
+## Recent Changes
+
+### ✅ System-wide Spelling Correction (August 1, 2025)
+
+**📝 Comprehensive "expediture" → "expenditure" Fix**
+- Fixed systematic misspelling throughout entire codebase (25+ instances)
+- Corrected database schema references, table names, and foreign key relationships
+- Updated backend controllers, API routes, and SQL queries
+- Fixed frontend TypeScript interfaces, component props, and UI references
+- Updated migration files, configuration scripts, and documentation
+- Ensured consistency across all file types: .ts, .tsx, .js, .sql, .md files
+- Database integrity maintained with proper table and column name corrections
+- All references now use the correct spelling "expenditure" for consistency and professionalism

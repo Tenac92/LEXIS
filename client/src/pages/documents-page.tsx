@@ -518,8 +518,8 @@ export default function DocumentsPage() {
                       <SelectContent>
                         <SelectItem value="">Όλοι οι τύποι</SelectItem>
                         {expenditureTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.expediture_types || type.name || ''}>
-                            {type.expediture_types || type.name}
+                          <SelectItem key={type.id} value={type.expenditure_types || type.name || ''}>
+                            {type.expenditure_types || type.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

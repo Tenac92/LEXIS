@@ -115,7 +115,7 @@ async function executeSystemQuery(query) {
     try {
       // Get list of tables by trying known ones
       const knownTables = ['Projects', 'project_index', 'project_history', 'budget_na853_split', 
-                          'budget_history', 'event_types', 'expediture_types', 'kallikratis', 
+                          'budget_history', 'event_types', 'expenditure_types', 'kallikratis', 
                           'Monada', 'users', 'beneficiaries', 'employees', 'documents'];
       
       const tableInfo = [];

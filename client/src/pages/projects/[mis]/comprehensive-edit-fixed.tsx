@@ -899,7 +899,7 @@ export default function ComprehensiveEditFixed() {
               const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
               const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
               const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
-              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expediture_type_id);
+              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
               
               const key = `${indexItem.monada_id || 'no-unit'}-${indexItem.event_types_id || 'no-event'}`;
               
@@ -2031,7 +2031,7 @@ export default function ComprehensiveEditFixed() {
                                       <div key={expenditureType.id} className="flex items-center space-x-2 py-1">
                                         <input
                                           type="checkbox"
-                                          id={`expediture-type-${index}-${expenditureType.id}`}
+                                          id={`expenditure-type-${index}-${expenditureType.id}`}
                                           checked={field.value?.includes(expenditureType.id) || false}
                                           onChange={(e) => {
                                             const currentValue = field.value || [];
@@ -2044,7 +2044,7 @@ export default function ComprehensiveEditFixed() {
                                           className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
                                         />
                                         <label 
-                                          htmlFor={`expediture-type-${index}-${expenditureType.id}`}
+                                          htmlFor={`expenditure-type-${index}-${expenditureType.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
                                           {expenditureType.expenditure_types || expenditureType.name}

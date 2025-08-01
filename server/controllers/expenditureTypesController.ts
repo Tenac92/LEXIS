@@ -13,7 +13,7 @@ import { asyncHandler } from '../middleware/errorHandler';
 export const getExpenditureTypes = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { data: expenditureTypes, error } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .select('*')
       .order('id');
 
@@ -58,7 +58,7 @@ export const getExpenditureTypeById = asyncHandler(async (req: Request, res: Res
 
   try {
     const { data: expenditureType, error } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .select('*')
       .eq('id', id)
       .single();
@@ -101,7 +101,7 @@ export const createExpenditureType = asyncHandler(async (req: Request, res: Resp
 
   try {
     const { data: newExpenditureType, error } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .insert([{
         name,
         description,
@@ -152,7 +152,7 @@ export const updateExpenditureType = asyncHandler(async (req: Request, res: Resp
 
   try {
     const { data: updatedExpenditureType, error } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .update({
         name,
         description,
@@ -203,7 +203,7 @@ export const deleteExpenditureType = asyncHandler(async (req: Request, res: Resp
 
   try {
     const { error } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .delete()
       .eq('id', id);
 
@@ -236,8 +236,8 @@ export const deleteExpenditureType = asyncHandler(async (req: Request, res: Resp
 export const getExpenditureTypesForFilter = asyncHandler(async (req: Request, res: Response) => {
   try {
     const { data: expenditureTypes, error } = await supabase
-      .from('expediture_types')
-      .select('id, expediture_types as name')
+      .from('expenditure_types')
+      .select('id, expenditure_types as name')
       .eq('is_active', true)
       .order('id');
 

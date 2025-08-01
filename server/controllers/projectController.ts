@@ -18,7 +18,7 @@ export async function listProjects(req: Request, res: Response) {
       supabase.from('Projects').select('*').order('created_at', { ascending: false }),
       supabase.from('Monada').select('*'),
       supabase.from('event_types').select('*'),
-      supabase.from('expediture_types').select('*'),
+      supabase.from('expenditure_types').select('*'),
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
     ]);
@@ -52,7 +52,7 @@ export async function listProjects(req: Request, res: Response) {
         const eventTypeData = projectIndexItems.length > 0 ? 
           eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
         const expenditureTypeData = projectIndexItems.length > 0 ? 
-          expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+          expenditureTypes.find(et => et.id === projectIndexItems[0].expenditure_type_id) : null;
         const monadaData_item = projectIndexItems.length > 0 ? 
           monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
         const kallikratisData_item = projectIndexItems.length > 0 ? 
@@ -60,9 +60,9 @@ export async function listProjects(req: Request, res: Response) {
 
         // Get all expenditure types for this project
         const allExpenditureTypes = projectIndexItems
-          .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+          .map(idx => expenditureTypes.find(et => et.id === idx.expenditure_type_id))
           .filter(et => et !== null && et !== undefined)
-          .map(et => et.expediture_types);
+          .map(et => et.expenditure_types);
         const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
 
         // Get all event types for this project
@@ -80,7 +80,7 @@ export async function listProjects(req: Request, res: Response) {
           } : null,
           enhanced_expenditure_type: expenditureTypeData ? {
             id: expenditureTypeData.id,
-            name: expenditureTypeData.expediture_types
+            name: expenditureTypeData.expenditure_types
           } : null,
           enhanced_unit: monadaData_item ? {
             id: monadaData_item.id,
@@ -120,7 +120,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       supabase.from('Projects').select('*').order('created_at', { ascending: false }),
       supabase.from('Monada').select('*'),
       supabase.from('event_types').select('*'),
-      supabase.from('expediture_types').select('*'),
+      supabase.from('expenditure_types').select('*'),
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
     ]);
@@ -146,9 +146,9 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       
       // Get all expenditure types for this project
       const allExpenditureTypes = projectIndexItems
-        .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+        .map(idx => expenditureTypes.find(et => et.id === idx.expenditure_type_id))
         .filter(et => et !== null && et !== undefined)
-        .map(et => et.expediture_types);
+        .map(et => et.expenditure_types);
       const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
 
       // Get all event types for this project
@@ -161,7 +161,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       const eventType = projectIndexItems.length > 0 ? 
         eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
       const expenditureType = projectIndexItems.length > 0 ? 
-        expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+        expenditureTypes.find(et => et.id === projectIndexItems[0].expenditure_type_id) : null;
       const monadaItem = projectIndexItems.length > 0 ? 
         monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
       const kallikratisItem = projectIndexItems.length > 0 ? 
@@ -175,7 +175,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         } : null,
         enhanced_expenditure_type: expenditureType ? {
           id: expenditureType.id,
-          name: expenditureType.expediture_types
+          name: expenditureType.expenditure_types
         } : null,
         enhanced_unit: monadaItem ? {
           id: monadaItem.id,
@@ -509,7 +509,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       supabase.from('event_types').select('*').limit(100),
       supabase.from('Monada').select('*').limit(50),
       supabase.from('kallikratis').select('*').limit(2000),
-      supabase.from('expediture_types').select('*').limit(50)
+      supabase.from('expenditure_types').select('*').limit(50)
     ]);
     
     // Check for errors in reference data queries
@@ -542,7 +542,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     const mostCommonKallikratis = projectIndex.length > 0 ? 
       kallikratis.find(k => k.id === projectIndex[0].kallikratis_id) : null;
     const mostCommonExpenditure = projectIndex.length > 0 ? 
-      expenditureTypes.find(et => et.id === projectIndex[0].expediture_type_id) : null;
+      expenditureTypes.find(et => et.id === projectIndex[0].expenditure_type_id) : null;
     
     // Find event type from direct field
     const eventType = eventTypes.find(et => et.id === projectData.event_type_id);
@@ -558,7 +558,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       } : null,
       enhanced_expenditure_type: mostCommonExpenditure ? {
         id: mostCommonExpenditure.id,
-        name: mostCommonExpenditure.expediture_types
+        name: mostCommonExpenditure.expenditure_types
       } : null,
       enhanced_unit: mostCommonUnit ? {
         id: mostCommonUnit.id,
@@ -777,7 +777,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
           // Get reference data if not already available
           const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes] = await Promise.all([
             supabase.from('event_types').select('*'),
-            supabase.from('expediture_types').select('*'),
+            supabase.from('expenditure_types').select('*'),
             supabase.from('Monada').select('*'),
             supabase.from('kallikratis').select('*')
           ]);
@@ -905,12 +905,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
             // Find expenditure type IDs (multiple values)
             if (line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0) {
               console.log(`[Projects] DEBUG: Processing expenditure types:`, line.expenditure_types);
-              console.log(`[Projects] DEBUG: Available expenditure types:`, expenditureTypes.map(et => ({ id: et.id, name: et.expediture_types })));
+              console.log(`[Projects] DEBUG: Available expenditure types:`, expenditureTypes.map(et => ({ id: et.id, name: et.expenditure_types })));
               
               for (const expType of line.expenditure_types) {
                 const expenditureType = expenditureTypes.find(et => 
                   et.id == expType || 
-                  et.expediture_types === expType ||
+                  et.expenditure_types === expType ||
                   et.id === parseInt(expType)
                 );
                 expenditureTypeId = expenditureType?.id || null;
@@ -952,7 +952,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                   const indexEntry: any = {
                     project_id: updatedProject.id,
                     event_types_id: eventTypeId,
-                    expediture_type_id: expenditureTypeId
+                    expenditure_type_id: expenditureTypeId
                   };
                   
                   // Only add optional fields if they're not null
@@ -985,7 +985,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
               }
             } else {
               // Use default expenditure type if none specified
-              const defaultExpenditureType = expenditureTypes.find(et => et.expediture_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ") || expenditureTypes[0];
+              const defaultExpenditureType = expenditureTypes.find(et => et.expenditure_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ") || expenditureTypes[0];
               if (defaultExpenditureType) {
                 // Calculate geographic code for default entry
                 let geographicCode = null;
@@ -1013,7 +1013,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 const indexEntry: any = {
                   project_id: updatedProject.id,
                   event_types_id: eventTypeId,
-                  expediture_type_id: defaultExpenditureType.id
+                  expenditure_type_id: defaultExpenditureType.id
                 };
                 
                 // Only add optional fields if they're not null
@@ -1054,7 +1054,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     // Get enhanced data for the updated project
     const [eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
       supabase.from('event_types').select('*'),
-      supabase.from('expediture_types').select('*'),
+      supabase.from('expenditure_types').select('*'),
       supabase.from('Monada').select('*'),
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
@@ -1069,7 +1069,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     // Find enhanced data for this project
     const indexItem = indexData.find(idx => idx.project_id === updatedProject.id);
     const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
-    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
@@ -1082,7 +1082,7 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       } : null,
       enhanced_expenditure_type: expenditureType ? {
         id: expenditureType.id,
-        name: expenditureType.expediture_types
+        name: expenditureType.expenditure_types
       } : null,
       enhanced_unit: monada ? {
         id: monada.id,
@@ -1124,7 +1124,7 @@ router.get('/reference-data', authenticateSession, async (req: AuthenticatedRequ
       supabase.from('event_types').select('*').order('id'),
       supabase.from('Monada').select('*').order('id'),
       supabase.from('kallikratis').select('*').order('id'),
-      supabase.from('expediture_types').select('*').order('id')
+      supabase.from('expenditure_types').select('*').order('id')
     ]);
 
     const referenceData = {
@@ -1164,7 +1164,7 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
     const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
       supabase.from('Projects').select('*').eq('mis', mis).single(),
       supabase.from('event_types').select('*'),
-      supabase.from('expediture_types').select('*'),
+      supabase.from('expenditure_types').select('*'),
       supabase.from('Monada').select('*'),
       supabase.from('kallikratis').select('*'),
       supabase.from('project_index').select('*')
@@ -1199,7 +1199,7 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
     // Find enhanced data for this project
     const indexItem = indexData.find(idx => idx.project_id === project.id);
     const eventType = indexItem ? eventTypes.find(et => et.id === indexItem.event_types_id) : null;
-    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expediture_type_id) : null;
+    const expenditureType = indexItem ? expenditureTypes.find(et => et.id === indexItem.expenditure_type_id) : null;
     const monada = indexItem ? monadaData.find(m => m.id === indexItem.monada_id) : null;
     const kallikratis = indexItem ? kallikratisData.find(k => k.id === indexItem.kallikratis_id) : null;
 
@@ -1233,7 +1233,7 @@ router.get('/:mis', authenticateSession, async (req: AuthenticatedRequest, res: 
       } : null,
       enhanced_expenditure_type: expenditureType ? {
         id: expenditureType.id,
-        name: expenditureType.expediture_types
+        name: expenditureType.expenditure_types
       } : null,
       enhanced_unit: monada ? {
         id: monada.id,
@@ -1431,10 +1431,10 @@ router.get('/:mis/index', authenticateSession, async (req: AuthenticatedRequest,
           id,
           name
         ),
-        expediture_types(
+        expenditure_types(
           id,
-          expediture_types,
-          expediture_types_minor
+          expenditure_types,
+          expenditure_types_minor
         )
       `)
       .eq('project_id', project.id);
@@ -1550,7 +1550,7 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
           ada: decision.ada || null,
           implementing_agency: decision.implementing_agency || [],
           decision_budget: parseEuropeanBudget(decision.decision_budget),
-          expediture_type: decision.expediture_type || [],
+          expenditure_type: decision.expenditure_type || [],
           decision_date: new Date().toISOString().split('T')[0], // Today's date as default
           included: decision.included !== undefined ? decision.included : true,
           is_active: true,

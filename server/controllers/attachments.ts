@@ -24,9 +24,9 @@ async function fetchAttachments(expenditureType: string) {
   try {
     // First, get the expenditure type ID
     const { data: expenditureTypeData, error: expenditureTypeError } = await supabase
-      .from('expediture_types')
+      .from('expenditure_types')
       .select('id')
-      .eq('expediture_types', expenditureType)
+      .eq('expenditure_types', expenditureType)
       .single();
     
     if (expenditureTypeError) {
@@ -44,8 +44,8 @@ async function fetchAttachments(expenditureType: string) {
     // Fetch attachments that have this expenditure type ID in their array
     const { data: attachmentsData, error: attachmentsError } = await supabase
       .from('attachments')
-      .select('id, atachments, expediture_type_id')
-      .contains('expediture_type_id', [expenditureTypeId]);
+      .select('id, atachments, expenditure_type_id')
+      .contains('expenditure_type_id', [expenditureTypeId]);
     
     if (attachmentsError) {
       console.error('[Attachments] Error fetching attachments:', attachmentsError);

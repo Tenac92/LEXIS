@@ -148,7 +148,7 @@
 
 #### 17. **attachments** (12 records)
 - **Schema**: Document attachment metadata
-- **Key Fields**: id, atachments, expediture_type_id
+- **Key Fields**: id, atachments, expenditure_type_id
 - **Backend Controller**: `server/controllers/attachmentsController.ts`
 - **API Routes**: `GET /api/attachments`
 - **Database Relations**: Referenced by generated_documents via attachment_id array

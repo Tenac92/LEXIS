@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supabase.from('Projects').select('*').order('created_at', { ascending: false }),
         supabase.from('Monada').select('*'),
         supabase.from('event_types').select('*'),
-        supabase.from('expediture_types').select('*'),
+        supabase.from('expenditure_types').select('*'),
         supabase.from('kallikratis').select('*'),
         supabase.from('project_index').select('*')
       ]);
@@ -194,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const eventTypeData = projectIndexItems.length > 0 ? 
             eventTypes.find(et => et.id === projectIndexItems[0].event_types_id) : null;
           const expenditureTypeData = projectIndexItems.length > 0 ? 
-            expenditureTypes.find(et => et.id === projectIndexItems[0].expediture_type_id) : null;
+            expenditureTypes.find(et => et.id === projectIndexItems[0].expenditure_type_id) : null;
           const monadaData_item = projectIndexItems.length > 0 ? 
             monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
           const kallikratisData_item = projectIndexItems.length > 0 ? 
@@ -202,9 +202,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Get all expenditure types for this project
           const allExpenditureTypes = projectIndexItems
-            .map(idx => expenditureTypes.find(et => et.id === idx.expediture_type_id))
+            .map(idx => expenditureTypes.find(et => et.id === idx.expenditure_type_id))
             .filter(et => et !== null && et !== undefined)
-            .map(et => et.expediture_types);
+            .map(et => et.expenditure_types);
           const uniqueExpenditureTypes = Array.from(new Set(allExpenditureTypes));
 
           return {
@@ -340,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/expenditure-types', async (req: Request, res: Response) => {
     try {
       const { data: expenditureTypes, error } = await supabase
-        .from('expediture_types')
+        .from('expenditure_types')
         .select('*')
         .order('id');
       
@@ -507,7 +507,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/public/expenditure-types', async (req: Request, res: Response) => {
     try {
       const { data: expenditureTypes, error } = await supabase
-        .from('expediture_types')
+        .from('expenditure_types')
         .select('*')
         .order('id');
       
@@ -854,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           kallikratis:kallikratis_id (
             *
           ),
-          expediture_types:expediture_type_id (
+          expenditure_types:expenditure_type_id (
             *
           )
         `)
@@ -878,8 +878,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (k.perifereiaki_enotita) regionalUnits.add(k.perifereiaki_enotita);
           if (k.onoma_neou_ota) municipalities.add(k.onoma_neou_ota);
         }
-        if (index.expediture_types) {
-          expenditureTypes.add(index.expediture_types);
+        if (index.expenditure_types) {
+          expenditureTypes.add(index.expenditure_types);
         }
       });
       
@@ -921,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         supabase.from('Projects').select('*'),
         supabase.from('Monada').select('*'),
         supabase.from('event_types').select('*'),
-        supabase.from('expediture_types').select('*'),
+        supabase.from('expenditure_types').select('*'),
         supabase.from('project_index').select('*')
       ]);
       
@@ -984,14 +984,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Extract unique expenditure type IDs
         const expenditureTypeIds = Array.from(new Set(projectIndexEntries
-          .map(idx => idx.expediture_type_id)
+          .map(idx => idx.expenditure_type_id)
           .filter(id => id !== null && id !== undefined)));
         
         // Map expenditure type IDs to names
         const expenditureTypeNames = expenditureTypeIds
           .map(id => {
             const expType = expenditureTypes.find(et => et.id === id);
-            return expType ? expType.expediture_types : null;
+            return expType ? expType.expenditure_types : null;
           })
           .filter(name => name !== null);
         
