@@ -1812,8 +1812,8 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4" key={`decisions-container-${initializationTime}`}>
                     {/* Decisions List */}
-                    {form.watch("decisions").map((_, index) => (
-                      <div key={`decision-${index}-${initializationTime}`} className="p-3 border rounded-lg space-y-3">
+                    {form.watch("decisions").map((decision, index) => (
+                      <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-3 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
                           <Button
@@ -1822,9 +1822,21 @@ export default function ComprehensiveEditFixed() {
                             size="sm"
                             className="h-8 px-2"
                             onClick={() => {
+                              console.log(`🗑️ Deleting decision at index ${index}`);
                               const currentDecisions = form.getValues("decisions");
+                              console.log(`🗑️ Current decisions before delete:`, currentDecisions);
                               const updatedDecisions = currentDecisions.filter((_, i) => i !== index);
-                              form.setValue("decisions", updatedDecisions);
+                              console.log(`🗑️ Updated decisions after delete:`, updatedDecisions);
+                              form.setValue("decisions", updatedDecisions, { 
+                                shouldDirty: true, 
+                                shouldTouch: true,
+                                shouldValidate: true 
+                              });
+                              // Force a re-render by triggering the watch
+                              setTimeout(() => {
+                                const finalDecisions = form.getValues("decisions");
+                                console.log(`🗑️ Final decisions after setValue:`, finalDecisions);
+                              }, 50);
                             }}
                           >
                             <X className="h-4 w-4 mr-1" />
