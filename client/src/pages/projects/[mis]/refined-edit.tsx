@@ -175,6 +175,17 @@ export default function RefinedProjectEdit() {
     if (projectData?.project) {
       const project = projectData.project;
       
+      // Debug logging to help troubleshoot data population
+      console.log('DEBUG - Initializing form with project data:', {
+        project_title: project.project_title,
+        event_description: project.event_description,
+        status: project.status,
+        budget_na853: project.budget_na853,
+        enhanced_event_type: project.enhanced_event_type,
+        enhanced_unit: project.enhanced_unit,
+        enhanced_expenditure_type: project.enhanced_expenditure_type
+      });
+      
       form.reset({
         project_title: project.project_title || "",
         event_description: project.event_description || "",
@@ -183,15 +194,18 @@ export default function RefinedProjectEdit() {
         budget_na271: project.budget_na271 ? formatEuropeanNumber(project.budget_na271) : "",
         budget_e069: project.budget_e069 ? formatEuropeanNumber(project.budget_e069) : "",
         event_year: project.event_year?.toString() || "",
-        event_type: project.enhanced_event_type?.name || "",
+        event_type: project.enhanced_event_type?.name || project.event_type || "",
         na853: project.na853 || "",
         na271: project.na271 || "",
         e069: project.e069 || "",
-        implementing_agency: project.enhanced_unit?.name || "",
-        expenditure_types: project.enhanced_expenditure_type?.expenditure_types ? [project.enhanced_expenditure_type.expenditure_types] : [],
+        implementing_agency: project.enhanced_unit?.name || project.enhanced_unit?.unit || "",
+        expenditure_types: project.enhanced_expenditure_type?.name ? [project.enhanced_expenditure_type.name] : 
+                          project.enhanced_expenditure_type?.expenditure_types ? [project.enhanced_expenditure_type.expenditure_types] : [],
         location_details: [], // Will be populated from index data
-        comments: "",
+        comments: project.comments || "",
       });
+      
+      console.log('DEBUG - Form initialized with values:', form.getValues());
     }
   }, [projectData, form]);
 
@@ -269,9 +283,9 @@ export default function RefinedProjectEdit() {
   const project = projectData.project;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="border-b bg-card">
+      <div className="border-b bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -279,20 +293,20 @@ export default function RefinedProjectEdit() {
                 variant="ghost"
                 size="sm"
                 onClick={handleCancel}
-                className="gap-2"
+                className="gap-2 hover:bg-gray-100"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Πίσω
               </Button>
               <div>
-                <h1 className="text-xl font-semibold">Επεξεργασία Έργου</h1>
-                <p className="text-sm text-muted-foreground">MIS: {project.mis}</p>
+                <h1 className="text-xl font-semibold text-gray-900">Επεξεργασία Έργου</h1>
+                <p className="text-sm text-gray-600">MIS: {project.mis}</p>
               </div>
             </div>
             
             <div className="flex items-center gap-3">
               {unsavedChanges && (
-                <Badge variant="secondary" className="gap-1">
+                <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 hover:bg-amber-200">
                   <Clock className="h-3 w-3" />
                   Μη αποθηκευμένο
                 </Badge>
@@ -302,7 +316,7 @@ export default function RefinedProjectEdit() {
                 variant="outline"
                 size="sm"
                 onClick={() => setLocation(`/projects/${mis}`)}
-                className="gap-2"
+                className="gap-2 border-gray-300 hover:bg-gray-50"
               >
                 <Eye className="h-4 w-4" />
                 Προβολή
@@ -311,7 +325,7 @@ export default function RefinedProjectEdit() {
               <Button
                 onClick={form.handleSubmit(handleSubmit)}
                 disabled={updateMutation.isPending || !form.formState.isValid}
-                className="gap-2"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {updateMutation.isPending ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -325,11 +339,11 @@ export default function RefinedProjectEdit() {
           
           {/* Progress bar */}
           <div className="mt-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+            <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
               <span>Πρόοδος Φόρμας:</span>
-              <span className="font-medium">{formProgress}%</span>
+              <span className="font-medium text-blue-600">{formProgress}%</span>
             </div>
-            <Progress value={formProgress} className="h-2" />
+            <Progress value={formProgress} className="h-2 bg-gray-200" />
           </div>
         </div>
       </div>
@@ -361,22 +375,26 @@ export default function RefinedProjectEdit() {
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6">
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <FileText className="h-5 w-5" />
+                  <Card className="bg-white shadow-sm border-gray-200">
+                    <CardHeader className="bg-gray-50 border-b border-gray-200">
+                      <CardTitle className="flex items-center gap-2 text-gray-900">
+                        <FileText className="h-5 w-5 text-blue-600" />
                         Βασικά Στοιχεία
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                       <FormField
                         control={form.control}
                         name="project_title"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Τίτλος Έργου *</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Τίτλος Έργου *</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου" />
+                              <Input 
+                                {...field} 
+                                placeholder="Εισάγετε τον τίτλο του έργου" 
+                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -388,12 +406,13 @@ export default function RefinedProjectEdit() {
                         name="event_description"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Περιγραφή Συμβάντος *</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Περιγραφή Συμβάντος *</FormLabel>
                             <FormControl>
                               <Textarea 
                                 {...field} 
                                 placeholder="Περιγράψτε το συμβάν που οδήγησε στη δημιουργία του έργου"
                                 rows={4}
+                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 resize-none"
                               />
                             </FormControl>
                             <FormMessage />
@@ -406,10 +425,10 @@ export default function RefinedProjectEdit() {
                         name="status"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Κατάσταση Έργου</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Κατάσταση Έργου</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                   <SelectValue placeholder="Επιλέξτε κατάσταση" />
                                 </SelectTrigger>
                               </FormControl>
@@ -447,23 +466,23 @@ export default function RefinedProjectEdit() {
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
+                  <Card className="bg-white shadow-sm border-gray-200">
+                    <CardHeader className="bg-gray-50 border-b border-gray-200">
+                      <CardTitle className="flex items-center gap-2 text-gray-900">
+                        <Calendar className="h-5 w-5 text-green-600" />
                         Στοιχεία Συμβάντος
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-4 p-6">
                       <FormField
                         control={form.control}
                         name="event_type"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Τύπος Συμβάντος</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Τύπος Συμβάντος</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                   <SelectValue placeholder="Επιλέξτε τύπο συμβάντος" />
                                 </SelectTrigger>
                               </FormControl>
@@ -485,9 +504,13 @@ export default function RefinedProjectEdit() {
                         name="event_year"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Έτος Συμβάντος</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Έτος Συμβάντος</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="π.χ. 2024" />
+                              <Input 
+                                {...field} 
+                                placeholder="π.χ. 2024" 
+                                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -499,10 +522,10 @@ export default function RefinedProjectEdit() {
                         name="implementing_agency"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Φορέας Υλοποίησης</FormLabel>
+                            <FormLabel className="text-gray-700 font-medium">Φορέας Υλοποίησης</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger>
+                                <SelectTrigger className="border-gray-300 focus:border-blue-500 focus:ring-blue-500">
                                   <SelectValue placeholder="Επιλέξτε φορέα" />
                                 </SelectTrigger>
                               </FormControl>
