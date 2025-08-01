@@ -1058,9 +1058,9 @@ export default function ComprehensiveEditFixed() {
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Διαχείριση Έργου: {typedProjectData?.project_title}
+            Επεξεργασία Έργου: {typedProjectData?.project_title}
           </h1>
-          <div className="flex items-center gap-4 text-gray-600">
+          <div className="flex items-center gap-4 text-gray-600 mb-4">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4" />
               <span className="font-medium">MIS: {typedProjectData?.mis}</span>
@@ -1070,10 +1070,32 @@ export default function ComprehensiveEditFixed() {
               <span className="text-sm">{typedProjectData?.status || "Ενεργό"}</span>
             </div>
           </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => navigate(`/projects/${mis}`)}>
+              Επιστροφή στο Έργο
+            </Button>
+            <Button 
+              onClick={form.handleSubmit(handleSubmit)}
+              disabled={mutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {mutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Αποθήκευση...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Αποθήκευση Αλλαγών
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         <Form key={formKey} {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <Tabs defaultValue="edit" className="w-full">
               <TabsList className="grid w-full grid-cols-2 bg-white border border-gray-200 h-12 rounded-lg">
                 <TabsTrigger 
@@ -2455,45 +2477,6 @@ export default function ComprehensiveEditFixed() {
                 </CardContent>
               </Card>
 
-              {/* Submit Button */}
-              <div className="flex gap-4 pt-6 border-t border-gray-200 bg-gray-50 p-6 -mx-6 -mb-6 rounded-b-lg">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(`/projects/${mis}`)}
-                  disabled={mutation.isPending}
-                  className="px-6 py-2 border border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800 bg-white hover:bg-gray-50"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Ακύρωση
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={mutation.isPending}
-                  onClick={() => {
-                    console.log("=== SUBMIT BUTTON CLICKED ===");
-                    console.log("Form state:", {
-                      isValid: form.formState.isValid,
-                      errors: form.formState.errors,
-                      isDirty: form.formState.isDirty,
-                      isSubmitting: form.formState.isSubmitting
-                    });
-                  }}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                >
-                  {mutation.isPending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Αποθήκευση...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Αποθήκευση Αλλαγών
-                    </>
-                  )}
-                </Button>
-              </div>
             </TabsContent>
           </Tabs>
         </form>
