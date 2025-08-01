@@ -526,15 +526,54 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       console.error('[ProjectComplete] Error fetching kallikratis:', kallikratisRes.error);
     }
     
+    // Enhance project data with related information
+    const eventTypes = eventTypesRes.data || [];
+    const units = unitsRes.data || [];
+    const expenditureTypes = expenditureTypesRes.data || [];
+    const kallikratis = kallikratisRes.data || [];
+    
+    // Find related data for this project
+    console.log(`[ProjectComplete] Looking for event type with ID: ${projectData.event_type_id} (type: ${typeof projectData.event_type_id})`);
+    console.log(`[ProjectComplete] Available event types:`, eventTypes.map(et => ({ id: et.id, name: et.name })));
+    
+    const eventType = eventTypes.find(et => et.id === projectData.event_type_id);
+    const expenditureType = expenditureTypes.find(et => et.id === projectData.expenditure_type_id);
+    const unit = units.find(u => u.id === projectData.unit_id);
+    const kallikratisItem = kallikratis.find(k => k.id === projectData.kallikratis_id);
+    
+    console.log(`[ProjectComplete] Found event type:`, eventType);
+    
+    // Create enhanced project data
+    const enhancedProject = {
+      ...projectData,
+      enhanced_event_type: eventType ? {
+        id: eventType.id,
+        name: eventType.name
+      } : null,
+      enhanced_expenditure_type: expenditureType ? {
+        id: expenditureType.id,
+        name: expenditureType.expediture_types
+      } : null,
+      enhanced_unit: unit ? {
+        id: unit.id,
+        name: unit.unit
+      } : null,
+      enhanced_kallikratis: kallikratisItem ? {
+        id: kallikratisItem.id,
+        name: kallikratisItem.perifereia || kallikratisItem.onoma_dimou_koinotitas,
+        level: kallikratisItem.level || 'municipality'
+      } : null
+    };
+
     const completeData = {
-      project: projectData,
+      project: enhancedProject,
       decisions: decisionsRes.data || [],
       formulations: formulationsRes.data || [],
       index: indexRes.data || [],
-      eventTypes: eventTypesRes.data || [],
-      units: unitsRes.data || [],
-      kallikratis: kallikratisRes.data || [],
-      expenditureTypes: expenditureTypesRes.data || []
+      eventTypes: eventTypes,
+      units: units,
+      kallikratis: kallikratis,
+      expenditureTypes: expenditureTypes
     };
     
     console.log(`[ProjectComplete] Successfully fetched complete data for project ${projectId}`);
