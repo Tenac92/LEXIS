@@ -1054,67 +1054,144 @@ export default function ComprehensiveEditFixed() {
   console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.length || 0, "total items", typedExpenditureTypesData?.slice(0, 3));
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Διαχείριση Έργου: {typedProjectData?.project_title}</h1>
-        <p className="text-gray-600">MIS: {typedProjectData?.mis}</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="mb-8 bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            Διαχείριση Έργου: {typedProjectData?.project_title}
+          </h1>
+          <div className="flex items-center gap-4 text-gray-600">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              <span className="font-medium">MIS: {typedProjectData?.mis}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              <span className="text-sm">{typedProjectData?.status || "Ενεργό"}</span>
+            </div>
+          </div>
+        </div>
 
-      <Form key={formKey} {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <Tabs defaultValue="edit" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="summary">Σύνοψη</TabsTrigger>
-              <TabsTrigger value="edit">Επεξεργασία</TabsTrigger>
-            </TabsList>
+        <Form key={formKey} {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+            <Tabs defaultValue="edit" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white shadow-lg border-0 h-14 rounded-xl">
+                <TabsTrigger 
+                  value="summary" 
+                  className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Σύνοψη
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="edit"
+                  className="text-sm font-medium rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white data-[state=active]:shadow-md transition-all duration-200"
+                >
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Επεξεργασία
+                </TabsTrigger>
+              </TabsList>
             
-            <TabsContent value="summary" className="space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+            <TabsContent value="summary" className="space-y-8">
+              <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="py-6 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FileText className="h-6 w-6" />
+                    </div>
                     Σύνοψη Έργου
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Βασικά Στοιχεία</h3>
-                        <div className="space-y-2 text-sm">
-                          <div><span className="font-medium">MIS:</span> {typedProjectData?.mis}</div>
-                          <div><span className="font-medium">Τίτλος:</span> {typedProjectData?.project_title}</div>
-                          <div><span className="font-medium">Περιγραφή:</span> {typedProjectData?.event_description}</div>
-                          <div><span className="font-medium">Κατάσταση:</span> {typedProjectData?.status}</div>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+                        <h3 className="text-base font-bold text-blue-800 mb-4 flex items-center gap-2">
+                          <Building2 className="h-5 w-5" />
+                          Βασικά Στοιχεία
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">MIS:</span> 
+                            <span className="font-bold text-blue-600">{typedProjectData?.mis}</span>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600 block mb-1">Τίτλος:</span> 
+                            <span className="text-gray-800">{typedProjectData?.project_title}</span>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600 block mb-1">Περιγραφή:</span> 
+                            <span className="text-gray-800">{typedProjectData?.event_description}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">Κατάσταση:</span> 
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">{typedProjectData?.status}</span>
+                          </div>
                         </div>
                       </div>
                       
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Κωδικοί ΣΑ</h3>
-                        <div className="space-y-2 text-sm">
-                          <div><span className="font-medium">ΝΑ853:</span> {typedProjectData?.na853 || "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">ΝΑ271:</span> {typedProjectData?.na271 || "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">E069:</span> {typedProjectData?.e069 || "Μη διαθέσιμο"}</div>
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
+                        <h3 className="text-base font-bold text-purple-800 mb-4 flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Κωδικοί ΣΑ
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">ΝΑ853:</span> 
+                            <span className="font-mono text-purple-600">{typedProjectData?.na853 || "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">ΝΑ271:</span> 
+                            <span className="font-mono text-purple-600">{typedProjectData?.na271 || "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">E069:</span> 
+                            <span className="font-mono text-purple-600">{typedProjectData?.e069 || "Μη διαθέσιμο"}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Προϋπολογισμοί</h3>
-                        <div className="space-y-2 text-sm">
-                          <div><span className="font-medium">Προϋπ. ΝΑ853:</span> {typedProjectData?.budget_na853 ? formatEuropeanCurrency(typedProjectData.budget_na853) : "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">Προϋπ. ΝΑ271:</span> {typedProjectData?.budget_na271 ? formatEuropeanCurrency(typedProjectData.budget_na271) : "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">Προϋπ. E069:</span> {typedProjectData?.budget_e069 ? formatEuropeanCurrency(typedProjectData.budget_e069) : "Μη διαθέσιμο"}</div>
+                    <div className="space-y-6">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+                        <h3 className="text-base font-bold text-green-800 mb-4 flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Προϋπολογισμοί
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">Προϋπ. ΝΑ853:</span> 
+                            <span className="font-bold text-green-600">{typedProjectData?.budget_na853 ? formatEuropeanCurrency(typedProjectData.budget_na853) : "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">Προϋπ. ΝΑ271:</span> 
+                            <span className="font-bold text-green-600">{typedProjectData?.budget_na271 ? formatEuropeanCurrency(typedProjectData.budget_na271) : "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="flex justify-between items-center p-2 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600">Προϋπ. E069:</span> 
+                            <span className="font-bold text-green-600">{typedProjectData?.budget_e069 ? formatEuropeanCurrency(typedProjectData.budget_e069) : "Μη διαθέσιμο"}</span>
+                          </div>
                         </div>
                       </div>
                       
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-600 mb-2">Συνδέσεις</h3>
-                        <div className="space-y-2 text-sm">
-                          <div><span className="font-medium">Τύπος Συμβάντος:</span> {typedProjectData?.enhanced_event_type?.name || "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">Φορέας Υλοποίησης:</span> {typedProjectData?.enhanced_unit?.name || "Μη διαθέσιμο"}</div>
-                          <div><span className="font-medium">Τύπος Δαπάνης:</span> {typedProjectData?.enhanced_expenditure_type?.name || "Μη διαθέσιμο"}</div>
+                      <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 border border-orange-100">
+                        <h3 className="text-base font-bold text-orange-800 mb-4 flex items-center gap-2">
+                          <CheckCircle className="h-5 w-5" />
+                          Συνδέσεις
+                        </h3>
+                        <div className="space-y-3">
+                          <div className="p-3 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600 block mb-1">Τύπος Συμβάντος:</span> 
+                            <span className="text-orange-600 font-medium">{typedProjectData?.enhanced_event_type?.name || "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600 block mb-1">Φορέας Υλοποίησης:</span> 
+                            <span className="text-orange-600 font-medium">{typedProjectData?.enhanced_unit?.name || "Μη διαθέσιμο"}</span>
+                          </div>
+                          <div className="p-3 bg-white rounded-lg">
+                            <span className="font-medium text-gray-600 block mb-1">Τύπος Δαπάνης:</span> 
+                            <span className="text-orange-600 font-medium">{typedProjectData?.enhanced_expenditure_type?.name || "Μη διαθέσιμο"}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1123,12 +1200,14 @@ export default function ComprehensiveEditFixed() {
               </Card>
             </TabsContent>
             
-            <TabsContent value="edit" className="space-y-6">
+            <TabsContent value="edit" className="space-y-8">
               {/* Combined Section 2&3: Event & Project Details */}
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-green-50 to-purple-50 border-b border-gray-200">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
+              <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="py-6 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-600 text-white">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Calendar className="h-6 w-6" />
+                    </div>
                     1. Στοιχεία Συμβάντος & Έργου
                   </CardTitle>
                 </CardHeader>
@@ -1229,15 +1308,17 @@ export default function ComprehensiveEditFixed() {
               </Card>
 
               {/* Section 5: Location Details */}
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-gray-200">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
+              <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="py-6 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-600 text-white">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <Building2 className="h-6 w-6" />
+                    </div>
                     2. Διαχείριση Τοποθεσιών & Φορέων
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div className="space-y-4">
+                <CardContent className="p-8">
+                  <div className="space-y-6">
                     {(() => {
                       const locationDetails = form.watch("location_details");
                       console.log("🔍 RENDER LOCATION DETAILS:", locationDetails);
@@ -1252,7 +1333,7 @@ export default function ComprehensiveEditFixed() {
                       }
                       
                       return (
-                      <div key={index} className="p-4 border rounded-lg space-y-4">
+                      <div key={index} className="p-6 bg-gradient-to-br from-cyan-50 to-blue-50 border border-cyan-200 rounded-xl space-y-6">
                         <div className="flex justify-between items-center">
                           <h4 className="font-medium text-sm text-gray-700">Τοποθεσία {index + 1}</h4>
                           <Button
@@ -1529,15 +1610,17 @@ export default function ComprehensiveEditFixed() {
               </Card>
 
               {/* Section 4: Formulation Details */}
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-gray-200">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+              <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="py-6 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-600 text-white">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FileText className="h-6 w-6" />
+                    </div>
                     3. Στοιχεία κατάρτισης έργου
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div className="space-y-4">
+                <CardContent className="p-8">
+                  <div className="space-y-6">
                     {(() => {
                       const formulations = form.watch("formulation_details");
                       const hasFormulations = formulations && formulations.length > 0 && formulations.some(f => 
@@ -1546,42 +1629,47 @@ export default function ComprehensiveEditFixed() {
                       
                       if (!hasFormulations) {
                         return (
-                          <div className="text-center py-8">
-                            <p className="text-gray-500 mb-4">Δεν υπάρχουν στοιχεία κατάρτισης για αυτό το έργο</p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                form.setValue("formulation_details", [
-                                  { 
-                                    sa: "ΝΑ853" as const, 
-                                    enumeration_code: "", 
-                                    protocol_number: "", 
-                                    ada: "", 
-                                    decision_year: "", 
-                                    project_budget: "", 
-                                    epa_version: "", 
-                                    total_public_expense: "", 
-                                    eligible_public_expense: "", 
-                                    decision_status: "Ενεργή" as const, 
-                                    change_type: "Έγκριση" as const, 
-                                    connected_decisions: [], 
-                                    comments: "" 
-                                  }
-                                ]);
-                              }}
-                              className="text-sm"
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Προσθήκη Πρώτου Στοιχείου Κατάρτισης
-                            </Button>
+                          <div className="text-center py-12 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200">
+                            <div className="flex flex-col items-center space-y-4">
+                              <div className="p-4 bg-amber-100 rounded-full">
+                                <FileText className="h-8 w-8 text-amber-600" />
+                              </div>
+                              <p className="text-gray-600 font-medium">Δεν υπάρχουν στοιχεία κατάρτισης για αυτό το έργο</p>
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  form.setValue("formulation_details", [
+                                    { 
+                                      sa: "ΝΑ853" as const, 
+                                      enumeration_code: "", 
+                                      protocol_number: "", 
+                                      ada: "", 
+                                      decision_year: "", 
+                                      project_budget: "", 
+                                      epa_version: "", 
+                                      total_public_expense: "", 
+                                      eligible_public_expense: "", 
+                                      decision_status: "Ενεργή" as const, 
+                                      change_type: "Έγκριση" as const, 
+                                      connected_decisions: [], 
+                                      comments: "" 
+                                    }
+                                  ]);
+                                }}
+                                className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Προσθήκη Πρώτου Στοιχείου Κατάρτισης
+                              </Button>
+                            </div>
                           </div>
                         );
                       }
                       
                       return formulations.map((_, index) => (
-                      <div key={index} className="p-3 border rounded-lg space-y-3">
+                      <div key={index} className="p-6 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl space-y-4 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Στοιχεία κατάρτισης #{index + 1}</span>
                           <Button
@@ -1893,15 +1981,17 @@ export default function ComprehensiveEditFixed() {
               </Card>
 
               {/* Section 1: Decisions */}
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
+              <Card className="shadow-xl border-0 bg-white rounded-2xl overflow-hidden">
+                <CardHeader className="py-6 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 text-white">
+                  <CardTitle className="text-xl flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FileText className="h-6 w-6" />
+                    </div>
                     4. Αποφάσεις που τεκμηριώνουν το έργο
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-4">
-                  <div className="space-y-4" key={`decisions-container-${initializationTime}`}>
+                <CardContent className="p-8">
+                  <div className="space-y-6" key={`decisions-container-${initializationTime}`}>
                     {/* Decisions List */}
                     {(() => {
                       const decisions = form.watch("decisions");
@@ -1913,28 +2003,33 @@ export default function ComprehensiveEditFixed() {
                       
                       if (!hasDecisions) {
                         return (
-                          <div className="text-center py-8">
-                            <p className="text-gray-500 mb-4">Δεν υπάρχουν αποφάσεις για αυτό το έργο</p>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                form.setValue("decisions", [
-                                  { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
-                                ]);
-                              }}
-                              className="text-sm"
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Προσθήκη Πρώτης Απόφασης
-                            </Button>
+                          <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                            <div className="flex flex-col items-center space-y-4">
+                              <div className="p-4 bg-purple-100 rounded-full">
+                                <FileText className="h-8 w-8 text-purple-600" />
+                              </div>
+                              <p className="text-gray-600 font-medium">Δεν υπάρχουν αποφάσεις για αυτό το έργο</p>
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  form.setValue("decisions", [
+                                    { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
+                                  ]);
+                                }}
+                                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg"
+                              >
+                                <Plus className="h-4 w-4 mr-2" />
+                                Προσθήκη Πρώτης Απόφασης
+                              </Button>
+                            </div>
                           </div>
                         );
                       }
                       
                       return decisions.map((decision, index) => (
-                      <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-3 border rounded-lg space-y-3">
+                      <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl space-y-4 shadow-sm">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
                           <Button
@@ -2327,13 +2422,15 @@ export default function ComprehensiveEditFixed() {
               </Card>
 
               {/* Submit Button */}
-              <div className="flex gap-4 pt-6">
+              <div className="flex gap-6 pt-8 pb-4">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => navigate(`/projects/${mis}`)}
                   disabled={mutation.isPending}
+                  className="px-8 py-3 border-2 border-gray-300 hover:border-gray-400 text-gray-700 hover:text-gray-800 bg-white hover:bg-gray-50 transition-all duration-200 shadow-sm"
                 >
+                  <X className="h-4 w-4 mr-2" />
                   Ακύρωση
                 </Button>
                 <Button
@@ -2348,14 +2445,26 @@ export default function ComprehensiveEditFixed() {
                       isSubmitting: form.formState.isSubmitting
                     });
                   }}
+                  className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                 >
-                  {mutation.isPending ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
+                  {mutation.isPending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Αποθήκευση...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Αποθήκευση Αλλαγών
+                    </>
+                  )}
                 </Button>
               </div>
             </TabsContent>
           </Tabs>
         </form>
       </Form>
+      </div>
     </div>
   );
 };
