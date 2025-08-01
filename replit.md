@@ -51,3 +51,19 @@ Core architectural decisions include:
 - Ensured consistency across all file types: .ts, .tsx, .js, .sql, .md files
 - Database integrity maintained with proper table and column name corrections
 - All references now use the correct spelling "expenditure" for consistency and professionalism
+
+### ✅ Enhanced Deletion Functionality & UI Improvements (August 1, 2025)
+
+**🗑️ Immediate Database Updates for Deletions**
+- Enhanced Project Decisions deletion with immediate database persistence instead of waiting for form submission
+- Enhanced Project Formulations deletion with immediate database persistence instead of waiting for form submission
+- Added comprehensive error handling with user feedback via toast notifications
+- Implemented form state reversion when database operations fail
+- Added detailed debugging logs for deletion operations
+
+**🎨 Improved Empty State UI Logic**
+- Replaced blank cards with clean empty states when no data exists
+- Project Decisions section shows "Add First Decision" button when empty
+- Project Formulations section shows "Add First Formulation" button when empty
+- Add buttons only appear when existing data is present, maintaining clean interface
+- Enhanced user experience with contextual action buttons based on data presence

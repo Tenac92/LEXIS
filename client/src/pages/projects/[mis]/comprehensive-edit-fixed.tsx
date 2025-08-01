@@ -1538,7 +1538,49 @@ export default function ComprehensiveEditFixed() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    {form.watch("formulation_details").map((_, index) => (
+                    {(() => {
+                      const formulations = form.watch("formulation_details");
+                      const hasFormulations = formulations && formulations.length > 0 && formulations.some(f => 
+                        f.sa || f.enumeration_code || f.protocol_number || f.ada || f.project_budget
+                      );
+                      
+                      if (!hasFormulations) {
+                        return (
+                          <div className="text-center py-8">
+                            <p className="text-gray-500 mb-4">Δεν υπάρχουν στοιχεία κατάρτισης για αυτό το έργο</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                form.setValue("formulation_details", [
+                                  { 
+                                    sa: "ΝΑ853" as const, 
+                                    enumeration_code: "", 
+                                    protocol_number: "", 
+                                    ada: "", 
+                                    decision_year: "", 
+                                    project_budget: "", 
+                                    epa_version: "", 
+                                    total_public_expense: "", 
+                                    eligible_public_expense: "", 
+                                    decision_status: "Ενεργή" as const, 
+                                    change_type: "Έγκριση" as const, 
+                                    connected_decisions: [], 
+                                    comments: "" 
+                                  }
+                                ]);
+                              }}
+                              className="text-sm"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Προσθήκη Πρώτου Στοιχείου Κατάρτισης
+                            </Button>
+                          </div>
+                        );
+                      }
+                      
+                      return formulations.map((_, index) => (
                       <div key={index} className="p-3 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Στοιχεία κατάρτισης #{index + 1}</span>
@@ -1547,10 +1589,45 @@ export default function ComprehensiveEditFixed() {
                             variant="destructive"
                             size="sm"
                             className="h-8 px-2"
-                            onClick={() => {
+                            onClick={async () => {
+                              console.log(`🗑️ Deleting formulation at index ${index}`);
                               const currentFormulations = form.getValues("formulation_details");
+                              console.log(`🗑️ Current formulations before delete:`, currentFormulations);
+                              console.log(`🗑️ Formulation being deleted:`, currentFormulations[index]);
+                              
                               const updatedFormulations = currentFormulations.filter((_, i) => i !== index);
-                              form.setValue("formulation_details", updatedFormulations);
+                              console.log(`🗑️ Updated formulations after delete:`, updatedFormulations);
+                              
+                              form.setValue("formulation_details", updatedFormulations, { 
+                                shouldDirty: true, 
+                                shouldTouch: true,
+                                shouldValidate: true 
+                              });
+                              
+                              // Immediately save the updated formulations to the database
+                              try {
+                                console.log(`🗑️ Immediately updating database with remaining formulations`);
+                                
+                                await apiRequest(`/api/projects/${mis}/formulations`, {
+                                  method: "PUT",
+                                  body: JSON.stringify({ formulation_details: updatedFormulations }),
+                                });
+                                
+                                console.log(`🗑️ ✅ Successfully deleted formulation from database`);
+                                toast({
+                                  title: "Επιτυχία",
+                                  description: "Το στοιχείο κατάρτισης διαγράφηκε επιτυχώς",
+                                });
+                              } catch (error) {
+                                console.error(`🗑️ ❌ Failed to delete formulation from database:`, error);
+                                toast({
+                                  title: "Σφάλμα",
+                                  description: "Αποτυχία διαγραφής στοιχείου κατάρτισης",
+                                  variant: "destructive",
+                                });
+                                // Revert the form state if database update failed
+                                form.setValue("formulation_details", currentFormulations);
+                              }
                             }}
                           >
                             <X className="h-4 w-4 mr-1" />
@@ -1763,40 +1840,54 @@ export default function ComprehensiveEditFixed() {
                           />
                         </div>
                       </div>
-                    ))}
+                      ));
+                    })()}
                     
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const currentFormulations = form.getValues("formulation_details");
-                          form.setValue("formulation_details", [
-                            ...currentFormulations,
-                            { 
-                              sa: "ΝΑ853" as const, 
-                              enumeration_code: "", 
-                              protocol_number: "", 
-                              ada: "", 
-                              decision_year: "", 
-                              project_budget: "", 
-                              epa_version: "", 
-                              total_public_expense: "", 
-                              eligible_public_expense: "", 
-                              decision_status: "Ενεργή" as const, 
-                              change_type: "Έγκριση" as const, 
-                              connected_decisions: [], 
-                              comments: "" 
-                            }
-                          ]);
-                        }}
-                        className="text-sm"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Προσθήκη Στοιχείου
-                      </Button>
-                    </div>
+                    {/* Add Formulation Button - only show when there are existing formulations */}
+                    {(() => {
+                      const formulations = form.watch("formulation_details");
+                      const hasFormulations = formulations && formulations.length > 0 && formulations.some(f => 
+                        f.sa || f.enumeration_code || f.protocol_number || f.ada || f.project_budget
+                      );
+                      
+                      if (hasFormulations) {
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentFormulations = form.getValues("formulation_details");
+                                form.setValue("formulation_details", [
+                                  ...currentFormulations,
+                                  { 
+                                    sa: "ΝΑ853" as const, 
+                                    enumeration_code: "", 
+                                    protocol_number: "", 
+                                    ada: "", 
+                                    decision_year: "", 
+                                    project_budget: "", 
+                                    epa_version: "", 
+                                    total_public_expense: "", 
+                                    eligible_public_expense: "", 
+                                    decision_status: "Ενεργή" as const, 
+                                    change_type: "Έγκριση" as const, 
+                                    connected_decisions: [], 
+                                    comments: "" 
+                                  }
+                                ]);
+                              }}
+                              className="text-sm"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Προσθήκη Στοιχείου
+                            </Button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </CardContent>
               </Card>
@@ -1812,7 +1903,37 @@ export default function ComprehensiveEditFixed() {
                 <CardContent className="p-4">
                   <div className="space-y-4" key={`decisions-container-${initializationTime}`}>
                     {/* Decisions List */}
-                    {form.watch("decisions").map((decision, index) => (
+                    {(() => {
+                      const decisions = form.watch("decisions");
+                      const hasDecisions = decisions && decisions.length > 0 && decisions.some(d => 
+                        d.protocol_number || d.ada || d.decision_budget || 
+                        (d.implementing_agency && d.implementing_agency.length > 0) ||
+                        (d.expenditure_type && d.expenditure_type.length > 0)
+                      );
+                      
+                      if (!hasDecisions) {
+                        return (
+                          <div className="text-center py-8">
+                            <p className="text-gray-500 mb-4">Δεν υπάρχουν αποφάσεις για αυτό το έργο</p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                form.setValue("decisions", [
+                                  { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
+                                ]);
+                              }}
+                              className="text-sm"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Προσθήκη Πρώτης Απόφασης
+                            </Button>
+                          </div>
+                        );
+                      }
+                      
+                      return decisions.map((decision, index) => (
                       <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-3 border rounded-lg space-y-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
@@ -2165,26 +2286,42 @@ export default function ComprehensiveEditFixed() {
                           )}
                         />
                       </div>
-                    ))}
+                      ));
+                    })()}
                     
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const currentDecisions = form.getValues("decisions");
-                          form.setValue("decisions", [
-                            ...currentDecisions,
-                            { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
-                          ]);
-                        }}
-                        className="text-sm"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Προσθήκη Απόφασης
-                      </Button>
-                    </div>
+                    {/* Add Decision Button - only show when there are existing decisions */}
+                    {(() => {
+                      const decisions = form.watch("decisions");
+                      const hasDecisions = decisions && decisions.length > 0 && decisions.some(d => 
+                        d.protocol_number || d.ada || d.decision_budget || 
+                        (d.implementing_agency && d.implementing_agency.length > 0) ||
+                        (d.expenditure_type && d.expenditure_type.length > 0)
+                      );
+                      
+                      if (hasDecisions) {
+                        return (
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentDecisions = form.getValues("decisions");
+                                form.setValue("decisions", [
+                                  ...currentDecisions,
+                                  { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
+                                ]);
+                              }}
+                              className="text-sm"
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Προσθήκη Απόφασης
+                            </Button>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </CardContent>
               </Card>
