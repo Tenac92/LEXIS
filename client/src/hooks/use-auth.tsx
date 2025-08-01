@@ -200,7 +200,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       } catch (error) {
         console.error('Error fetching user:', error);
-        // Don't throw the error here to prevent unhandled promise rejections
         // Ensure we always return null on error to prevent unhandled rejections
         return null;
       }
@@ -209,8 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: false,
     refetchInterval: false,
     staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-    throwOnError: false // Prevent unhandled promise rejections
+    gcTime: 15 * 60 * 1000
   });
 
   // Simplified session management for faster startup

@@ -36,13 +36,9 @@ export function useStableWebSocket() {
     const key = connectionKeyRef.current;
     if (key && globalConnections.has(key)) {
       const ws = globalConnections.get(key);
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
         console.log(`[StableWebSocket] Disconnecting: ${reason}`);
-        try {
-          ws.close(code, reason);
-        } catch (error) {
-          console.warn('[StableWebSocket] Error during disconnect:', error);
-        }
+        ws.close(code, reason);
       }
       globalConnections.delete(key);
     }

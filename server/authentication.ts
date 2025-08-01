@@ -182,6 +182,7 @@ export const authenticateSession = async (req: AuthenticatedRequest, res: Respon
       unit_id: sessionUser.unit_id || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
+      descr: sessionUser.descr || undefined,
       details: sessionUser.details || undefined
     };
     
@@ -391,7 +392,8 @@ export async function authenticateUser(email: string, password: string): Promise
       id: userData?.id,
       email: userData?.email,
       role: userData?.role,
-      unit_id: userData?.unit_id
+      unit_id: userData?.unit_id,
+      unit_id: userData?.unit_id // Use the new unit_id field
     });
 
     if (userError) {
@@ -435,6 +437,7 @@ export async function authenticateUser(email: string, password: string): Promise
       unit_id: userData.unit_id || [],
       department: userData.department || undefined,
       telephone: userData.telephone || undefined,
+      descr: userData.descr || undefined,
       details: userData.details || undefined,
       created_at: userData.created_at || undefined,
       updated_at: userData.updated_at || undefined
@@ -569,6 +572,7 @@ export async function setupAuth(app: Express) {
         unit_id: userData.unit_id || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
+        descr: userData.descr || undefined,
         details: userData.details || undefined
       };
 
@@ -745,6 +749,7 @@ export async function setupAuth(app: Express) {
         unit_id: sessionUser.unit_id || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,
+        descr: sessionUser.descr,
         details: sessionUser.details
       };
       
@@ -789,7 +794,7 @@ export async function setupAuth(app: Express) {
       });
     } catch (error) {
       console.error('[Debug] Error:', error);
-      return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+      return res.status(500).json({ error: error.message });
     }
   });
 
