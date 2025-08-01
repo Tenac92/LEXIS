@@ -1462,8 +1462,9 @@ export default function ComprehensiveEditFixed() {
                                 <FormControl>
                                   <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
                                     {typedExpenditureTypesData?.map((expenditureType) => {
-                                      const expenditureName = expenditureType.expediture_type || expenditureType.name;
+                                      const expenditureName = expenditureType.expediture_types || expenditureType.name;
                                       const isChecked = field.value?.includes(expenditureName) || false;
+                                      console.log(`🔍 [Field ${index}] Checking expenditure:`, {expenditureName, isChecked, fieldValue: field.value});
                                       return (
                                       <div key={expenditureType.id} className="flex items-center space-x-2 py-1">
                                         <input
@@ -1484,7 +1485,7 @@ export default function ComprehensiveEditFixed() {
                                           htmlFor={`expenditure-type-${index}-${expenditureType.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
-                                          {expenditureType.expediture_type || expenditureType.name}
+                                          {expenditureType.expediture_types || expenditureType.name}
                                         </label>
                                       </div>
                                       );
