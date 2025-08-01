@@ -7,11 +7,13 @@ import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw, ArrowLeft, Clock, Eye } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
@@ -217,6 +219,11 @@ export default function ComprehensiveEditFixed() {
   const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
+  
+  // Enhanced UI state
+  const [activeTab, setActiveTab] = useState("decisions");
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [formProgress, setFormProgress] = useState(0);
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -1054,28 +1061,73 @@ export default function ComprehensiveEditFixed() {
   console.log("DEBUG - Expenditure types data:", typedExpenditureTypesData?.length || 0, "total items", typedExpenditureTypesData?.slice(0, 3));
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Διαχείριση Έργου: {typedProjectData?.project_title}</h1>
-        <p className="text-gray-600">MIS: {typedProjectData?.mis}</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto p-6 max-w-7xl">
+        {/* Enhanced Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => navigate("/projects")}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Επιστροφή
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900">
+                {typedProjectData?.project_title || "Νέο Έργο"}
+              </h1>
+              <div className="flex items-center gap-4 mt-2">
+                <Badge variant="outline" className="text-blue-600 border-blue-200">
+                  MIS: {typedProjectData?.mis}
+                </Badge>
+                <Badge variant="secondary">
+                  {typedProjectData?.status || "Ενεργό"}
+                </Badge>
+                {unsavedChanges && (
+                  <div className="flex items-center gap-2 text-amber-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm">Μη αποθηκευμένες αλλαγές</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="bg-white rounded-lg border p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Πρόοδος φόρμας</span>
+              <span className="text-sm text-gray-500">{Math.round(formProgress)}% συμπληρωμένο</span>
+            </div>
+            <Progress value={formProgress} className="h-2" />
+          </div>
+        </div>
 
-      <Form key={formKey} {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          <Tabs defaultValue="edit" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="summary">Σύνοψη</TabsTrigger>
-              <TabsTrigger value="edit">Επεξεργασία</TabsTrigger>
-            </TabsList>
+        <Form key={formKey} {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 bg-white shadow-sm">
+                <TabsTrigger value="summary" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Σύνοψη
+                </TabsTrigger>
+                <TabsTrigger value="edit" className="data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Επεξεργασία
+                </TabsTrigger>
+              </TabsList>
             
-            <TabsContent value="summary" className="space-y-6">
-              <Card className="shadow-sm">
-                <CardHeader className="py-3 bg-gradient-to-r from-gray-50 to-slate-50 border-b border-gray-200">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Σύνοψη Έργου
-                  </CardTitle>
-                </CardHeader>
+              <TabsContent value="summary" className="space-y-6">
+                <Card className="bg-white shadow-sm border-gray-200">
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                    <CardTitle className="text-lg flex items-center gap-2 text-gray-900">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      Σύνοψη Έργου
+                    </CardTitle>
+                  </CardHeader>
                 <CardContent className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -2356,6 +2408,7 @@ export default function ComprehensiveEditFixed() {
           </Tabs>
         </form>
       </Form>
+      </div>
     </div>
   );
 };
