@@ -1428,17 +1428,19 @@ export default function ComprehensiveEditFixed() {
                           <FormField
                             control={form.control}
                             name={`location_details.${index}.implementing_agency`}
-                            render={({ field }) => (
+                            render={({ field }) => {
+                              console.log(`🔍 [Field ${index}] implementing_agency field value:`, field.value);
+                              return (
                               <FormItem>
                                 <FormLabel className="text-sm font-medium">Φορέας Υλοποίησης</FormLabel>
                                 <FormControl>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Επιλέξτε φορέα" />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {typedUnitsData?.map((unit) => (
-                                        <SelectItem key={unit.id} value={unit.id.toString()}>
+                                        <SelectItem key={unit.id} value={unit.unit || unit.name || unit.unit_name?.name || ""}>
                                           {unit.unit || unit.name || unit.unit_name?.name}
                                         </SelectItem>
                                       ))}
@@ -1446,28 +1448,34 @@ export default function ComprehensiveEditFixed() {
                                   </Select>
                                 </FormControl>
                               </FormItem>
-                            )}
+                              );
+                            }}
                           />
                           <FormField
                             control={form.control}
                             name={`location_details.${index}.expenditure_types`}
-                            render={({ field }) => (
+                            render={({ field }) => {
+                              console.log(`🔍 [Field ${index}] expenditure_types field value:`, field.value);
+                              return (
                               <FormItem>
                                 <FormLabel className="text-sm font-medium">Τύπος Δαπάνης</FormLabel>
                                 <FormControl>
                                   <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
-                                    {typedExpenditureTypesData?.map((expenditureType) => (
+                                    {typedExpenditureTypesData?.map((expenditureType) => {
+                                      const expenditureName = expenditureType.expediture_type || expenditureType.name;
+                                      const isChecked = field.value?.includes(expenditureName) || false;
+                                      return (
                                       <div key={expenditureType.id} className="flex items-center space-x-2 py-1">
                                         <input
                                           type="checkbox"
                                           id={`expenditure-type-${index}-${expenditureType.id}`}
-                                          checked={field.value?.includes(expenditureType.id.toString()) || false}
+                                          checked={isChecked}
                                           onChange={(e) => {
                                             const currentValue = field.value || [];
                                             if (e.target.checked) {
-                                              field.onChange([...currentValue, expenditureType.id.toString()]);
+                                              field.onChange([...currentValue, expenditureName]);
                                             } else {
-                                              field.onChange(currentValue.filter(id => id !== expenditureType.id.toString()));
+                                              field.onChange(currentValue.filter(name => name !== expenditureName));
                                             }
                                           }}
                                           className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
@@ -1476,14 +1484,16 @@ export default function ComprehensiveEditFixed() {
                                           htmlFor={`expenditure-type-${index}-${expenditureType.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
-                                          {expenditureType.expediture_types || expenditureType.expenditure_types || expenditureType.name}
+                                          {expenditureType.expediture_type || expenditureType.name}
                                         </label>
                                       </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 </FormControl>
                               </FormItem>
-                            )}
+                              );
+                            }}
                           />
                         </div>
                       </div>
