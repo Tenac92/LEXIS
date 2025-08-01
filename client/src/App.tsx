@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
+import NewProjectPage from "@/pages/projects/new";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
 import EditProjectPage from "@/pages/projects/[mis]/edit";
 import ComprehensiveEditProjectPage from "@/pages/projects/[mis]/comprehensive-edit-fixed";
@@ -41,6 +42,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/documents" component={DocumentsPage} />
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         {/* Order matters: more specific routes should come first */}
+        <ProtectedRoute path="/projects/new" component={NewProjectPage} />
         <ProtectedRoute path="/projects/:mis/comprehensive-edit-new" component={ComprehensiveEditProjectPage} />
         <ProtectedRoute path="/projects/:mis/comprehensive-edit" component={ComprehensiveEditProjectPage} />
         <ProtectedRoute path="/projects/:mis/edit" component={ComprehensiveEditProjectPage} />
