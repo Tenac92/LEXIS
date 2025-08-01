@@ -337,7 +337,12 @@ export default function ComprehensiveEditFixed() {
           event_description: data.project_details.project_description,
           // Convert event_name to event_type_id if needed
           event_type: (() => {
-            if (data.event_details.event_name && typedEventTypesData) {
+            if (!data.event_details.event_name) {
+              console.log("No event name provided");
+              return null;
+            }
+            
+            if (typedEventTypesData) {
               const eventType = typedEventTypesData.find(et => 
                 et.name === data.event_details.event_name || 
                 et.id.toString() === data.event_details.event_name
@@ -345,12 +350,12 @@ export default function ComprehensiveEditFixed() {
               console.log("Event type conversion:", {
                 input: data.event_details.event_name,
                 found: eventType,
-                result: eventType ? eventType.id : data.event_details.event_name
+                result: eventType ? eventType.id : null
               });
-              return eventType ? eventType.id : data.event_details.event_name;
+              return eventType ? eventType.id : null;
             }
-            console.log("No event type conversion needed:", data.event_details.event_name);
-            return data.event_details.event_name;
+            console.log("No event types data available for conversion");
+            return null;
           })(),
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
@@ -864,6 +869,11 @@ export default function ComprehensiveEditFixed() {
         console.log('🔍 FORM VALUES AFTER INDIVIDUAL SET:', currentDecisions);
       }, 100);
       form.setValue("event_details", {
+        event_name: typedProjectData.enhanced_event_type?.name || "",
+        event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
+      });
+      
+      console.log('Setting event_details with:', {
         event_name: typedProjectData.enhanced_event_type?.name || "",
         event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
       });
