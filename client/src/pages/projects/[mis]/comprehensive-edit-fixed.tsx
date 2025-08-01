@@ -90,9 +90,8 @@ interface EventTypeData {
 
 interface ExpenditureTypeData {
   id: number;
-  expediture_types?: string;
   expenditure_types?: string;
-  expediture_types_minor?: string;
+  expenditure_types_minor?: string;
   name?: string;
 }
 
@@ -127,7 +126,8 @@ const comprehensiveProjectSchema = z.object({
     ada: z.string().default(""),
     implementing_agency: z.array(z.number()).default([]),
     decision_budget: z.string().default(""),
-    expediture_type: z.array(z.number()).default([]),
+    expenses_covered: z.string().default(""),
+    expenditure_type: z.array(z.number()).default([]),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
     included: z.boolean().default(true),
     comments: z.string().default(""),
@@ -227,9 +227,10 @@ export default function ComprehensiveEditFixed() {
         protocol_number: "", 
         fek: { year: "", issue: "", number: "" }, 
         ada: "", 
-        implementing_agency: "", 
+        implementing_agency: [], 
         decision_budget: "", 
         expenses_covered: "", 
+        expenditure_type: [],
         decision_type: "Έγκριση", 
         included: true, 
         comments: "" 
@@ -239,14 +240,14 @@ export default function ComprehensiveEditFixed() {
         event_year: "" 
       },
       location_details: [{ 
-        municipality: "", 
-        regional_unit: "", 
-        region: "", 
         implementing_agency: "", 
         event_type: "", 
         expenditure_types: [],
-        geographic_level: undefined,
-        geographic_code: undefined
+        regions: [{ 
+          region: "", 
+          regional_unit: "", 
+          municipality: "" 
+        }]
       }],
       project_details: { 
         mis: "", 
@@ -415,9 +416,9 @@ export default function ComprehensiveEditFixed() {
               ? decision.implementing_agency 
               : decision.implementing_agency ? [decision.implementing_agency] : [],
             decision_budget: decision.decision_budget || "",
-            expediture_type: Array.isArray(decision.expediture_type) 
-              ? decision.expediture_type 
-              : decision.expediture_type ? [decision.expediture_type] : [],
+            expenditure_type: Array.isArray(decision.expenditure_type) 
+              ? decision.expenditure_type 
+              : decision.expenditure_type ? [decision.expenditure_type] : [],
             decision_type: decision.decision_type || "Έγκριση",
             included: decision.included !== undefined ? decision.included : true,
             comments: decision.comments || "",
@@ -611,7 +612,7 @@ export default function ComprehensiveEditFixed() {
             ada: decision.ada || "",
             implementing_agency: decision.implementing_agency || [],
             decision_budget: decision.decision_budget ? formatEuropeanNumber(decision.decision_budget) : "",
-            expediture_type: decision.expediture_type || [],
+            expenditure_type: decision.expenditure_type || [],
             decision_type: decision.decision_type || "Έγκριση" as const,
             included: decision.included ?? decision.is_included ?? true,
             comments: decision.comments || "",
@@ -622,7 +623,7 @@ export default function ComprehensiveEditFixed() {
             ada: "",
             implementing_agency: [],
             decision_budget: "",
-            expediture_type: [],
+            expenditure_type: [],
             decision_type: "Έγκριση" as const,
             included: true,
             comments: "",
@@ -812,9 +813,9 @@ export default function ComprehensiveEditFixed() {
                 }
                 
                 // Add expenditure type if it exists
-                if (expenditureType && expenditureType.expediture_types) {
-                  if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
-                    locationDetail.expenditure_types.push(expenditureType.expediture_types);
+                if (expenditureType && expenditureType.expenditure_types) {
+                  if (!locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
+                    locationDetail.expenditure_types.push(expenditureType.expenditure_types);
                   }
                 }
               }
@@ -933,9 +934,9 @@ export default function ComprehensiveEditFixed() {
               }
               
               // Add expenditure type if it exists
-              if (expenditureType && expenditureType.expediture_types) {
-                if (!locationDetail.expenditure_types.includes(expenditureType.expediture_types)) {
-                  locationDetail.expenditure_types.push(expenditureType.expediture_types);
+              if (expenditureType && expenditureType.expenditure_types) {
+                if (!locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
+                  locationDetail.expenditure_types.push(expenditureType.expenditure_types);
                 }
               }
             });
@@ -1462,7 +1463,7 @@ export default function ComprehensiveEditFixed() {
                                 <FormControl>
                                   <div className="border rounded-md p-2 max-h-32 overflow-y-auto">
                                     {typedExpenditureTypesData?.map((expenditureType) => {
-                                      const expenditureName = expenditureType.expediture_types || expenditureType.name;
+                                      const expenditureName = expenditureType.expenditure_types || expenditureType.name;
                                       const isChecked = field.value?.includes(expenditureName) || false;
                                       console.log(`🔍 [Field ${index}] Checking expenditure:`, {expenditureName, isChecked, fieldValue: field.value});
                                       return (
@@ -1485,7 +1486,7 @@ export default function ComprehensiveEditFixed() {
                                           htmlFor={`expenditure-type-${index}-${expenditureType.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
-                                          {expenditureType.expediture_types || expenditureType.name}
+                                          {expenditureType.expenditure_types || expenditureType.name}
                                         </label>
                                       </div>
                                       );
@@ -2020,7 +2021,7 @@ export default function ComprehensiveEditFixed() {
                         <div className="grid grid-cols-3 gap-3">
                           <FormField
                             control={form.control}
-                            name={`decisions.${index}.expediture_type`}
+                            name={`decisions.${index}.expenditure_type`}
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel className="text-xs">Δαπάνες που αφορά</FormLabel>
@@ -2046,7 +2047,7 @@ export default function ComprehensiveEditFixed() {
                                           htmlFor={`expediture-type-${index}-${expenditureType.id}`}
                                           className="text-sm cursor-pointer flex-1"
                                         >
-                                          {expenditureType.expediture_types || expenditureType.expenditure_types || expenditureType.name}
+                                          {expenditureType.expenditure_types || expenditureType.name}
                                         </label>
                                       </div>
                                     ))}
@@ -2119,7 +2120,7 @@ export default function ComprehensiveEditFixed() {
                           const currentDecisions = form.getValues("decisions");
                           form.setValue("decisions", [
                             ...currentDecisions,
-                            { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: "", decision_budget: "", expenses_covered: "", decision_type: "Έγκριση" as const, included: true, comments: "" }
+                            { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
                           ]);
                         }}
                         className="text-sm"
