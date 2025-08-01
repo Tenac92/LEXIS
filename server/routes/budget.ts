@@ -86,7 +86,7 @@ router.post('/validate', authenticateSession, async (req: AuthenticatedRequest, 
           mis,
           amount: requestedAmount,
           timestamp: new Date().toISOString(),
-          userId: req.user?.id?.toString(),
+          userId: req.user?.id ? req.user.id.toString() : undefined,
           sessionId // Client session ID to filter out self-updates
         });
         console.log(`[Budget] Broadcast budget update for MIS ${mis} with amount ${requestedAmount}`);
@@ -152,7 +152,7 @@ router.post('/broadcast-update', async (req: AuthenticatedRequest, res: Response
           amount: requestedAmount,
           timestamp: new Date().toISOString(),
           userId: req.user?.id?.toString(),
-          sessionId: null, // Send to ALL clients including the sender
+          sessionId: undefined, // Send to ALL clients including the sender
           // Add the simple budget calculation data
           simpleBudgetData
         });
@@ -325,7 +325,7 @@ router.get('/overview', authenticateSession, async (req: AuthenticatedRequest, r
       // Extract unique MIS codes
       const misCodes = Array.from(new Set(
         allowedMis
-          ?.map(item => item.Projects?.mis)
+          ?.map((item: any) => item.Projects?.mis)
           .filter(mis => mis !== null && mis !== undefined) || []
       ));
       

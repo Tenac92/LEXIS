@@ -378,6 +378,12 @@ export function AdminDashboard() {
                 <Button variant="outline" size="sm" asChild className="w-full justify-start">
                   <Link href="/admin/budget-monitoring">
                     <TrendingUp className="w-4 h-4 mr-2" />
+                    Παρακολούθηση Τάσεων
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild className="w-full justify-start">
+                  <Link href="/admin/budget-monitoring">
+                    <TrendingUp className="w-4 h-4 mr-2" />
                     Παρακολούθηση τάσεων
                   </Link>
                 </Button>
