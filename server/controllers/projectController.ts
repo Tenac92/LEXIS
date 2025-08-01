@@ -592,6 +592,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     if (updateData.project_title) fieldsToUpdate.project_title = updateData.project_title;
     if (updateData.event_description) fieldsToUpdate.event_description = updateData.event_description;
     
+    // Handle event_type field - can be ID or text
+    if (updateData.event_type !== undefined && updateData.event_type !== null) {
+      fieldsToUpdate.event_type_id = updateData.event_type;
+      console.log(`[Projects] Setting event_type_id to: ${updateData.event_type} (type: ${typeof updateData.event_type})`);
+    }
+    
     // Legacy code fields that exist
     if (updateData.e069) fieldsToUpdate.e069 = updateData.e069;
     if (updateData.na271) fieldsToUpdate.na271 = updateData.na271;

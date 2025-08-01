@@ -342,8 +342,14 @@ export default function ComprehensiveEditFixed() {
                 et.name === data.event_details.event_name || 
                 et.id.toString() === data.event_details.event_name
               );
+              console.log("Event type conversion:", {
+                input: data.event_details.event_name,
+                found: eventType,
+                result: eventType ? eventType.id : data.event_details.event_name
+              });
               return eventType ? eventType.id : data.event_details.event_name;
             }
+            console.log("No event type conversion needed:", data.event_details.event_name);
             return data.event_details.event_name;
           })(),
           event_year: data.event_details.event_year,
