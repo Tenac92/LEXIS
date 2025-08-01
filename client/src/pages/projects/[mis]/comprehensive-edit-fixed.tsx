@@ -1985,11 +1985,8 @@ export default function ComprehensiveEditFixed() {
                     {/* Decisions List */}
                     {(() => {
                       const decisions = form.watch("decisions");
-                      const hasDecisions = decisions && decisions.length > 0 && decisions.some(d => 
-                        d.protocol_number || d.ada || d.decision_budget || 
-                        (d.implementing_agency && d.implementing_agency.length > 0) ||
-                        (d.expenditure_type && d.expenditure_type.length > 0)
-                      );
+                      const hasDecisions = decisions && decisions.length > 0;
+                      console.log("🔍 Decision visibility check:", { decisions, hasDecisions, length: decisions?.length });
                       
                       if (!hasDecisions) {
                         return (
