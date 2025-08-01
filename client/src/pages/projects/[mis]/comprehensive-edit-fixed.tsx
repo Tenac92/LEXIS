@@ -1993,10 +1993,10 @@ export default function ComprehensiveEditFixed() {
                       
                       if (!hasDecisions) {
                         return (
-                          <div className="text-center py-12 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                          <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
                             <div className="flex flex-col items-center space-y-4">
-                              <div className="p-4 bg-purple-100 rounded-full">
-                                <FileText className="h-8 w-8 text-purple-600" />
+                              <div className="p-4 bg-blue-100 rounded-full">
+                                <FileText className="h-8 w-8 text-blue-600" />
                               </div>
                               <p className="text-gray-600 font-medium">Δεν υπάρχουν αποφάσεις για αυτό το έργο</p>
                               <Button
@@ -2004,11 +2004,27 @@ export default function ComprehensiveEditFixed() {
                                 variant="default"
                                 size="sm"
                                 onClick={() => {
-                                  form.setValue("decisions", [
-                                    { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
-                                  ]);
+                                  console.log("🔄 Adding first decision");
+                                  const newDecision = { 
+                                    protocol_number: "", 
+                                    fek: { year: "", issue: "", number: "" }, 
+                                    ada: "", 
+                                    implementing_agency: [], 
+                                    decision_budget: "", 
+                                    expenses_covered: "", 
+                                    expenditure_type: [], 
+                                    decision_type: "Έγκριση" as const, 
+                                    included: true, 
+                                    comments: "" 
+                                  };
+                                  form.setValue("decisions", [newDecision], { 
+                                    shouldDirty: true, 
+                                    shouldTouch: true,
+                                    shouldValidate: true 
+                                  });
+                                  console.log("🔄 First decision added:", newDecision);
                                 }}
-                                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white shadow-lg"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Προσθήκη Πρώτης Απόφασης
@@ -2019,7 +2035,7 @@ export default function ComprehensiveEditFixed() {
                       }
                       
                       return decisions.map((decision, index) => (
-                      <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-6 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl space-y-4 shadow-sm">
+                      <div key={`decision-${index}-${decision.protocol_number || 'empty'}`} className="p-6 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium">Απόφαση #{index + 1}</span>
                           <Button
@@ -2391,13 +2407,31 @@ export default function ComprehensiveEditFixed() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
+                                console.log("🔄 Adding additional decision");
                                 const currentDecisions = form.getValues("decisions");
+                                const newDecision = { 
+                                  protocol_number: "", 
+                                  fek: { year: "", issue: "", number: "" }, 
+                                  ada: "", 
+                                  implementing_agency: [], 
+                                  decision_budget: "", 
+                                  expenses_covered: "", 
+                                  expenditure_type: [], 
+                                  decision_type: "Έγκριση" as const, 
+                                  included: true, 
+                                  comments: "" 
+                                };
                                 form.setValue("decisions", [
                                   ...currentDecisions,
-                                  { protocol_number: "", fek: { year: "", issue: "", number: "" }, ada: "", implementing_agency: [], decision_budget: "", expenses_covered: "", expenditure_type: [], decision_type: "Έγκριση" as const, included: true, comments: "" }
-                                ]);
+                                  newDecision
+                                ], { 
+                                  shouldDirty: true, 
+                                  shouldTouch: true,
+                                  shouldValidate: true 
+                                });
+                                console.log("🔄 Additional decision added:", newDecision);
                               }}
-                              className="text-sm"
+                              className="text-sm border-blue-200 text-blue-700 hover:bg-blue-50"
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Προσθήκη Απόφασης
