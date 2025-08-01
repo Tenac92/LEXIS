@@ -887,8 +887,9 @@ export default function ComprehensiveEditFixed() {
         project_status: typedProjectData.status || "Ενεργό",
       });
       form.setValue("formulation_details", formulations);
-      form.setValue("location_details", (() => {
-          // Populate location details from project index data OR create fallback from project data
+      
+      // Populate location details from project index data OR create fallback from project data
+      const locationDetailsArray = (() => {
           if (projectIndexData && projectIndexData.length > 0) {
             const locationDetailsMap = new Map();
             
@@ -974,7 +975,13 @@ export default function ComprehensiveEditFixed() {
               municipality: ""
             }]
           }];
-        })());
+        })();
+        
+        
+        console.log("🔥 SETTING LOCATION DETAILS:", locationDetailsArray);
+        form.setValue("location_details", locationDetailsArray);
+        console.log("🔍 FORM location_details AFTER SET:", form.getValues("location_details"));
+        
       form.setValue("changes", []);
       hasInitialized.current = true;
       setInitializationTime(Date.now());
@@ -1230,7 +1237,10 @@ export default function ComprehensiveEditFixed() {
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="space-y-4">
-                    {form.watch("location_details").map((location, index) => {
+                    {(() => {
+                      const locationDetails = form.watch("location_details");
+                      console.log("🔍 RENDER LOCATION DETAILS:", locationDetails);
+                      return locationDetails?.map((location, index) => {
                       // Ensure regions array exists
                       if (!location.regions || !Array.isArray(location.regions)) {
                         location.regions = [{
@@ -1478,7 +1488,8 @@ export default function ComprehensiveEditFixed() {
                         </div>
                       </div>
                       );
-                    })}
+                      });
+                    })()}
                     
                     <Button
                       type="button"
