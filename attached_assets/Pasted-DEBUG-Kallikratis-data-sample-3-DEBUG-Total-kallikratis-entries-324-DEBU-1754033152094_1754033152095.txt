@@ -1,0 +1,37 @@
+DEBUG - Kallikratis data sample: 
+(3) [{…}, {…}, {…}]
+DEBUG - Total kallikratis entries: 324
+DEBUG - Units data: 11 units total
+DEBUG - All units: 
+(11) ["11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ", "1: ΓΔΑΕΦΚ", "4: ΔΑΕΦΚ-ΒΕ", "6: ΤΑΕΦΚ-ΔΑ", "7: ΤΑΕΦΚ-ΑΑ", "8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ", "9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ", "10: ΤΑΕΦΚ ΧΑΝΙΩΝ", "2: ΔΑΕΦΚ-ΚΕ", "5: ΔΑΕΦΚ-ΔΕ", "3: ΔΑΕΦΚ-ΑΚ"]
+DEBUG - Event types data: 17 total items 
+(3) [{…}, {…}, {…}]
+DEBUG - Expenditure types data: 8 total items 
+(3) [{…}, {…}, {…}]
+🔍 RENDER LOCATION DETAILS: 
+Array [{…}]
+🔍 [Field 0] implementing_agency field value: ΔΑΕΦΚ-ΚΕ
+🔍 [Field 0] expenditure_types field value: 
+(4) ["ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΕΚΤΟΣ ΕΔΡΑΣ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ"]
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ", isChecked: true, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ", isChecked: false, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", isChecked: true, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΔΚΑ ΕΠΙΣΚΕΥΗ", isChecked: true, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΕΚΤΟΣ ΕΔΡΑΣ", isChecked: true, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ", isChecked: false, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ", isChecked: false, fieldValue: Array(4)}
+🔍 [Field 0] Checking expenditure: 
+Object {expenditureName: "ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ", isChecked: false, fieldValue: Array(4)}
+🔍 FORM VALUES AFTER INDIVIDUAL SET: 
+Array [{…}]
+[StableWebSocket] Creating new connection
+[StableWebSocket] Connecting to: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws
+[StableWebSocket] Connected successfully
+Form initialization complete - field clearing protection disabled

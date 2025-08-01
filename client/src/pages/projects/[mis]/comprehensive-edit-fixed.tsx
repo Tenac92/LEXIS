@@ -1821,17 +1821,61 @@ export default function ComprehensiveEditFixed() {
                             variant="destructive"
                             size="sm"
                             className="h-8 px-2"
-                            onClick={() => {
+                            onClick={async () => {
                               console.log(`🗑️ Deleting decision at index ${index}`);
                               const currentDecisions = form.getValues("decisions");
                               console.log(`🗑️ Current decisions before delete:`, currentDecisions);
+                              console.log(`🗑️ Decision being deleted:`, currentDecisions[index]);
+                              
                               const updatedDecisions = currentDecisions.filter((_, i) => i !== index);
                               console.log(`🗑️ Updated decisions after delete:`, updatedDecisions);
+                              
                               form.setValue("decisions", updatedDecisions, { 
                                 shouldDirty: true, 
                                 shouldTouch: true,
                                 shouldValidate: true 
                               });
+                              
+                              // Immediately save the updated decisions to the database
+                              try {
+                                console.log(`🗑️ Immediately updating database with remaining decisions`);
+                                const transformedDecisions = updatedDecisions.map(decision => ({
+                                  protocol_number: decision.protocol_number || "",
+                                  fek: decision.fek || { year: "", issue: "", number: "" },
+                                  ada: decision.ada || "",
+                                  implementing_agency: Array.isArray(decision.implementing_agency) 
+                                    ? decision.implementing_agency 
+                                    : decision.implementing_agency ? [decision.implementing_agency] : [],
+                                  decision_budget: decision.decision_budget || "",
+                                  expenditure_type: Array.isArray(decision.expenditure_type) 
+                                    ? decision.expenditure_type 
+                                    : decision.expenditure_type ? [decision.expenditure_type] : [],
+                                  decision_type: decision.decision_type || "Έγκριση",
+                                  included: decision.included !== undefined ? decision.included : true,
+                                  comments: decision.comments || "",
+                                }));
+                                
+                                await apiRequest(`/api/projects/${mis}/decisions`, {
+                                  method: "PUT",
+                                  body: JSON.stringify({ decisions_data: transformedDecisions }),
+                                });
+                                
+                                console.log(`🗑️ ✅ Successfully deleted decision from database`);
+                                toast({
+                                  title: "Επιτυχία",
+                                  description: "Η απόφαση διαγράφηκε επιτυχώς",
+                                });
+                              } catch (error) {
+                                console.error(`🗑️ ❌ Failed to delete decision from database:`, error);
+                                toast({
+                                  title: "Σφάλμα",
+                                  description: "Αποτυχία διαγραφής απόφασης",
+                                  variant: "destructive",
+                                });
+                                // Revert the form state if database update failed
+                                form.setValue("decisions", currentDecisions);
+                              }
+                              
                               // Force a re-render by triggering the watch
                               setTimeout(() => {
                                 const finalDecisions = form.getValues("decisions");
