@@ -36,6 +36,7 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatEuropeanNumber, formatNumberWhileTyping } from "@/lib/number-format";
+import { LocationManager } from "@/components/projects/LocationManager";
 
 // Form schema with better validation
 const ProjectEditSchema = z.object({
@@ -63,10 +64,15 @@ const ProjectEditSchema = z.object({
   expenditure_types: z.array(z.string()).default([]),
   
   // Location information
-  regions: z.array(z.object({
-    region: z.string(),
-    regional_unit: z.string(),
-    municipality: z.string(),
+  location_details: z.array(z.object({
+    implementing_agency: z.string().default(""),
+    event_type: z.string().default(""),
+    expenditure_types: z.array(z.string()).default([]),
+    regions: z.array(z.object({
+      region: z.string().default(""),
+      regional_unit: z.string().default(""),
+      municipality: z.string().default(""),
+    })).default([{ region: "", regional_unit: "", municipality: "" }]),
   })).default([]),
   
   // Project notes and comments
@@ -101,7 +107,7 @@ export default function RefinedProjectEdit() {
       e069: "",
       implementing_agency: "",
       expenditure_types: [],
-      regions: [],
+      location_details: [],
       comments: "",
     },
   });
@@ -183,7 +189,7 @@ export default function RefinedProjectEdit() {
         e069: project.e069 || "",
         implementing_agency: project.enhanced_unit?.name || "",
         expenditure_types: project.enhanced_expenditure_type?.expenditure_types ? [project.enhanced_expenditure_type.expenditure_types] : [],
-        regions: [], // Will be populated from index data
+        location_details: [], // Will be populated from index data
         comments: "",
       });
     }
@@ -769,23 +775,13 @@ export default function RefinedProjectEdit() {
 
               {/* Location Tab */}
               <TabsContent value="location" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5" />
-                      Γεωγραφική Κάλυψη
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Διευθέτηση γεωγραφικής κάλυψης του έργου (υπό ανάπτυξη)
-                    </p>
-                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-                      <MapPin className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-500">Η διαχείριση τοποθεσιών θα είναι διαθέσιμη σύντομα</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <LocationManager
+                  form={form}
+                  eventTypesData={eventTypesData}
+                  unitsData={unitsData}
+                  expenditureTypesData={expenditureTypesData}
+                  kallikratisData={kallikratisData}
+                />
               </TabsContent>
             </Tabs>
           </form>
