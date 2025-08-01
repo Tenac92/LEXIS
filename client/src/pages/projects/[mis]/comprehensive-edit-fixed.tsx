@@ -453,6 +453,7 @@ export default function ComprehensiveEditFixed() {
         // 4. Update project index (location details) through project PATCH endpoint
         if (data.location_details && data.location_details.length > 0) {
           console.log("4. Processing location details:", data.location_details);
+          console.log("4a. Form location_details structure:", JSON.stringify(data.location_details, null, 2));
           
           // Transform location details to project_index format
           const projectLines = [];
