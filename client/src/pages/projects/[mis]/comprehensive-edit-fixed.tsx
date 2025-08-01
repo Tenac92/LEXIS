@@ -2003,26 +2003,39 @@ export default function ComprehensiveEditFixed() {
                                 type="button"
                                 variant="default"
                                 size="sm"
-                                onClick={() => {
-                                  console.log("🔄 Adding first decision");
-                                  const newDecision = { 
-                                    protocol_number: "", 
-                                    fek: { year: "", issue: "", number: "" }, 
-                                    ada: "", 
-                                    implementing_agency: [], 
-                                    decision_budget: "", 
-                                    expenses_covered: "", 
-                                    expenditure_type: [], 
-                                    decision_type: "Έγκριση" as const, 
-                                    included: true, 
-                                    comments: "" 
-                                  };
-                                  form.setValue("decisions", [newDecision], { 
-                                    shouldDirty: true, 
-                                    shouldTouch: true,
-                                    shouldValidate: true 
-                                  });
-                                  console.log("🔄 First decision added:", newDecision);
+                                onClick={(e) => {
+                                  console.log("🔄 BUTTON CLICKED - Adding first decision", e);
+                                  console.log("🔄 Form state before:", form.getValues());
+                                  console.log("🔄 Current decisions:", form.getValues("decisions"));
+                                  
+                                  try {
+                                    const newDecision = { 
+                                      protocol_number: "", 
+                                      fek: { year: "", issue: "", number: "" }, 
+                                      ada: "", 
+                                      implementing_agency: [], 
+                                      decision_budget: "", 
+                                      expenses_covered: "", 
+                                      expenditure_type: [], 
+                                      decision_type: "Έγκριση" as const, 
+                                      included: true, 
+                                      comments: "" 
+                                    };
+                                    
+                                    console.log("🔄 New decision object:", newDecision);
+                                    
+                                    form.setValue("decisions", [newDecision], { 
+                                      shouldDirty: true, 
+                                      shouldTouch: true,
+                                      shouldValidate: true 
+                                    });
+                                    
+                                    console.log("🔄 Form state after setValue:", form.getValues("decisions"));
+                                    console.log("🔄 Form errors:", form.formState.errors);
+                                    console.log("🔄 First decision added successfully");
+                                  } catch (error) {
+                                    console.error("🔄 Error adding first decision:", error);
+                                  }
                                 }}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                               >
