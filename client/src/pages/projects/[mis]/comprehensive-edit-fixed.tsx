@@ -335,7 +335,17 @@ export default function ComprehensiveEditFixed() {
         const projectUpdateData = {
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
-          event_type: data.event_details.event_name,
+          // Convert event_name to event_type_id if needed
+          event_type: (() => {
+            if (data.event_details.event_name && typedEventTypesData) {
+              const eventType = typedEventTypesData.find(et => 
+                et.name === data.event_details.event_name || 
+                et.id.toString() === data.event_details.event_name
+              );
+              return eventType ? eventType.id : data.event_details.event_name;
+            }
+            return data.event_details.event_name;
+          })(),
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
           
@@ -384,10 +394,28 @@ export default function ComprehensiveEditFixed() {
         // 2. Update project decisions in normalized table
         if (data.decisions && data.decisions.length > 0) {
           console.log("2. Updating project decisions:", data.decisions);
+          
+          // Transform decisions data to match API expectations
+          const transformedDecisions = data.decisions.map(decision => ({
+            protocol_number: decision.protocol_number || "",
+            fek: decision.fek || { year: "", issue: "", number: "" },
+            ada: decision.ada || "",
+            implementing_agency: Array.isArray(decision.implementing_agency) 
+              ? decision.implementing_agency 
+              : decision.implementing_agency ? [decision.implementing_agency] : [],
+            decision_budget: decision.decision_budget || "",
+            expediture_type: Array.isArray(decision.expediture_type) 
+              ? decision.expediture_type 
+              : decision.expediture_type ? [decision.expediture_type] : [],
+            decision_type: decision.decision_type || "Έγκριση",
+            included: decision.included !== undefined ? decision.included : true,
+            comments: decision.comments || "",
+          }));
+          
           try {
             const decisionsResponse = await apiRequest(`/api/projects/${mis}/decisions`, {
               method: "PUT",
-              body: JSON.stringify({ decisions_data: data.decisions }),
+              body: JSON.stringify({ decisions_data: transformedDecisions }),
             });
             console.log("✓ Decisions update successful:", decisionsResponse);
           } catch (error) {
@@ -1100,7 +1128,7 @@ export default function ComprehensiveEditFixed() {
                                 </SelectTrigger>
                                 <SelectContent>
                                   {typedEventTypesData?.map((eventType) => (
-                                    <SelectItem key={eventType.id} value={eventType.id.toString()}>
+                                    <SelectItem key={eventType.id} value={eventType.name}>
                                       {eventType.name}
                                     </SelectItem>
                                   ))}
