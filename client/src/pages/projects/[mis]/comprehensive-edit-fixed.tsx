@@ -873,10 +873,7 @@ export default function ComprehensiveEditFixed() {
         event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
       });
       
-      console.log('Setting event_details with:', {
-        event_name: typedProjectData.enhanced_event_type?.name || "",
-        event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
-      });
+
       form.setValue("project_details", {
         mis: String(typedProjectData.mis || ""),
         sa: "",
