@@ -351,20 +351,33 @@ export default function ComprehensiveEditFixed() {
   // Number formatting helper functions
   const formatNumberWhileTyping = (value: string): string => {
     // Remove all non-numeric characters except comma and period
-    const cleanValue = value.replace(/[^0-9,.]/g, '');
+    let cleanValue = value.replace(/[^0-9,.]/g, '');
+    
+    // If empty, return empty
+    if (!cleanValue) return '';
     
     // Handle European format (comma as decimal separator)
     if (cleanValue.includes(',')) {
       const parts = cleanValue.split(',');
       if (parts.length === 2) {
-        // Add thousand separators to integer part
-        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        return `${integerPart},${parts[1]}`;
+        // Clean integer part and add thousand separators
+        const integerPart = parts[0].replace(/\./g, ''); // Remove existing dots first
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        // Limit decimal part to 2 digits
+        const decimalPart = parts[1].slice(0, 2);
+        return `${formattedInteger},${decimalPart}`;
+      } else if (parts.length > 2) {
+        // If multiple commas, take only the first two parts
+        const integerPart = parts[0].replace(/\./g, '');
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const decimalPart = parts[1].slice(0, 2);
+        return `${formattedInteger},${decimalPart}`;
       }
     }
     
-    // If no decimal separator, add thousand separators
-    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    // For integers only, remove existing dots and add proper thousand separators
+    const integerValue = cleanValue.replace(/[,.]/g, '');
+    return integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   const parseEuropeanNumber = (value: string): number | null => {
@@ -483,7 +496,8 @@ export default function ComprehensiveEditFixed() {
               fek: decision.fek || { year: "", issue: "", number: "" },
               ada: decision.ada || "",
               implementing_agency: implementing_agency_ids,
-              decision_budget: decision.decision_budget || "",
+              decision_budget: parseEuropeanNumber(decision.decision_budget || "") || 0,
+              expenses_covered: parseEuropeanNumber(decision.expenses_covered || "") || 0,
               expenditure_type: expenditure_type_ids,
               decision_type: decision.decision_type || "Έγκριση",
               included: decision.included !== undefined ? decision.included : true,
@@ -553,10 +567,10 @@ export default function ComprehensiveEditFixed() {
               protocol_number: formulation.protocol_number,
               ada: formulation.ada,
               decision_year: formulation.decision_year,
-              project_budget: formulation.project_budget,
+              project_budget: parseEuropeanNumber(formulation.project_budget || "") || 0,
               epa_version: formulation.epa_version,
-              total_public_expense: formulation.total_public_expense,
-              eligible_public_expense: formulation.eligible_public_expense,
+              total_public_expense: parseEuropeanNumber(formulation.total_public_expense || "") || 0,
+              eligible_public_expense: parseEuropeanNumber(formulation.eligible_public_expense || "") || 0,
               decision_status: formulation.decision_status,
               change_type: formulation.change_type,
               connected_decisions: formulation.connected_decisions,
