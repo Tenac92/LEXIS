@@ -1417,7 +1417,14 @@ export default function ComprehensiveEditFixed() {
                               <FormItem>
                                 <FormLabel>Δαπάνες που καλύπτει</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="π.χ. 500.000,00" />
+                                  <Input 
+                                    {...field} 
+                                    placeholder="π.χ. 500.000,00" 
+                                    onChange={(e) => {
+                                      const formatted = formatNumberWhileTyping(e.target.value);
+                                      field.onChange(formatted);
+                                    }}
+                                  />
                                 </FormControl>
                               </FormItem>
                             )}
