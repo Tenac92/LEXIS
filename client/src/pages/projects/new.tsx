@@ -1130,7 +1130,7 @@ export default function NewProjectPage() {
                         <FormItem>
                           <FormLabel>Τίτλος Έργου</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου..." />
+                            <Textarea {...field} placeholder="Εισάγετε τον τίτλο του έργου..." rows={6} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -1143,7 +1143,7 @@ export default function NewProjectPage() {
                         <FormItem>
                           <FormLabel>Περιγραφή Έργου</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="Εισάγετε αναλυτική περιγραφή του έργου..." rows={4} />
+                            <Textarea {...field} placeholder="Εισάγετε αναλυτική περιγραφή του έργου..." rows={2} />
                           </FormControl>
                         </FormItem>
                       )}
