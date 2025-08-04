@@ -1292,6 +1292,21 @@ export default function ComprehensiveEditFixed() {
 
                           <FormField
                             control={form.control}
+                            name={`decisions.${index}.expenses_covered`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Δαπάνες που καλύπτει</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 500.000,00" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
                             name={`decisions.${index}.decision_type`}
                             render={({ field }) => (
                               <FormItem>
@@ -1311,6 +1326,92 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
+
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.included`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Συμπεριλαμβάνεται στο έργο</FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Implementing Agency Multi-select */}
+                        <div>
+                          <FormLabel>Υλοποιούσες Μονάδες</FormLabel>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            {typedUnitsData?.map((unit) => (
+                              <FormField
+                                key={unit.id}
+                                control={form.control}
+                                name={`decisions.${index}.implementing_agency`}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(unit.unit_name?.name || unit.name || unit.unit || "")}
+                                        onCheckedChange={(checked) => {
+                                          const unitName = unit.unit_name?.name || unit.name || unit.unit || "";
+                                          if (checked) {
+                                            field.onChange([...(field.value || []), unitName]);
+                                          } else {
+                                            field.onChange((field.value || []).filter((item: string) => item !== unitName));
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                      {unit.unit_name?.name || unit.name || unit.unit}
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expenditure Type Multi-select */}
+                        <div>
+                          <FormLabel>Τύποι Δαπανών</FormLabel>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            {typedExpenditureTypesData?.map((expenditureType) => (
+                              <FormField
+                                key={expenditureType.id}
+                                control={form.control}
+                                name={`decisions.${index}.expenditure_type`}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(expenditureType.expenditure_types || expenditureType.name || "")}
+                                        onCheckedChange={(checked) => {
+                                          const expenditureName = expenditureType.expenditure_types || expenditureType.name || "";
+                                          if (checked) {
+                                            field.onChange([...(field.value || []), expenditureName]);
+                                          } else {
+                                            field.onChange((field.value || []).filter((item: string) => item !== expenditureName));
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                      {expenditureType.expenditure_types || expenditureType.name}
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          </div>
                         </div>
 
                         <FormField
@@ -1521,7 +1622,25 @@ export default function ComprehensiveEditFixed() {
                           <div className="space-y-4">
                             <FormLabel>Περιοχές</FormLabel>
                             {form.watch(`location_details.${locationIndex}.regions`).map((_, regionIndex) => (
-                              <div key={regionIndex} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 border rounded">
+                              <div key={regionIndex} className="grid grid-cols-1 md:grid-3 gap-4 p-3 border rounded">
+                                <div className="md:col-span-3 flex justify-between items-center mb-2">
+                                  <span className="text-sm font-medium">Περιοχή {regionIndex + 1}</span>
+                                  {form.watch(`location_details.${locationIndex}.regions`).length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const locations = form.getValues("location_details");
+                                        locations[locationIndex].regions.splice(regionIndex, 1);
+                                        form.setValue("location_details", locations);
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+
                                 <FormField
                                   control={form.control}
                                   name={`location_details.${locationIndex}.regions.${regionIndex}.region`}
@@ -1598,6 +1717,24 @@ export default function ComprehensiveEditFixed() {
                                 />
                               </div>
                             ))}
+                            
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const locations = form.getValues("location_details");
+                                locations[locationIndex].regions.push({
+                                  region: "",
+                                  regional_unit: "",
+                                  municipality: "",
+                                });
+                                form.setValue("location_details", locations);
+                              }}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Προσθήκη Περιοχής
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1887,7 +2024,7 @@ export default function ComprehensiveEditFixed() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.project_budget`}
@@ -1908,6 +2045,21 @@ export default function ComprehensiveEditFixed() {
                             )}
                           />
 
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.epa_version`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Έκδοση ΕΠΑ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 1.0" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.total_public_expense`}
