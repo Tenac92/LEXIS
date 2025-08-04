@@ -698,9 +698,9 @@ export default function ComprehensiveEditFixed() {
                 if (kallikratis) {
                   kallikratisId = kallikratis.id;
                   
-                  // FORCE regional unit level if municipality is empty or user wants regional unit level
-                  // This fixes the issue where both regional unit and municipality are populated but user wants regional unit codes
-                  const forceLevel = (!region.municipality || region.municipality.trim() === "") ? 'regional_unit' : undefined;
+                  // ALWAYS FORCE regional unit level for this project - user wants codes 804/805, not municipality codes
+                  // This overrides any municipality data that might be present in the form
+                  const forceLevel = 'regional_unit';
                   
                   // Calculate geographic code based on what data is selected
                   geographicCode = getGeographicCodeForSave(region, kallikratis, forceLevel);
