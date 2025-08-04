@@ -2386,10 +2386,8 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
 
     // Update project decisions if provided
     if (formData.decisions && Array.isArray(formData.decisions)) {
-      // Delete existing decisions
       await supabase.from('project_decisions').delete().eq('project_id', project.id);
       
-      // Insert new decisions
       const decisionsToInsert = formData.decisions.map((decision: any, index: number) => ({
         project_id: project.id,
         decision_sequence: index + 1,
@@ -2398,8 +2396,8 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
         fek: decision.fek || null,
         ada: decision.ada || null,
         implementing_agency: decision.implementing_agency || [],
-        decision_budget: parseFloat(String(decision.decision_budget || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
-        expenses_covered: parseFloat(String(decision.expenses_covered || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        decision_budget: parseFloat(String(decision.decision_budget || 0).replace(/[^\d.,]/g, '.')) || 0,
+        expenses_covered: parseFloat(String(decision.expenses_covered || 0).replace(/[^\d.,]/g, '.')) || 0,
         expenditure_type: decision.expenditure_type || [],
         decision_date: new Date().toISOString().split('T')[0],
         included: decision.included !== undefined ? decision.included : true,
@@ -2422,103 +2420,16 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
       }
     }
 
-    // Update location details and geographic data if provided
-    if (formData.location_details && Array.isArray(formData.location_details)) {
-      // Delete existing project index entries
-      await supabase.from('project_index').delete().eq('project_id', project.id);
-      
-      // Process each location detail
-      for (const locationDetail of formData.location_details) {
-        if (locationDetail.regions && Array.isArray(locationDetail.regions)) {
-          for (const region of locationDetail.regions) {
-            if (region.region || region.regional_unit || region.municipality) {
-              // Determine the appropriate geographic code based on what's selected
-              let geographic_code = null;
-              let kallikratis_id = null;
-
-              // Find the appropriate kallikratis entry and determine the code level
-              const { data: kallikratisData } = await supabase
-                .from('kallikratis')
-                .select('*');
-
-              if (kallikratisData) {
-                let matchingEntry = null;
-
-                // If municipality is selected, use its code (4 digits)
-                if (region.municipality) {
-                  matchingEntry = kallikratisData.find(k => 
-                    k.onoma_neou_ota === region.municipality &&
-                    k.perifereiaki_enotita === region.regional_unit &&
-                    k.perifereia === region.region
-                  );
-                  if (matchingEntry) {
-                    geographic_code = matchingEntry.kodikos_neou_ota;
-                    kallikratis_id = matchingEntry.id;
-                  }
-                }
-                // If only regional unit is selected, use its code (3 digits)
-                else if (region.regional_unit) {
-                  matchingEntry = kallikratisData.find(k => 
-                    k.perifereiaki_enotita === region.regional_unit &&
-                    k.perifereia === region.region
-                  );
-                  if (matchingEntry) {
-                    geographic_code = matchingEntry.kodikos_perifereiakis_enotitas;
-                    kallikratis_id = matchingEntry.id;
-                  }
-                }
-                // If only region is selected, use its code (1 digit)
-                else if (region.region) {
-                  matchingEntry = kallikratisData.find(k => k.perifereia === region.region);
-                  if (matchingEntry) {
-                    geographic_code = matchingEntry.kodikos_perifereias;
-                    kallikratis_id = matchingEntry.id;
-                  }
-                }
-
-                // Insert project index entry with correct geographic code
-                if (geographic_code && kallikratis_id) {
-                  const indexEntry = {
-                    project_id: project.id,
-                    kallikratis_id: kallikratis_id,
-                    geographic_code: geographic_code,
-                    monada_id: null, // Will be set from implementing agency if needed
-                    event_types_id: null, // Will be set from event type if needed
-                    expenditure_type_id: null, // Will be set from expenditure types if needed
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  };
-
-                  const { error: indexError } = await supabase
-                    .from('project_index')
-                    .insert(indexEntry);
-
-                  if (indexError) {
-                    console.error(`[ComprehensiveUpdate] Error inserting project index:`, indexError);
-                  } else {
-                    console.log(`[ComprehensiveUpdate] Inserted project index with geographic_code: ${geographic_code}`);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
     // Update formulations if provided
     if (formData.formulation_details && Array.isArray(formData.formulation_details)) {
-      // Delete existing formulations
       await supabase.from('project_formulations').delete().eq('project_id', project.id);
       
-      // Get existing decisions for mapping connected decisions
       const { data: existingDecisions } = await supabase
         .from('project_decisions')
         .select('id')
         .eq('project_id', project.id)
         .order('decision_sequence');
 
-      // Insert new formulations
       const formulationsToInsert = formData.formulation_details.map((formulation: any, index: number) => ({
         project_id: project.id,
         formulation_sequence: index + 1,
@@ -2527,17 +2438,15 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
         protocol_number: formulation.protocol_number || null,
         ada: formulation.ada || null,
         decision_year: formulation.decision_year ? parseInt(formulation.decision_year) : null,
-        project_budget: parseFloat(String(formulation.project_budget || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
-        total_public_expense: parseFloat(String(formulation.total_public_expense || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
-        eligible_public_expense: parseFloat(String(formulation.eligible_public_expense || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        project_budget: parseFloat(String(formulation.project_budget || 0).replace(/[^\d.,]/g, '.')) || 0,
+        total_public_expense: parseFloat(String(formulation.total_public_expense || 0).replace(/[^\d.,]/g, '.')) || 0,
+        eligible_public_expense: parseFloat(String(formulation.eligible_public_expense || 0).replace(/[^\d.,]/g, '.')) || 0,
         epa_version: formulation.epa_version || null,
         decision_status: formulation.decision_status || 'Ενεργή',
         change_type: formulation.change_type || 'Έγκριση',
         connected_decision_ids: Array.isArray(formulation.connected_decisions) 
           ? formulation.connected_decisions
-              .map((index: number) => {
-                return (existingDecisions && index < existingDecisions.length) ? existingDecisions[index]?.id : null;
-              })
+              .map((index: number) => (existingDecisions && index < existingDecisions.length) ? existingDecisions[index]?.id : null)
               .filter((id: number | null) => id !== null)
           : [],
         comments: formulation.comments || null,
@@ -2565,7 +2474,6 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
       sections_updated: {
         project_details: !!formData.project_details,
         decisions: !!(formData.decisions && formData.decisions.length > 0),
-        location_details: !!(formData.location_details && formData.location_details.length > 0),
         formulations: !!(formData.formulation_details && formData.formulation_details.length > 0)
       }
     });
