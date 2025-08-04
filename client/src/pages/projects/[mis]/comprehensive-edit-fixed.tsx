@@ -195,7 +195,7 @@ const comprehensiveProjectSchema = z.object({
     eligible_public_expense: z.string().default(""),
     decision_status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
-    connected_decisions: z.array(z.string()).default([]),
+    connected_decisions: z.array(z.number()).default([]),
     comments: z.string().default(""),
   })).default([]),
   
@@ -2307,18 +2307,41 @@ export default function ComprehensiveEditFixed() {
                           />
                         </div>
 
-                        <FormField
-                          control={form.control}
-                          name={`formulation_details.${index}.connected_decisions`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Αποφάσεις που συνδέονται</FormLabel>
-                              <FormControl>
-                                <Textarea {...field} placeholder="Εισάγετε τις συνδεδεμένες αποφάσεις..." rows={2} />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
+                        {/* Connected Decisions Multi-select */}
+                        <div>
+                          <FormLabel>Αποφάσεις που συνδέονται</FormLabel>
+                          <div className="grid grid-cols-1 gap-2 mt-2">
+                            {(decisionsData || []).map((decision: any, decisionIndex: number) => (
+                              <FormField
+                                key={decisionIndex}
+                                control={form.control}
+                                name={`formulation_details.${index}.connected_decisions`}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(decisionIndex)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            field.onChange([...(field.value || []), decisionIndex]);
+                                          } else {
+                                            field.onChange((field.value || []).filter((item: number) => item !== decisionIndex));
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                      Απόφαση {decisionIndex + 1}: {decision.protocol_number || decision.kya || `#${decisionIndex + 1}`} ({decision.decision_type || "Έγκριση"})
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                            {(!decisionsData || decisionsData.length === 0) && (
+                              <p className="text-sm text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις για σύνδεση</p>
+                            )}
+                          </div>
+                        </div>
 
                         <FormField
                           control={form.control}

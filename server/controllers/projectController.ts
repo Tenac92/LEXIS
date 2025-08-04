@@ -2336,4 +2336,252 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
   }
 });
 
+// Comprehensive project update - handles all form data at once
+router.put('/:mis/comprehensive', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const formData = req.body;
+    
+    console.log(`[ComprehensiveUpdate] Updating comprehensive data for project MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project to get the project_id
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      console.error(`[ComprehensiveUpdate] Project not found for MIS: ${mis}`, projectError);
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    console.log(`[ComprehensiveUpdate] Processing update for project ID: ${project.id}`);
+
+    // Update project details if provided
+    if (formData.project_details) {
+      const projectUpdate = {
+        mis: formData.project_details.mis || project.mis,
+        sa: formData.project_details.sa || null,
+        enumeration_code: formData.project_details.enumeration_code || null,
+        inclusion_year: formData.project_details.inclusion_year ? parseInt(formData.project_details.inclusion_year) : null,
+        title: formData.project_details.project_title || null,
+        description: formData.project_details.project_description || null,
+        summary_description: formData.project_details.summary_description || null,
+        expenses_executed: formData.project_details.expenses_executed || null,
+        project_status: formData.project_details.project_status || 'Ενεργό',
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: updateError } = await supabase
+        .from('Projects')
+        .update(projectUpdate)
+        .eq('id', project.id);
+
+      if (updateError) {
+        console.error(`[ComprehensiveUpdate] Error updating project:`, updateError);
+        return res.status(500).json({ message: "Failed to update project details" });
+      }
+      console.log(`[ComprehensiveUpdate] Updated project details`);
+    }
+
+    // Update project decisions if provided
+    if (formData.decisions && Array.isArray(formData.decisions)) {
+      // Delete existing decisions
+      await supabase.from('project_decisions').delete().eq('project_id', project.id);
+      
+      // Insert new decisions
+      const decisionsToInsert = formData.decisions.map((decision: any, index: number) => ({
+        project_id: project.id,
+        decision_sequence: index + 1,
+        decision_type: decision.decision_type || 'Έγκριση',
+        protocol_number: decision.protocol_number || null,
+        fek: decision.fek || null,
+        ada: decision.ada || null,
+        implementing_agency: decision.implementing_agency || [],
+        decision_budget: parseFloat(String(decision.decision_budget || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        expenses_covered: parseFloat(String(decision.expenses_covered || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        expenditure_type: decision.expenditure_type || [],
+        decision_date: new Date().toISOString().split('T')[0],
+        included: decision.included !== undefined ? decision.included : true,
+        is_active: true,
+        comments: decision.comments || null,
+        created_by: req.user!.id,
+        updated_by: req.user!.id
+      }));
+
+      if (decisionsToInsert.length > 0) {
+        const { error: decisionsError } = await supabase
+          .from('project_decisions')
+          .insert(decisionsToInsert);
+
+        if (decisionsError) {
+          console.error(`[ComprehensiveUpdate] Error inserting decisions:`, decisionsError);
+          return res.status(500).json({ message: "Failed to update decisions" });
+        }
+        console.log(`[ComprehensiveUpdate] Updated ${decisionsToInsert.length} decisions`);
+      }
+    }
+
+    // Update location details and geographic data if provided
+    if (formData.location_details && Array.isArray(formData.location_details)) {
+      // Delete existing project index entries
+      await supabase.from('project_index').delete().eq('project_id', project.id);
+      
+      // Process each location detail
+      for (const locationDetail of formData.location_details) {
+        if (locationDetail.regions && Array.isArray(locationDetail.regions)) {
+          for (const region of locationDetail.regions) {
+            if (region.region || region.regional_unit || region.municipality) {
+              // Determine the appropriate geographic code based on what's selected
+              let geographic_code = null;
+              let kallikratis_id = null;
+
+              // Find the appropriate kallikratis entry and determine the code level
+              const { data: kallikratisData } = await supabase
+                .from('kallikratis')
+                .select('*');
+
+              if (kallikratisData) {
+                let matchingEntry = null;
+
+                // If municipality is selected, use its code (4 digits)
+                if (region.municipality) {
+                  matchingEntry = kallikratisData.find(k => 
+                    k.onoma_neou_ota === region.municipality &&
+                    k.perifereiaki_enotita === region.regional_unit &&
+                    k.perifereia === region.region
+                  );
+                  if (matchingEntry) {
+                    geographic_code = matchingEntry.kodikos_neou_ota;
+                    kallikratis_id = matchingEntry.id;
+                  }
+                }
+                // If only regional unit is selected, use its code (3 digits)
+                else if (region.regional_unit) {
+                  matchingEntry = kallikratisData.find(k => 
+                    k.perifereiaki_enotita === region.regional_unit &&
+                    k.perifereia === region.region
+                  );
+                  if (matchingEntry) {
+                    geographic_code = matchingEntry.kodikos_perifereiakis_enotitas;
+                    kallikratis_id = matchingEntry.id;
+                  }
+                }
+                // If only region is selected, use its code (1 digit)
+                else if (region.region) {
+                  matchingEntry = kallikratisData.find(k => k.perifereia === region.region);
+                  if (matchingEntry) {
+                    geographic_code = matchingEntry.kodikos_perifereias;
+                    kallikratis_id = matchingEntry.id;
+                  }
+                }
+
+                // Insert project index entry with correct geographic code
+                if (geographic_code && kallikratis_id) {
+                  const indexEntry = {
+                    project_id: project.id,
+                    kallikratis_id: kallikratis_id,
+                    geographic_code: geographic_code,
+                    monada_id: null, // Will be set from implementing agency if needed
+                    event_types_id: null, // Will be set from event type if needed
+                    expenditure_type_id: null, // Will be set from expenditure types if needed
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                  };
+
+                  const { error: indexError } = await supabase
+                    .from('project_index')
+                    .insert(indexEntry);
+
+                  if (indexError) {
+                    console.error(`[ComprehensiveUpdate] Error inserting project index:`, indexError);
+                  } else {
+                    console.log(`[ComprehensiveUpdate] Inserted project index with geographic_code: ${geographic_code}`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Update formulations if provided
+    if (formData.formulation_details && Array.isArray(formData.formulation_details)) {
+      // Delete existing formulations
+      await supabase.from('project_formulations').delete().eq('project_id', project.id);
+      
+      // Get existing decisions for mapping connected decisions
+      const { data: existingDecisions } = await supabase
+        .from('project_decisions')
+        .select('id')
+        .eq('project_id', project.id)
+        .order('decision_sequence');
+
+      // Insert new formulations
+      const formulationsToInsert = formData.formulation_details.map((formulation: any, index: number) => ({
+        project_id: project.id,
+        formulation_sequence: index + 1,
+        sa_type: formulation.sa || 'ΝΑ853',
+        enumeration_code: formulation.enumeration_code || null,
+        protocol_number: formulation.protocol_number || null,
+        ada: formulation.ada || null,
+        decision_year: formulation.decision_year ? parseInt(formulation.decision_year) : null,
+        project_budget: parseFloat(String(formulation.project_budget || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        total_public_expense: parseFloat(String(formulation.total_public_expense || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        eligible_public_expense: parseFloat(String(formulation.eligible_public_expense || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+        epa_version: formulation.epa_version || null,
+        decision_status: formulation.decision_status || 'Ενεργή',
+        change_type: formulation.change_type || 'Έγκριση',
+        connected_decision_ids: Array.isArray(formulation.connected_decisions) 
+          ? formulation.connected_decisions
+              .map((index: number) => {
+                return (existingDecisions && index < existingDecisions.length) ? existingDecisions[index]?.id : null;
+              })
+              .filter((id: number | null) => id !== null)
+          : [],
+        comments: formulation.comments || null,
+        is_active: true,
+        created_by: req.user?.id || null,
+        updated_by: req.user?.id || null
+      }));
+
+      if (formulationsToInsert.length > 0) {
+        const { error: formulationsError } = await supabase
+          .from('project_formulations')
+          .insert(formulationsToInsert);
+
+        if (formulationsError) {
+          console.error(`[ComprehensiveUpdate] Error inserting formulations:`, formulationsError);
+          return res.status(500).json({ message: "Failed to update formulations" });
+        }
+        console.log(`[ComprehensiveUpdate] Updated ${formulationsToInsert.length} formulations`);
+      }
+    }
+
+    res.json({ 
+      message: "Project updated successfully",
+      project_id: project.id,
+      sections_updated: {
+        project_details: !!formData.project_details,
+        decisions: !!(formData.decisions && formData.decisions.length > 0),
+        location_details: !!(formData.location_details && formData.location_details.length > 0),
+        formulations: !!(formData.formulation_details && formData.formulation_details.length > 0)
+      }
+    });
+
+  } catch (error) {
+    console.error(`[ComprehensiveUpdate] Error updating project:`, error);
+    res.status(500).json({ 
+      message: "Failed to update project",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 export { router as projectsRouter };
