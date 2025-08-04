@@ -222,7 +222,19 @@ export default function ComprehensiveEditFixed() {
   // Create mutation for project updates
   const projectUpdateMutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
-      return onSubmit(data);
+      const response = await fetch(`/api/projects/${mis}/comprehensive`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
