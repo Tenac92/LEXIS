@@ -813,7 +813,7 @@ export default function ComprehensiveEditFixed() {
       const formulations = formulationsData && formulationsData.length > 0
         ? formulationsData.map(formulation => {
             // Convert connected_decision_ids from database to form format
-            let connectedDecisions: string[] = [];
+            let connectedDecisions: number[] = [];
             if (formulation.connected_decision_ids && Array.isArray(formulation.connected_decision_ids)) {
               // Map decision IDs back to form indices by finding them in decisionsData
               console.log(`[ConnectedDecisions] Processing for formulation ${formulation.sa_type}:`, {
@@ -827,9 +827,9 @@ export default function ComprehensiveEditFixed() {
                 .map((decisionId: number) => {
                   const decisionIndex = decisionsData?.findIndex((d: any) => d.id === decisionId);
                   console.log(`[ConnectedDecisions] Mapping ID ${decisionId} to index ${decisionIndex}`);
-                  return decisionIndex !== -1 && decisionIndex !== undefined ? String(decisionIndex) : null;
+                  return decisionIndex !== -1 && decisionIndex !== undefined ? decisionIndex : null;
                 })
-                .filter((index: string | null) => index !== null) as string[];
+                .filter((index: number | null) => index !== null) as number[];
             }
             
             console.log(`[FormulationInit] Formulation ${formulation.sa_type}:`, {
@@ -2266,40 +2266,45 @@ export default function ComprehensiveEditFixed() {
                         </div>
 
                         {/* Connected Decisions Multi-select */}
-                        <div>
-                          <FormLabel>Αποφάσεις που συνδέονται</FormLabel>
-                          <div className="grid grid-cols-1 gap-2 mt-2">
-                            {(decisionsData || []).map((decision: any, decisionIndex: number) => (
-                              <FormField
-                                key={decisionIndex}
-                                control={form.control}
-                                name={`formulation_details.${index}.connected_decisions`}
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(decisionIndex)}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            field.onChange([...(field.value || []), decisionIndex]);
-                                          } else {
-                                            field.onChange((field.value || []).filter((item: number) => item !== decisionIndex));
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="text-sm font-normal">
-                                      Απόφαση {decisionIndex + 1}: {decision.protocol_number || decision.kya || `#${decisionIndex + 1}`} ({decision.decision_type || "Έγκριση"})
-                                    </FormLabel>
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
-                            {(!decisionsData || decisionsData.length === 0) && (
-                              <p className="text-sm text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις για σύνδεση</p>
-                            )}
-                          </div>
-                        </div>
+                        <FormField
+                          control={form.control}
+                          name={`formulation_details.${index}.connected_decisions`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="mb-4">
+                                <FormLabel className="text-base">Αποφάσεις που συνδέονται</FormLabel>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {(decisionsData || []).map((decision: any, decisionIndex: number) => (
+                                    <FormItem
+                                      key={decisionIndex}
+                                      className="flex flex-row items-start space-x-3 space-y-0"
+                                    >
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(decisionIndex) || false}
+                                          onCheckedChange={(checked) => {
+                                            const currentValue = field.value || [];
+                                            if (checked) {
+                                              field.onChange([...currentValue, decisionIndex]);
+                                            } else {
+                                              field.onChange(currentValue.filter((item: number) => item !== decisionIndex));
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="text-sm font-normal cursor-pointer">
+                                        Απόφαση {decisionIndex + 1}: {decision.protocol_number || decision.kya || `#${decisionIndex + 1}`} ({decision.decision_type || "Έγκριση"})
+                                      </FormLabel>
+                                    </FormItem>
+                                  ))}
+                                  {(!decisionsData || decisionsData.length === 0) && (
+                                    <p className="text-sm text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις για σύνδεση</p>
+                                  )}
+                                </div>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
 
                         <FormField
                           control={form.control}
