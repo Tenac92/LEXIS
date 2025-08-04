@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -325,6 +326,54 @@ export default function ComprehensiveEditFixed() {
   const typedKallikratisData = kallikratisData as KallikratisEntry[] | undefined;
   const typedEventTypesData = eventTypesData as EventTypeData[] | undefined;
   const typedExpenditureTypesData = expenditureTypesData as ExpenditureTypeData[] | undefined;
+
+  // Helper functions for geographic data
+  const getUniqueRegions = () => {
+    return [...new Set(typedKallikratisData?.map(k => k.perifereia) || [])].filter(Boolean);
+  };
+
+  const getRegionalUnitsForRegion = (region: string) => {
+    if (!region) return [];
+    return [...new Set(typedKallikratisData
+      ?.filter(k => k.perifereia === region)
+      .map(k => k.perifereiaki_enotita) || [])].filter(Boolean);
+  };
+
+  const getMunicipalitiesForRegionalUnit = (region: string, regionalUnit: string) => {
+    if (!region || !regionalUnit) return [];
+    return [...new Set(typedKallikratisData
+      ?.filter(k => k.perifereia === region && k.perifereiaki_enotita === regionalUnit)
+      .map(k => k.onoma_neou_ota) || [])].filter(Boolean);
+  };
+
+  // Number formatting helper functions
+  const formatNumberWhileTyping = (value: string): string => {
+    // Remove all non-numeric characters except comma and period
+    const cleanValue = value.replace(/[^0-9,.]/g, '');
+    
+    // Handle European format (comma as decimal separator)
+    if (cleanValue.includes(',')) {
+      const parts = cleanValue.split(',');
+      if (parts.length === 2) {
+        // Add thousand separators to integer part
+        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return `${integerPart},${parts[1]}`;
+      }
+    }
+    
+    // If no decimal separator, add thousand separators
+    return cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+
+  const parseEuropeanNumber = (value: string): number | null => {
+    if (!value) return null;
+    
+    // Replace thousand separators (periods) and convert comma to period for decimal
+    const cleaned = value.replace(/\./g, '').replace(/,/g, '.');
+    const parsed = parseFloat(cleaned);
+    
+    return isNaN(parsed) ? null : parsed;
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
@@ -1357,13 +1406,220 @@ export default function ComprehensiveEditFixed() {
                   </CardContent>
                 </Card>
 
-                {/* Placeholder for other tabs - implementing core structure first */}
+                {/* Location Details */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Στοιχεία Τοποθεσίας</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-600">Location details will be implemented here</p>
+                    <div className="space-y-6">
+                      {form.watch("location_details").map((_, locationIndex) => (
+                        <div key={locationIndex} className="border rounded-lg p-4 space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium">Τοποθεσία {locationIndex + 1}</h4>
+                            {form.watch("location_details").length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const locations = form.getValues("location_details");
+                                  locations.splice(locationIndex, 1);
+                                  form.setValue("location_details", locations);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`location_details.${locationIndex}.implementing_agency`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Επιλέξτε μονάδα" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {typedUnitsData?.map((unit) => (
+                                        <SelectItem key={unit.id} value={unit.unit_name?.name || unit.name || unit.unit || ""}>
+                                          {unit.unit_name?.name || unit.name || unit.unit}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`location_details.${locationIndex}.event_type`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Τύπος Γεγονότος</FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Επιλέξτε τύπο" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {typedEventTypesData?.map((eventType) => (
+                                        <SelectItem key={eventType.id} value={eventType.name}>
+                                          {eventType.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Expenditure Types */}
+                          <div>
+                            <FormLabel>Τύποι Δαπανών</FormLabel>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                              {typedExpenditureTypesData?.map((expenditureType) => (
+                                <FormField
+                                  key={expenditureType.id}
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.expenditure_types`}
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(expenditureType.expenditure_types || expenditureType.name || "")}
+                                          onCheckedChange={(checked) => {
+                                            const expenditureName = expenditureType.expenditure_types || expenditureType.name || "";
+                                            if (checked) {
+                                              field.onChange([...(field.value || []), expenditureName]);
+                                            } else {
+                                              field.onChange((field.value || []).filter((item: string) => item !== expenditureName));
+                                            }
+                                          }}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="text-sm font-normal">
+                                        {expenditureType.expenditure_types || expenditureType.name}
+                                      </FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Regions */}
+                          <div className="space-y-4">
+                            <FormLabel>Περιοχές</FormLabel>
+                            {form.watch(`location_details.${locationIndex}.regions`).map((_, regionIndex) => (
+                              <div key={regionIndex} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 border rounded">
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.regions.${regionIndex}.region`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Περιφέρεια</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Επιλέξτε περιφέρεια" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {getUniqueRegions().map((region) => (
+                                            <SelectItem key={region} value={region}>
+                                              {region}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.regions.${regionIndex}.regional_unit`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Περιφερειακή Ενότητα</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Επιλέξτε ενότητα" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {getRegionalUnitsForRegion(form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`)).map((unit) => (
+                                            <SelectItem key={unit} value={unit}>
+                                              {unit}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.regions.${regionIndex}.municipality`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Δήμος</FormLabel>
+                                      <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Επιλέξτε δήμο" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {getMunicipalitiesForRegionalUnit(
+                                            form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`),
+                                            form.watch(`location_details.${locationIndex}.regions.${regionIndex}.regional_unit`)
+                                          ).map((municipality) => (
+                                            <SelectItem key={municipality} value={municipality}>
+                                              {municipality}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const locations = form.getValues("location_details");
+                          locations.push({
+                            implementing_agency: "",
+                            event_type: "",
+                            expenditure_types: [],
+                            regions: [{ region: "", regional_unit: "", municipality: "" }],
+                          });
+                          form.setValue("location_details", locations);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Προσθήκη Τοποθεσίας
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -1373,22 +1629,414 @@ export default function ComprehensiveEditFixed() {
             <TabsContent value="project">
               <Card>
                 <CardHeader>
-                  <CardTitle>Στοιχεία Έργου</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Στοιχεία Έργου
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">Project details will be implemented here</p>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="project_details.mis"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>MIS</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="π.χ. 5222801" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="project_details.sa"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>ΣΑ</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="π.χ. ΝΑ853" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="project_details.enumeration_code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="project_details.inclusion_year"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Έτος Ένταξης</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="π.χ. 2024" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="project_details.project_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Κατάσταση Έργου</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="Ενεργό">Ενεργό</SelectItem>
+                                <SelectItem value="Αναμονή">Αναμονή</SelectItem>
+                                <SelectItem value="Ολοκληρωμένο">Ολοκληρωμένο</SelectItem>
+                                <SelectItem value="Ακυρωμένο">Ακυρωμένο</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="project_details.project_title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Τίτλος Έργου</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Εισάγετε τον τίτλο του έργου..." />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="project_details.project_description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Περιγραφή Έργου</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} placeholder="Εισάγετε αναλυτική περιγραφή του έργου..." rows={4} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="project_details.summary_description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Συνοπτική Περιγραφή</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} placeholder="Εισάγετε συνοπτική περιγραφή..." rows={2} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="project_details.expenses_executed"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Εκτελεσθείσες Δαπάνες</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              placeholder="π.χ. 500.000,00" 
+                              onChange={(e) => {
+                                const formatted = formatNumberWhileTyping(e.target.value);
+                                field.onChange(formatted);
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* Tab 4: Formulation */}
+            {/* Tab 4: Formulation Details */}
             <TabsContent value="formulation">
               <Card>
                 <CardHeader>
-                  <CardTitle>Διατύπωση</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Στοιχεία Διατύπωσης Έργου
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">Formulation details will be implemented here</p>
+                  <div className="space-y-6">
+                    {form.watch("formulation_details").map((_, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h4 className="font-medium">Διατύπωση {index + 1}</h4>
+                          {form.watch("formulation_details").length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const formulations = form.getValues("formulation_details");
+                                formulations.splice(index, 1);
+                                form.setValue("formulation_details", formulations);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.sa`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΣΑ</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Επιλέξτε ΣΑ" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
+                                    <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
+                                    <SelectItem value="E069">E069</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.enumeration_code`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.decision_year`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Έτος Απόφασης</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 2024" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.protocol_number`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 12345/2024" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.ada`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>ΑΔΑ</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.project_budget`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Προϋπολογισμός Έργου</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    placeholder="π.χ. 1.000.000,00" 
+                                    onChange={(e) => {
+                                      const formatted = formatNumberWhileTyping(e.target.value);
+                                      field.onChange(formatted);
+                                    }}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.total_public_expense`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Συνολική Δημόσια Δαπάνη</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    placeholder="π.χ. 800.000,00" 
+                                    onChange={(e) => {
+                                      const formatted = formatNumberWhileTyping(e.target.value);
+                                      field.onChange(formatted);
+                                    }}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.eligible_public_expense`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Επιλέξιμη Δημόσια Δαπάνη</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    {...field} 
+                                    placeholder="π.χ. 750.000,00" 
+                                    onChange={(e) => {
+                                      const formatted = formatNumberWhileTyping(e.target.value);
+                                      field.onChange(formatted);
+                                    }}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.decision_status`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Κατάσταση Απόφασης</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Ενεργή">Ενεργή</SelectItem>
+                                    <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
+                                    <SelectItem value="Αναστολή">Αναστολή</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`formulation_details.${index}.change_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Τύπος Αλλαγής</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Επιλέξτε τύπο" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                    <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                    <SelectItem value="Παράταση">Παράταση</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`formulation_details.${index}.comments`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Σχόλια</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Προαιρετικά σχόλια..." />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const formulations = form.getValues("formulation_details");
+                        formulations.push({
+                          sa: "ΝΑ853",
+                          enumeration_code: "",
+                          protocol_number: "",
+                          ada: "",
+                          decision_year: "",
+                          project_budget: "",
+                          epa_version: "",
+                          total_public_expense: "",
+                          eligible_public_expense: "",
+                          decision_status: "Ενεργή",
+                          change_type: "Έγκριση",
+                          connected_decisions: [],
+                          comments: "",
+                        });
+                        form.setValue("formulation_details", formulations);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Προσθήκη Διατύπωσης
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1397,10 +2045,61 @@ export default function ComprehensiveEditFixed() {
             <TabsContent value="changes">
               <Card>
                 <CardHeader>
-                  <CardTitle>Αλλαγές</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <RefreshCw className="h-5 w-5" />
+                    Αλλαγές που Πραγματοποιήθηκαν
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-gray-600">Changes tracking will be implemented here</p>
+                  <div className="space-y-4">
+                    {form.watch("changes").map((_, index) => (
+                      <div key={index} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="font-medium">Αλλαγή {index + 1}</h4>
+                          {form.watch("changes").length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const changes = form.getValues("changes");
+                                changes.splice(index, 1);
+                                form.setValue("changes", changes);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name={`changes.${index}.description`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Περιγραφή Αλλαγής</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..." rows={3} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const changes = form.getValues("changes");
+                        changes.push({ description: "" });
+                        form.setValue("changes", changes);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Προσθήκη Αλλαγής
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
