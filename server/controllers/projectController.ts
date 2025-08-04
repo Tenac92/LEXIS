@@ -2365,15 +2365,10 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
     // Update project details if provided
     if (formData.project_details) {
       const projectUpdate = {
-        mis: formData.project_details.mis || project.mis,
-        sa: formData.project_details.sa || null,
-        enumeration_code: formData.project_details.enumeration_code || null,
-        inclusion_year: formData.project_details.inclusion_year ? parseInt(formData.project_details.inclusion_year) : null,
-        title: formData.project_details.project_title || null,
-        description: formData.project_details.project_description || null,
-        summary_description: formData.project_details.summary_description || null,
-        expenses_executed: formData.project_details.expenses_executed || null,
-        project_status: formData.project_details.project_status || 'Ενεργό',
+        mis: formData.project_details.mis ? parseInt(formData.project_details.mis) : project.mis,
+        project_title: formData.project_details.project_title || null,
+        event_description: formData.project_details.project_description || formData.project_details.summary_description || null,
+        status: formData.project_details.project_status || 'Ενεργό',
         updated_at: new Date().toISOString()
       };
 
