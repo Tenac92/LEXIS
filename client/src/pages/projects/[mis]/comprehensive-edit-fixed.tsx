@@ -400,6 +400,10 @@ export default function ComprehensiveEditFixed() {
         const projectUpdateData = {
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
+          // CRITICAL: Include the missing fields that weren't being saved
+          inclusion_year: data.project_details.inclusion_year,
+          na853: data.project_details.sa,
+          enumeration_code: data.project_details.enumeration_code,
           // Convert event_name to event_type_id if needed
           event_type: (() => {
             if (!data.event_details.event_name) {
@@ -456,6 +460,12 @@ export default function ComprehensiveEditFixed() {
         };
         
         console.log("1. Updating core project data:", projectUpdateData);
+        console.log("🔍 Key fields being sent:", {
+          inclusion_year: projectUpdateData.inclusion_year,
+          na853: projectUpdateData.na853,
+          enumeration_code: projectUpdateData.enumeration_code,
+          project_title: projectUpdateData.project_title
+        });
         try {
           const projectResponse = await apiRequest(`/api/projects/${mis}`, {
             method: "PATCH",
