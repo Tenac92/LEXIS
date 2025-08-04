@@ -219,40 +219,7 @@ export default function ComprehensiveEditFixed() {
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
-  // Create mutation for project updates
-  const projectUpdateMutation = useMutation({
-    mutationFn: async (data: ComprehensiveFormData) => {
-      const response = await fetch(`/api/projects/${mis}/comprehensive`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Επιτυχία",
-        description: "Το έργο ενημερώθηκε επιτυχώς",
-      });
-      // Invalidate and refetch data
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/complete`] });
-    },
-    onError: (error: any) => {
-      console.error("Update failed:", error);
-      toast({
-        title: "Σφάλμα",
-        description: error.message || "Αποτυχία ενημέρωσης του έργου",
-        variant: "destructive",
-      });
-    },
-  });
+
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -1245,16 +1212,7 @@ export default function ComprehensiveEditFixed() {
     return <div className="container mx-auto p-6">Αναμονή για φόρτωση δεδομένων...</div>;
   }
 
-  const handleSubmit = (data: ComprehensiveFormData) => {
-    console.log("=== FORM SUBMISSION DEBUG ===");
-    console.log("✓ handleSubmit called - form is valid");
-    console.log("Form data:", JSON.stringify(data, null, 2));
-    console.log("Form errors:", form.formState.errors);
-    console.log("Form is valid:", form.formState.isValid);
-    console.log("Mutation pending:", projectUpdateMutation.isPending);
-    
-    projectUpdateMutation.mutate(data);
-  };
+
 
   // Debug all fetched data
   console.log("DEBUG - Kallikratis data sample:", typedKallikratisData?.slice(0, 3));
@@ -1286,11 +1244,11 @@ export default function ComprehensiveEditFixed() {
               Επιστροφή στο Έργο
             </Button>
             <Button 
-              onClick={form.handleSubmit((data) => projectUpdateMutation.mutate(data))}
-              disabled={projectUpdateMutation.isPending}
+              onClick={form.handleSubmit((data) => mutation.mutate(data))}
+              disabled={mutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {projectUpdateMutation.isPending ? (
+              {mutation.isPending ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   Αποθήκευση...
@@ -1306,7 +1264,7 @@ export default function ComprehensiveEditFixed() {
         </div>
 
         <Form key={formKey} {...form}>
-          <form onSubmit={form.handleSubmit((data) => projectUpdateMutation.mutate(data))} className="space-y-6">
+          <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6">
             <Tabs defaultValue="project" className="space-y-6">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="project" className="flex items-center gap-2">
@@ -2453,24 +2411,7 @@ export default function ComprehensiveEditFixed() {
             </TabsContent>
 
           </Tabs>
-          
-          {/* Save Button */}
-          <div className="flex justify-end gap-4 mt-8 pb-6">
-            <Button
-              type="submit"
-              disabled={projectUpdateMutation.isPending}
-              className="min-w-[120px]"
-            >
-              {projectUpdateMutation.isPending ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Αποθήκευση...
-                </>
-              ) : (
-                "Αποθήκευση Αλλαγών"
-              )}
-            </Button>
-          </div>
+
         </form>
       </Form>
       </div>
