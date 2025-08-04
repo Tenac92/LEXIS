@@ -595,6 +595,620 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
   }
 });
 
+// Project Decisions CRUD endpoints
+router.get('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[ProjectDecisions] Fetching decisions for MIS: ${mis}`);
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Fetch all decisions for this project
+    const { data: decisions, error: decisionsError } = await supabase
+      .from('project_decisions')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('decision_sequence', { ascending: true });
+
+    if (decisionsError) {
+      console.error('[ProjectDecisions] Error fetching decisions:', decisionsError);
+      return res.status(500).json({ 
+        message: "Failed to fetch decisions",
+        error: decisionsError.message
+      });
+    }
+
+    console.log(`[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ${project.id}`);
+    res.json(decisions || []);
+  } catch (error) {
+    console.error('[ProjectDecisions] Error in decisions endpoint:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.post('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const decisionData = req.body;
+    console.log(`[ProjectDecisions] Creating decision for MIS: ${mis}`, decisionData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Get the next sequence number
+    const { data: lastDecision } = await supabase
+      .from('project_decisions')
+      .select('decision_sequence')
+      .eq('project_id', project.id)
+      .order('decision_sequence', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextSequence = (lastDecision?.decision_sequence || 0) + 1;
+
+    // Prepare decision data
+    const newDecision = {
+      project_id: project.id,
+      decision_sequence: nextSequence,
+      decision_type: decisionData.decision_type || 'Έγκριση',
+      protocol_number: decisionData.protocol_number || null,
+      fek: decisionData.fek || null,
+      ada: decisionData.ada || null,
+      implementing_agency: decisionData.implementing_agency || [],
+      decision_budget: decisionData.decision_budget ? parseFloat(decisionData.decision_budget.toString().replace(/[.,]/g, '')) / 100 : null,
+      expenditure_type: decisionData.expenditure_type || [],
+      decision_date: decisionData.decision_date || new Date().toISOString().split('T')[0],
+      included: decisionData.included ?? true,
+      comments: decisionData.comments || null,
+      created_by: req.user.id,
+      updated_by: req.user.id
+    };
+
+    const { data: createdDecision, error: createError } = await supabase
+      .from('project_decisions')
+      .insert(newDecision)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('[ProjectDecisions] Error creating decision:', createError);
+      return res.status(500).json({ 
+        message: "Failed to create decision",
+        error: createError.message
+      });
+    }
+
+    console.log(`[ProjectDecisions] Successfully created decision with ID: ${createdDecision.id}`);
+    res.status(201).json(createdDecision);
+  } catch (error) {
+    console.error('[ProjectDecisions] Error creating decision:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.patch('/:mis/decisions/:decisionId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, decisionId } = req.params;
+    const updateData = req.body;
+    console.log(`[ProjectDecisions] Updating decision ${decisionId} for MIS: ${mis}`, updateData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the decision exists and belongs to the project
+    const { data: existingDecision, error: findError } = await supabase
+      .from('project_decisions')
+      .select('*, Projects!inner(mis)')
+      .eq('id', decisionId)
+      .eq('Projects.mis', mis)
+      .single();
+
+    if (findError || !existingDecision) {
+      return res.status(404).json({ 
+        message: "Decision not found",
+        error: findError?.message || "Not found"
+      });
+    }
+
+    // Prepare update data
+    const fieldsToUpdate: any = {
+      updated_by: req.user.id,
+      updated_at: new Date().toISOString()
+    };
+
+    if (updateData.decision_type) fieldsToUpdate.decision_type = updateData.decision_type;
+    if (updateData.protocol_number !== undefined) fieldsToUpdate.protocol_number = updateData.protocol_number;
+    if (updateData.fek !== undefined) fieldsToUpdate.fek = updateData.fek;
+    if (updateData.ada !== undefined) fieldsToUpdate.ada = updateData.ada;
+    if (updateData.implementing_agency !== undefined) fieldsToUpdate.implementing_agency = updateData.implementing_agency;
+    if (updateData.expenditure_type !== undefined) fieldsToUpdate.expenditure_type = updateData.expenditure_type;
+    if (updateData.decision_date !== undefined) fieldsToUpdate.decision_date = updateData.decision_date;
+    if (updateData.included !== undefined) fieldsToUpdate.included = updateData.included;
+    if (updateData.comments !== undefined) fieldsToUpdate.comments = updateData.comments;
+    
+    if (updateData.decision_budget !== undefined) {
+      fieldsToUpdate.decision_budget = updateData.decision_budget ? 
+        parseFloat(updateData.decision_budget.toString().replace(/[.,]/g, '')) / 100 : null;
+    }
+
+    const { data: updatedDecision, error: updateError } = await supabase
+      .from('project_decisions')
+      .update(fieldsToUpdate)
+      .eq('id', decisionId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[ProjectDecisions] Error updating decision:', updateError);
+      return res.status(500).json({ 
+        message: "Failed to update decision",
+        error: updateError.message
+      });
+    }
+
+    console.log(`[ProjectDecisions] Successfully updated decision ${decisionId}`);
+    res.json(updatedDecision);
+  } catch (error) {
+    console.error('[ProjectDecisions] Error updating decision:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.delete('/:mis/decisions/:decisionId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, decisionId } = req.params;
+    console.log(`[ProjectDecisions] Deleting decision ${decisionId} for MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the decision exists and belongs to the project
+    const { data: existingDecision, error: findError } = await supabase
+      .from('project_decisions')
+      .select('*, Projects!inner(mis)')
+      .eq('id', decisionId)
+      .eq('Projects.mis', mis)
+      .single();
+
+    if (findError || !existingDecision) {
+      return res.status(404).json({ 
+        message: "Decision not found",
+        error: findError?.message || "Not found"
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('project_decisions')
+      .delete()
+      .eq('id', decisionId);
+
+    if (deleteError) {
+      console.error('[ProjectDecisions] Error deleting decision:', deleteError);
+      return res.status(500).json({ 
+        message: "Failed to delete decision",
+        error: deleteError.message
+      });
+    }
+
+    console.log(`[ProjectDecisions] Successfully deleted decision ${decisionId}`);
+    res.status(204).send();
+  } catch (error) {
+    console.error('[ProjectDecisions] Error deleting decision:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Project Formulations CRUD endpoints
+router.get('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[ProjectFormulations] Fetching formulations for MIS: ${mis}`);
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Fetch all formulations for this project
+    const { data: formulations, error: formulationsError } = await supabase
+      .from('project_formulations')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('formulation_sequence', { ascending: true });
+
+    if (formulationsError) {
+      console.error('[ProjectFormulations] Error fetching formulations:', formulationsError);
+      return res.status(500).json({ 
+        message: "Failed to fetch formulations",
+        error: formulationsError.message
+      });
+    }
+
+    console.log(`[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ${project.id}`);
+    res.json(formulations || []);
+  } catch (error) {
+    console.error('[ProjectFormulations] Error in formulations endpoint:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.post('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const formulationData = req.body;
+    console.log(`[ProjectFormulations] Creating formulation for MIS: ${mis}`, formulationData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Get the next sequence number
+    const { data: lastFormulation } = await supabase
+      .from('project_formulations')
+      .select('formulation_sequence')
+      .eq('project_id', project.id)
+      .order('formulation_sequence', { ascending: false })
+      .limit(1)
+      .single();
+
+    const nextSequence = (lastFormulation?.formulation_sequence || 0) + 1;
+
+    // Prepare formulation data
+    const newFormulation = {
+      project_id: project.id,
+      formulation_sequence: nextSequence,
+      sa_type: formulationData.sa || 'ΝΑ853',
+      enumeration_code: formulationData.enumeration_code || null,
+      protocol_number: formulationData.protocol_number || null,
+      ada: formulationData.ada || null,
+      decision_year: formulationData.decision_year ? parseInt(formulationData.decision_year) : null,
+      project_budget: formulationData.project_budget ? parseFloat(formulationData.project_budget.toString().replace(/[.,]/g, '')) / 100 : 0,
+      total_public_expense: formulationData.total_public_expense ? parseFloat(formulationData.total_public_expense) : null,
+      eligible_public_expense: formulationData.eligible_public_expense ? parseFloat(formulationData.eligible_public_expense) : null,
+      epa_version: formulationData.epa_version || null,
+      decision_status: formulationData.decision_status || 'Ενεργή',
+      change_type: formulationData.change_type || 'Έγκριση',
+      connected_decision_ids: formulationData.connected_decisions || [],
+      comments: formulationData.comments || null,
+      created_by: req.user.id,
+      updated_by: req.user.id
+    };
+
+    const { data: createdFormulation, error: createError } = await supabase
+      .from('project_formulations')
+      .insert(newFormulation)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('[ProjectFormulations] Error creating formulation:', createError);
+      return res.status(500).json({ 
+        message: "Failed to create formulation",
+        error: createError.message
+      });
+    }
+
+    console.log(`[ProjectFormulations] Successfully created formulation with ID: ${createdFormulation.id}`);
+    res.status(201).json(createdFormulation);
+  } catch (error) {
+    console.error('[ProjectFormulations] Error creating formulation:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.patch('/:mis/formulations/:formulationId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, formulationId } = req.params;
+    const updateData = req.body;
+    console.log(`[ProjectFormulations] Updating formulation ${formulationId} for MIS: ${mis}`, updateData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the formulation exists and belongs to the project
+    const { data: existingFormulation, error: findError } = await supabase
+      .from('project_formulations')
+      .select('*, Projects!inner(mis)')
+      .eq('id', formulationId)
+      .eq('Projects.mis', mis)
+      .single();
+
+    if (findError || !existingFormulation) {
+      return res.status(404).json({ 
+        message: "Formulation not found",
+        error: findError?.message || "Not found"
+      });
+    }
+
+    // Prepare update data
+    const fieldsToUpdate: any = {
+      updated_by: req.user.id,
+      updated_at: new Date().toISOString()
+    };
+
+    if (updateData.sa) fieldsToUpdate.sa_type = updateData.sa;
+    if (updateData.enumeration_code !== undefined) fieldsToUpdate.enumeration_code = updateData.enumeration_code;
+    if (updateData.protocol_number !== undefined) fieldsToUpdate.protocol_number = updateData.protocol_number;
+    if (updateData.ada !== undefined) fieldsToUpdate.ada = updateData.ada;
+    if (updateData.decision_year !== undefined) fieldsToUpdate.decision_year = updateData.decision_year ? parseInt(updateData.decision_year) : null;
+    if (updateData.epa_version !== undefined) fieldsToUpdate.epa_version = updateData.epa_version;
+    if (updateData.decision_status !== undefined) fieldsToUpdate.decision_status = updateData.decision_status;
+    if (updateData.change_type !== undefined) fieldsToUpdate.change_type = updateData.change_type;
+    if (updateData.connected_decisions !== undefined) fieldsToUpdate.connected_decision_ids = updateData.connected_decisions;
+    if (updateData.comments !== undefined) fieldsToUpdate.comments = updateData.comments;
+    
+    if (updateData.project_budget !== undefined) {
+      fieldsToUpdate.project_budget = updateData.project_budget ? 
+        parseFloat(updateData.project_budget.toString().replace(/[.,]/g, '')) / 100 : 0;
+    }
+    if (updateData.total_public_expense !== undefined) {
+      fieldsToUpdate.total_public_expense = updateData.total_public_expense ? parseFloat(updateData.total_public_expense) : null;
+    }
+    if (updateData.eligible_public_expense !== undefined) {
+      fieldsToUpdate.eligible_public_expense = updateData.eligible_public_expense ? parseFloat(updateData.eligible_public_expense) : null;
+    }
+
+    const { data: updatedFormulation, error: updateError } = await supabase
+      .from('project_formulations')
+      .update(fieldsToUpdate)
+      .eq('id', formulationId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('[ProjectFormulations] Error updating formulation:', updateError);
+      return res.status(500).json({ 
+        message: "Failed to update formulation",
+        error: updateError.message
+      });
+    }
+
+    console.log(`[ProjectFormulations] Successfully updated formulation ${formulationId}`);
+    res.json(updatedFormulation);
+  } catch (error) {
+    console.error('[ProjectFormulations] Error updating formulation:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.delete('/:mis/formulations/:formulationId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, formulationId } = req.params;
+    console.log(`[ProjectFormulations] Deleting formulation ${formulationId} for MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the formulation exists and belongs to the project
+    const { data: existingFormulation, error: findError } = await supabase
+      .from('project_formulations')
+      .select('*, Projects!inner(mis)')
+      .eq('id', formulationId)
+      .eq('Projects.mis', mis)
+      .single();
+
+    if (findError || !existingFormulation) {
+      return res.status(404).json({ 
+        message: "Formulation not found",
+        error: findError?.message || "Not found"
+      });
+    }
+
+    const { error: deleteError } = await supabase
+      .from('project_formulations')
+      .delete()
+      .eq('id', formulationId);
+
+    if (deleteError) {
+      console.error('[ProjectFormulations] Error deleting formulation:', deleteError);
+      return res.status(500).json({ 
+        message: "Failed to delete formulation",
+        error: deleteError.message
+      });
+    }
+
+    console.log(`[ProjectFormulations] Successfully deleted formulation ${formulationId}`);
+    res.status(204).send();
+  } catch (error) {
+    console.error('[ProjectFormulations] Error deleting formulation:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Project History/Changes endpoints
+router.get('/:mis/history', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    console.log(`[ProjectHistory] Fetching history for MIS: ${mis}`);
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Fetch all history entries for this project
+    const { data: history, error: historyError } = await supabase
+      .from('project_history')
+      .select('*')
+      .eq('project_id', project.id)
+      .order('created_at', { ascending: false });
+
+    if (historyError) {
+      console.error('[ProjectHistory] Error fetching history:', historyError);
+      return res.status(500).json({ 
+        message: "Failed to fetch history",
+        error: historyError.message
+      });
+    }
+
+    console.log(`[ProjectHistory] Found ${history?.length || 0} history entries for project ${project.id}`);
+    res.json(history || []);
+  } catch (error) {
+    console.error('[ProjectHistory] Error in history endpoint:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+router.post('/:mis/changes', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const changeData = req.body;
+    console.log(`[ProjectChanges] Recording change for MIS: ${mis}`, changeData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('*')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Prepare change record with current project state snapshot
+    const changeRecord = {
+      project_id: project.id,
+      change_type: changeData.change_type || 'UPDATE',
+      change_description: changeData.description || 'Project updated via comprehensive form',
+      changed_by: req.user.id,
+      
+      // Snapshot of current project state
+      project_title: project.project_title,
+      event_description: project.event_description,
+      status: project.status,
+      budget_na853: project.budget_na853,
+      budget_na271: project.budget_na271,
+      budget_e069: project.budget_e069,
+      na853: project.na853,
+      na271: project.na271,
+      e069: project.e069,
+      event_type_id: project.event_type_id,
+      event_year: project.event_year
+    };
+
+    const { data: createdChange, error: createError } = await supabase
+      .from('project_history')
+      .insert(changeRecord)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('[ProjectChanges] Error creating change record:', createError);
+      return res.status(500).json({ 
+        message: "Failed to record change",
+        error: createError.message
+      });
+    }
+
+    console.log(`[ProjectChanges] Successfully recorded change with ID: ${createdChange.id}`);
+    res.status(201).json(createdChange);
+  } catch (error) {
+    console.error('[ProjectChanges] Error recording change:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);

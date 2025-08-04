@@ -452,55 +452,178 @@ export default function ComprehensiveEditFixed() {
           throw error;
         }
         
-        // 2. Update project decisions in normalized table
+        // 2. Handle project decisions using individual CRUD endpoints
         if (data.decisions && data.decisions.length > 0) {
-          console.log("2. Updating project decisions:", data.decisions);
+          console.log("2. Processing project decisions:", data.decisions);
           
-          // Transform decisions data to match API expectations
-          const transformedDecisions = data.decisions.map(decision => ({
-            protocol_number: decision.protocol_number || "",
-            fek: decision.fek || { year: "", issue: "", number: "" },
-            ada: decision.ada || "",
-            implementing_agency: Array.isArray(decision.implementing_agency) 
-              ? decision.implementing_agency 
-              : decision.implementing_agency ? [decision.implementing_agency] : [],
-            decision_budget: decision.decision_budget || "",
-            expenditure_type: Array.isArray(decision.expenditure_type) 
-              ? decision.expenditure_type 
-              : decision.expenditure_type ? [decision.expenditure_type] : [],
-            decision_type: decision.decision_type || "Έγκριση",
-            included: decision.included !== undefined ? decision.included : true,
-            comments: decision.comments || "",
-          }));
-          
+          // Get existing decisions to compare
+          let existingDecisions = [];
           try {
-            const decisionsResponse = await apiRequest(`/api/projects/${mis}/decisions`, {
-              method: "PUT",
-              body: JSON.stringify({ decisions_data: transformedDecisions }),
-            });
-            console.log("✓ Decisions update successful:", decisionsResponse);
+            existingDecisions = await apiRequest(`/api/projects/${mis}/decisions`);
           } catch (error) {
-            console.error("✗ Decisions update failed:", error);
-            throw error;
+            console.warn("Could not fetch existing decisions:", error);
+            existingDecisions = [];
           }
+          
+          // Process each decision
+          for (let i = 0; i < data.decisions.length; i++) {
+            const decision = data.decisions[i];
+            const existingDecision = existingDecisions[i];
+            
+            const decisionData = {
+              protocol_number: decision.protocol_number || "",
+              fek: decision.fek || { year: "", issue: "", number: "" },
+              ada: decision.ada || "",
+              implementing_agency: Array.isArray(decision.implementing_agency) 
+                ? decision.implementing_agency 
+                : decision.implementing_agency ? [decision.implementing_agency] : [],
+              decision_budget: decision.decision_budget || "",
+              expenditure_type: Array.isArray(decision.expenditure_type) 
+                ? decision.expenditure_type 
+                : decision.expenditure_type ? [decision.expenditure_type] : [],
+              decision_type: decision.decision_type || "Έγκριση",
+              included: decision.included !== undefined ? decision.included : true,
+              comments: decision.comments || "",
+            };
+            
+            try {
+              if (existingDecision) {
+                // Update existing decision
+                console.log(`Updating decision ${existingDecision.id}:`, decisionData);
+                await apiRequest(`/api/projects/${mis}/decisions/${existingDecision.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(decisionData),
+                });
+              } else {
+                // Create new decision
+                console.log(`Creating new decision:`, decisionData);
+                await apiRequest(`/api/projects/${mis}/decisions`, {
+                  method: "POST",
+                  body: JSON.stringify(decisionData),
+                });
+              }
+            } catch (error) {
+              console.error(`Error processing decision ${i}:`, error);
+              throw error;
+            }
+          }
+          
+          // Delete any extra existing decisions
+          if (existingDecisions.length > data.decisions.length) {
+            for (let i = data.decisions.length; i < existingDecisions.length; i++) {
+              try {
+                console.log(`Deleting excess decision ${existingDecisions[i].id}`);
+                await apiRequest(`/api/projects/${mis}/decisions/${existingDecisions[i].id}`, {
+                  method: "DELETE",
+                });
+              } catch (error) {
+                console.error(`Error deleting decision ${existingDecisions[i].id}:`, error);
+              }
+            }
+          }
+          
+          console.log("✓ Decisions processing completed");
         }
         
-        // 3. Update project formulations in normalized table
+        // 3. Handle project formulations using individual CRUD endpoints
         if (data.formulation_details && data.formulation_details.length > 0) {
-          console.log("3. Updating project formulations:", data.formulation_details);
+          console.log("3. Processing project formulations:", data.formulation_details);
+          
+          // Get existing formulations to compare
+          let existingFormulations = [];
           try {
-            const formulationsResponse = await apiRequest(`/api/projects/${mis}/formulations`, {
-              method: "PUT",
-              body: JSON.stringify({ formulation_details: data.formulation_details }),
-            });
-            console.log("✓ Formulations update successful:", formulationsResponse);
+            existingFormulations = await apiRequest(`/api/projects/${mis}/formulations`);
           } catch (error) {
-            console.error("✗ Formulations update failed:", error);
-            throw error;
+            console.warn("Could not fetch existing formulations:", error);
+            existingFormulations = [];
           }
+          
+          // Process each formulation
+          for (let i = 0; i < data.formulation_details.length; i++) {
+            const formulation = data.formulation_details[i];
+            const existingFormulation = existingFormulations[i];
+            
+            const formulationData = {
+              sa: formulation.sa,
+              enumeration_code: formulation.enumeration_code,
+              protocol_number: formulation.protocol_number,
+              ada: formulation.ada,
+              decision_year: formulation.decision_year,
+              project_budget: formulation.project_budget,
+              epa_version: formulation.epa_version,
+              total_public_expense: formulation.total_public_expense,
+              eligible_public_expense: formulation.eligible_public_expense,
+              decision_status: formulation.decision_status,
+              change_type: formulation.change_type,
+              connected_decisions: formulation.connected_decisions,
+              comments: formulation.comments
+            };
+            
+            try {
+              if (existingFormulation) {
+                // Update existing formulation
+                console.log(`Updating formulation ${existingFormulation.id}:`, formulationData);
+                await apiRequest(`/api/projects/${mis}/formulations/${existingFormulation.id}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(formulationData),
+                });
+              } else {
+                // Create new formulation
+                console.log(`Creating new formulation:`, formulationData);
+                await apiRequest(`/api/projects/${mis}/formulations`, {
+                  method: "POST",
+                  body: JSON.stringify(formulationData),
+                });
+              }
+            } catch (error) {
+              console.error(`Error processing formulation ${i}:`, error);
+              throw error;
+            }
+          }
+          
+          // Delete any extra existing formulations
+          if (existingFormulations.length > data.formulation_details.length) {
+            for (let i = data.formulation_details.length; i < existingFormulations.length; i++) {
+              try {
+                console.log(`Deleting excess formulation ${existingFormulations[i].id}`);
+                await apiRequest(`/api/projects/${mis}/formulations/${existingFormulations[i].id}`, {
+                  method: "DELETE",
+                });
+              } catch (error) {
+                console.error(`Error deleting formulation ${existingFormulations[i].id}:`, error);
+              }
+            }
+          }
+          
+          console.log("✓ Formulations processing completed");
         }
         
-        // 4. Update project index (location details) through project PATCH endpoint
+        // 4. Record changes in project history if provided
+        if (data.changes && data.changes.length > 0) {
+          console.log("4. Recording project changes:", data.changes);
+          
+          for (const change of data.changes) {
+            if (change.description && change.description.trim()) {
+              try {
+                console.log("Recording change:", change.description);
+                await apiRequest(`/api/projects/${mis}/changes`, {
+                  method: "POST",
+                  body: JSON.stringify({
+                    description: change.description,
+                    change_type: "UPDATE"
+                  }),
+                });
+              } catch (error) {
+                console.error("Error recording change:", error);
+                // Don't throw error here, changes recording is not critical
+              }
+            }
+          }
+          
+          console.log("✓ Changes recording completed");
+        }
+        
+        // 5. Update project index (location details) through project PATCH endpoint
         if (data.location_details && data.location_details.length > 0) {
           console.log("4. Processing location details:", data.location_details);
           console.log("4a. Form location_details structure:", JSON.stringify(data.location_details, null, 2));
@@ -611,9 +734,11 @@ export default function ComprehensiveEditFixed() {
       
       // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/complete`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/index`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/decisions`] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/formulations`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/history`] });
       
       // Stay on the edit page to show updated data
       // Data will refresh automatically due to query invalidation
