@@ -699,6 +699,19 @@ export default function ComprehensiveEditFixed() {
                   kallikratisId = kallikratis.id;
                   // Calculate geographic code based on what data is selected
                   geographicCode = getGeographicCodeForSave(region, kallikratis);
+                  
+                  // DEBUG: Log the geographic code calculation
+                  console.log("Geographic Code Calculation:", {
+                    region: region.region,
+                    regional_unit: region.regional_unit,
+                    municipality: region.municipality,
+                    calculated_code: geographicCode,
+                    available_codes: {
+                      municipality_code: kallikratis.kodikos_neou_ota,
+                      regional_unit_code: kallikratis.kodikos_perifereiakis_enotitas,
+                      region_code: kallikratis.kodikos_perifereias
+                    }
+                  });
                 }
                 console.log("Kallikratis lookup:", { region, found: kallikratis, kallikratisId, geographicCode });
               }
