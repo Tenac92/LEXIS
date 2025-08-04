@@ -219,6 +219,29 @@ export default function ComprehensiveEditFixed() {
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
+  // Create mutation for project updates
+  const projectUpdateMutation = useMutation({
+    mutationFn: async (data: ComprehensiveFormData) => {
+      return onSubmit(data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Επιτυχία",
+        description: "Το έργο ενημερώθηκε επιτυχώς",
+      });
+      // Invalidate and refetch data
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}/complete`] });
+    },
+    onError: (error: any) => {
+      console.error("Update failed:", error);
+      toast({
+        title: "Σφάλμα",
+        description: error.message || "Αποτυχία ενημέρωσης του έργου",
+        variant: "destructive",
+      });
+    },
+  });
+
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
     resolver: zodResolver(comprehensiveProjectSchema),
@@ -1274,11 +1297,11 @@ export default function ComprehensiveEditFixed() {
               Επιστροφή στο Έργο
             </Button>
             <Button 
-              onClick={form.handleSubmit(handleSubmit)}
-              disabled={mutation.isPending}
+              onClick={form.handleSubmit((data) => projectUpdateMutation.mutate(data))}
+              disabled={projectUpdateMutation.isPending}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {mutation.isPending ? (
+              {projectUpdateMutation.isPending ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                   Αποθήκευση...
@@ -1294,7 +1317,7 @@ export default function ComprehensiveEditFixed() {
         </div>
 
         <Form key={formKey} {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit((data) => projectUpdateMutation.mutate(data))} className="space-y-6">
             <Tabs defaultValue="decisions" className="space-y-6">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="decisions" className="flex items-center gap-2">
