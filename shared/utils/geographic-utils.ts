@@ -95,7 +95,7 @@ export function getGeographicCodeForSave(location: {
     forceLevel
   });
   
-  // If forceLevel is specified, use that level regardless of available data
+  // If forceLevel is specified, use that level based on available data
   if (forceLevel === 'regional_unit' && hasRegion && hasRegionalUnit) {
     console.log("FORCED regional unit code:", kallikratisEntry.kodikos_perifereiakis_enotitas);
     return kallikratisEntry.kodikos_perifereiakis_enotitas?.toString() || null;

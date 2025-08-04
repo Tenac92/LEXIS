@@ -698,9 +698,12 @@ export default function ComprehensiveEditFixed() {
                 if (kallikratis) {
                   kallikratisId = kallikratis.id;
                   
-                  // ALWAYS FORCE regional unit level for this project - user wants codes 804/805, not municipality codes
-                  // This overrides any municipality data that might be present in the form
-                  const forceLevel = 'regional_unit';
+                  // Determine the appropriate level based on what data is actually populated
+                  // If municipality is empty/cleared, use regional unit level
+                  // If municipality is populated, use municipality level
+                  const forceLevel = (!region.municipality || region.municipality.trim() === "" || region.municipality === "__clear__") 
+                    ? 'regional_unit' 
+                    : 'municipality';
                   
                   // Calculate geographic code based on what data is selected
                   geographicCode = getGeographicCodeForSave(region, kallikratis, forceLevel);
