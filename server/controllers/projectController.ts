@@ -2342,9 +2342,15 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
     const { mis } = req.params;
     const formData = req.body;
     
-    console.log(`[ComprehensiveUpdate] Updating comprehensive data for project MIS: ${mis}`);
+    console.log(`[ComprehensiveUpdate] ========== STARTING UPDATE FOR MIS: ${mis} ==========`);
+    console.log(`[ComprehensiveUpdate] Request body keys:`, Object.keys(formData));
+    console.log(`[ComprehensiveUpdate] Project details provided:`, !!formData.project_details);
+    console.log(`[ComprehensiveUpdate] Decisions provided:`, !!formData.decisions, formData.decisions?.length || 0);
+    console.log(`[ComprehensiveUpdate] Location details provided:`, !!formData.location_details, formData.location_details?.length || 0);
+    console.log(`[ComprehensiveUpdate] Formulation details provided:`, !!formData.formulation_details, formData.formulation_details?.length || 0);
 
     if (!req.user) {
+      console.log(`[ComprehensiveUpdate] Authentication failed - no user session`);
       return res.status(401).json({ message: "Authentication required" });
     }
 

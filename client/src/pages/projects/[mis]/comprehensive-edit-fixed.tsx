@@ -1248,12 +1248,12 @@ export default function ComprehensiveEditFixed() {
   const handleSubmit = (data: ComprehensiveFormData) => {
     console.log("=== FORM SUBMISSION DEBUG ===");
     console.log("✓ handleSubmit called - form is valid");
-    console.log("Form data:", data);
+    console.log("Form data:", JSON.stringify(data, null, 2));
     console.log("Form errors:", form.formState.errors);
     console.log("Form is valid:", form.formState.isValid);
-    console.log("Mutation pending:", mutation.isPending);
+    console.log("Mutation pending:", projectUpdateMutation.isPending);
     
-    mutation.mutate(data);
+    projectUpdateMutation.mutate(data);
   };
 
   // Debug all fetched data
