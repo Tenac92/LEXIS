@@ -395,6 +395,14 @@ export default function ComprehensiveEditFixed() {
       console.log("=== COMPREHENSIVE FORM SUBMISSION ===");
       console.log("Form data:", data);
       
+      // Track what operations have been completed for potential rollback
+      const completedOperations = {
+        projectUpdate: false,
+        decisions: [],
+        formulations: [],
+        changes: false
+      };
+      
       try {
         // 1. Update core project data
         const projectUpdateData = {
@@ -471,10 +479,11 @@ export default function ComprehensiveEditFixed() {
             method: "PATCH",
             body: JSON.stringify(projectUpdateData),
           });
+          completedOperations.projectUpdate = true;
           console.log("✓ Project update successful:", projectResponse);
         } catch (error) {
           console.error("✗ Project update failed:", error);
-          throw error;
+          throw new Error(`Failed to update project data: ${error.message || error}`);
         }
         
         // 2. Handle project decisions using individual CRUD endpoints
@@ -651,10 +660,10 @@ export default function ComprehensiveEditFixed() {
           console.log("✓ Changes recording completed");
         }
         
-        // 5. Update project index (location details) through project PATCH endpoint
+        // 5. Process location details and include project_lines in the main update
         if (data.location_details && data.location_details.length > 0) {
-          console.log("4. Processing location details:", data.location_details);
-          console.log("4a. Form location_details structure:", JSON.stringify(data.location_details, null, 2));
+          console.log("5. Processing location details:", data.location_details);
+          console.log("5a. Form location_details structure:", JSON.stringify(data.location_details, null, 2));
           
           // Transform location details to project_index format
           const projectLines = [];
@@ -754,26 +763,51 @@ export default function ComprehensiveEditFixed() {
           }
           
           if (projectLines.length > 0) {
-            console.log("Updating project index with lines:", projectLines);
-            // Include project_lines in the main project update
+            console.log("Including project_lines in main project update:", projectLines);
+            // FIX: Include project_lines in the main project update to avoid duplicate calls
             projectUpdateData.project_lines = projectLines;
           }
         }
         
-        // Update the project again with project_lines if they exist
-        if (projectUpdateData.project_lines) {
-          console.log("Updating project with location details via PATCH");
-          await apiRequest(`/api/projects/${mis}`, {
+        // 6. Update the project with all data including project_lines in a single call
+        console.log("6. Final project update with all data:", projectUpdateData);
+        try {
+          const finalProjectResponse = await apiRequest(`/api/projects/${mis}`, {
             method: "PATCH",
-            body: JSON.stringify({ project_lines: projectUpdateData.project_lines }),
+            body: JSON.stringify(projectUpdateData),
           });
+          console.log("✓ Final project update successful:", finalProjectResponse);
+        } catch (error) {
+          console.error("✗ Final project update failed:", error);
+          throw error;
         }
         
         return { success: true };
         
       } catch (error) {
-        console.error("Comprehensive form submission error:", error);
-        throw error;
+        console.error("=== COMPREHENSIVE FORM SUBMISSION ERROR ===");
+        console.error("Error details:", error);
+        console.error("Completed operations:", completedOperations);
+        
+        // Provide more specific error information
+        let errorMessage = "Παρουσιάστηκε σφάλμα κατά την ενημέρωση";
+        
+        if (error.message) {
+          if (error.message.includes("Failed to update project data")) {
+            errorMessage = "Σφάλμα ενημέρωσης βασικών στοιχείων έργου";
+          } else if (error.message.includes("decisions")) {
+            errorMessage = "Σφάλμα ενημέρωσης αποφάσεων";
+          } else if (error.message.includes("formulations")) {
+            errorMessage = "Σφάλμα ενημέρωσης διατυπώσεων";
+          }
+        }
+        
+        // Create enhanced error with context
+        const enhancedError = new Error(errorMessage);
+        enhancedError.originalError = error;
+        enhancedError.completedOperations = completedOperations;
+        
+        throw enhancedError;
       }
     },
     onSuccess: () => {
@@ -803,6 +837,109 @@ export default function ComprehensiveEditFixed() {
       });
     },
   });
+
+  // Helper function to consolidate location details processing
+  const getLocationDetailsFromData = () => {
+    if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
+      const locationDetailsMap = new Map();
+      
+      // Group by implementing agency and event type
+      projectIndexData.forEach(indexItem => {
+        const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
+        const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
+        const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
+        const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
+        
+        const key = `${indexItem.monada_id || 'no-unit'}-${indexItem.event_types_id || 'no-event'}`;
+        
+        if (!locationDetailsMap.has(key)) {
+          // Use consistent naming pattern that matches the dropdown options
+          const implementingAgencyName = unit?.unit_name?.name || unit?.name || unit?.unit || "";
+          
+          let locationDetail = {
+            implementing_agency: implementingAgencyName,
+            event_type: eventType?.name || "",
+            expenditure_types: [],
+            regions: []
+          };
+          
+          locationDetailsMap.set(key, locationDetail);
+        }
+        
+        const locationDetail = locationDetailsMap.get(key);
+        
+        // Add region if it doesn't exist
+        if (kallikratis) {
+          // For geographic codes 804/805, we want regional unit level, not municipality level
+          // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
+          const shouldIncludeMunicipality = indexItem.geographic_code && parseInt(indexItem.geographic_code) >= 9000;
+          const municipalityToCheck = shouldIncludeMunicipality ? (kallikratis.onoma_neou_ota || "") : "";
+          
+          // Improved deduplication: compare based on actual fields that will be populated
+          const existingRegion = locationDetail.regions.find(r => {
+            if (shouldIncludeMunicipality) {
+              // For municipality level, check all three fields
+              return r.region === kallikratis.perifereia && 
+                     r.regional_unit === kallikratis.perifereiaki_enotita && 
+                     r.municipality === kallikratis.onoma_neou_ota;
+            } else {
+              // For regional unit level, only check region and regional_unit
+              return r.region === kallikratis.perifereia && 
+                     r.regional_unit === kallikratis.perifereiaki_enotita;
+            }
+          });
+          
+          if (!existingRegion) {
+            locationDetail.regions.push({
+              region: kallikratis.perifereia || "",
+              regional_unit: kallikratis.perifereiaki_enotita || "",
+              municipality: municipalityToCheck
+            });
+          }
+        }
+        
+        // Add expenditure type if it exists
+        if (expenditureType && expenditureType.expenditure_types) {
+          if (!locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
+            locationDetail.expenditure_types.push(expenditureType.expenditure_types);
+          }
+        }
+      });
+      
+      const locationDetailsArray = Array.from(locationDetailsMap.values());
+      console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
+      return locationDetailsArray.length > 0 ? locationDetailsArray : [{
+        implementing_agency: typedProjectData.enhanced_unit?.name || "",
+        event_type: "",
+        expenditure_types: [],
+        regions: [{
+          region: "",
+          regional_unit: "",
+          municipality: ""
+        }]
+      }];
+    }
+    
+    // Default location detail if no project index data
+    console.log('DEBUG - Creating fallback location entry for project without project_index data');
+    
+    // Try to get implementing agency from various sources
+    const implementingAgency = typedProjectData.enhanced_unit?.name || 
+                             typedProjectData.enhanced_unit?.unit ||
+                             (typedUnitsData && typedUnitsData.length > 0 ? typedUnitsData[0].unit : "") ||
+                             "ΔΑΕΦΚ-ΚΕ";
+    
+    return [{
+      implementing_agency: implementingAgency,
+      event_type: "",
+      expenditure_types: [],
+      regions: [{
+        region: "",
+        regional_unit: "",
+        municipality: ""
+      }]
+    }];
+  };
 
   // Data initialization effect
   useEffect(() => {
@@ -860,8 +997,8 @@ export default function ComprehensiveEditFixed() {
         ? formulationsData.map(formulation => {
             // Convert connected_decision_ids from database to form format
             let connectedDecisions: number[] = [];
-            if (formulation.connected_decision_ids && Array.isArray(formulation.connected_decision_ids)) {
-              // Map decision IDs back to form indices by finding them in decisionsData
+            if (formulation.connected_decision_ids && Array.isArray(formulation.connected_decision_ids) && decisionsData) {
+              // FIX: More robust mapping with error handling
               console.log(`[ConnectedDecisions] Processing for formulation ${formulation.sa_type}:`, {
                 connected_decision_ids: formulation.connected_decision_ids,
                 decisionsData_available: !!decisionsData,
@@ -869,13 +1006,19 @@ export default function ComprehensiveEditFixed() {
                 available_decision_ids: decisionsData?.map(d => d.id) || []
               });
               
-              connectedDecisions = formulation.connected_decision_ids
-                .map((decisionId: number) => {
-                  const decisionIndex = decisionsData?.findIndex((d: any) => d.id === decisionId);
-                  console.log(`[ConnectedDecisions] Mapping ID ${decisionId} to index ${decisionIndex}`);
-                  return decisionIndex !== -1 && decisionIndex !== undefined ? decisionIndex : null;
-                })
-                .filter((index: number | null) => index !== null) as number[];
+              try {
+                connectedDecisions = formulation.connected_decision_ids
+                  .map((decisionId: number) => {
+                    const decisionIndex = decisionsData.findIndex((d: any) => d.id === decisionId);
+                    console.log(`[ConnectedDecisions] Mapping ID ${decisionId} to index ${decisionIndex}`);
+                    // Only return valid indices (>= 0)
+                    return decisionIndex >= 0 ? decisionIndex : null;
+                  })
+                  .filter((index: number | null) => index !== null) as number[];
+              } catch (error) {
+                console.error(`[ConnectedDecisions] Error mapping connected decisions for ${formulation.sa_type}:`, error);
+                connectedDecisions = []; // Fallback to empty array
+              }
             }
             
             console.log(`[FormulationInit] Formulation ${formulation.sa_type}:`, {
@@ -973,104 +1116,7 @@ export default function ComprehensiveEditFixed() {
           project_status: typedProjectData.status || "Ενεργό"
         },
         formulation_details: formulations,
-        location_details: (() => {
-          if (projectIndexData && Array.isArray(projectIndexData) && projectIndexData.length > 0) {
-            const locationDetailsMap = new Map();
-            
-            projectIndexData.forEach(indexEntry => {
-              const kallikratisData = indexEntry.kallikratis_data;
-              const expenditureType = indexEntry.expenditure_type;
-              const unit = indexEntry.unit;
-              const eventType = indexEntry.event_type;
-              
-              if (kallikratisData) {
-                const geoInfo = getGeographicInfo(kallikratisData.geographic_code);
-                console.log('DEBUG Geographic Code Analysis:', {
-                  geographicCode: kallikratisData.geographic_code,
-                  geoInfo,
-                  kallikratisFound: !!kallikratisData,
-                  kallikratisData: {
-                    region: kallikratisData.region,
-                    regionalUnit: kallikratisData.regionalUnit,
-                    municipality: kallikratisData.municipality
-                  }
-                });
-
-                // For null values from database, try to get from enhanced project data
-                const implementingAgencyValue = unit?.unit || typedProjectData.enhanced_unit?.unit || "";
-                const eventTypeValue = eventType?.name || typedProjectData.enhanced_event_type?.name || "";
-                
-                // Create a key based on implementing agency and event type
-                const key = `${implementingAgencyValue}-${eventTypeValue}`;
-                
-                if (!locationDetailsMap.has(key)) {
-                  const locationDetail = {
-                    implementing_agency: implementingAgencyValue,
-                    event_type: eventTypeValue,
-                    expenditure_types: [] as string[],
-                    regions: [] as Array<{
-                      region: string;
-                      regional_unit: string;
-                      municipality: string;
-                    }>
-                  };
-                  
-                  locationDetailsMap.set(key, locationDetail);
-                }
-                
-                const locationDetail = locationDetailsMap.get(key);
-                
-                // Add region if it doesn't exist
-                const regionKey = `${kallikratisData.region}-${kallikratisData.regionalUnit}-${kallikratisData.municipality}`;
-                const existingRegion = locationDetail.regions.find(r => 
-                  r.region === kallikratisData.region && 
-                  r.regional_unit === kallikratisData.regionalUnit && 
-                  r.municipality === kallikratisData.municipality
-                );
-                
-                if (!existingRegion) {
-                  locationDetail.regions.push({
-                    region: kallikratisData.region || "",
-                    regional_unit: kallikratisData.regionalUnit || "",
-                    municipality: kallikratisData.municipality || ""
-                  });
-                }
-                
-                // Add expenditure type if it exists
-                if (expenditureType && expenditureType.expenditure_types) {
-                  if (!locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
-                    locationDetail.expenditure_types.push(expenditureType.expenditure_types);
-                  }
-                }
-              }
-            });
-            
-            const locationDetailsArray = Array.from(locationDetailsMap.values());
-            console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
-            return locationDetailsArray.length > 0 ? locationDetailsArray : [{
-              implementing_agency: typedProjectData.enhanced_unit?.name || "",
-              event_type: "",
-              expenditure_types: [],
-              regions: [{
-                region: "",
-                regional_unit: "",
-                municipality: ""
-              }]
-            }];
-          }
-          
-          // Default location detail if no project index data
-          return [{
-            implementing_agency: typedProjectData.enhanced_unit?.name || "",
-            event_type: "",
-            expenditure_types: [],
-            regions: [{
-              region: "",
-              regional_unit: "",
-              municipality: ""
-            }]
-          }];
-        })(),
+        location_details: getLocationDetailsFromData(),
         previous_entries: [],
         changes: []
       };
@@ -1113,127 +1159,9 @@ export default function ComprehensiveEditFixed() {
       });
       form.setValue("formulation_details", formulations);
       
-      // Populate location details from project index data OR create fallback from project data
-      const locationDetailsArray = (() => {
-          if (projectIndexData && projectIndexData.length > 0) {
-            const locationDetailsMap = new Map();
-            
-            // Group by implementing agency and event type
-            projectIndexData.forEach(indexItem => {
-              const kallikratis = typedKallikratisData.find(k => k.id === indexItem.kallikratis_id);
-              const unit = typedUnitsData.find(u => u.id === indexItem.monada_id);
-              const eventType = typedEventTypesData.find(et => et.id === indexItem.event_types_id);
-              const expenditureType = typedExpenditureTypesData.find(et => et.id === indexItem.expenditure_type_id);
-              
-              const key = `${indexItem.monada_id || 'no-unit'}-${indexItem.event_types_id || 'no-event'}`;
-              
-              if (!locationDetailsMap.has(key)) {
-                // FIX: Use consistent naming pattern that matches the dropdown options
-                const implementingAgencyName = unit?.unit_name?.name || unit?.name || unit?.unit || "";
-                console.log("DEBUG: Unit name mapping:", {
-                  unit_id: unit?.id,
-                  unit_name_name: unit?.unit_name?.name,
-                  name: unit?.name,
-                  unit: unit?.unit,
-                  final_name: implementingAgencyName
-                });
-                
-                let locationDetail = {
-                  implementing_agency: implementingAgencyName,
-                  event_type: eventType?.name || "",
-                  expenditure_types: [],
-                  regions: []
-                };
-                
-                locationDetailsMap.set(key, locationDetail);
-              }
-              
-              const locationDetail = locationDetailsMap.get(key);
-              
-              // Add region if it doesn't exist
-              if (kallikratis) {
-                // IMPORTANT: For geographic codes 804/805, we want regional unit level, not municipality level
-                // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
-                const shouldIncludeMunicipality = indexItem.geographic_code && parseInt(indexItem.geographic_code) >= 9000;
-                const municipalityToCheck = shouldIncludeMunicipality ? (kallikratis.onoma_neou_ota || "") : "";
-                
-                // Improved deduplication: compare based on actual fields that will be populated
-                const existingRegion = locationDetail.regions.find(r => {
-                  if (shouldIncludeMunicipality) {
-                    // For municipality level, check all three fields
-                    return r.region === kallikratis.perifereia && 
-                           r.regional_unit === kallikratis.perifereiaki_enotita && 
-                           r.municipality === kallikratis.onoma_neou_ota;
-                  } else {
-                    // For regional unit level, only check region and regional_unit
-                    return r.region === kallikratis.perifereia && 
-                           r.regional_unit === kallikratis.perifereiaki_enotita;
-                  }
-                });
-                
-                if (!existingRegion) {
-                  locationDetail.regions.push({
-                    region: kallikratis.perifereia || "",
-                    regional_unit: kallikratis.perifereiaki_enotita || "",
-                    municipality: municipalityToCheck
-                  });
-                  
-                  console.log("DEBUG: Region population logic:", {
-                    geographic_code: indexItem.geographic_code,
-                    shouldIncludeMunicipality,
-                    region: kallikratis.perifereia,
-                    regional_unit: kallikratis.perifereiaki_enotita,
-                    municipality: shouldIncludeMunicipality ? kallikratis.onoma_neou_ota : "SKIPPED_FOR_REGIONAL_UNIT"
-                  });
-                }
-              }
-              
-              // Add expenditure type if it exists
-              if (expenditureType && expenditureType.expenditure_types) {
-                if (!locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
-                  locationDetail.expenditure_types.push(expenditureType.expenditure_types);
-                }
-              }
-            });
-            
-            const locationDetailsArray = Array.from(locationDetailsMap.values());
-            console.log('DEBUG Final locationDetailsArray:', locationDetailsArray);
-            return locationDetailsArray.length > 0 ? locationDetailsArray : [{
-              implementing_agency: typedProjectData.enhanced_unit?.name || "",
-              event_type: "",
-              expenditure_types: [],
-              regions: [{
-                region: "",
-                regional_unit: "",
-                municipality: ""
-              }]
-            }];
-          }
-          
-          // Default location detail if no project index data
-          console.log('DEBUG - Creating fallback location entry for project without project_index data');
-          
-          // Try to get implementing agency from various sources
-          const implementingAgency = typedProjectData.enhanced_unit?.name || 
-                                   typedProjectData.enhanced_unit?.unit ||
-                                   (typedUnitsData && typedUnitsData.length > 0 ? typedUnitsData[0].unit : "") ||
-                                   "ΔΑΕΦΚ-ΚΕ";
-          
-          console.log('DEBUG - Fallback implementing agency:', implementingAgency);
-          
-          return [{
-            implementing_agency: implementingAgency,
-            event_type: "",
-            expenditure_types: [],
-            regions: [{
-              region: "",
-              regional_unit: "",
-              municipality: ""
-            }]
-          }];
-        })();
-        
-        
+      // Populate location details using consolidated function
+      const locationDetailsArray = getLocationDetailsFromData();
+      
         console.log("🔥 SETTING LOCATION DETAILS:", locationDetailsArray);
         form.setValue("location_details", locationDetailsArray);
         console.log("🔍 FORM location_details AFTER SET:", form.getValues("location_details"));
