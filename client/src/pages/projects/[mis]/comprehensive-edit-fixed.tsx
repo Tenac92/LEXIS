@@ -1997,6 +1997,19 @@ export default function ComprehensiveEditFixed() {
 
                         <FormField
                           control={form.control}
+                          name={`formulation_details.${index}.connected_decisions`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Αποφάσεις που συνδέονται</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Εισάγετε τις συνδεδεμένες αποφάσεις..." rows={2} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
                           name={`formulation_details.${index}.comments`}
                           render={({ field }) => (
                             <FormItem>
