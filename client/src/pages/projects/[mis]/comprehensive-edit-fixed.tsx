@@ -470,17 +470,42 @@ export default function ComprehensiveEditFixed() {
             const decision = data.decisions[i];
             const existingDecision = existingDecisions[i];
             
+            // Convert implementing_agency strings to unit IDs
+            const implementing_agency_ids = [];
+            if (Array.isArray(decision.implementing_agency)) {
+              for (const agencyName of decision.implementing_agency) {
+                const unit = typedUnitsData?.find(u => 
+                  u.unit_name?.name === agencyName || 
+                  u.name === agencyName || 
+                  u.unit === agencyName
+                );
+                if (unit) {
+                  implementing_agency_ids.push(unit.id);
+                }
+              }
+            }
+
+            // Convert expenditure_type strings to IDs
+            const expenditure_type_ids = [];
+            if (Array.isArray(decision.expenditure_type)) {
+              for (const expenditureName of decision.expenditure_type) {
+                const expenditureType = typedExpenditureTypesData?.find(et => 
+                  et.expenditure_types === expenditureName || 
+                  et.name === expenditureName
+                );
+                if (expenditureType) {
+                  expenditure_type_ids.push(expenditureType.id);
+                }
+              }
+            }
+
             const decisionData = {
               protocol_number: decision.protocol_number || "",
               fek: decision.fek || { year: "", issue: "", number: "" },
               ada: decision.ada || "",
-              implementing_agency: Array.isArray(decision.implementing_agency) 
-                ? decision.implementing_agency 
-                : decision.implementing_agency ? [decision.implementing_agency] : [],
+              implementing_agency: implementing_agency_ids,
               decision_budget: decision.decision_budget || "",
-              expenditure_type: Array.isArray(decision.expenditure_type) 
-                ? decision.expenditure_type 
-                : decision.expenditure_type ? [decision.expenditure_type] : [],
+              expenditure_type: expenditure_type_ids,
               decision_type: decision.decision_type || "Έγκριση",
               included: decision.included !== undefined ? decision.included : true,
               comments: decision.comments || "",
@@ -2395,6 +2420,24 @@ export default function ComprehensiveEditFixed() {
             </TabsContent>
 
           </Tabs>
+          
+          {/* Save Button */}
+          <div className="flex justify-end gap-4 mt-8 pb-6">
+            <Button
+              type="submit"
+              disabled={projectUpdateMutation.isPending}
+              className="min-w-[120px]"
+            >
+              {projectUpdateMutation.isPending ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Αποθήκευση...
+                </>
+              ) : (
+                "Αποθήκευση Αλλαγών"
+              )}
+            </Button>
+          </div>
         </form>
       </Form>
       </div>
