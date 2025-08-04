@@ -77,7 +77,7 @@ export function getGeographicCodeForSave(location: {
   regional_unit?: string;
   municipality?: string;
   municipal_community?: string;
-}, kallikratisEntry: any): string | null {
+}, kallikratisEntry: any, forceLevel?: 'region' | 'regional_unit' | 'municipality'): string | null {
   if (!kallikratisEntry) return null;
   
   // Clean up location data - also check for empty strings
@@ -91,10 +91,23 @@ export function getGeographicCodeForSave(location: {
     hasMunicipality,
     region_value: location.region,
     regional_unit_value: location.regional_unit,
-    municipality_value: location.municipality
+    municipality_value: location.municipality,
+    forceLevel
   });
   
-  // Determine which code to use based on available data
+  // If forceLevel is specified, use that level regardless of available data
+  if (forceLevel === 'regional_unit' && hasRegion && hasRegionalUnit) {
+    console.log("FORCED regional unit code:", kallikratisEntry.kodikos_perifereiakis_enotitas);
+    return kallikratisEntry.kodikos_perifereiakis_enotitas?.toString() || null;
+  } else if (forceLevel === 'region' && hasRegion) {
+    console.log("FORCED region code:", kallikratisEntry.kodikos_perifereias);
+    return kallikratisEntry.kodikos_perifereias?.toString() || null;
+  } else if (forceLevel === 'municipality' && hasRegion && hasRegionalUnit && hasMunicipality) {
+    console.log("FORCED municipality code:", kallikratisEntry.kodikos_neou_ota);
+    return kallikratisEntry.kodikos_neou_ota?.toString() || null;
+  }
+  
+  // Default behavior - use the most specific level available
   if (hasRegion && hasRegionalUnit && hasMunicipality) {
     // Municipality level - use 4-digit code
     console.log("Using municipality code:", kallikratisEntry.kodikos_neou_ota);

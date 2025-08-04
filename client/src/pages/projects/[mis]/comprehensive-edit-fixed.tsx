@@ -697,8 +697,13 @@ export default function ComprehensiveEditFixed() {
                 
                 if (kallikratis) {
                   kallikratisId = kallikratis.id;
+                  
+                  // FORCE regional unit level if municipality is empty or user wants regional unit level
+                  // This fixes the issue where both regional unit and municipality are populated but user wants regional unit codes
+                  const forceLevel = (!region.municipality || region.municipality.trim() === "") ? 'regional_unit' : undefined;
+                  
                   // Calculate geographic code based on what data is selected
-                  geographicCode = getGeographicCodeForSave(region, kallikratis);
+                  geographicCode = getGeographicCodeForSave(region, kallikratis, forceLevel);
                   
                   // DEBUG: Log the geographic code calculation
                   console.log("Geographic Code Calculation:", {
@@ -706,6 +711,7 @@ export default function ComprehensiveEditFixed() {
                     regional_unit: region.regional_unit,
                     municipality: region.municipality,
                     calculated_code: geographicCode,
+                    forceLevel,
                     available_codes: {
                       municipality_code: kallikratis.kodikos_neou_ota,
                       regional_unit_code: kallikratis.kodikos_perifereiakis_enotitas,
@@ -1109,8 +1115,18 @@ export default function ComprehensiveEditFixed() {
               const key = `${indexItem.monada_id || 'no-unit'}-${indexItem.event_types_id || 'no-event'}`;
               
               if (!locationDetailsMap.has(key)) {
+                // FIX: Use consistent naming pattern that matches the dropdown options
+                const implementingAgencyName = unit?.unit_name?.name || unit?.name || unit?.unit || "";
+                console.log("DEBUG: Unit name mapping:", {
+                  unit_id: unit?.id,
+                  unit_name_name: unit?.unit_name?.name,
+                  name: unit?.name,
+                  unit: unit?.unit,
+                  final_name: implementingAgencyName
+                });
+                
                 let locationDetail = {
-                  implementing_agency: unit?.unit || unit?.name || unit?.unit_name?.name || "",
+                  implementing_agency: implementingAgencyName,
                   event_type: eventType?.name || "",
                   expenditure_types: [],
                   regions: []
@@ -1130,10 +1146,22 @@ export default function ComprehensiveEditFixed() {
                 );
                 
                 if (!existingRegion) {
+                  // IMPORTANT: For geographic codes 804/805, we want regional unit level, not municipality level
+                  // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
+                  const shouldIncludeMunicipality = indexItem.geographic_code && parseInt(indexItem.geographic_code) >= 9000;
+                  
                   locationDetail.regions.push({
                     region: kallikratis.perifereia || "",
                     regional_unit: kallikratis.perifereiaki_enotita || "",
-                    municipality: kallikratis.onoma_neou_ota || ""
+                    municipality: shouldIncludeMunicipality ? (kallikratis.onoma_neou_ota || "") : ""
+                  });
+                  
+                  console.log("DEBUG: Region population logic:", {
+                    geographic_code: indexItem.geographic_code,
+                    shouldIncludeMunicipality,
+                    region: kallikratis.perifereia,
+                    regional_unit: kallikratis.perifereiaki_enotita,
+                    municipality: shouldIncludeMunicipality ? kallikratis.onoma_neou_ota : "SKIPPED"
                   });
                 }
               }
