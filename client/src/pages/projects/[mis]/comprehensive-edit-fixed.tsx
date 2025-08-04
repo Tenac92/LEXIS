@@ -1142,21 +1142,30 @@ export default function ComprehensiveEditFixed() {
               
               // Add region if it doesn't exist
               if (kallikratis) {
-                const existingRegion = locationDetail.regions.find(r => 
-                  r.region === kallikratis.perifereia && 
-                  r.regional_unit === kallikratis.perifereiaki_enotita && 
-                  r.municipality === kallikratis.onoma_neou_ota
-                );
+                // IMPORTANT: For geographic codes 804/805, we want regional unit level, not municipality level
+                // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
+                const shouldIncludeMunicipality = indexItem.geographic_code && parseInt(indexItem.geographic_code) >= 9000;
+                const municipalityToCheck = shouldIncludeMunicipality ? (kallikratis.onoma_neou_ota || "") : "";
+                
+                // Improved deduplication: compare based on actual fields that will be populated
+                const existingRegion = locationDetail.regions.find(r => {
+                  if (shouldIncludeMunicipality) {
+                    // For municipality level, check all three fields
+                    return r.region === kallikratis.perifereia && 
+                           r.regional_unit === kallikratis.perifereiaki_enotita && 
+                           r.municipality === kallikratis.onoma_neou_ota;
+                  } else {
+                    // For regional unit level, only check region and regional_unit
+                    return r.region === kallikratis.perifereia && 
+                           r.regional_unit === kallikratis.perifereiaki_enotita;
+                  }
+                });
                 
                 if (!existingRegion) {
-                  // IMPORTANT: For geographic codes 804/805, we want regional unit level, not municipality level
-                  // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
-                  const shouldIncludeMunicipality = indexItem.geographic_code && parseInt(indexItem.geographic_code) >= 9000;
-                  
                   locationDetail.regions.push({
                     region: kallikratis.perifereia || "",
                     regional_unit: kallikratis.perifereiaki_enotita || "",
-                    municipality: shouldIncludeMunicipality ? (kallikratis.onoma_neou_ota || "") : ""
+                    municipality: municipalityToCheck
                   });
                   
                   console.log("DEBUG: Region population logic:", {
@@ -1164,7 +1173,7 @@ export default function ComprehensiveEditFixed() {
                     shouldIncludeMunicipality,
                     region: kallikratis.perifereia,
                     regional_unit: kallikratis.perifereiaki_enotita,
-                    municipality: shouldIncludeMunicipality ? kallikratis.onoma_neou_ota : "SKIPPED"
+                    municipality: shouldIncludeMunicipality ? kallikratis.onoma_neou_ota : "SKIPPED_FOR_REGIONAL_UNIT"
                   });
                 }
               }
