@@ -454,23 +454,23 @@ export default function NewProjectPage() {
         </div>
 
         <Form {...form}>
-          <Tabs defaultValue="decisions" className="space-y-6">
+          <Tabs defaultValue="project" className="space-y-6">
             <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="decisions" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Αποφάσεις
+              <TabsTrigger value="project" className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4" />
+                Στοιχεία Έργου
               </TabsTrigger>
               <TabsTrigger value="event-location" className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
                 Γεγονός & Τοποθεσία
               </TabsTrigger>
-              <TabsTrigger value="project" className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                Στοιχεία Έργου
-              </TabsTrigger>
               <TabsTrigger value="formulation" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Διατύπωση
+              </TabsTrigger>
+              <TabsTrigger value="decisions" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Αποφάσεις
               </TabsTrigger>
               <TabsTrigger value="changes" className="flex items-center gap-2">
                 <RefreshCw className="h-4 w-4" />
@@ -601,6 +601,21 @@ export default function NewProjectPage() {
 
                           <FormField
                             control={form.control}
+                            name={`decisions.${index}.expenses_covered`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Δαπάνες που καλύπτει</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="π.χ. 500.000,00" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
                             name={`decisions.${index}.decision_type`}
                             render={({ field }) => (
                               <FormItem>
@@ -620,6 +635,90 @@ export default function NewProjectPage() {
                               </FormItem>
                             )}
                           />
+
+                          <FormField
+                            control={form.control}
+                            name={`decisions.${index}.included`}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel>Συμπεριλαμβάνεται στο έργο</FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Implementing Agency Multi-select */}
+                        <div>
+                          <FormLabel>Υλοποιούσες Μονάδες</FormLabel>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            {typedUnitsData?.map((unit) => (
+                              <FormField
+                                key={unit.id}
+                                control={form.control}
+                                name={`decisions.${index}.implementing_agency`}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(unit.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            field.onChange([...(field.value || []), unit.id]);
+                                          } else {
+                                            field.onChange((field.value || []).filter((item: number) => item !== unit.id));
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                      {unit.unit_name?.name || unit.name || unit.unit}
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Expenditure Type Multi-select */}
+                        <div>
+                          <FormLabel>Τύποι Δαπανών</FormLabel>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            {typedExpenditureTypesData?.map((expenditureType) => (
+                              <FormField
+                                key={expenditureType.id}
+                                control={form.control}
+                                name={`decisions.${index}.expenditure_type`}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(expenditureType.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            field.onChange([...(field.value || []), expenditureType.id]);
+                                          } else {
+                                            field.onChange((field.value || []).filter((item: number) => item !== expenditureType.id));
+                                          }
+                                        }}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal">
+                                      {expenditureType.expenditure_types || expenditureType.name}
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            ))}
+                          </div>
                         </div>
 
                         <FormField

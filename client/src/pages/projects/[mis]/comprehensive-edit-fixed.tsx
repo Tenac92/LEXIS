@@ -493,34 +493,11 @@ export default function ComprehensiveEditFixed() {
             const decision = data.decisions[i];
             const existingDecision = existingDecisions[i];
             
-            // Convert implementing_agency strings to unit IDs
-            const implementing_agency_ids = [];
-            if (Array.isArray(decision.implementing_agency)) {
-              for (const agencyName of decision.implementing_agency) {
-                const unit = typedUnitsData?.find(u => 
-                  u.unit_name?.name === agencyName || 
-                  u.name === agencyName || 
-                  u.unit === agencyName
-                );
-                if (unit) {
-                  implementing_agency_ids.push(unit.id);
-                }
-              }
-            }
+            // Use implementing_agency IDs directly (already converted in form)
+            const implementing_agency_ids = Array.isArray(decision.implementing_agency) ? decision.implementing_agency : [];
 
-            // Convert expenditure_type strings to IDs
-            const expenditure_type_ids = [];
-            if (Array.isArray(decision.expenditure_type)) {
-              for (const expenditureName of decision.expenditure_type) {
-                const expenditureType = typedExpenditureTypesData?.find(et => 
-                  et.expenditure_types === expenditureName || 
-                  et.name === expenditureName
-                );
-                if (expenditureType) {
-                  expenditure_type_ids.push(expenditureType.id);
-                }
-              }
-            }
+            // Use expenditure_type IDs directly (already converted in form)
+            const expenditure_type_ids = Array.isArray(decision.expenditure_type) ? decision.expenditure_type : [];
 
             const decisionData = {
               protocol_number: decision.protocol_number || "",
@@ -832,9 +809,9 @@ export default function ComprehensiveEditFixed() {
             protocol_number: decision.protocol_number || "",
             fek: normalizeFekData(decision.fek),
             ada: decision.ada || "",
-            implementing_agency: decision.implementing_agency || [],
+            implementing_agency: Array.isArray(decision.implementing_agency) ? decision.implementing_agency : [],
             decision_budget: decision.decision_budget ? formatEuropeanNumber(decision.decision_budget) : "",
-            expenditure_type: decision.expenditure_type || [],
+            expenditure_type: Array.isArray(decision.expenditure_type) ? decision.expenditure_type : [],
             decision_type: decision.decision_type || "Έγκριση" as const,
             included: decision.included ?? decision.is_included ?? true,
             comments: decision.comments || "",
@@ -1318,23 +1295,23 @@ export default function ComprehensiveEditFixed() {
 
         <Form key={formKey} {...form}>
           <form onSubmit={form.handleSubmit((data) => projectUpdateMutation.mutate(data))} className="space-y-6">
-            <Tabs defaultValue="decisions" className="space-y-6">
+            <Tabs defaultValue="project" className="space-y-6">
               <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="decisions" className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Αποφάσεις
+                <TabsTrigger value="project" className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Στοιχεία Έργου
                 </TabsTrigger>
                 <TabsTrigger value="event-location" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Γεγονός & Τοποθεσία
                 </TabsTrigger>
-                <TabsTrigger value="project" className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Στοιχεία Έργου
-                </TabsTrigger>
                 <TabsTrigger value="formulation" className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
                   Διατύπωση
+                </TabsTrigger>
+                <TabsTrigger value="decisions" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Αποφάσεις
                 </TabsTrigger>
                 <TabsTrigger value="changes" className="flex items-center gap-2">
                   <RefreshCw className="h-4 w-4" />
@@ -1532,13 +1509,12 @@ export default function ComprehensiveEditFixed() {
                                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                     <FormControl>
                                       <Checkbox
-                                        checked={field.value?.includes(unit.unit_name?.name || unit.name || unit.unit || "")}
+                                        checked={field.value?.includes(unit.id)}
                                         onCheckedChange={(checked) => {
-                                          const unitName = unit.unit_name?.name || unit.name || unit.unit || "";
                                           if (checked) {
-                                            field.onChange([...(field.value || []), unitName]);
+                                            field.onChange([...(field.value || []), unit.id]);
                                           } else {
-                                            field.onChange((field.value || []).filter((item: string) => item !== unitName));
+                                            field.onChange((field.value || []).filter((item: number) => item !== unit.id));
                                           }
                                         }}
                                       />
@@ -1566,13 +1542,12 @@ export default function ComprehensiveEditFixed() {
                                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                                     <FormControl>
                                       <Checkbox
-                                        checked={field.value?.includes(expenditureType.expenditure_types || expenditureType.name || "")}
+                                        checked={field.value?.includes(expenditureType.id)}
                                         onCheckedChange={(checked) => {
-                                          const expenditureName = expenditureType.expenditure_types || expenditureType.name || "";
                                           if (checked) {
-                                            field.onChange([...(field.value || []), expenditureName]);
+                                            field.onChange([...(field.value || []), expenditureType.id]);
                                           } else {
-                                            field.onChange((field.value || []).filter((item: string) => item !== expenditureName));
+                                            field.onChange((field.value || []).filter((item: number) => item !== expenditureType.id));
                                           }
                                         }}
                                       />
