@@ -52,6 +52,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { default: projectResolverRouter } = await import('./controllers/projectResolverController');
   app.use('/api/projects', projectResolverRouter);
   
+  // Projects by unit endpoint for document creation
+  app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { unitName } = req.params;
+      
+      if (!unitName) {
+        return res.status(400).json({ error: 'Unit name is required' });
+      }
+      
+      // Decode the unit name if it's URL encoded
+      const decodedUnitName = decodeURIComponent(unitName);
+      
+      log(`[Projects Working] Fetching projects for unit: ${decodedUnitName}`);
+      
+      // Check if unitName is numeric (unit ID) or string (unit name)
+      let unitId: number | null = null;
+      
+      if (/^\d+$/.test(decodedUnitName)) {
+        // It's a numeric unit ID
+        unitId = parseInt(decodedUnitName, 10);
+      } else {
+        // It's a unit name, find the corresponding ID
+        const unitResult = await supabase
+          .from('Monada')
+          .select('id')
+          .eq('unit', decodedUnitName)
+          .single();
+          
+        if (unitResult.data) {
+          unitId = unitResult.data.id;
+        }
+      }
+      
+      if (!unitId) {
+        log(`[Projects Working] Unit not found: ${decodedUnitName}`);
+        return res.json([]);
+      }
+      
+      // Get projects linked to this unit through project_index
+      const [projectIndexRes, projectsRes, monadaRes, eventTypesRes, expenditureTypesRes] = await Promise.all([
+        supabase.from('project_index').select('*').eq('monada_id', unitId),
+        supabase.from('Projects').select('*'),
+        supabase.from('Monada').select('*'),
+        supabase.from('event_types').select('*'),
+        supabase.from('expenditure_types').select('*')
+      ]);
+
+      if (projectIndexRes.error) {
+        console.error('[Projects Working] Database error:', projectIndexRes.error);
+        return res.status(500).json({ error: 'Failed to fetch project index' });
+      }
+
+      if (projectsRes.error) {
+        console.error('[Projects Working] Database error:', projectsRes.error);
+        return res.status(500).json({ error: 'Failed to fetch projects' });
+      }
+      
+      const projectIndexItems = projectIndexRes.data || [];
+      const allProjects = projectsRes.data || [];
+      const monadaData = monadaRes.data || [];
+      const eventTypes = eventTypesRes.data || [];
+      const expenditureTypes = expenditureTypesRes.data || [];
+      
+      // Get unique project IDs for this unit
+      const projectIds = Array.from(new Set(projectIndexItems.map(item => item.project_id)));
+      
+      // Filter projects to those linked to this unit
+      const unitProjects = allProjects.filter(project => projectIds.includes(project.id));
+      
+      log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
+      
+      // Enhance each project with related data
+      const enhancedProjects = unitProjects.map(project => {
+        const projectIndexForProject = projectIndexItems.filter(idx => idx.project_id === project.id);
+        
+        // Get expenditure types for this project
+        const projectExpenditureTypes = projectIndexForProject
+          .map(idx => expenditureTypes.find(et => et.id === idx.expenditure_type_id))
+          .filter(et => et !== null && et !== undefined)
+          .map(et => et.expenditure_types);
+        
+        const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
+        
+        // Get event types for this project
+        const projectEventTypes = projectIndexForProject
+          .map(idx => eventTypes.find(et => et.id === idx.event_types_id))
+          .filter(et => et !== null && et !== undefined)
+          .map(et => et.name);
+        
+        const uniqueEventTypes = Array.from(new Set(projectEventTypes));
+        
+        return {
+          id: project.id,
+          mis: project.mis,
+          project_title: project.project_title || project.event_description,
+          event_description: project.event_description,
+          expenditure_types: uniqueExpenditureTypes,
+          event_types: uniqueEventTypes,
+          created_at: project.created_at,
+          updated_at: project.updated_at
+        };
+      });
+      
+      res.json(enhancedProjects);
+      
+    } catch (error) {
+      console.error('[Projects Working] Error:', error);
+      res.status(500).json({ error: 'Failed to fetch projects for unit' });
+    }
+  });
+  
   // Beneficiary payments endpoint for enhanced display
   app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {

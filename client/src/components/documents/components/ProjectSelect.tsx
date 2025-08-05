@@ -67,9 +67,9 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     }, []);
 
     // Fetch projects query
-    const { data: projects = [], isLoading, error } = useQuery<Project[]>({
+    const { data: projects = [], isLoading, error } = useQuery({
       queryKey: ['projects-working', selectedUnit],
-      queryFn: async () => {
+      queryFn: async (): Promise<Project[]> => {
         if (!selectedUnit) {
           console.log("[ProjectSelect] No selectedUnit, returning empty array");
           return [];
@@ -90,7 +90,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         );
         console.log("[ProjectSelect] Valid projects filtered:", validProjects.length);
 
-        return validProjects.map((item: any) => {
+        return validProjects.map((item: any): Project => {
           // Process expenditure types - handle both legacy and optimized schema
           let expenditureTypes: string[] = [];
           
@@ -120,7 +120,11 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       },
       enabled: Boolean(selectedUnit),
       staleTime: 5 * 60 * 1000,
-      onError: (error) => {
+    });
+
+    // Handle query errors
+    useEffect(() => {
+      if (error) {
         console.error("[ProjectSelect] Query error:", error);
         toast({
           title: "Σφάλμα",
@@ -128,7 +132,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
           variant: "destructive",
         });
       }
-    });
+    }, [error, toast]);
 
     // Add debug logging for state changes
     useEffect(() => {
@@ -136,7 +140,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     }, [selectedUnit, projects, isLoading, isFocused]);
 
     const selectedProject = useMemo(() => 
-      projects?.find(p => p.id === value) || null,
+      projects?.find((p: Project) => p.id === Number(value)) || null,
       [projects, value]
     );
 
@@ -151,7 +155,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       setIsSearching(true);
       
       try {
-        const results = projects.filter((project) => {
+        const results = projects.filter((project: Project) => {
           const normalizedName = normalizeText(project.name);
           const normalizedMis = normalizeText(project.mis || "");
           const normalizedId = normalizeText(String(project.id));
@@ -266,7 +270,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
                       return (
                         <CommandItem
                           key={project.id}
-                          value={project.id}
+                          value={String(project.id)}
                           onSelect={() => {
                             console.log("[ProjectSelect] Project selected:", project);
                             onProjectSelect(project);
