@@ -155,16 +155,40 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       setIsSearching(true);
       
       try {
+        console.log("[ProjectSelect] Searching for:", debouncedSearchQuery, "normalized:", normalizedQuery);
+        
         const results = projects.filter((project: Project) => {
           const normalizedName = normalizeText(project.name);
-          const normalizedMis = normalizeText(project.mis || "");
+          const normalizedMis = normalizeText(String(project.mis) || "");
           const normalizedId = normalizeText(String(project.id));
           
-          return (
+          // Also check raw values without normalization for exact number matches
+          const rawMisMatch = String(project.mis).includes(debouncedSearchQuery);
+          const rawIdMatch = String(project.id).includes(debouncedSearchQuery);
+          
+          const matches = (
             normalizedName.includes(normalizedQuery) ||
             normalizedMis.includes(normalizedQuery) ||
-            normalizedId.includes(normalizedQuery)
+            normalizedId.includes(normalizedQuery) ||
+            rawMisMatch ||
+            rawIdMatch
           );
+          
+          // Debug log for the specific project we're looking for
+          if (String(project.mis) === "5222801") {
+            console.log("[ProjectSelect] Found target project 5222801:", {
+              project,
+              normalizedQuery,
+              normalizedName,
+              normalizedMis,
+              normalizedId,
+              rawMisMatch,
+              rawIdMatch,
+              matches
+            });
+          }
+          
+          return matches;
         });
 
         return results.slice(0, 50);
