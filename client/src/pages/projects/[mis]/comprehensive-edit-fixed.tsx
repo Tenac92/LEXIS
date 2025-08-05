@@ -2002,9 +2002,27 @@ export default function ComprehensiveEditFixed() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>ΣΑ</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="π.χ. ΝΑ853" />
-                            </FormControl>
+                            <Select 
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                // Auto-populate enumeration code based on selected ΣΑ
+                                const currentEnumerationCode = form.getValues("project_details.enumeration_code");
+                                const newEnumerationCode = generateEnumerationCode(value, currentEnumerationCode);
+                                form.setValue("project_details.enumeration_code", newEnumerationCode);
+                              }} 
+                              value={field.value || ""}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Επιλέξτε ΣΑ" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
+                                <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
+                                <SelectItem value="E069">E069</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </FormItem>
                         )}
                       />
