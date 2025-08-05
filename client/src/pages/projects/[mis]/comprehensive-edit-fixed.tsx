@@ -7,7 +7,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +28,39 @@ function safeText(value: any): string {
     return value.join(", ");
   }
   return "";
+}
+
+// Helper function to generate enumeration code based on ΣΑ type
+function generateEnumerationCode(saType: string, currentCode?: string): string {
+  const currentYear = new Date().getFullYear();
+  
+  // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
+  if (currentCode) {
+    const patterns = {
+      "ΝΑ853": /^\d{4}ΕΠ\d{8}$/,
+      "ΝΑ271": /^\d{4}ΣΕ\d{8}$/,
+      "E069": /^\d{4}ΕΦ\d{8}$/
+    };
+    
+    if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
+      return currentCode;
+    }
+  }
+  
+  // Generate new code based on ΣΑ type
+  const prefixes = {
+    "ΝΑ853": "ΕΠ",
+    "ΝΑ271": "ΣΕ", 
+    "E069": "ΕΦ"
+  };
+  
+  const prefix = prefixes[saType as keyof typeof prefixes];
+  if (!prefix) return currentCode || "";
+  
+  // Generate a sequential number (in real implementation, this would come from database)
+  const sequentialNumber = Math.floor(Math.random() * 99999999).toString().padStart(8, '0');
+  
+  return `${currentYear}${prefix}${sequentialNumber}`;
 }
 
 // Helper function to convert FEK data from old string format to new object format
@@ -2129,7 +2162,16 @@ export default function ComprehensiveEditFixed() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>ΣΑ</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select 
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    // Auto-populate enumeration code based on selected ΣΑ
+                                    const currentEnumerationCode = form.getValues(`formulation_details.${index}.enumeration_code`);
+                                    const newEnumerationCode = generateEnumerationCode(value, currentEnumerationCode);
+                                    form.setValue(`formulation_details.${index}.enumeration_code`, newEnumerationCode);
+                                  }} 
+                                  defaultValue={field.value}
+                                >
                                   <FormControl>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Επιλέξτε ΣΑ" />

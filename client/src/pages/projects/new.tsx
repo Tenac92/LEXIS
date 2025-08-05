@@ -30,6 +30,39 @@ function safeText(value: any): string {
   return "";
 }
 
+// Helper function to generate enumeration code based on ΣΑ type
+function generateEnumerationCode(saType: string, currentCode?: string): string {
+  const currentYear = new Date().getFullYear();
+  
+  // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
+  if (currentCode) {
+    const patterns = {
+      "ΝΑ853": /^\d{4}ΕΠ\d{8}$/,
+      "ΝΑ271": /^\d{4}ΣΕ\d{8}$/,
+      "E069": /^\d{4}ΕΦ\d{8}$/
+    };
+    
+    if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
+      return currentCode;
+    }
+  }
+  
+  // Generate new code based on ΣΑ type
+  const prefixes = {
+    "ΝΑ853": "ΕΠ",
+    "ΝΑ271": "ΣΕ", 
+    "E069": "ΕΦ"
+  };
+  
+  const prefix = prefixes[saType as keyof typeof prefixes];
+  if (!prefix) return currentCode || "";
+  
+  // Generate a sequential number (in real implementation, this would come from database)
+  const sequentialNumber = Math.floor(Math.random() * 99999999).toString().padStart(8, '0');
+  
+  return `${currentYear}${prefix}${sequentialNumber}`;
+}
+
 // Helper function to convert FEK data from old string format to new object format
 function normalizeFekData(fekValue: any): { year: string; issue: string; number: string } {
   if (!fekValue) return { year: "", issue: "", number: "" };
@@ -215,7 +248,7 @@ export default function NewProjectPage() {
       },
       formulation_details: [{ 
         sa: "ΝΑ853", 
-        enumeration_code: "", 
+        enumeration_code: generateEnumerationCode("ΝΑ853"), 
         protocol_number: "", 
         ada: "", 
         decision_year: "", 
@@ -1224,7 +1257,16 @@ export default function NewProjectPage() {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>ΣΑ</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select 
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    // Auto-populate enumeration code based on selected ΣΑ
+                                    const currentEnumerationCode = form.getValues(`formulation_details.${index}.enumeration_code`);
+                                    const newEnumerationCode = generateEnumerationCode(value, currentEnumerationCode);
+                                    form.setValue(`formulation_details.${index}.enumeration_code`, newEnumerationCode);
+                                  }} 
+                                  defaultValue={field.value}
+                                >
                                   <FormControl>
                                     <SelectTrigger>
                                       <SelectValue placeholder="Επιλέξτε ΣΑ" />
