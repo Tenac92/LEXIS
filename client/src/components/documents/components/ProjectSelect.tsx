@@ -191,6 +191,8 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
           return matches;
         });
 
+        console.log("[ProjectSelect] Search results count:", results.length, "showing first 50");
+        console.log("[ProjectSelect] Results include 5222801:", results.some(p => String(p.mis) === "5222801"));
         return results.slice(0, 50);
       } catch (error) {
         return projects.slice(0, 20);
@@ -267,7 +269,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         {/* Search Results */}
         {isFocused && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-96 overflow-hidden">
-            <Command className="rounded-lg border-none shadow-none">
+            <Command className="rounded-lg border-none shadow-none" shouldFilter={false}>
               <div className="p-2">
                 <CommandInput 
                   value={searchQuery}
