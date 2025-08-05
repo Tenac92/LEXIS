@@ -879,7 +879,25 @@ export default function ComprehensiveEditFixed() {
               })(),
               decision_status: formulation.decision_status,
               change_type: formulation.change_type,
-              connected_decisions: formulation.connected_decisions,
+              connected_decisions: (() => {
+                // Convert indices back to decision IDs
+                if (!formulation.connected_decisions || !Array.isArray(formulation.connected_decisions)) {
+                  return [];
+                }
+                
+                const decisionIds = formulation.connected_decisions
+                  .map((index: number) => {
+                    const decision = decisionsData?.[index];
+                    return decision?.id;
+                  })
+                  .filter((id: any) => id !== undefined);
+                
+                console.log(
+                  `[FormulationSave] Converting indices ${JSON.stringify(formulation.connected_decisions)} to IDs ${JSON.stringify(decisionIds)}`,
+                );
+                
+                return decisionIds;
+              })(),
               comments: formulation.comments,
             };
 
