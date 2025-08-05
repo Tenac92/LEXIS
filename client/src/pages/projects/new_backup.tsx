@@ -127,7 +127,6 @@ const comprehensiveProjectSchema = z.object({
   project_details: z.object({
     mis: z.string().default(""),
     sa: z.string().default(""),
-    enumeration_code: z.string().default(""),
     inclusion_year: z.string().default(""),
     project_title: z.string().default(""),
     project_description: z.string().default(""),
@@ -205,7 +204,6 @@ export default function NewProjectPage() {
       project_details: { 
         mis: "", 
         sa: "", 
-        enumeration_code: "", 
         inclusion_year: "", 
         project_title: "", 
         project_description: "", 
@@ -945,7 +943,7 @@ export default function NewProjectPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="project_details.mis"
@@ -967,19 +965,6 @@ export default function NewProjectPage() {
                             <FormLabel>ΣΑ</FormLabel>
                             <FormControl>
                               <Input {...field} placeholder="π.χ. ΝΑ853" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="project_details.enumeration_code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
                             </FormControl>
                           </FormItem>
                         )}
@@ -1143,12 +1128,12 @@ export default function NewProjectPage() {
 
                           <FormField
                             control={form.control}
-                            name={`formulation_details.${index}.enumeration_code`}
+                            name={`formulation_details.${index}.decision_year`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
+                                <FormLabel>Έτος Απόφασης</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
+                                  <Input {...field} placeholder="π.χ. 2024" />
                                 </FormControl>
                               </FormItem>
                             )}
@@ -1156,10 +1141,10 @@ export default function NewProjectPage() {
 
                           <FormField
                             control={form.control}
-                            name={`formulation_details.${index}.decision_year`}
+                            name="project_details.inclusion_year"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Έτος Απόφασης</FormLabel>
+                                <FormLabel>Έτος Ένταξης</FormLabel>
                                 <FormControl>
                                   <Input {...field} placeholder="π.χ. 2024" />
                                 </FormControl>

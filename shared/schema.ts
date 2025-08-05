@@ -97,6 +97,8 @@ export const projects = pgTable("Projects", {
   budget_na853: decimal("budget_na853", { precision: 12, scale: 2 }),
   status: text("status"),
   event_type_id: integer("event_type_id"),
+  inc_year: integer("inc_year"), // Έτος Ένταξης (Inclusion Year)
+  updates: jsonb("updates").default([]), // Αλλαγές (Changes and Updates)
   created_at: timestamp("created_at"),
   updated_at: timestamp("updated_at"),
 });
