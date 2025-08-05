@@ -1125,20 +1125,22 @@ export default function ComprehensiveEditFixed() {
         // Provide more specific error information
         let errorMessage = "Παρουσιάστηκε σφάλμα κατά την ενημέρωση";
 
-        if (error.message) {
-          if (error.message.includes("Failed to update project data")) {
+        // Type guard for error handling
+        const errorObj = error as Error;
+        if (errorObj && typeof errorObj.message === 'string') {
+          if (errorObj.message.includes("Failed to update project data")) {
             errorMessage = "Σφάλμα ενημέρωσης βασικών στοιχείων έργου";
-          } else if (error.message.includes("decisions")) {
+          } else if (errorObj.message.includes("decisions")) {
             errorMessage = "Σφάλμα ενημέρωσης αποφάσεων";
-          } else if (error.message.includes("formulations")) {
+          } else if (errorObj.message.includes("formulations")) {
             errorMessage = "Σφάλμα ενημέρωσης διατυπώσεων";
           }
         }
 
         // Create enhanced error with context
         const enhancedError = new Error(errorMessage);
-        enhancedError.originalError = error;
-        enhancedError.completedOperations = completedOperations;
+        (enhancedError as any).originalError = error;
+        (enhancedError as any).completedOperations = completedOperations;
 
         throw enhancedError;
       }
