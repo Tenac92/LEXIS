@@ -83,10 +83,19 @@ export function useStableWebSocket() {
       
       // Construct WebSocket URL with proper port handling
       let wsUrl;
-      if (port && port !== '80' && port !== '443') {
+      console.log('[StableWebSocket] URL construction:', { protocol, hostname, port });
+      
+      if (port && port !== '80' && port !== '443' && port !== '') {
         wsUrl = `${protocol}//${hostname}:${port}/ws`;
       } else {
         wsUrl = `${protocol}//${hostname}/ws`;
+      }
+      
+      // Validate URL before connection
+      if (wsUrl.includes('undefined')) {
+        console.error('[StableWebSocket] Invalid URL detected:', wsUrl);
+        console.error('[StableWebSocket] Window location:', window.location);
+        throw new Error('Invalid WebSocket URL - contains undefined values');
       }
       
       console.log('[StableWebSocket] Connecting to:', wsUrl);

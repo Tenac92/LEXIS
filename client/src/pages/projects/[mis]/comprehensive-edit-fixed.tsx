@@ -390,6 +390,21 @@ export default function ComprehensiveEditFixed() {
     return isNaN(parsed) ? null : parsed;
   };
 
+  // Helper function to validate and limit numeric input to database constraints
+  const validateAndLimitNumericInput = (value: string, fieldName: string): string => {
+    const parsed = parseEuropeanNumber(value);
+    if (parsed && parsed > 9999999999.99) {
+      console.warn(`${fieldName} value ${parsed} exceeds database limit, limiting input`);
+      toast({
+        title: "Προσοχή",
+        description: `${fieldName}: Το ποσό περιορίστηκε στο μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`,
+        variant: "destructive",
+      });
+      return formatEuropeanNumber(9999999999.99);
+    }
+    return value;
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
       console.log("=== COMPREHENSIVE FORM SUBMISSION ===");
@@ -586,10 +601,34 @@ export default function ComprehensiveEditFixed() {
               protocol_number: formulation.protocol_number,
               ada: formulation.ada,
               decision_year: formulation.decision_year,
-              project_budget: parseEuropeanNumber(formulation.project_budget || "") || 0,
+              project_budget: (() => {
+                const parsed = parseEuropeanNumber(formulation.project_budget || "");
+                // Database constraint: precision 12, scale 2 (max: 9,999,999,999.99)
+                if (parsed && parsed > 9999999999.99) {
+                  console.warn(`Project budget ${parsed} exceeds database limit, capping at 9,999,999,999.99`);
+                  return 9999999999.99;
+                }
+                return parsed || 0;
+              })(),
               epa_version: formulation.epa_version,
-              total_public_expense: parseEuropeanNumber(formulation.total_public_expense || "") || 0,
-              eligible_public_expense: parseEuropeanNumber(formulation.eligible_public_expense || "") || 0,
+              total_public_expense: (() => {
+                const parsed = parseEuropeanNumber(formulation.total_public_expense || "");
+                // Database constraint: precision 12, scale 2 (max: 9,999,999,999.99)
+                if (parsed && parsed > 9999999999.99) {
+                  console.warn(`Total public expense ${parsed} exceeds database limit, capping at 9,999,999,999.99`);
+                  return 9999999999.99;
+                }
+                return parsed || 0;
+              })(),
+              eligible_public_expense: (() => {
+                const parsed = parseEuropeanNumber(formulation.eligible_public_expense || "");
+                // Database constraint: precision 12, scale 2 (max: 9,999,999,999.99)
+                if (parsed && parsed > 9999999999.99) {
+                  console.warn(`Eligible public expense ${parsed} exceeds database limit, capping at 9,999,999,999.99`);
+                  return 9999999999.99;
+                }
+                return parsed || 0;
+              })(),
               decision_status: formulation.decision_status,
               change_type: formulation.change_type,
               connected_decisions: formulation.connected_decisions,
@@ -614,7 +653,14 @@ export default function ComprehensiveEditFixed() {
               }
             } catch (error) {
               console.error(`Error processing formulation ${i}:`, error);
-              throw error;
+              
+              // Provide more specific error information for database constraints
+              let errorMessage = `Error processing formulation ${i}`;
+              if (error.message && error.message.includes('numeric field overflow')) {
+                errorMessage = `Formulation ${i}: Το ποσό υπερβαίνει το μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`;
+              }
+              
+              throw new Error(errorMessage);
             }
           }
           
@@ -2167,10 +2213,14 @@ export default function ComprehensiveEditFixed() {
                                     placeholder="π.χ. 1.000.000,00" 
                                     onChange={(e) => {
                                       const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
+                                      const validated = validateAndLimitNumericInput(formatted, "Προϋπολογισμός Έργου");
+                                      field.onChange(validated);
                                     }}
                                   />
                                 </FormControl>
+                                <FormMessage className="text-xs text-muted-foreground">
+                                  Μέγιστο επιτρεπτό ποσό: 9.999.999.999,99 €
+                                </FormMessage>
                               </FormItem>
                             )}
                           />
@@ -2202,10 +2252,14 @@ export default function ComprehensiveEditFixed() {
                                     placeholder="π.χ. 800.000,00" 
                                     onChange={(e) => {
                                       const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
+                                      const validated = validateAndLimitNumericInput(formatted, "Συνολική Δημόσια Δαπάνη");
+                                      field.onChange(validated);
                                     }}
                                   />
                                 </FormControl>
+                                <FormMessage className="text-xs text-muted-foreground">
+                                  Μέγιστο επιτρεπτό ποσό: 9.999.999.999,99 €
+                                </FormMessage>
                               </FormItem>
                             )}
                           />
@@ -2222,10 +2276,14 @@ export default function ComprehensiveEditFixed() {
                                     placeholder="π.χ. 750.000,00" 
                                     onChange={(e) => {
                                       const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
+                                      const validated = validateAndLimitNumericInput(formatted, "Επιλέξιμη Δημόσια Δαπάνη");
+                                      field.onChange(validated);
                                     }}
                                   />
                                 </FormControl>
+                                <FormMessage className="text-xs text-muted-foreground">
+                                  Μέγιστο επιτρεπτό ποσό: 9.999.999.999,99 €
+                                </FormMessage>
                               </FormItem>
                             )}
                           />

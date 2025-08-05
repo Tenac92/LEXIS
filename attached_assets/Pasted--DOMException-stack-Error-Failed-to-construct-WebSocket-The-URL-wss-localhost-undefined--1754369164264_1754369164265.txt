@@ -1,0 +1,57 @@
+
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+[API] Error details: 
+Object {message: "Failed to update formulation", requestInfo: {…}, stack: "Error: Failed to update formulation↵    at apiRequest…"}
+
+Error processing formulation 0: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+Error details: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+Completed operations: 
+Object {projectUpdate: true, decisions: Array(0), formulations: Array(0), changes: false}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Failed to update formulation", requestInfo: {…}, stack: "Error: Failed to update formulation↵    at apiRequest…"}
+
+Error processing formulation 0: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error details: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+isApiError: true
+originalError: Error
+requestInfo: Object
+message: "Failed to update formulation"
+stack: "Error: Failed to update formulation↵ at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/src/lib/queryClient.ts:71:27)↵ at async Object.mutationFn (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:483:17)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.repl.co/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Completed operations: 
+Object {projectUpdate: true, decisions: Array(0), formulations: Array(0), changes: false}
+
+Form submission failed: 
+Error {originalError: Error, completedOperations: {…}}

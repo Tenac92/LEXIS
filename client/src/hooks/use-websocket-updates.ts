@@ -87,10 +87,19 @@ function useWebSocketUpdatesOriginal() {
       
       // Construct WebSocket URL with proper port handling
       let wsUrl;
-      if (port && port !== '80' && port !== '443') {
+      console.log('[WebSocketUpdates] URL construction:', { protocol, hostname, port });
+      
+      if (port && port !== '80' && port !== '443' && port !== '') {
         wsUrl = `${protocol}//${hostname}:${port}/ws?t=${Date.now()}`;
       } else {
         wsUrl = `${protocol}//${hostname}/ws?t=${Date.now()}`;
+      }
+      
+      // Validate URL before connection
+      if (wsUrl.includes('undefined')) {
+        console.error('[WebSocketUpdates] Invalid URL detected:', wsUrl);
+        console.error('[WebSocketUpdates] Window location:', window.location);
+        throw new Error('Invalid WebSocket URL - contains undefined values');
       }
       
       console.log('[WebSocket] Connecting to:', wsUrl);
