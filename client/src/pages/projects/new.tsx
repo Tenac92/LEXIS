@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
+import { SmartRegionalUnitSelect } from "@/components/forms/SmartRegionalUnitSelect";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
@@ -421,14 +422,52 @@ export default function NewProjectPage() {
     return Array.from(regions).sort();
   };
 
-  const getRegionalUnitsForRegion = (region: string) => {
+  const getRegionalUnitsForRegion = (region: string, searchQuery?: string) => {
     if (!typedKallikratisData || !region) return [];
+    
+    // Get all regional units for the region
     const units = new Set(
       typedKallikratisData
         .filter(k => k.perifereia === region)
         .map(k => k.perifereiaki_enotita)
+        .filter(Boolean) // Remove empty/null values
     );
-    return Array.from(units).sort();
+    
+    let filteredUnits = Array.from(units);
+    
+    // Apply search filter if provided
+    if (searchQuery && searchQuery.trim()) {
+      const normalizedQuery = searchQuery.toLowerCase().trim();
+      filteredUnits = filteredUnits.filter(unit => 
+        unit.toLowerCase().includes(normalizedQuery)
+      );
+    }
+    
+    // Smart sorting: prioritize exact matches, then partial matches, then alphabetical
+    return filteredUnits.sort((a, b) => {
+      if (!searchQuery) return a.localeCompare(b, 'el'); // Greek locale sorting
+      
+      const query = searchQuery.toLowerCase();
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      
+      // Exact matches first
+      if (aLower === query) return -1;
+      if (bLower === query) return 1;
+      
+      // Starts with query
+      if (aLower.startsWith(query) && !bLower.startsWith(query)) return -1;
+      if (bLower.startsWith(query) && !aLower.startsWith(query)) return 1;
+      
+      // Contains query
+      const aContains = aLower.includes(query);
+      const bContains = bLower.includes(query);
+      if (aContains && !bContains) return -1;
+      if (bContains && !aContains) return 1;
+      
+      // Alphabetical for equal relevance
+      return a.localeCompare(b, 'el');
+    });
   };
 
   const getMunicipalitiesForRegionalUnit = (region: string, regionalUnit: string) => {
@@ -993,20 +1032,15 @@ export default function NewProjectPage() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Περιφερειακή Ενότητα</FormLabel>
-                                      <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Επιλέξτε ενότητα" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {getRegionalUnitsForRegion(form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`)).map((unit) => (
-                                            <SelectItem key={unit} value={unit}>
-                                              {unit}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
+                                      <FormControl>
+                                        <SmartRegionalUnitSelect
+                                          value={field.value}
+                                          onValueChange={field.onChange}
+                                          region={form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`)}
+                                          kallikratisData={typedKallikratisData || []}
+                                          placeholder="Επιλέξτε περιφερειακή ενότητα"
+                                        />
+                                      </FormControl>
                                     </FormItem>
                                   )}
                                 />
