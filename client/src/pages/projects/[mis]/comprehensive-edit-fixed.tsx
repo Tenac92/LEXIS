@@ -287,7 +287,7 @@ export default function ComprehensiveEditFixed() {
       }],
       project_details: { 
         mis: "", 
-        sa: "", 
+        sa: "ΝΑ853", 
         enumeration_code: "", 
         inclusion_year: "", 
         project_title: "", 
@@ -1185,8 +1185,8 @@ export default function ComprehensiveEditFixed() {
         },
         project_details: {
           mis: typedProjectData.mis?.toString() || "",
-          sa: [typedProjectData.na853, typedProjectData.na271, typedProjectData.e069].filter(Boolean).join(", ") || "",
-          enumeration_code: typedProjectData.enumeration_code || "",
+          sa: formulations.length > 0 ? formulations[0].sa : "ΝΑ853",
+          enumeration_code: formulations.length > 0 ? formulations[0].enumeration_code : "",
           inclusion_year: "",
           project_title: typedProjectData.project_title || "",
           project_description: typedProjectData.event_description || "",
@@ -1203,6 +1203,8 @@ export default function ComprehensiveEditFixed() {
       // Set each field individually to force component updates
       console.log('🔥 SETTING FORM VALUES INDIVIDUALLY:');
       form.setValue("decisions", formData.decisions, { shouldValidate: true, shouldDirty: true });
+      form.setValue("event_details", formData.event_details, { shouldValidate: true, shouldDirty: true });
+      form.setValue("project_details", formData.project_details, { shouldValidate: true, shouldDirty: true });
       form.setValue("formulation_details", formData.formulation_details, { shouldValidate: true, shouldDirty: true });
       form.setValue("location_details", formData.location_details, { shouldValidate: true, shouldDirty: true });
       form.setValue("previous_entries", formData.previous_entries, { shouldValidate: true, shouldDirty: true });
@@ -1216,27 +1218,9 @@ export default function ComprehensiveEditFixed() {
       
       // Verify the values were set
       setTimeout(() => {
-        const currentDecisions = form.getValues("decisions");
-        console.log('🔍 FORM VALUES AFTER INDIVIDUAL SET:', currentDecisions);
+        const currentProjectDetails = form.getValues("project_details");
+        console.log('🔍 PROJECT DETAILS AFTER SET:', currentProjectDetails);
       }, 100);
-      form.setValue("event_details", {
-        event_name: typedProjectData.enhanced_event_type?.name || "",
-        event_year: Array.isArray(typedProjectData.event_year) ? typedProjectData.event_year[0] : typedProjectData.event_year?.toString() || "",
-      });
-      
-
-      form.setValue("project_details", {
-        mis: String(typedProjectData.mis || ""),
-        sa: "",
-        enumeration_code: "",
-        inclusion_year: "",
-        project_title: typedProjectData.project_title || "",
-        project_description: typedProjectData.event_description || "",
-        summary_description: "",
-        expenses_executed: "",
-        project_status: typedProjectData.status || "Ενεργό",
-      });
-      form.setValue("formulation_details", formulations);
       
       // Populate location details using consolidated function
       const locationDetailsArray = getLocationDetailsFromData();
