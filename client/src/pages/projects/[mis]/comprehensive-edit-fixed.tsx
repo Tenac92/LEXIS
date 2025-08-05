@@ -68,15 +68,18 @@ function safeText(value: any): string {
 }
 
 // Helper function to generate enumeration code based on ΣΑ type
-function generateEnumerationCode(saType: string, currentCode?: string): string {
-  const currentYear = new Date().getFullYear();
+function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
+  // If we have an existing enumeration code for this ΣΑ type, use it
+  if (existingCodes && existingCodes[saType]) {
+    return existingCodes[saType];
+  }
 
   // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
   if (currentCode) {
     const patterns = {
-      ΝΑ853: /^\d{4}ΕΠ\d{8}$/,
-      ΝΑ271: /^\d{4}ΣΕ\d{8}$/,
-      E069: /^\d{4}ΕΦ\d{8}$/,
+      ΝΑ853: /^\d{4}ΝΑ853\d{8}$/,
+      ΝΑ271: /^\d{4}ΝΑ271\d{8}$/,
+      E069: /^\d{4}E069\d{8}$/,
     };
 
     if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
@@ -84,22 +87,13 @@ function generateEnumerationCode(saType: string, currentCode?: string): string {
     }
   }
 
-  // Generate new code based on ΣΑ type
-  const prefixes = {
-    ΝΑ853: "ΕΠ",
-    ΝΑ271: "ΣΕ",
-    E069: "ΕΦ",
-  };
-
-  const prefix = prefixes[saType as keyof typeof prefixes];
-  if (!prefix) return currentCode || "";
-
-  // Generate a sequential number (in real implementation, this would come from database)
+  // Only generate new code if no existing data found (this should be rare in edit mode)
+  const currentYear = new Date().getFullYear();
   const sequentialNumber = Math.floor(Math.random() * 99999999)
     .toString()
     .padStart(8, "0");
 
-  return `${currentYear}${prefix}${sequentialNumber}`;
+  return `${currentYear}${saType}${sequentialNumber}`;
 }
 
 // Helper function to convert FEK data from old string format to new object format
@@ -437,6 +431,15 @@ export default function ComprehensiveEditFixed() {
   const kallikratisData = completeProjectData?.kallikratis;
   const expenditureTypesData = completeProjectData?.expenditureTypes;
 
+  // Extract existing ΣΑ types and enumeration codes from formulations data
+  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean))] || [];
+  const existingEnumerationCodes = formulationsData?.reduce((acc, f) => {
+    if (f.sa && f.enumeration_code) {
+      acc[f.sa] = f.enumeration_code;
+    }
+    return acc;
+  }, {} as Record<string, string>) || {};
+
   // Debug logging for unified data fetch
   console.log("DEBUG - Complete Project Data:", {
     hasData: !!completeProjectData,
@@ -445,6 +448,13 @@ export default function ComprehensiveEditFixed() {
     formulationsCount: formulationsData?.length || 0,
     isLoading: isCompleteDataLoading,
     error: completeDataError?.message || completeDataError,
+  });
+
+  // Debug logging for ΣΑ types and enumeration codes
+  console.log("DEBUG - ΣΑ Data:", {
+    existingSATypes,
+    existingEnumerationCodes,
+    formulationsDataSample: formulationsData?.slice(0, 2),
   });
 
   // Reset initialization state when component mounts
@@ -2636,7 +2646,7 @@ export default function ComprehensiveEditFixed() {
                               <Select
                                 onValueChange={(value) => {
                                   field.onChange(value);
-                                  // Auto-populate enumeration code based on selected ΣΑ
+                                  // Auto-populate enumeration code based on selected ΣΑ using existing data
                                   const currentEnumerationCode = form.getValues(
                                     "project_details.enumeration_code",
                                   );
@@ -2644,6 +2654,7 @@ export default function ComprehensiveEditFixed() {
                                     generateEnumerationCode(
                                       value,
                                       currentEnumerationCode,
+                                      existingEnumerationCodes,
                                     );
                                   form.setValue(
                                     "project_details.enumeration_code",
@@ -2658,9 +2669,19 @@ export default function ComprehensiveEditFixed() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
-                                  <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
-                                  <SelectItem value="E069">E069</SelectItem>
+                                  {existingSATypes.length > 0 ? (
+                                    existingSATypes.map((saType) => (
+                                      <SelectItem key={saType} value={saType}>
+                                        {saType}
+                                      </SelectItem>
+                                    ))
+                                  ) : (
+                                    <>
+                                      <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
+                                      <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
+                                      <SelectItem value="E069">E069</SelectItem>
+                                    </>
+                                  )}
                                 </SelectContent>
                               </Select>
                             </FormItem>
@@ -2859,7 +2880,7 @@ export default function ComprehensiveEditFixed() {
                                   <Select
                                     onValueChange={(value) => {
                                       field.onChange(value);
-                                      // Auto-populate enumeration code based on selected ΣΑ
+                                      // Auto-populate enumeration code based on selected ΣΑ using existing data
                                       const currentEnumerationCode =
                                         form.getValues(
                                           `formulation_details.${index}.enumeration_code`,
@@ -2868,6 +2889,7 @@ export default function ComprehensiveEditFixed() {
                                         generateEnumerationCode(
                                           value,
                                           currentEnumerationCode,
+                                          existingEnumerationCodes,
                                         );
                                       form.setValue(
                                         `formulation_details.${index}.enumeration_code`,
@@ -2882,13 +2904,23 @@ export default function ComprehensiveEditFixed() {
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      <SelectItem value="ΝΑ853">
-                                        ΝΑ853
-                                      </SelectItem>
-                                      <SelectItem value="ΝΑ271">
-                                        ΝΑ271
-                                      </SelectItem>
-                                      <SelectItem value="E069">E069</SelectItem>
+                                      {existingSATypes.length > 0 ? (
+                                        existingSATypes.map((saType) => (
+                                          <SelectItem key={saType} value={saType}>
+                                            {saType}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <>
+                                          <SelectItem value="ΝΑ853">
+                                            ΝΑ853
+                                          </SelectItem>
+                                          <SelectItem value="ΝΑ271">
+                                            ΝΑ271
+                                          </SelectItem>
+                                          <SelectItem value="E069">E069</SelectItem>
+                                        </>
+                                      )}
                                     </SelectContent>
                                   </Select>
                                 </FormItem>
