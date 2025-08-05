@@ -244,13 +244,12 @@ const comprehensiveProjectSchema = z.object({
     )
     .default([]),
 
-  // Section 3: Project details
+  // Section 3: Project details (enumeration_code removed - now only in formulation tab)
   project_details: z
     .object({
       mis: z.string().default(""),
       sa: z.string().default(""),
-      enumeration_code: z.string().default(""),
-      inclusion_year: z.string().default(""),
+      inc_year: z.string().default(""), // Renamed from inclusion_year for consistency
       project_title: z.string().default(""),
       project_description: z.string().default(""),
       summary_description: z.string().default(""),
@@ -260,8 +259,7 @@ const comprehensiveProjectSchema = z.object({
     .default({
       mis: "",
       sa: "",
-      enumeration_code: "",
-      inclusion_year: "",
+      inc_year: "",
       project_title: "",
       project_description: "",
       summary_description: "",
@@ -269,14 +267,13 @@ const comprehensiveProjectSchema = z.object({
       project_status: "Ενεργό",
     }),
 
-  // Previous entries for section 3
+  // Previous entries for section 3 (enumeration_code removed)
   previous_entries: z
     .array(
       z.object({
         mis: z.string().default(""),
         sa: z.string().default(""),
-        enumeration_code: z.string().default(""),
-        inclusion_year: z.string().default(""),
+        inc_year: z.string().default(""),
         project_title: z.string().default(""),
         project_description: z.string().default(""),
         summary_description: z.string().default(""),
@@ -311,14 +308,25 @@ const comprehensiveProjectSchema = z.object({
     )
     .default([]),
 
-  // Section 5: Changes performed
+  // Section 5: Changes performed (enhanced with tracking fields)
   changes: z
     .array(
       z.object({
+        timestamp: z.string().default(""),
+        user_id: z.number().optional(),
+        user_name: z.string().default(""),
+        change_type: z.enum(["Initial Creation", "Budget Update", "Status Change", "Document Update", "Other"]).default("Other"),
         description: z.string().default(""),
+        notes: z.string().default(""),
       }),
     )
-    .default([]),
+    .default([{ 
+      timestamp: new Date().toISOString(),
+      user_name: "",
+      change_type: "Other",
+      description: "",
+      notes: ""
+    }]),
 });
 
 type ComprehensiveFormData = z.infer<typeof comprehensiveProjectSchema>;
@@ -377,8 +385,7 @@ export default function ComprehensiveEditFixed() {
       project_details: {
         mis: "",
         sa: "ΝΑ853",
-        enumeration_code: "",
-        inclusion_year: "",
+        inc_year: "",
         project_title: "",
         project_description: "",
         summary_description: "",
@@ -403,7 +410,13 @@ export default function ComprehensiveEditFixed() {
           comments: "",
         },
       ],
-      changes: [{ description: "" }],
+      changes: [{ 
+        timestamp: new Date().toISOString(),
+        user_name: "",
+        change_type: "Other",
+        description: "",
+        notes: ""
+      }],
     },
   });
 
@@ -595,10 +608,10 @@ export default function ComprehensiveEditFixed() {
         const projectUpdateData = {
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
-          // CRITICAL: Include the missing fields that weren't being saved
-          inclusion_year: data.project_details.inclusion_year,
+          // New fields: inc_year and updates (enumeration_code removed from project details)  
+          inc_year: data.project_details.inc_year ? parseInt(data.project_details.inc_year) : null,
+          updates: data.changes || [],
           na853: data.project_details.sa,
-          enumeration_code: data.project_details.enumeration_code,
           // Convert event_name to event_type_id if needed
           event_type: (() => {
             if (!data.event_details.event_name) {
@@ -1579,9 +1592,7 @@ export default function ComprehensiveEditFixed() {
         project_details: {
           mis: typedProjectData.mis?.toString() || "",
           sa: formulations.length > 0 ? formulations[0].sa : "ΝΑ853",
-          enumeration_code:
-            formulations.length > 0 ? formulations[0].enumeration_code : "",
-          inclusion_year: "",
+          inc_year: typedProjectData.inc_year?.toString() || "",
           project_title: typedProjectData.project_title || "",
           project_description: typedProjectData.event_description || "",
           summary_description: "",
@@ -1591,7 +1602,15 @@ export default function ComprehensiveEditFixed() {
         formulation_details: formulations,
         location_details: getLocationDetailsFromData(),
         previous_entries: [],
-        changes: [],
+        changes: Array.isArray(typedProjectData.updates) && typedProjectData.updates.length > 0 
+          ? typedProjectData.updates 
+          : [{ 
+              timestamp: new Date().toISOString().slice(0, 16),
+              user_name: "",
+              change_type: "Other",
+              description: "",
+              notes: ""
+            }],
       };
 
       // Set each field individually to force component updates
@@ -2690,25 +2709,7 @@ export default function ComprehensiveEditFixed() {
 
                         <FormField
                           control={form.control}
-                          name="project_details.enumeration_code"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  placeholder="π.χ. 2023ΕΠ00100001"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="project_details.inclusion_year"
+                          name="project_details.inc_year"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Έτος Ένταξης</FormLabel>
@@ -2718,7 +2719,9 @@ export default function ComprehensiveEditFixed() {
                             </FormItem>
                           )}
                         />
+                      </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
                           name="project_details.project_status"
@@ -3290,7 +3293,7 @@ export default function ComprehensiveEditFixed() {
                 </Card>
               </TabsContent>
 
-              {/* Tab 5: Changes */}
+              {/* Tab 5: Changes - Enhanced with comprehensive tracking */}
               <TabsContent value="changes">
                 <Card>
                   <CardHeader>
@@ -3302,9 +3305,11 @@ export default function ComprehensiveEditFixed() {
                   <CardContent>
                     <div className="space-y-4">
                       {form.watch("changes").map((_, index) => (
-                        <div key={index} className="border rounded-lg p-4">
+                        <div key={index} className="border rounded-lg p-4 bg-gray-50">
                           <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-medium">Αλλαγή {index + 1}</h4>
+                            <h4 className="font-medium text-blue-900">
+                              Αλλαγή {index + 1}
+                            </h4>
                             {form.watch("changes").length > 1 && (
                               <Button
                                 type="button"
@@ -3315,23 +3320,118 @@ export default function ComprehensiveEditFixed() {
                                   changes.splice(index, 1);
                                   form.setValue("changes", changes);
                                 }}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
 
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <FormField
+                              control={form.control}
+                              name={`changes.${index}.timestamp`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Χρονική Στιγμή</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="YYYY-MM-DD HH:MM:SS"
+                                      value={
+                                        field.value ||
+                                        new Date().toISOString().slice(0, 16)
+                                      }
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`changes.${index}.user_name`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Χρήστης</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="Όνομα χρήστη που έκανε την αλλαγή"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="mb-4">
+                            <FormField
+                              control={form.control}
+                              name={`changes.${index}.change_type`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Τύπος Αλλαγής</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Επιλέξτε τύπο αλλαγής" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Initial Creation">
+                                        Αρχική Δημιουργία
+                                      </SelectItem>
+                                      <SelectItem value="Budget Update">
+                                        Ενημέρωση Προϋπολογισμού
+                                      </SelectItem>
+                                      <SelectItem value="Status Change">
+                                        Αλλαγή Κατάστασης
+                                      </SelectItem>
+                                      <SelectItem value="Document Update">
+                                        Ενημέρωση Εγγράφων
+                                      </SelectItem>
+                                      <SelectItem value="Other">Άλλο</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="mb-4">
+                            <FormField
+                              control={form.control}
+                              name={`changes.${index}.description`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Περιγραφή Αλλαγής</FormLabel>
+                                  <FormControl>
+                                    <Textarea
+                                      {...field}
+                                      placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..."
+                                      rows={3}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
                           <FormField
                             control={form.control}
-                            name={`changes.${index}.description`}
+                            name={`changes.${index}.notes`}
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Περιγραφή Αλλαγής</FormLabel>
+                                <FormLabel>Επιπλέον Σημειώσεις</FormLabel>
                                 <FormControl>
                                   <Textarea
                                     {...field}
-                                    placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..."
-                                    rows={3}
+                                    placeholder="Προαιρετικές σημειώσεις ή παρατηρήσεις..."
+                                    rows={2}
                                   />
                                 </FormControl>
                               </FormItem>
@@ -3345,9 +3445,16 @@ export default function ComprehensiveEditFixed() {
                         variant="outline"
                         onClick={() => {
                           const changes = form.getValues("changes");
-                          changes.push({ description: "" });
+                          changes.push({
+                            timestamp: new Date().toISOString().slice(0, 16),
+                            user_name: "",
+                            change_type: "Other",
+                            description: "",
+                            notes: "",
+                          });
                           form.setValue("changes", changes);
                         }}
+                        className="w-full md:w-auto"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Προσθήκη Αλλαγής
