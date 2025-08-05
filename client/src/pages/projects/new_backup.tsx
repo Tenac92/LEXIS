@@ -134,7 +134,7 @@ const comprehensiveProjectSchema = z.object({
     expenses_executed: z.string().default(""),
     project_status: z.string().default("Ενεργό"),
   }).default({ 
-    mis: "", sa: "", enumeration_code: "", inclusion_year: "", 
+    mis: "", sa: "", inclusion_year: "", 
     project_title: "", project_description: "", summary_description: "", 
     expenses_executed: "", project_status: "Ενεργό" 
   }),
@@ -158,7 +158,12 @@ const comprehensiveProjectSchema = z.object({
   
   // Section 5: Changes performed
   changes: z.array(z.object({
+    timestamp: z.string().default(new Date().toISOString()),
+    user_id: z.number().optional(),
+    user_name: z.string().default(""),
+    change_type: z.string().default("Update"),
     description: z.string().default(""),
+    notes: z.string().default(""),
   })).default([]),
 });
 
@@ -226,7 +231,14 @@ export default function NewProjectPage() {
         connected_decisions: [], 
         comments: "" 
       }],
-      changes: [{ description: "" }],
+      changes: [{ 
+        timestamp: new Date().toISOString(),
+        user_id: undefined,
+        user_name: "",
+        change_type: "Initial Creation",
+        description: "Project created",
+        notes: ""
+      }],
     },
   });
 
@@ -296,6 +308,10 @@ export default function NewProjectPage() {
             const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
             return formEntry?.project_budget ? parseEuropeanNumber(formEntry.project_budget) : null;
           })(),
+          
+          // New fields: inc_year and updates
+          inc_year: data.project_details.inclusion_year ? parseInt(data.project_details.inclusion_year) : null,
+          updates: data.changes || [],
         };
         
         console.log("1. Creating core project data:", projectCreateData);
@@ -1346,10 +1362,15 @@ export default function NewProjectPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {form.watch("changes").map((_, index) => (
+                    {form.watch("changes").map((change, index) => (
                       <div key={index} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-4">
-                          <h4 className="font-medium">Αλλαγή {index + 1}</h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">Αλλαγή {index + 1}</h4>
+                            <span className="text-sm text-muted-foreground">
+                              {new Date(change.timestamp || new Date()).toLocaleDateString('el-GR')}
+                            </span>
+                          </div>
                           {form.watch("changes").length > 1 && (
                             <Button
                               type="button"
@@ -1366,14 +1387,66 @@ export default function NewProjectPage() {
                           )}
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <FormField
+                            control={form.control}
+                            name={`changes.${index}.change_type`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Τύπος Αλλαγής</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Επιλέξτε τύπο" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="Initial Creation">Αρχική Δημιουργία</SelectItem>
+                                    <SelectItem value="Budget Update">Ενημέρωση Προϋπολογισμού</SelectItem>
+                                    <SelectItem value="Status Change">Αλλαγή Κατάστασης</SelectItem>
+                                    <SelectItem value="Document Update">Ενημέρωση Εγγράφων</SelectItem>
+                                    <SelectItem value="Other">Άλλο</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name={`changes.${index}.user_name`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Χρήστης</FormLabel>
+                                <FormControl>
+                                  <Input {...field} placeholder="Όνομα χρήστη" readOnly />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
                         <FormField
                           control={form.control}
                           name={`changes.${index}.description`}
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="mb-4">
                               <FormLabel>Περιγραφή Αλλαγής</FormLabel>
                               <FormControl>
-                                <Textarea {...field} placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..." rows={3} />
+                                <Textarea {...field} placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..." rows={2} />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name={`changes.${index}.notes`}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Επιπλέον Σημειώσεις</FormLabel>
+                              <FormControl>
+                                <Textarea {...field} placeholder="Προσθέστε οποιεσδήποτε επιπλέον σημειώσεις..." rows={2} />
                               </FormControl>
                             </FormItem>
                           )}
@@ -1386,7 +1459,14 @@ export default function NewProjectPage() {
                       variant="outline"
                       onClick={() => {
                         const changes = form.getValues("changes");
-                        changes.push({ description: "" });
+                        changes.push({ 
+                          timestamp: new Date().toISOString(),
+                          user_id: undefined,
+                          user_name: "",
+                          change_type: "Other",
+                          description: "",
+                          notes: ""
+                        });
                         form.setValue("changes", changes);
                       }}
                     >

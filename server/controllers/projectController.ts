@@ -1209,6 +1209,67 @@ router.post('/:mis/changes', authenticateSession, async (req: AuthenticatedReque
   }
 });
 
+// Create a new project
+router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectData = req.body;
+    console.log('[Projects] Creating new project:', projectData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Prepare project data for database insertion
+    const fieldsToInsert: any = {
+      mis: projectData.mis || null,
+      na853: projectData.na853 || null,
+      project_title: projectData.project_title || null,
+      event_description: projectData.event_description || null,
+      event_year: projectData.event_year ? [projectData.event_year] : [],
+      status: projectData.status || 'Ενεργό',
+      event_type_id: projectData.event_type || null,
+      
+      // Budget fields
+      budget_e069: projectData.budget_e069 || null,
+      budget_na271: projectData.budget_na271 || null,
+      budget_na853: projectData.budget_na853 || null,
+      
+      // New fields: inc_year and updates
+      inc_year: projectData.inc_year || null,
+      updates: projectData.updates || [],
+      
+      // Timestamps
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    console.log('[Projects] Inserting project with fields:', Object.keys(fieldsToInsert));
+
+    const { data: createdProject, error: createError } = await supabase
+      .from('Projects')
+      .insert(fieldsToInsert)
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('[Projects] Error creating project:', createError);
+      return res.status(500).json({ 
+        message: "Failed to create project",
+        error: createError.message
+      });
+    }
+
+    console.log(`[Projects] Successfully created project with ID: ${createdProject.id}`);
+    res.status(201).json(createdProject);
+  } catch (error) {
+    console.error('[Projects] Error creating project:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
@@ -1287,6 +1348,20 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
     
     // Event year as JSONB array (matches database structure)
     if (updateData.event_year) fieldsToUpdate.event_year = [updateData.event_year];
+    
+    // New fields for inc_year and updates
+    if (updateData.inc_year !== undefined) {
+      fieldsToUpdate.inc_year = updateData.inc_year ? parseInt(updateData.inc_year) : null;
+      console.log(`[Projects] Setting inc_year to: ${fieldsToUpdate.inc_year}`);
+    }
+    
+    // Handle updates/changes field
+    if (updateData.updates) {
+      // Ensure we have a proper array structure for the JSONB field
+      const updatesArray = Array.isArray(updateData.updates) ? updateData.updates : [];
+      fieldsToUpdate.updates = updatesArray;
+      console.log(`[Projects] Setting updates with ${updatesArray.length} entries`);
+    }
     
     // Always update timestamp
     fieldsToUpdate.updated_at = new Date().toISOString();
