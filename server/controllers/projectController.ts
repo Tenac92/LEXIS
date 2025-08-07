@@ -620,7 +620,7 @@ router.get('/reference-data', async (req: Request, res: Response) => {
       expenditureTypesRes
     ] = await Promise.all([
       supabase.from('event_types').select('id, name').limit(100),
-      supabase.from('Monada').select('id, unit, name').limit(50),
+      supabase.from('Monada').select('id, unit, unit_name').limit(50),
       supabase.from('kallikratis').select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, level').limit(2000),
       supabase.from('expenditure_types').select('id, expenditure_types').limit(50)
     ]);
