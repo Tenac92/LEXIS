@@ -491,9 +491,6 @@ export default function ComprehensiveEditFixed() {
     completeKallikratis: completeProjectData?.kallikratis?.length || 0,
     finalKallikratisLength: kallikratisData?.length || 0,
     kallikratisSample: kallikratisData?.slice(0, 2) || [],
-    typedKallikratisLength: typedKallikratisData?.length || 0,
-    uniqueRegionsCount: getUniqueRegions().length,
-    uniqueRegions: getUniqueRegions().slice(0, 3),
   });
 
   // Debug logging for ΣΑ types and enumeration codes
@@ -554,6 +551,14 @@ export default function ComprehensiveEditFixed() {
       ),
     ].filter(Boolean);
   };
+
+  // Additional debug logging now that variables are properly initialized
+  console.log("DEBUG - Geographic Data:", {
+    typedKallikratisLength: typedKallikratisData?.length || 0,
+    uniqueRegionsCount: getUniqueRegions().length,
+    uniqueRegions: getUniqueRegions().slice(0, 3),
+    sampleKallikratisEntry: typedKallikratisData?.[0],
+  });
 
   // Number formatting helper functions
   const formatNumberWhileTyping = (value: string): string => {
