@@ -616,14 +616,87 @@ router.get('/reference-data', async (req: Request, res: Response) => {
     const [
       eventTypesRes,
       unitsRes,
-      kallikratisRes,
-      expenditureTypesRes
+      expenditureTypesRes,
+      projectIndexRes
     ] = await Promise.all([
       supabase.from('event_types').select('id, name').limit(100),
       supabase.from('Monada').select('id, unit, unit_name').limit(50),
-      supabase.from('kallikratis').select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, level').limit(2000),
-      supabase.from('expenditure_types').select('id, expenditure_types').limit(50)
+      supabase.from('expenditure_types').select('id, expenditure_types').limit(50),
+      supabase.from('project_index').select('kallikratis_id, region').limit(5000)
     ]);
+
+    // Extract unique geographic regions from project_index instead of empty kallikratis table
+    const indexData = projectIndexRes.data || [];
+    const uniqueRegions = new Map();
+    
+    indexData.forEach(item => {
+      if (item.region && typeof item.region === 'object') {
+        const region = item.region;
+        // Create unique entries for regions, prefectures, municipalities, etc.
+        if (region.perifereia && !uniqueRegions.has(region.perifereia)) {
+          uniqueRegions.set(region.perifereia, {
+            id: `region_${region.perifereia.toLowerCase().replace(/\s+/g, '_')}`,
+            perifereia: region.perifereia,
+            level: 'region'
+          });
+        }
+        if (region.perifereiaki_enotita && !uniqueRegions.has(region.perifereiaki_enotita)) {
+          uniqueRegions.set(region.perifereiaki_enotita, {
+            id: `prefecture_${region.perifereiaki_enotita.toLowerCase().replace(/\s+/g, '_')}`,
+            perifereiaki_enotita: region.perifereiaki_enotita,
+            perifereia: region.perifereia,
+            level: 'prefecture'
+          });
+        }
+        if (region.onoma_neou_ota && !uniqueRegions.has(region.onoma_neou_ota)) {
+          uniqueRegions.set(region.onoma_neou_ota, {
+            id: `municipality_${region.onoma_neou_ota.toLowerCase().replace(/\s+/g, '_')}`,
+            onoma_neou_ota: region.onoma_neou_ota,
+            perifereiaki_enotita: region.perifereiaki_enotita,
+            perifereia: region.perifereia,
+            level: 'municipality'
+          });
+        }
+        if (region.dimotiki_enotita && !uniqueRegions.has(region.dimotiki_enotita)) {
+          uniqueRegions.set(region.dimotiki_enotita, {
+            id: `unit_${region.dimotiki_enotita.toLowerCase().replace(/\s+/g, '_')}`,
+            dimotiki_enotita: region.dimotiki_enotita,
+            onoma_neou_ota: region.onoma_neou_ota,
+            perifereiaki_enotita: region.perifereiaki_enotita,
+            perifereia: region.perifereia,
+            level: 'municipal_unit'
+          });
+        }
+      }
+    });
+
+    // Convert to array and sort by level and name
+    let kallikratisFromIndex = Array.from(uniqueRegions.values())
+      .sort((a, b) => {
+        const levelOrder = { 'region': 1, 'prefecture': 2, 'municipality': 3, 'municipal_unit': 4 };
+        if (levelOrder[a.level] !== levelOrder[b.level]) {
+          return levelOrder[a.level] - levelOrder[b.level];
+        }
+        const nameA = a.perifereia || a.perifereiaki_enotita || a.onoma_neou_ota || a.dimotiki_enotita || '';
+        const nameB = b.perifereia || b.perifereiaki_enotita || b.onoma_neou_ota || b.dimotiki_enotita || '';
+        return nameA.localeCompare(nameB, 'el', { sensitivity: 'base' });
+      });
+
+    // If no geographic data found in project_index, provide common Greek regions as fallback
+    if (kallikratisFromIndex.length === 0) {
+      console.log('[ProjectReference] No geographic data found in project_index, providing common regions fallback');
+      kallikratisFromIndex = [
+        { id: 'region_attiki', perifereia: 'ΑΤΤΙΚΗ', level: 'region' },
+        { id: 'region_kentriki_makedonia', perifereia: 'ΚΕΝΤΡΙΚΗ ΜΑΚΕΔΟΝΙΑ', level: 'region' },
+        { id: 'region_dytiki_ellada', perifereia: 'ΔΥΤΙΚΗ ΕΛΛΑΔΑ', level: 'region' },
+        { id: 'region_thessalia', perifereia: 'ΘΕΣΣΑΛΙΑ', level: 'region' },
+        { id: 'region_peloponnisos', perifereia: 'ΠΕΛΟΠΟΝΝΗΣΟΣ', level: 'region' },
+        { id: 'region_sterea_ellada', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'region' },
+        { id: 'region_kentriki_ellada', perifereia: 'ΚΕΝΤΡΙΚΗ ΕΛΛΑΔΑ', level: 'region' },
+        { id: 'prefecture_voiotias', perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'prefecture' },
+        { id: 'prefecture_fthiotidas', perifereiaki_enotita: 'ΦΘΙΩΤΙΔΑΣ', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'prefecture' }
+      ];
+    }
     
     // Set aggressive caching headers for reference data
     res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600'); // 1 hour cache
@@ -632,7 +705,7 @@ router.get('/reference-data', async (req: Request, res: Response) => {
     const referenceData = {
       eventTypes: eventTypesRes.data || [],
       units: unitsRes.data || [],
-      kallikratis: kallikratisRes.data || [],
+      kallikratis: kallikratisFromIndex,
       expenditureTypes: expenditureTypesRes.data || []
     };
     
