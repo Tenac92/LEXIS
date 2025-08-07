@@ -210,14 +210,14 @@ export default function BeneficiariesPage() {
       if (data && Array.isArray(data)) {
         const regions = new Map();
         data.forEach((project: any) => {
-          if (project.region && project.region.perifereia && project.region.kodikos_perifereias) {
-            const regionCode = project.region.kodikos_perifereias.toString();
-            if (!regions.has(regionCode)) {
-              regions.set(regionCode, project.region.perifereia);
+          if (project.region && project.region.id && project.region.name) {
+            const regionId = project.region.id.toString();
+            if (!regions.has(regionId)) {
+              regions.set(regionId, project.region.name);
             }
           }
         });
-        return Array.from(regions.entries()).map(([code, name]) => ({ code, name }));
+        return Array.from(regions.entries()).map(([id, name]) => ({ id, name }));
       }
       return [];
     },
@@ -255,12 +255,27 @@ export default function BeneficiariesPage() {
     return paymentMap;
   }, [beneficiaryPayments]);
 
-  // REGION MAPPING: Helper function to get region name from region code
-  const getRegionName = useCallback((regionCode: string | null) => {
-    if (!regionCode || !kallikratisData.length) return regionCode;
+  // REGION MAPPING: Helper function to get region name from region ID
+  const getRegionName = useCallback((regionId: string | null) => {
+    if (!regionId) return regionId;
     
-    const regionMapping = kallikratisData.find(region => region.code === regionCode.toString());
-    return regionMapping ? regionMapping.name : regionCode;
+    if (kallikratisData.length === 0) {
+      console.log('[RegionMapping] No kallikratis data available');
+      return regionId;
+    }
+    
+    console.log('[RegionMapping] Looking for region ID:', regionId, 'in', kallikratisData.length, 'regions');
+    console.log('[RegionMapping] Sample regions:', kallikratisData.slice(0, 3));
+    
+    const regionMapping = kallikratisData.find(region => region.id === regionId.toString());
+    
+    if (regionMapping) {
+      console.log('[RegionMapping] Found mapping:', regionId, '->', regionMapping.name);
+      return regionMapping.name;
+    } else {
+      console.log('[RegionMapping] No mapping found for region ID:', regionId);
+      return regionId;
+    }
   }, [kallikratisData]);
 
   // Optimized helper functions using memoized data
