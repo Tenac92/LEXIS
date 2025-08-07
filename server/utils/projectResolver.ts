@@ -81,7 +81,7 @@ export async function resolveProject(identifier: string | number): Promise<Proje
       return data;
     }
 
-    console.log(`[ProjectResolver] No project found for identifier: ${identifier}`);
+    console.error(`Project not found: ${identifier}`);
     return null;
     
   } catch (error) {

@@ -40,6 +40,22 @@ Core architectural decisions include:
 
 ## Recent Changes
 
+### ✅ WebSocket Connection & Error Handling Improvements (August 7, 2025)
+
+**🔗 Enhanced WebSocket Connection Reliability**
+- Fixed WebSocket URL construction to handle undefined port values gracefully
+- Added comprehensive validation for hostname and port variables before connection
+- Implemented fallback values and edge case handling for various deployment environments
+- Enhanced error logging to differentiate between connection types and network issues
+- **Result**: WebSocket connections now work reliably across all environments without "undefined" URL errors
+
+**🛠️ Project Resolution Error Handling**
+- Improved project resolver error messages to be more specific and actionable
+- Enhanced client-side error handling to distinguish between 404 (not found) and other errors
+- Added better logging for "Project not found" scenarios to aid in debugging
+- Standardized error messaging format across project lookup operations
+- **Result**: Better user experience when dealing with missing or invalid project references
+
 ### ✅ Kallikratis Geographic Data Resolution (August 7, 2025)
 
 **🗺️ Complete Geographic Data Integration Fix**

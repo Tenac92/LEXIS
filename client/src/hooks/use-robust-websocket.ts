@@ -84,24 +84,38 @@ export function useRobustWebSocket() {
     try {
       // Construct WebSocket URL with protocol detection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const port = window.location.port;
-      const hostname = window.location.hostname;
+      const port = window.location.port || '';
+      const hostname = window.location.hostname || 'localhost';
+      
+      // Validate essential components
+      if (!hostname || hostname === 'undefined') {
+        console.error('[RobustWebSocket] Invalid hostname detected:', hostname);
+        console.error('[RobustWebSocket] Window location:', window.location);
+        throw new Error('Invalid WebSocket hostname - cannot connect');
+      }
       
       // Construct WebSocket URL with proper port handling
       let wsUrl;
       console.log('[RobustWebSocket] URL construction:', { protocol, hostname, port });
       
-      if (port && port !== '80' && port !== '443' && port !== '') {
+      // Only include port if it's not a standard port and not empty
+      const shouldIncludePort = port && 
+                                port !== '80' && 
+                                port !== '443' && 
+                                port !== '' && 
+                                port !== 'undefined';
+      
+      if (shouldIncludePort) {
         wsUrl = `${protocol}//${hostname}:${port}/ws?t=${Date.now()}`;
       } else {
         wsUrl = `${protocol}//${hostname}/ws?t=${Date.now()}`;
       }
       
-      // Validate URL before connection
-      if (wsUrl.includes('undefined')) {
+      // Final validation for any undefined values
+      if (wsUrl.includes('undefined') || wsUrl.includes('null')) {
         console.error('[RobustWebSocket] Invalid URL detected:', wsUrl);
         console.error('[RobustWebSocket] Window location:', window.location);
-        throw new Error('Invalid WebSocket URL - contains undefined values');
+        throw new Error('Invalid WebSocket URL - contains undefined/null values');
       }
       
       console.log('[RobustWebSocket] Connecting to:', wsUrl);

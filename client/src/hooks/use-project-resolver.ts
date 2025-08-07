@@ -31,8 +31,13 @@ export function useProjectResolver(identifier: string | number | null) {
       try {
         const response = await apiRequest(`/api/projects/resolve/${encodeURIComponent(identifier)}`);
         return response as ProjectData;
-      } catch (error) {
-        console.error('Failed to resolve project:', error);
+      } catch (error: any) {
+        // More specific error logging
+        if (error.status === 404) {
+          console.error(`Project not found: ${identifier}`);
+        } else {
+          console.error(`Failed to resolve project ${identifier}:`, error.message || error);
+        }
         return null;
       }
     },
