@@ -454,10 +454,10 @@ export default function ComprehensiveEditFixed() {
   const formulationsData = completeProjectData?.formulations;
   
   // Extract reference data from separate endpoint (with fallback to old structure for compatibility)
-  const eventTypesData = referenceData?.eventTypes || completeProjectData?.eventTypes;
-  const unitsData = referenceData?.units || completeProjectData?.units;
-  const kallikratisData = referenceData?.kallikratis || completeProjectData?.kallikratis;
-  const expenditureTypesData = referenceData?.expenditureTypes || completeProjectData?.expenditureTypes;
+  const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
+  const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
+  const kallikratisData = (referenceData?.kallikratis?.length > 0 ? referenceData.kallikratis : completeProjectData?.kallikratis);
+  const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
   const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean))] || [];
