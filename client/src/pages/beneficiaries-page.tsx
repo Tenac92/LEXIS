@@ -202,6 +202,31 @@ export default function BeneficiariesPage() {
     enabled: beneficiaries.length > 0,
   });
 
+  // Fetch kallikratis data for region name mapping with aggressive caching
+  const { data: kallikratisData = [] } = useQuery({
+    queryKey: ["/api/projects/cards"],
+    select: (data: any) => {
+      // Extract unique regions from enhanced project data
+      if (data && Array.isArray(data)) {
+        const regions = new Map();
+        data.forEach((project: any) => {
+          if (project.region && project.region.perifereia && project.region.kodikos_perifereias) {
+            const regionCode = project.region.kodikos_perifereias.toString();
+            if (!regions.has(regionCode)) {
+              regions.set(regionCode, project.region.perifereia);
+            }
+          }
+        });
+        return Array.from(regions.entries()).map(([code, name]) => ({ code, name }));
+      }
+      return [];
+    },
+    staleTime: 60 * 60 * 1000, // 1 hour cache - region data rarely changes
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
   // PERFORMANCE OPTIMIZATION: Memoized payment data to avoid recalculation on every render
   const beneficiaryPaymentData = useMemo(() => {
     if (!Array.isArray(beneficiaryPayments)) return new Map();
@@ -229,6 +254,14 @@ export default function BeneficiariesPage() {
     
     return paymentMap;
   }, [beneficiaryPayments]);
+
+  // REGION MAPPING: Helper function to get region name from region code
+  const getRegionName = useCallback((regionCode: string | null) => {
+    if (!regionCode || !kallikratisData.length) return regionCode;
+    
+    const regionMapping = kallikratisData.find(region => region.code === regionCode.toString());
+    return regionMapping ? regionMapping.name : regionCode;
+  }, [kallikratisData]);
 
   // Optimized helper functions using memoized data
   const getPaymentsForBeneficiary = (beneficiaryId: number) => {
@@ -512,7 +545,7 @@ export default function BeneficiariesPage() {
                                   {beneficiary.region && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Building className="w-4 h-4" />
-                                      <span>{beneficiary.region}</span>
+                                      <span>{getRegionName(beneficiary.region)}</span>
                                     </div>
                                   )}
                                 </div>
@@ -703,7 +736,7 @@ export default function BeneficiariesPage() {
                                     <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                     <div>
                                       <span className="text-xs text-blue-600 font-medium">Περιοχή</span>
-                                      <p className="text-sm text-blue-900 font-medium">{beneficiary.region}</p>
+                                      <p className="text-sm text-blue-900 font-medium">{getRegionName(beneficiary.region)}</p>
                                     </div>
                                   </div>
                                 )}

@@ -1011,6 +1011,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public kallikratis data endpoint for region name mapping
+  app.get('/api/public/kallikratis', async (req: Request, res: Response) => {
+    try {
+      const { data: kallikratisData, error } = await supabase
+        .from('kallikratis')
+        .select('*')
+        .order('perifereia', { ascending: true })
+        .order('perifereiaki_enotita', { ascending: true })
+        .order('onoma_neou_ota', { ascending: true });
+
+      if (error) {
+        console.error('[Kallikratis] Database error:', error);
+        return res.status(500).json({ error: error.message });
+      }
+
+      res.json(kallikratisData || []);
+    } catch (error) {
+      console.error('[Kallikratis] Error fetching data:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   log('[Routes] API routes registered');
   
   // Additional project endpoints
