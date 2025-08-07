@@ -340,11 +340,11 @@ export const documentTemplates = pgTable("document_templates", {
  */
 export const monada = pgTable("Monada", {
   id: bigint("id", { mode: "number" }).primaryKey(),
-  unit: text("unit").notNull(),
-  unit_name: jsonb("unit_name").notNull(),
+  unit: text("unit"),
+  unit_name: jsonb("unit_name"),
   parts: jsonb("parts"),
   email: text("email"),
-  manager: jsonb("manager"),
+  director: jsonb("director"),
   address: jsonb("address"),
 });
 
