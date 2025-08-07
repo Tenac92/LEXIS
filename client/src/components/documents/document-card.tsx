@@ -240,7 +240,7 @@ const DocumentCard = memo(function DocumentCard({
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="text-lg font-bold text-foreground">
                     {doc.protocol_number_input && doc.protocol_date
-                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR")}`
+                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR").replace(/\//g, '.')}`
                       : `Έγγραφο #${doc.id}`}
                   </h3>
                   <Badge variant={statusDetails.variant as any}>
@@ -387,7 +387,7 @@ const DocumentCard = memo(function DocumentCard({
                 <div className="space-y-2 flex-1">
                   <h3 className="text-xl font-bold text-gray-900 leading-tight">
                     {doc.protocol_number_input && doc.protocol_date
-                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR")}`
+                      ? `${doc.protocol_number_input}/${new Date(doc.protocol_date).toLocaleDateString("el-GR").replace(/\//g, '.')}`
                       : `Έγγραφο #${doc.id}`}
                   </h3>
                   <Badge variant={statusDetails.variant}>
@@ -454,7 +454,7 @@ const DocumentCard = memo(function DocumentCard({
                       <span className="text-blue-900">
                         {new Date(doc.protocol_date).toLocaleDateString(
                           "el-GR",
-                        )}
+                        ).replace(/\//g, '.')}
                       </span>
                     </div>
                   )}
