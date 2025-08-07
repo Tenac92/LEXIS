@@ -422,52 +422,31 @@ export default function NewProjectPage() {
     return Array.from(regions).sort();
   };
 
-  const getRegionalUnitsForRegion = (region: string, searchQuery?: string) => {
-    if (!typedKallikratisData || !region) return [];
+  // Pre-compute regional units map for performance
+  const regionUnitsMap = useMemo(() => {
+    if (!typedKallikratisData) return new Map<string, string[]>();
     
-    // Get all regional units for the region
-    const units = new Set(
-      typedKallikratisData
-        .filter(k => k.perifereia === region)
-        .map(k => k.perifereiaki_enotita)
-        .filter(Boolean) // Remove empty/null values
-    );
-    
-    let filteredUnits = Array.from(units);
-    
-    // Apply search filter if provided
-    if (searchQuery && searchQuery.trim()) {
-      const normalizedQuery = searchQuery.toLowerCase().trim();
-      filteredUnits = filteredUnits.filter(unit => 
-        unit.toLowerCase().includes(normalizedQuery)
-      );
-    }
-    
-    // Smart sorting: prioritize exact matches, then partial matches, then alphabetical
-    return filteredUnits.sort((a, b) => {
-      if (!searchQuery) return a.localeCompare(b, 'el'); // Greek locale sorting
-      
-      const query = searchQuery.toLowerCase();
-      const aLower = a.toLowerCase();
-      const bLower = b.toLowerCase();
-      
-      // Exact matches first
-      if (aLower === query) return -1;
-      if (bLower === query) return 1;
-      
-      // Starts with query
-      if (aLower.startsWith(query) && !bLower.startsWith(query)) return -1;
-      if (bLower.startsWith(query) && !aLower.startsWith(query)) return 1;
-      
-      // Contains query
-      const aContains = aLower.includes(query);
-      const bContains = bLower.includes(query);
-      if (aContains && !bContains) return -1;
-      if (bContains && !aContains) return 1;
-      
-      // Alphabetical for equal relevance
-      return a.localeCompare(b, 'el');
+    const map = new Map<string, Set<string>>();
+    typedKallikratisData.forEach(k => {
+      if (k.perifereia && k.perifereiaki_enotita) {
+        if (!map.has(k.perifereia)) {
+          map.set(k.perifereia, new Set());
+        }
+        map.get(k.perifereia)!.add(k.perifereiaki_enotita);
+      }
     });
+    
+    // Convert sets to sorted arrays for final performance
+    const finalMap = new Map<string, string[]>();
+    map.forEach((units, region) => {
+      finalMap.set(region, Array.from(units).sort((a, b) => a.localeCompare(b, 'el')));
+    });
+    
+    return finalMap;
+  }, [typedKallikratisData]);
+
+  const getRegionalUnitsForRegion = (region: string) => {
+    return regionUnitsMap.get(region) || [];
   };
 
   const getMunicipalitiesForRegionalUnit = (region: string, regionalUnit: string) => {

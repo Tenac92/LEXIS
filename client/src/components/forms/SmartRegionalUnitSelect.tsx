@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
@@ -34,54 +34,55 @@ export function SmartRegionalUnitSelect({
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Smart filtering function
+  // Optimized filtering with pre-computed maps for speed
+  const regionUnitsMap = useMemo(() => {
+    if (!kallikratisData) return new Map();
+    
+    const map = new Map<string, Set<string>>();
+    kallikratisData.forEach(k => {
+      if (k.perifereia && k.perifereiaki_enotita) {
+        if (!map.has(k.perifereia)) {
+          map.set(k.perifereia, new Set());
+        }
+        map.get(k.perifereia)!.add(k.perifereiaki_enotita);
+      }
+    });
+    return map;
+  }, [kallikratisData]);
+
   const getFilteredRegionalUnits = useMemo(() => {
-    if (!kallikratisData || !region) return [];
+    if (!region || !regionUnitsMap.has(region)) return [];
     
-    // Get all regional units for the region
-    const units = new Set(
-      kallikratisData
-        .filter(k => k.perifereia === region)
-        .map(k => k.perifereiaki_enotita)
-        .filter(Boolean) // Remove empty/null values
-    );
+    const units = Array.from(regionUnitsMap.get(region)!) as string[];
     
-    let filteredUnits = Array.from(units);
-    
-    // Apply search filter if provided
-    if (searchQuery && searchQuery.trim()) {
-      const normalizedQuery = searchQuery.toLowerCase().trim();
-      filteredUnits = filteredUnits.filter(unit => 
-        unit.toLowerCase().includes(normalizedQuery)
-      );
+    // Early return for no search
+    if (!searchQuery?.trim()) {
+      return units.sort((a: string, b: string) => a.localeCompare(b, 'el'));
     }
     
-    // Smart sorting: prioritize exact matches, then partial matches, then alphabetical
-    return filteredUnits.sort((a, b) => {
-      if (!searchQuery) return a.localeCompare(b, 'el'); // Greek locale sorting
-      
-      const query = searchQuery.toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = units.filter((unit: string) => 
+      unit.toLowerCase().includes(query)
+    );
+    
+    // Fast sorting with single pass
+    return filtered.sort((a: string, b: string) => {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       
-      // Exact matches first
+      // Exact match priority
       if (aLower === query) return -1;
       if (bLower === query) return 1;
       
-      // Starts with query
-      if (aLower.startsWith(query) && !bLower.startsWith(query)) return -1;
-      if (bLower.startsWith(query) && !aLower.startsWith(query)) return 1;
+      // Starts with priority
+      const aStarts = aLower.startsWith(query);
+      const bStarts = bLower.startsWith(query);
+      if (aStarts !== bStarts) return aStarts ? -1 : 1;
       
-      // Contains query
-      const aContains = aLower.includes(query);
-      const bContains = bLower.includes(query);
-      if (aContains && !bContains) return -1;
-      if (bContains && !aContains) return 1;
-      
-      // Alphabetical for equal relevance
+      // Alphabetical
       return a.localeCompare(b, 'el');
     });
-  }, [kallikratisData, region, searchQuery]);
+  }, [regionUnitsMap, region, searchQuery]);
 
   const handleSelect = (selectedValue: string) => {
     onValueChange(selectedValue === value ? "" : selectedValue);
@@ -89,16 +90,10 @@ export function SmartRegionalUnitSelect({
     setSearchQuery("");
   };
 
-  // Get statistics for better UX
+  // Fast statistics using pre-computed map
   const totalUnitsInRegion = useMemo(() => {
-    if (!kallikratisData || !region) return 0;
-    return new Set(
-      kallikratisData
-        .filter(k => k.perifereia === region)
-        .map(k => k.perifereiaki_enotita)
-        .filter(Boolean)
-    ).size;
-  }, [kallikratisData, region]);
+    return regionUnitsMap.get(region)?.size || 0;
+  }, [regionUnitsMap, region]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -150,7 +145,7 @@ export function SmartRegionalUnitSelect({
               </CommandEmpty>
 
               <CommandGroup className="max-h-[200px] overflow-y-auto">
-                {getFilteredRegionalUnits.map((unit) => (
+                {getFilteredRegionalUnits.map((unit: string) => (
                   <CommandItem
                     key={unit}
                     value={unit}
@@ -166,13 +161,13 @@ export function SmartRegionalUnitSelect({
                     <span className="flex-1">
                       {searchQuery ? (
                         // Highlight matching text
-                        unit.split(new RegExp(`(${searchQuery})`, 'gi')).map((part, index) =>
+                        unit.split(new RegExp(`(${searchQuery})`, 'gi')).map((part: string, index: number) =>
                           part.toLowerCase() === searchQuery.toLowerCase() ? (
                             <mark key={index} className="bg-yellow-200 font-medium">
                               {part}
                             </mark>
                           ) : (
-                            part
+                            <span key={index}>{part}</span>
                           )
                         )
                       ) : (
