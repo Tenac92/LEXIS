@@ -420,7 +420,7 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
-  // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
+  // PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
   const {
     data: completeProjectData,
     isLoading: isCompleteDataLoading,
@@ -428,21 +428,36 @@ export default function ComprehensiveEditFixed() {
   } = useQuery({
     queryKey: [`/api/projects/${mis}/complete`],
     enabled: !!mis,
-    staleTime: 10 * 60 * 1000, // 10 minutes cache for better performance
-    gcTime: 30 * 60 * 1000, // 30 minutes cache retention (v5 renamed from cacheTime)
-    refetchOnWindowFocus: false, // Prevent unnecessary refetches
-    refetchOnMount: false, // Use cached data when available
+    staleTime: 5 * 60 * 1000, // 5 minutes cache for project-specific data
+    gcTime: 15 * 60 * 1000, // 15 minutes cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
-  // Extract data from unified API response with proper typing
+  // PERFORMANCE OPTIMIZATION: Separate query for reference data with aggressive caching
+  const {
+    data: referenceData,
+    isLoading: isReferenceDataLoading,
+    error: referenceDataError,
+  } = useQuery({
+    queryKey: ['/api/projects/reference-data'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache for reference data
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Extract data from optimized API responses with proper typing
   const projectData = completeProjectData?.project;
   const projectIndexData = completeProjectData?.index;
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
-  const eventTypesData = completeProjectData?.eventTypes;
-  const unitsData = completeProjectData?.units;
-  const kallikratisData = completeProjectData?.kallikratis;
-  const expenditureTypesData = completeProjectData?.expenditureTypes;
+  
+  // Extract reference data from separate endpoint (with fallback to old structure for compatibility)
+  const eventTypesData = referenceData?.eventTypes || completeProjectData?.eventTypes;
+  const unitsData = referenceData?.units || completeProjectData?.units;
+  const kallikratisData = referenceData?.kallikratis || completeProjectData?.kallikratis;
+  const expenditureTypesData = referenceData?.expenditureTypes || completeProjectData?.expenditureTypes;
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
   const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean))] || [];
@@ -453,14 +468,21 @@ export default function ComprehensiveEditFixed() {
     return acc;
   }, {} as Record<string, string>) || {};
 
-  // Debug logging for unified data fetch
-  console.log("DEBUG - Complete Project Data:", {
-    hasData: !!completeProjectData,
+  // Check if all essential data is loading
+  const isEssentialDataLoading = isCompleteDataLoading;
+  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading;
+  
+  // Debug logging for optimized data fetch
+  console.log("DEBUG - Project Data:", {
+    hasProjectData: !!completeProjectData,
+    hasReferenceData: !!referenceData,
     projectData: !!projectData,
     decisionsCount: decisionsData?.length || 0,
     formulationsCount: formulationsData?.length || 0,
-    isLoading: isCompleteDataLoading,
-    error: completeDataError?.message || completeDataError,
+    isProjectLoading: isCompleteDataLoading,
+    isReferenceLoading: isReferenceDataLoading,
+    projectError: completeDataError?.message || completeDataError,
+    referenceError: referenceDataError?.message || referenceDataError,
   });
 
   // Debug logging for ΣΑ types and enumeration codes
@@ -1704,13 +1726,16 @@ export default function ComprehensiveEditFixed() {
     typedExpenditureTypesData,
   ]);
 
-  const isLoading = isCompleteDataLoading;
+  // PERFORMANCE: Only block on essential project data, allow progressive loading for reference data
+  const isLoading = isEssentialDataLoading;
   const isDataReady =
     typedProjectData &&
-    typedEventTypesData &&
-    typedUnitsData &&
-    typedKallikratisData &&
-    typedExpenditureTypesData;
+    (typedEventTypesData || referenceData?.eventTypes) &&
+    (typedUnitsData || referenceData?.units) &&
+    (typedExpenditureTypesData || referenceData?.expenditureTypes);
+  
+  // Kallikratis data can load progressively without blocking the form
+  const hasKallikratisData = typedKallikratisData || referenceData?.kallikratis;
 
   if (completeDataError) {
     return (
@@ -1740,10 +1765,21 @@ export default function ComprehensiveEditFixed() {
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <div
-                    className={`w-2 h-2 rounded-full ${typedUnitsData ? "bg-green-500" : "bg-gray-300"}`}
+                    className={`w-2 h-2 rounded-full ${(typedUnitsData || referenceData?.units) ? "bg-green-500" : "bg-gray-300"}`}
                   ></div>
-                  <span>Φορείς υλοποίησης {typedUnitsData ? "✓" : "..."}</span>
+                  <span>Φορείς υλοποίησης {(typedUnitsData || referenceData?.units) ? "✓" : "..."}</span>
                 </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${(typedEventTypesData || referenceData?.eventTypes) ? "bg-green-500" : "bg-gray-300"}`}
+                  ></div>
+                  <span>Τύποι συμβάντων {(typedEventTypesData || referenceData?.eventTypes) ? "✓" : "..."}</span>
+                </div>
+                {isReferenceDataLoading && (
+                  <div className="text-sm text-gray-500 text-center">
+                    Φόρτωση επιπλέον δεδομένων στο παρασκήνιο...
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

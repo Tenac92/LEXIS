@@ -493,25 +493,29 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       projectId = projectByMis.id;
     }
     
-    // Fetch all related data in parallel for optimal performance
+    // PERFORMANCE OPTIMIZATION: Fetch only essential project-specific data first
+    // Reference data will be cached and loaded separately
     const [
       decisionsRes,
       formulationsRes,
-      indexRes,
+      indexRes
+    ] = await Promise.all([
+      supabase.from('project_decisions').select('*').eq('project_id', projectId).order('decision_sequence'),
+      supabase.from('project_formulations').select('*').eq('project_id', projectId).order('created_at'),
+      supabase.from('project_index').select('*').eq('project_id', projectId)
+    ]);
+
+    // Fetch reference data with optimized queries and smaller limits for initial load
+    const [
       eventTypesRes,
       unitsRes,
-      kallikratisRes,
       expenditureTypesRes
     ] = await Promise.all([
-      supabase.from('project_decisions').select('*').eq('project_id', projectId),
-      supabase.from('project_formulations').select('*').eq('project_id', projectId),
-      supabase.from('project_index').select('*').eq('project_id', projectId),
-      supabase.from('event_types').select('*').limit(100),
-      supabase.from('Monada').select('*').limit(50),
-      supabase.from('kallikratis').select('*').limit(2000),
-      supabase.from('expenditure_types').select('*').limit(50)
+      supabase.from('event_types').select('id, name').limit(50), // Only essential fields
+      supabase.from('Monada').select('id, unit, name').limit(30), // Only essential fields  
+      supabase.from('expenditure_types').select('id, expenditure_types').limit(30) // Only essential fields
     ]);
-    
+
     // Check for errors in reference data queries
     if (eventTypesRes.error) {
       console.error('[ProjectComplete] Error fetching event types:', eventTypesRes.error);
@@ -522,15 +526,23 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     if (expenditureTypesRes.error) {
       console.error('[ProjectComplete] Error fetching expenditure types:', expenditureTypesRes.error);
     }
-    if (kallikratisRes.error) {
-      console.error('[ProjectComplete] Error fetching kallikratis:', kallikratisRes.error);
-    }
     
     // Enhance project data with related information
     const eventTypes = eventTypesRes.data || [];
     const units = unitsRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
-    const kallikratis = kallikratisRes.data || [];
+    
+    // Load kallikratis data asynchronously - it's large but not immediately needed
+    let kallikratis: any[] = [];
+    try {
+      const kallikratisResponse = await supabase
+        .from('kallikratis')
+        .select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, level')
+        .limit(1000); // Reduced from 2000 for faster initial load
+      kallikratis = kallikratisResponse.data || [];
+    } catch (kallikratisError) {
+      console.warn('[ProjectComplete] Kallikratis data load failed, continuing without:', kallikratisError);
+    }
     
     // Get related data from project_index entries (the most common ones)
     const projectIndex = indexRes.data || [];
@@ -590,6 +602,47 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     console.error('[ProjectComplete] Error fetching complete project data:', error);
     res.status(500).json({ 
       message: 'Failed to fetch complete project data',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Separate endpoint for reference data that can be heavily cached
+router.get('/reference-data', async (req: Request, res: Response) => {
+  try {
+    console.log('[ProjectReference] Fetching reference data');
+    
+    // Fetch all reference data in parallel with optimized queries
+    const [
+      eventTypesRes,
+      unitsRes,
+      kallikratisRes,
+      expenditureTypesRes
+    ] = await Promise.all([
+      supabase.from('event_types').select('id, name').limit(100),
+      supabase.from('Monada').select('id, unit, name').limit(50),
+      supabase.from('kallikratis').select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, level').limit(2000),
+      supabase.from('expenditure_types').select('id, expenditure_types').limit(50)
+    ]);
+    
+    // Set aggressive caching headers for reference data
+    res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600'); // 1 hour cache
+    res.set('ETag', `"reference-data-${Date.now()}"`);
+    
+    const referenceData = {
+      eventTypes: eventTypesRes.data || [],
+      units: unitsRes.data || [],
+      kallikratis: kallikratisRes.data || [],
+      expenditureTypes: expenditureTypesRes.data || []
+    };
+    
+    console.log(`[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, kallikratis=${referenceData.kallikratis.length}, expenditureTypes=${referenceData.expenditureTypes.length}`);
+    
+    res.json(referenceData);
+  } catch (error) {
+    console.error('[ProjectReference] Error fetching reference data:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch reference data',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
