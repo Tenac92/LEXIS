@@ -1,0 +1,63 @@
+
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Failed to update project", requestInfo: {…}, stack: "Error: Failed to update project↵    at apiRequest…"}
+
+✗ Project update failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error details: 
+Error {}
+
+Completed operations: 
+Object {projectUpdate: false, decisions: Array(0), formulations: Array(0), changes: false}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Failed to update project", requestInfo: {…}, stack: "Error: Failed to update project↵    at apiRequest…"}
+
+✗ Project update failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+Error details: 
+Error {}
+message: "Failed to update project data: Failed to update project"
+stack: "Error: Failed to update project data: Failed to update project↵ at Object.mutationFn (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:549:17)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Completed operations: 
+Object {projectUpdate: false, decisions: Array(0), formulations: Array(0), changes: false}
+changes: false
+decisions: Array(0)
+formulations: Array(0)
+projectUpdate: false
+[[Prototype]]: Object
+
+Form submission failed: 
+Error {originalError: Error, completedOperations: {…}}
+completedOperations: Object
+changes: false
+decisions: Array(0)
+formulations: Array(0)
+projectUpdate: false
+[[Prototype]]: Object
+originalError: Error
+message: "Σφάλμα ενημέρωσης βασικών στοιχείων έργου"
+stack: "Error: Σφάλμα ενημέρωσης βασικών στοιχείων έργου↵ at Object.mutationFn (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:907:31)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object

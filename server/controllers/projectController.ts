@@ -1371,10 +1371,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
       console.log(`[Projects] Setting event_type_id to: ${updateData.event_type} (type: ${typeof updateData.event_type})`);
     }
     
-    // Legacy code fields that exist
+    // Legacy code fields that exist - SKIP na853 to avoid unique constraint violations
     if (updateData.e069) fieldsToUpdate.e069 = updateData.e069;
     if (updateData.na271) fieldsToUpdate.na271 = updateData.na271;
-    if (updateData.na853) fieldsToUpdate.na853 = updateData.na853;
+    // Skip na853 field - it has unique constraint and shouldn't change after creation
+    // if (updateData.na853) fieldsToUpdate.na853 = updateData.na853;
     
     // Budget fields - use numbers or null
     console.log('[Projects] Received budget values:', {
