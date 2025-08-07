@@ -671,7 +671,7 @@ router.get('/reference-data', async (req: Request, res: Response) => {
     });
 
     // Convert to array and sort by level and name
-    let kallikratisFromIndex = Array.from(uniqueRegions.values())
+    const kallikratisFromIndex = Array.from(uniqueRegions.values())
       .sort((a, b) => {
         const levelOrder = { 'region': 1, 'prefecture': 2, 'municipality': 3, 'municipal_unit': 4 };
         if (levelOrder[a.level] !== levelOrder[b.level]) {
@@ -681,22 +681,6 @@ router.get('/reference-data', async (req: Request, res: Response) => {
         const nameB = b.perifereia || b.perifereiaki_enotita || b.onoma_neou_ota || b.dimotiki_enotita || '';
         return nameA.localeCompare(nameB, 'el', { sensitivity: 'base' });
       });
-
-    // If no geographic data found in project_index, provide common Greek regions as fallback
-    if (kallikratisFromIndex.length === 0) {
-      console.log('[ProjectReference] No geographic data found in project_index, providing common regions fallback');
-      kallikratisFromIndex = [
-        { id: 'region_attiki', perifereia: 'ΑΤΤΙΚΗ', level: 'region' },
-        { id: 'region_kentriki_makedonia', perifereia: 'ΚΕΝΤΡΙΚΗ ΜΑΚΕΔΟΝΙΑ', level: 'region' },
-        { id: 'region_dytiki_ellada', perifereia: 'ΔΥΤΙΚΗ ΕΛΛΑΔΑ', level: 'region' },
-        { id: 'region_thessalia', perifereia: 'ΘΕΣΣΑΛΙΑ', level: 'region' },
-        { id: 'region_peloponnisos', perifereia: 'ΠΕΛΟΠΟΝΝΗΣΟΣ', level: 'region' },
-        { id: 'region_sterea_ellada', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'region' },
-        { id: 'region_kentriki_ellada', perifereia: 'ΚΕΝΤΡΙΚΗ ΕΛΛΑΔΑ', level: 'region' },
-        { id: 'prefecture_voiotias', perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'prefecture' },
-        { id: 'prefecture_fthiotidas', perifereiaki_enotita: 'ΦΘΙΩΤΙΔΑΣ', perifereia: 'ΣΤΕΡΕΑ ΕΛΛΑΔΑ', level: 'prefecture' }
-      ];
-    }
     
     // Set aggressive caching headers for reference data
     res.set('Cache-Control', 'public, max-age=3600, s-maxage=3600'); // 1 hour cache
