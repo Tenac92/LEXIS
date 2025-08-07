@@ -84,11 +84,11 @@ export function useRobustWebSocket() {
     try {
       // Construct WebSocket URL with protocol detection
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const port = window.location.port || '';
-      const hostname = window.location.hostname || 'localhost';
+      const hostname = window.location.hostname;
+      const port = window.location.port;
       
       // Validate essential components
-      if (!hostname || hostname === 'undefined') {
+      if (!hostname || hostname === 'undefined' || hostname === 'null') {
         console.error('[RobustWebSocket] Invalid hostname detected:', hostname);
         console.error('[RobustWebSocket] Window location:', window.location);
         throw new Error('Invalid WebSocket hostname - cannot connect');
@@ -98,12 +98,13 @@ export function useRobustWebSocket() {
       let wsUrl;
       console.log('[RobustWebSocket] URL construction:', { protocol, hostname, port });
       
-      // Only include port if it's not a standard port and not empty
+      // Only include port if it's not a standard port and not empty/undefined
       const shouldIncludePort = port && 
-                                port !== '80' && 
-                                port !== '443' && 
+                                port !== 'undefined' && 
+                                port !== 'null' && 
                                 port !== '' && 
-                                port !== 'undefined';
+                                port !== '80' && 
+                                port !== '443';
       
       if (shouldIncludePort) {
         wsUrl = `${protocol}//${hostname}:${port}/ws?t=${Date.now()}`;

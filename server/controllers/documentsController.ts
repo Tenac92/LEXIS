@@ -1248,7 +1248,7 @@ router.patch('/generated/:id/protocol', async (req: AuthenticatedRequest, res: R
     // Get the document first to check access rights
     const { data: document, error: fetchError } = await supabase
       .from('generated_documents')
-      .select('unit')
+      .select('unit_id')
       .eq('id', parseInt(id))
       .single();
 
@@ -1265,7 +1265,7 @@ router.patch('/generated/:id/protocol', async (req: AuthenticatedRequest, res: R
     }
 
     // Check if user has access to this document's unit
-    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit)) {
+    if (req.user?.role === 'user' && !req.user.unit_id?.includes(document.unit_id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied to this document'
