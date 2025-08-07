@@ -1988,9 +1988,23 @@ export default function ComprehensiveEditFixed() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>ΦΕΚ Έτος</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="π.χ. 2024" />
-                                  </FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Επιλέξτε έτος" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => {
+                                        const year = new Date().getFullYear() - i;
+                                        return (
+                                          <SelectItem key={year} value={year.toString()}>
+                                            {year}
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select>
                                 </FormItem>
                               )}
                             />
@@ -2001,9 +2015,19 @@ export default function ComprehensiveEditFixed() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>ΦΕΚ Τεύχος</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="π.χ. Β'" />
-                                  </FormControl>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Επιλέξτε τεύχος" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="Α">Α</SelectItem>
+                                      <SelectItem value="Β">Β</SelectItem>
+                                      <SelectItem value="Γ">Γ</SelectItem>
+                                      <SelectItem value="Δ">Δ</SelectItem>
+                                    </SelectContent>
+                                  </Select>
                                 </FormItem>
                               )}
                             />
