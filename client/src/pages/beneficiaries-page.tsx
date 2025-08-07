@@ -21,6 +21,9 @@ import {
   AlertCircle,
   CreditCard,
   X,
+  MapPin,
+  Building2,
+  Shield,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
@@ -518,20 +521,30 @@ export default function BeneficiariesPage() {
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <FileText className="w-4 h-4 flex-shrink-0" />
                                       <span className="truncate" title={getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}>
-                                        {getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}
+                                        {getExpenditureTypesForBeneficiary(beneficiary.id).slice(0, 2).join(", ")}
+                                        {getExpenditureTypesForBeneficiary(beneficiary.id).length > 2 && 
+                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`
+                                        }
                                       </span>
                                     </div>
                                   )}
                                   {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                      <span>{getTotalAmountForBeneficiary(beneficiary.id).toLocaleString("el-GR")} €</span>
-                                    </div>
-                                  )}
-                                  {getPaymentsForBeneficiary(beneficiary.id).length > 0 && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <DollarSign className="w-4 h-4 flex-shrink-0" />
-                                      <span>{getPaymentsForBeneficiary(beneficiary.id).length} πληρωμές</span>
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-sm font-medium border border-green-200">
+                                        <CreditCard className="w-4 h-4 flex-shrink-0" />
+                                        <span>
+                                          {new Intl.NumberFormat('el-GR', { 
+                                            style: 'currency', 
+                                            currency: 'EUR',
+                                            minimumFractionDigits: 0,
+                                            maximumFractionDigits: 0
+                                          }).format(getTotalAmountForBeneficiary(beneficiary.id))}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-medium border border-blue-200">
+                                        <span>{getPaymentsForBeneficiary(beneficiary.id).length}</span>
+                                        <span className="text-xs">πληρωμές</span>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -600,20 +613,21 @@ export default function BeneficiariesPage() {
                         {/* Front of card */}
                         <div className="flip-card-front">
                           <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-purple-500 to-purple-600"></div>
-                          <div className="p-6">
+                          <div className="p-6 h-full flex flex-col">
+                            {/* Header with name and actions */}
                             <div className="flex items-start justify-between mb-4">
-                              <div className="space-y-2 flex-1">
-                                <h3 className="text-xl font-bold text-gray-900 leading-tight">
+                              <div className="space-y-1 flex-1">
+                                <h3 className="text-lg font-bold text-gray-900 leading-tight">
                                   {beneficiary.surname} {beneficiary.name}
-                                  {beneficiary.fathername && (
-                                    <span className="text-sm font-normal text-gray-600 italic ml-2">
-                                      του {beneficiary.fathername}
-                                    </span>
-                                  )}
                                 </h3>
-                                <div className="flex items-center gap-2 mt-3">
+                                {beneficiary.fathername && (
+                                  <p className="text-sm text-gray-600 italic">
+                                    του {beneficiary.fathername}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 mt-2">
                                   <User className="w-4 h-4 text-purple-600" />
-                                  <span className="text-sm font-mono text-gray-700">
+                                  <span className="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded">
                                     ΑΦΜ: {beneficiary.afm}
                                   </span>
                                 </div>
@@ -655,37 +669,76 @@ export default function BeneficiariesPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-sm mb-6">
-                              {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
-                                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                                  <span className="text-xs text-gray-600">
-                                    Τύποι Δαπάνης
-                                  </span>
-                                  <span className="text-gray-900 text-xs">
-                                    {getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}
-                                  </span>
-                                </div>
-                              )}
-                              {beneficiary.region && (
-                                <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
-                                  <span className="text-xs text-gray-600">
-                                    Περιοχή
-                                  </span>
-                                  <span className="text-gray-900">
-                                    {beneficiary.region}
-                                  </span>
-                                </div>
-                              )}
+                            {/* Key Information Section */}
+                            <div className="flex-1 space-y-3">
+                              {/* Financial Summary - Most Prominent */}
                               {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
-                                <div className="flex flex-col py-1.5 px-2 bg-green-50 rounded col-span-2">
-                                  <span className="text-xs text-green-600">
-                                    Συνολικό Ποσό
-                                  </span>
-                                  <span className="text-green-900 font-semibold">
-                                    {getTotalAmountForBeneficiary(beneficiary.id).toLocaleString("el-GR")} €
-                                  </span>
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <DollarSign className="w-5 h-5 text-green-600" />
+                                      <span className="text-sm font-medium text-green-800">Συνολικό Ποσό</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-xl font-bold text-green-900">
+                                        {new Intl.NumberFormat('el-GR', { 
+                                          style: 'currency', 
+                                          currency: 'EUR',
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2 
+                                        }).format(getTotalAmountForBeneficiary(beneficiary.id))}
+                                      </div>
+                                      <div className="text-xs text-green-700">
+                                        {getPaymentsForBeneficiary(beneficiary.id).length} πληρωμές
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
+
+                              {/* Location and Project Info */}
+                              <div className="grid grid-cols-1 gap-2">
+                                {beneficiary.region && (
+                                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                    <div>
+                                      <span className="text-xs text-blue-600 font-medium">Περιοχή</span>
+                                      <p className="text-sm text-blue-900 font-medium">{beneficiary.region}</p>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
+                                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <FileText className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs text-amber-600 font-medium">Τύποι Δαπάνης</span>
+                                      <p className="text-sm text-amber-900 font-medium leading-tight">
+                                        {getExpenditureTypesForBeneficiary(beneficiary.id).slice(0, 2).join(", ")}
+                                        {getExpenditureTypesForBeneficiary(beneficiary.id).length > 2 && 
+                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`
+                                        }
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Administrative Info */}
+                                {(beneficiary.adeia || beneficiary.onlinefoldernumber) && (
+                                  <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <Shield className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs text-slate-600 font-medium">Διοικητικά Στοιχεία</span>
+                                      {beneficiary.adeia && (
+                                        <p className="text-sm text-slate-900 font-medium">Άδεια: {beneficiary.adeia}</p>
+                                      )}
+                                      {beneficiary.onlinefoldernumber && (
+                                        <p className="text-sm text-slate-900 font-medium">Φάκελος: {beneficiary.onlinefoldernumber}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
 
@@ -735,108 +788,158 @@ export default function BeneficiariesPage() {
 
                             {/* Scrollable content area */}
                             <div className="flex-1 overflow-y-auto space-y-4 text-sm custom-scrollbar">
-                              {/* Payment Details - Last 3 Payments */}
+                              {/* Financial Overview */}
                               {(() => {
                                 const payments = getPaymentsForBeneficiary(beneficiary.id);
+                                const totalAmount = getTotalAmountForBeneficiary(beneficiary.id);
+                                
                                 if (payments.length === 0) return null;
                                 
-                                const maxVisiblePayments = 3;
-                                const hasMorePayments = payments.length > maxVisiblePayments;
-                                // Show the last 3 payments (most recent)
-                                const visiblePayments = payments.slice(-maxVisiblePayments).reverse();
+                                // Group payments by expenditure type
+                                const groupedPayments = payments.reduce((acc: any, payment: any) => {
+                                  const type = payment.expenditure_type || 'Άλλο';
+                                  if (!acc[type]) {
+                                    acc[type] = { payments: [], total: 0 };
+                                  }
+                                  acc[type].payments.push(payment);
+                                  acc[type].total += parseFloat(payment.amount || 0);
+                                  return acc;
+                                }, {});
                                 
                                 return (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-purple-700 font-medium text-sm">
-                                        Τελευταίες Πληρωμές:
-                                      </span>
-                                      <span className="text-xs text-purple-600">
-                                        {payments.length} συνολικά
-                                      </span>
-                                    </div>
-                                    <div className="bg-purple-100 p-3 rounded border">
+                                  <div className="space-y-3">
+                                    <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-300 rounded-lg p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <CreditCard className="w-5 h-5 text-green-700" />
+                                        <span className="font-semibold text-green-800">Οικονομική Επισκόπηση</span>
+                                      </div>
+                                      
+                                      <div className="grid grid-cols-2 gap-3 mb-3">
+                                        <div className="bg-white/70 p-3 rounded border">
+                                          <div className="text-xs text-green-600 font-medium">Συνολικό Ποσό</div>
+                                          <div className="text-lg font-bold text-green-900">
+                                            {new Intl.NumberFormat('el-GR', { 
+                                              style: 'currency', 
+                                              currency: 'EUR' 
+                                            }).format(totalAmount)}
+                                          </div>
+                                        </div>
+                                        <div className="bg-white/70 p-3 rounded border">
+                                          <div className="text-xs text-green-600 font-medium">Πληρωμές</div>
+                                          <div className="text-lg font-bold text-green-900">
+                                            {payments.length}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Payment breakdown by type */}
                                       <div className="space-y-2">
-                                        {visiblePayments.map((payment: any, index: number) => (
-                                          <div key={index} className="flex justify-between items-start p-2 bg-white rounded border-l-2 border-purple-300">
-                                            <div className="flex-1">
-                                              <div className="font-medium text-purple-800 text-xs">
-                                                {payment.expenditure_type}
-                                              </div>
-                                              <div className="text-purple-600 text-xs">
-                                                {payment.installment || 'ΕΦΑΠΑΞ'}
-                                              </div>
+                                        <div className="text-xs text-green-700 font-medium">Κατανομή ανά Τύπο:</div>
+                                        {Object.entries(groupedPayments).map(([type, data]: [string, any]) => (
+                                          <div key={type} className="bg-white/70 p-2 rounded border flex justify-between items-center">
+                                            <div>
+                                              <div className="text-xs font-medium text-green-800">{type}</div>
+                                              <div className="text-xs text-green-600">{data.payments.length} πληρωμές</div>
                                             </div>
-                                            <div className="text-right">
-                                              <div className="font-bold text-purple-900 text-sm">
-                                                {parseFloat(payment.amount || 0).toLocaleString("el-GR")} €
-                                              </div>
+                                            <div className="font-semibold text-green-900 text-sm">
+                                              {new Intl.NumberFormat('el-GR', { 
+                                                style: 'currency', 
+                                                currency: 'EUR' 
+                                              }).format(data.total)}
                                             </div>
                                           </div>
                                         ))}
                                       </div>
-                                      {hasMorePayments && (
-                                        <div className="mt-2 pt-2 border-t border-purple-200 text-center">
-                                          <span className="text-xs text-purple-600">
-                                            +{payments.length - maxVisiblePayments} παλαιότερες πληρωμές
-                                          </span>
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
                                 );
                               })()}
 
-                              {beneficiary.adeia && (
-                                <div className="space-y-1">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Άδεια:
-                                  </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border">
-                                    {beneficiary.adeia}
-                                  </p>
+                              {/* Administrative Information */}
+                              {(beneficiary.adeia || beneficiary.onlinefoldernumber) && (
+                                <div className="bg-slate-100 border border-slate-300 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Shield className="w-5 h-5 text-slate-600" />
+                                    <span className="font-semibold text-slate-700">Διοικητικά Στοιχεία</span>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {beneficiary.adeia && (
+                                      <div className="bg-white/70 p-3 rounded border">
+                                        <div className="text-xs text-slate-600 font-medium">Αριθμός Άδειας</div>
+                                        <div className="font-mono text-sm text-slate-900">{beneficiary.adeia}</div>
+                                      </div>
+                                    )}
+                                    {beneficiary.onlinefoldernumber && (
+                                      <div className="bg-white/70 p-3 rounded border">
+                                        <div className="text-xs text-slate-600 font-medium">Διαδικτυακός Φάκελος</div>
+                                        <div className="font-mono text-sm text-slate-900">{beneficiary.onlinefoldernumber}</div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
-                              {beneficiary.onlinefoldernumber && (
-                                <div className="space-y-1">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Αρ. Online Φακέλου:
-                                  </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border">
-                                    {beneficiary.onlinefoldernumber}
-                                  </p>
+
+                              {/* Engineering Information */}
+                              {(beneficiary.cengsur1 || beneficiary.cengsur2) && (
+                                <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <Building2 className="w-5 h-5 text-orange-600" />
+                                    <span className="font-semibold text-orange-700">Στοιχεία Μηχανικών</span>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {beneficiary.cengsur1 && (
+                                      <div className="bg-white/70 p-3 rounded border">
+                                        <div className="text-xs text-orange-600 font-medium">Μηχανικός 1</div>
+                                        <div className="text-sm text-orange-900 font-medium">
+                                          {beneficiary.cengsur1} {beneficiary.cengname1}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {beneficiary.cengsur2 && (
+                                      <div className="bg-white/70 p-3 rounded border">
+                                        <div className="text-xs text-orange-600 font-medium">Μηχανικός 2</div>
+                                        <div className="text-sm text-orange-900 font-medium">
+                                          {beneficiary.cengsur2} {beneficiary.cengname2}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               )}
-                              {beneficiary.cengsur1 && (
-                                <div className="space-y-1">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Μηχανικός 1:
-                                  </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border">
-                                    {beneficiary.cengsur1}{" "}
-                                    {beneficiary.cengname1}
-                                  </p>
-                                </div>
-                              )}
-                              {beneficiary.cengsur2 && (
-                                <div className="space-y-1">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Μηχανικός 2:
-                                  </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border">
-                                    {beneficiary.cengsur2}{" "}
-                                    {beneficiary.cengname2}
-                                  </p>
-                                </div>
-                              )}
+
+                              {/* Additional Notes */}
                               {beneficiary.freetext && (
-                                <div className="space-y-1">
-                                  <span className="text-purple-700 font-medium text-sm">
-                                    Ελεύθερο Κείμενο:
-                                  </span>
-                                  <p className="text-purple-900 text-sm bg-purple-100 p-2 rounded border break-words">
-                                    {beneficiary.freetext}
-                                  </p>
+                                <div className="bg-purple-100 border border-purple-300 rounded-lg p-4">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <FileText className="w-5 h-5 text-purple-600" />
+                                    <span className="font-semibold text-purple-700">Επιπλέον Πληροφορίες</span>
+                                  </div>
+                                  <div className="bg-white/70 p-3 rounded border">
+                                    <p className="text-sm text-purple-900 leading-relaxed break-words">
+                                      {beneficiary.freetext}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Creation Date */}
+                              {beneficiary.created_at && (
+                                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4">
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="w-4 h-4 text-gray-600" />
+                                    <div>
+                                      <div className="text-xs text-gray-600 font-medium">Ημερομηνία Δημιουργίας</div>
+                                      <div className="text-sm text-gray-900">
+                                        {new Date(beneficiary.created_at).toLocaleDateString('el-GR', {
+                                          year: 'numeric',
+                                          month: 'long',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
                             </div>
