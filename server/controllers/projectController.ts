@@ -512,7 +512,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       expenditureTypesRes
     ] = await Promise.all([
       supabase.from('event_types').select('id, name').limit(50), // Only essential fields
-      supabase.from('Monada').select('id, unit, name').limit(30), // Only essential fields  
+      supabase.from('Monada').select('id, unit, unit_name').limit(30), // Only essential fields  
       supabase.from('expenditure_types').select('id, expenditure_types').limit(30) // Only essential fields
     ]);
 
