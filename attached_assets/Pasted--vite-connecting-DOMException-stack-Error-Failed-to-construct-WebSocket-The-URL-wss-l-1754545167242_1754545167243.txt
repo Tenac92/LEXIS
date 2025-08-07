@@ -1,0 +1,69 @@
+[vite] connecting...
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[SessionInit] Using existing client session ID: session_1754543888956_5q7civsr
+ME endpoint response: 
+Object {authenticated: true, user: {…}}
+DEBUG - Project Data: 
+Object {hasProjectData: false, hasReferenceData: false, projectData: false, decisionsCount: 0, formulationsCount: 0, …}
+DEBUG - ΣΑ Data: 
+Object {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: undefined}
+DEBUG - Project Data: 
+Object {hasProjectData: false, hasReferenceData: false, projectData: false, decisionsCount: 0, formulationsCount: 0, …}
+DEBUG - ΣΑ Data: 
+Object {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: undefined}
+isLoadingProject is not defined
+DEBUG - Project Data: 
+Object {hasProjectData: false, hasReferenceData: false, projectData: false, decisionsCount: 0, formulationsCount: 0, …}
+DEBUG - ΣΑ Data: 
+Object {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: undefined}
+DEBUG - Project Data: 
+Object {hasProjectData: false, hasReferenceData: false, projectData: false, decisionsCount: 0, formulationsCount: 0, …}
+DEBUG - ΣΑ Data: 
+Object {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: undefined}
+isLoadingProject is not defined
+The above error occurred in the <ComprehensiveEditFixed> component:
+
+    at ComprehensiveEditFixed (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:208:19)
+    at Route (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=45c9f4f7:191:16)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=45c9f4f7:247:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:6536:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:7742:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:7800:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:44:34)
+    at Router
+    at DocumentFormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/contexts/document-form-context.tsx:63:40)
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:142:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=45c9f4f7:2848:3)
+    at ErrorBoundary (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/common/ErrorBoundary.tsx:10:5)
+    at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+
+at ComprehensiveEditFixed (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/[mis]/comprehensive-edit-fixed.tsx:208:19)
+at Route (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=45c9f4f7:191:16)
+at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=45c9f4f7:247:17)
+at div
+at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:6536:40)
+at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:7742:24)
+at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=45c9f4f7:7800:26)
+at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:44:34)
+at Router
+at DocumentFormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/contexts/document-form-context.tsx:63:40)
+at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:142:32)
+at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=45c9f4f7:2848:3)
+at ErrorBoundary (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/common/ErrorBoundary.tsx:10:5)
+at App
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+ErrorBoundary caught an error: 
+ReferenceError {}
+ 
+Object {componentStack: "↵    at ComprehensiveEditFixed…"}

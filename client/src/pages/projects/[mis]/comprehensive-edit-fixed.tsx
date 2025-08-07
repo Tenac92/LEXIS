@@ -794,7 +794,7 @@ export default function ComprehensiveEditFixed() {
     }
   };
 
-  if (isLoadingProject || isLoadingReferenceData) {
+  if (projectQuery.isLoading || referenceDataQuery.isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
@@ -807,14 +807,14 @@ export default function ComprehensiveEditFixed() {
     );
   }
 
-  if (projectError || referenceDataError) {
+  if (projectQuery.error || referenceDataQuery.error) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-red-600 mb-4">Σφάλμα Φόρτωσης</h1>
             <p className="text-gray-600">
-              {projectError?.message || referenceDataError?.message || "Παρουσιάστηκε σφάλμα κατά τη φόρτωση των δεδομένων"}
+              {projectQuery.error?.message || referenceDataQuery.error?.message || "Παρουσιάστηκε σφάλμα κατά τη φόρτωση των δεδομένων"}
             </p>
           </div>
         </div>
