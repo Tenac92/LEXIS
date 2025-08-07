@@ -40,6 +40,17 @@ Core architectural decisions include:
 
 ## Recent Changes
 
+### ✅ Kallikratis Geographic Data Resolution (August 7, 2025)
+
+**🗺️ Complete Geographic Data Integration Fix**
+- Successfully resolved empty Kallikratis data source issue
+- Changed data source from empty kallikratis table to populated project_index table
+- Fixed column name mappings to match actual database schema structure
+- Implemented proper geographic data flow from project references to form displays
+- **Result**: System now successfully loads 9 geographic entries with proper Greek regional data
+- Geographic data includes: perifereia (regions), perifereiaki_enotita (prefectures), onoma_neou_ota (municipalities)
+- All dropdown fields now properly populated with authentic Greek administrative divisions
+
 ### ✅ System-wide Spelling Correction (August 1, 2025)
 
 **📝 Comprehensive "expediture" → "expenditure" Fix**
