@@ -19,9 +19,14 @@ import {
   Mail,
   X,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Copy,
+  TrendingUp,
+  Clock,
+  Receipt
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import type { Beneficiary } from "@shared/schema";
 
 interface BeneficiaryDetailsModalProps {
@@ -35,6 +40,8 @@ export function BeneficiaryDetailsModal({
   open, 
   onOpenChange 
 }: BeneficiaryDetailsModalProps) {
+  const { toast } = useToast();
+  
   if (!beneficiary) return null;
 
   // Fetch all payments for this specific beneficiary
@@ -70,6 +77,21 @@ export function BeneficiaryDetailsModal({
     }
   };
 
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: "Αντιγράφηκε",
+        description: `Το ${label} αντιγράφηκε στο πρόχειρο`,
+      });
+    }).catch(() => {
+      toast({
+        title: "Σφάλμα",
+        description: "Αποτυχία αντιγραφής στο πρόχειρο",
+        variant: "destructive",
+      });
+    });
+  };
+
   // Calculate total amount from payments
   const totalAmount = Array.isArray(payments) ? 
     payments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0), 0) : 0;
@@ -100,79 +122,137 @@ export function BeneficiaryDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-gray-900">
-            Λεπτομέρειες Δικαιούχου
-          </DialogTitle>
-          <DialogDescription className="text-gray-600">
-            Πλήρη στοιχεία και πληροφορίες για τον επιλεγμένο δικαιούχο
-          </DialogDescription>
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto">
+        <DialogHeader className="border-b pb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                <User className="w-7 h-7 text-blue-600" />
+                Λεπτομέρειες Δικαιούχου
+              </DialogTitle>
+              <DialogDescription className="text-gray-600 mt-2">
+                Πλήρη στοιχεία και οικονομικές πληροφορίες για{" "}
+                <span className="font-semibold text-gray-800">
+                  {beneficiary.surname} {beneficiary.name}
+                </span>
+              </DialogDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-sm">
+                ID: {beneficiary.id}
+              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => copyToClipboard(beneficiary.afm, "ΑΦΜ")}
+                className="text-xs"
+              >
+                <Copy className="w-3 h-3 mr-1" />
+                Αντιγραφή ΑΦΜ
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 mt-6">
           {/* Personal Information */}
-          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm">
             <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
               <User className="w-5 h-5" />
               Προσωπικά Στοιχεία
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-blue-800">Πλήρες Όνομα:</label>
-                <p className="text-blue-900 font-medium">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
+                <label className="text-sm font-medium text-blue-700 flex items-center gap-1">
+                  <User className="w-4 h-4" />
+                  Πλήρες Όνομα:
+                </label>
+                <p className="text-blue-900 font-semibold text-lg mt-1">
                   {beneficiary.surname} {beneficiary.name}
                   {beneficiary.fathername && (
-                    <span className="text-blue-700"> του {beneficiary.fathername}</span>
+                    <span className="text-blue-700 font-normal"> του {beneficiary.fathername}</span>
                   )}
                 </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-blue-800">ΑΦΜ:</label>
-                <p className="text-blue-900 font-mono font-medium">{beneficiary.afm}</p>
+              <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
+                <label className="text-sm font-medium text-blue-700 flex items-center gap-1">
+                  <Hash className="w-4 h-4" />
+                  ΑΦΜ:
+                </label>
+                <p className="text-blue-900 font-mono font-bold text-lg mt-1">{beneficiary.afm}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-blue-800">Περιφέρεια:</label>
-                <p className="text-blue-900">{beneficiary.region || 'Δ/Υ'}</p>
+              <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
+                <label className="text-sm font-medium text-blue-700 flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  Περιφέρεια:
+                </label>
+                <p className="text-blue-900 font-medium mt-1">{beneficiary.region || 'Δεν έχει καθοριστεί'}</p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-blue-800">Μονάδα:</label>
-                <p className="text-blue-900">{beneficiary.monada || 'Δ/Υ'}</p>
+              <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
+                <label className="text-sm font-medium text-blue-700 flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  Ημερομηνία Εγγραφής:
+                </label>
+                <p className="text-blue-900 font-medium mt-1">
+                  {beneficiary.date ? new Date(beneficiary.date).toLocaleDateString('el-GR') : 'Δεν έχει καθοριστεί'}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Administrative Information */}
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Διοικητικά Στοιχεία
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700">Αρ. Άδειας:</label>
-                <p className="text-gray-900 font-mono">{beneficiary.adeia || 'Δ/Υ'}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white/70 p-4 rounded-lg border border-gray-200">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Receipt className="w-4 h-4" />
+                  Αρ. Άδειας:
+                </label>
+                <p className="text-gray-900 font-mono font-medium text-lg mt-1">
+                  {beneficiary.adeia || 'Δεν έχει καθοριστεί'}
+                </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Αρ. Διαδικτυακού Φακέλου:</label>
-                <p className="text-gray-900 font-mono">{beneficiary.onlinefoldernumber || 'Δ/Υ'}</p>
+              <div className="bg-white/70 p-4 rounded-lg border border-gray-200">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Hash className="w-4 h-4" />
+                  Αρ. Διαδικτυακού Φακέλου:
+                </label>
+                <p className="text-gray-900 font-mono font-medium text-lg mt-1">
+                  {beneficiary.onlinefoldernumber || 'Δεν έχει καθοριστεί'}
+                </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Έργο (MIS):</label>
-                <p className="text-gray-900 font-mono">{beneficiary.project || 'Δ/Υ'}</p>
+              <div className="bg-white/70 p-4 rounded-lg border border-gray-200">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Ημερομηνία Δημιουργίας:
+                </label>
+                <p className="text-gray-900 font-medium mt-1">
+                  {beneficiary.created_at ? new Date(beneficiary.created_at).toLocaleDateString('el-GR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'Δεν έχει καθοριστεί'}
+                </p>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Α/Α:</label>
-                <p className="text-gray-900">{beneficiary.aa || 'Δ/Υ'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Ημερομηνία:</label>
-                <p className="text-gray-900">{beneficiary.date || 'Δ/Υ'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Ημερομηνία Δημιουργίας:</label>
-                <p className="text-gray-900">
-                  {beneficiary.created_at ? new Date(beneficiary.created_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
+              <div className="bg-white/70 p-4 rounded-lg border border-gray-200">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Τελευταία Ενημέρωση:
+                </label>
+                <p className="text-gray-900 font-medium mt-1">
+                  {beneficiary.updated_at ? new Date(beneficiary.updated_at).toLocaleDateString('el-GR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  }) : 'Δεν έχει ενημερωθεί'}
                 </p>
               </div>
             </div>
