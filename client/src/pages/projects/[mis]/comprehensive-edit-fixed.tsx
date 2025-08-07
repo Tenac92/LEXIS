@@ -1806,6 +1806,9 @@ export default function ComprehensiveEditFixed() {
     typedKallikratisData?.length,
   );
   console.log("DEBUG - Units data:", typedUnitsData?.length, "units total");
+  console.log("DEBUG - Raw unitsData:", unitsData);
+  console.log("DEBUG - referenceData?.units:", referenceData?.units?.length);
+  console.log("DEBUG - completeProjectData?.units:", completeProjectData?.units?.length);
   console.log(
     "DEBUG - All units:",
     typedUnitsData?.map((u) => `${u.id}: ${u.unit}`),
