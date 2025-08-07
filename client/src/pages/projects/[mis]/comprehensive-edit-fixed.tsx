@@ -453,10 +453,10 @@ export default function ComprehensiveEditFixed() {
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
   
-  // Extract reference data from separate endpoint (with fallback to old structure for compatibility)
+  // Extract reference data - prioritize the source with more data for kallikratis
   const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
   const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
-  const kallikratisData = (referenceData?.kallikratis?.length > 0 ? referenceData.kallikratis : completeProjectData?.kallikratis);
+  const kallikratisData = (completeProjectData?.kallikratis?.length > (referenceData?.kallikratis?.length || 0) ? completeProjectData.kallikratis : referenceData?.kallikratis);
   const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
@@ -483,6 +483,17 @@ export default function ComprehensiveEditFixed() {
     isReferenceLoading: isReferenceDataLoading,
     projectError: completeDataError?.message || completeDataError,
     referenceError: referenceDataError?.message || referenceDataError,
+  });
+
+  // Debug logging for kallikratis data specifically  
+  console.log("DEBUG - Kallikratis Data:", {
+    referenceKallikratis: referenceData?.kallikratis?.length || 0,
+    completeKallikratis: completeProjectData?.kallikratis?.length || 0,
+    finalKallikratisLength: kallikratisData?.length || 0,
+    kallikratisSample: kallikratisData?.slice(0, 2) || [],
+    typedKallikratisLength: typedKallikratisData?.length || 0,
+    uniqueRegionsCount: getUniqueRegions().length,
+    uniqueRegions: getUniqueRegions().slice(0, 3),
   });
 
   // Debug logging for ΣΑ types and enumeration codes

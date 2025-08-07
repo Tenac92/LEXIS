@@ -532,14 +532,23 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     const units = unitsRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
     
+    console.log(`[ProjectComplete] Before kallikratis loading - got ${eventTypes.length} eventTypes, ${units.length} units, ${expenditureTypes.length} expenditureTypes`);
+    
     // Load kallikratis data asynchronously - it's large but not immediately needed
     let kallikratis: any[] = [];
     try {
+      console.log('[ProjectComplete] Attempting to load kallikratis data...');
       const kallikratisResponse = await supabase
         .from('kallikratis')
-        .select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, level')
+        .select('id, perifereia, perifereiaki_enotita, onoma_neou_ota, kodikos_neou_ota, kodikos_perifereiakis_enotitas, kodikos_perifereias, eidos_neou_ota')
         .limit(1000); // Reduced from 2000 for faster initial load
-      kallikratis = kallikratisResponse.data || [];
+      
+      if (kallikratisResponse.error) {
+        console.error('[ProjectComplete] Kallikratis query error:', kallikratisResponse.error);
+      } else {
+        kallikratis = kallikratisResponse.data || [];
+        console.log(`[ProjectComplete] Successfully loaded ${kallikratis.length} kallikratis entries for complete data`);
+      }
     } catch (kallikratisError) {
       console.warn('[ProjectComplete] Kallikratis data load failed, continuing without:', kallikratisError);
     }
@@ -595,7 +604,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     };
     
     console.log(`[ProjectComplete] Successfully fetched complete data for project ${projectId}`);
-    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}, eventTypes=${completeData.eventTypes.length}, units=${completeData.units.length}, expenditureTypes=${completeData.expenditureTypes.length}`);
+    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}, eventTypes=${completeData.eventTypes.length}, units=${completeData.units.length}, expenditureTypes=${completeData.expenditureTypes.length}, kallikratis=${completeData.kallikratis.length}`);
     
     res.json(completeData);
   } catch (error) {
