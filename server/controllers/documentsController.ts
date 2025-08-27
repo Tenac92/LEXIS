@@ -173,6 +173,22 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     }
 
     // Success logging removed for cleaner console output
+    // Update project budget with spending amount and create budget history
+    try {
+      console.log('[DocumentsController] V1 Updating budget for spending amount:', total_amount);
+      const { default: storage } = await import('../storage');
+      await storage.updateProjectBudgetSpending(
+        project_id, 
+        parseFloat(String(total_amount)) || 0, 
+        data.id, 
+        req.user?.id
+      );
+      console.log('[DocumentsController] V1 Budget updated successfully');
+    } catch (budgetError) {
+      console.error('[DocumentsController] V1 Error updating budget:', budgetError);
+      // Don't fail the document creation if budget update fails, just log the error
+    }
+
     res.status(201).json({ id: data.id });
   } catch (error) {
     console.error('[DocumentsController] Error creating document:', error);
@@ -590,6 +606,22 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       console.error('[DocumentsController] V2 Error creating beneficiary payments:', beneficiaryError);
     }
     
+    // Update project budget with spending amount and create budget history
+    try {
+      console.log('[DocumentsController] V2 Updating budget for spending amount:', total_amount);
+      const { default: storage } = await import('../storage');
+      await storage.updateProjectBudgetSpending(
+        project_id, 
+        parseFloat(String(total_amount)) || 0, 
+        data.id, 
+        req.user?.id
+      );
+      console.log('[DocumentsController] V2 Budget updated successfully');
+    } catch (budgetError) {
+      console.error('[DocumentsController] V2 Error updating budget:', budgetError);
+      // Don't fail the document creation if budget update fails, just log the error
+    }
+
     // Broadcast document update to all connected clients
     broadcastDocumentUpdate({
       type: 'DOCUMENT_UPDATE',

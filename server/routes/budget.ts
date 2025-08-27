@@ -39,6 +39,69 @@ router.get('/notifications', authenticateSession, async (req: AuthenticatedReque
   }
 });
 
+// Manual budget adjustment endpoint for administrators
+router.post('/adjust', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user is admin
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied. This operation requires admin privileges.'
+      });
+    }
+
+    const { project_id, amount, reason, type = 'manual_adjustment' } = req.body;
+
+    if (!project_id || !amount || !reason) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Missing required fields: project_id, amount, and reason are required'
+      });
+    }
+
+    console.log(`[Budget] Admin ${req.user.id} manually adjusting budget for project ${project_id}: ${amount}`);
+
+    // Update budget and create history entry
+    await storage.updateProjectBudgetSpending(
+      parseInt(project_id),
+      parseFloat(amount),
+      0, // No document ID for manual adjustments
+      req.user.id
+    );
+
+    // Broadcast budget update to all connected clients
+    broadcastBudgetUpdate({
+      type: 'BUDGET_MANUAL_ADJUSTMENT',
+      projectId: project_id,
+      amount: amount,
+      reason: reason,
+      userId: req.user.id,
+      timestamp: new Date().toISOString()
+    });
+
+    console.log(`[Budget] Successfully processed manual budget adjustment for project ${project_id}`);
+
+    return res.json({
+      status: 'success',
+      message: 'Budget adjustment completed successfully',
+      data: {
+        project_id,
+        amount,
+        reason,
+        adjusted_by: req.user.id,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('[Budget] Error processing manual budget adjustment:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to process budget adjustment',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Budget data routes - with explicit paths
 router.get('/data/:mis', async (req: Request, res: Response) => {
   try {

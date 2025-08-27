@@ -10,6 +10,7 @@ export interface IStorage {
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
   getBudgetData(mis: string): Promise<ProjectBudget | null>;
   createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void>;
+  updateProjectBudgetSpending(projectId: number, amount: number, documentId: number, userId?: number): Promise<void>;
   getBudgetHistory(
     mis?: string, 
     page?: number, 
@@ -240,7 +241,90 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
+  async updateProjectBudgetSpending(projectId: number, amount: number, documentId: number, userId?: number): Promise<void> {
+    try {
+      console.log(`[Storage] Updating budget spending for project ${projectId}: ${amount} (document: ${documentId})`);
+      
+      // First, get the project details to find the associated budget record
+      const { data: project, error: projectError } = await supabase
+        .from('Projects')
+        .select('mis, na853')
+        .eq('id', projectId)
+        .single();
+        
+      if (projectError || !project) {
+        console.error('[Storage] Error fetching project details:', projectError);
+        throw new Error(`Project ${projectId} not found`);
+      }
+      
+      // Find the budget record using project_id (preferred) or fallback to MIS
+      let budgetQuery = supabase
+        .from('project_budget')
+        .select('*')
+        .eq('project_id', projectId);
+      
+      let { data: budgetData, error: budgetError } = await budgetQuery.single();
+      
+      // If no budget found by project_id, try by MIS as fallback
+      if (budgetError && project.mis) {
+        console.log(`[Storage] Budget not found by project_id, trying MIS: ${project.mis}`);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('project_budget')
+          .select('*')
+          .eq('mis', project.mis)
+          .single();
+          
+        budgetData = fallbackData;
+        budgetError = fallbackError;
+      }
+      
+      if (budgetError || !budgetData) {
+        console.error('[Storage] No budget record found for project:', projectId, budgetError);
+        throw new Error(`No budget record found for project ${projectId}`);
+      }
+      
+      console.log(`[Storage] Found budget record - current user_view: ${budgetData.user_view}`);
+      
+      // Calculate new spending amount
+      const currentSpending = parseFloat(String(budgetData.user_view || 0));
+      const newSpending = currentSpending + amount;
+      
+      console.log(`[Storage] Budget calculation: ${currentSpending} + ${amount} = ${newSpending}`);
+      
+      // Update the budget record with new spending
+      const { error: updateError } = await supabase
+        .from('project_budget')
+        .update({ 
+          user_view: newSpending,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', budgetData.id);
+        
+      if (updateError) {
+        console.error('[Storage] Error updating budget spending:', updateError);
+        throw updateError;
+      }
+      
+      // Create budget history entry for this spending transaction
+      await this.createBudgetHistoryEntry({
+        project_id: projectId,
+        previous_amount: String(currentSpending),
+        new_amount: String(newSpending),
+        change_type: 'spending',
+        change_reason: `Document-related spending: €${amount}`,
+        document_id: documentId,
+        created_by: userId
+      });
+      
+      console.log(`[Storage] Successfully updated project budget spending: ${currentSpending} → ${newSpending}`);
+      
+    } catch (error) {
+      console.error('[Storage] Error in updateProjectBudgetSpending:', error);
+      throw error;
+    }
+  }
+
   async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
     try {
       console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
