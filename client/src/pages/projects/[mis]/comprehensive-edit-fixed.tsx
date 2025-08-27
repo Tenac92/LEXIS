@@ -229,6 +229,7 @@ const comprehensiveProjectSchema = z.object({
     .array(
       z.object({
         implementing_agency: z.string().default(""),
+        source_project: z.string().default(""),
         na853_code: z.string().default(""),
         event_type: z.string().default(""),
         expenditure_types: z.array(z.string()).default([]),
@@ -2399,7 +2400,7 @@ export default function ComprehensiveEditFixed() {
                                 )}
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <FormField
                                   control={form.control}
                                   name={`location_details.${locationIndex}.implementing_agency`}
@@ -2411,52 +2412,21 @@ export default function ComprehensiveEditFixed() {
                                           field.onChange(value);
                                           
                                           console.log("[UnitSelection] Selected unit:", value);
-                                          console.log("[UnitSelection] Available units:", typedUnitsData?.length);
                                           
-                                          // Auto-populate NA853 code and expenditure types based on selected unit
-                                          const selectedUnit = typedUnitsData?.find(unit => 
-                                            (unit.unit_name?.name || unit.name || unit.unit) === value
+                                          // Clear dependent fields when unit changes (like in create document dialog)
+                                          form.setValue(
+                                            `location_details.${locationIndex}.na853_code`,
+                                            ""
+                                          );
+                                          form.setValue(
+                                            `location_details.${locationIndex}.expenditure_types`,
+                                            []
                                           );
                                           
-                                          console.log("[UnitSelection] Found unit data:", selectedUnit);
-                                          
-                                          if (selectedUnit) {
-                                            // Auto-populate NA853 code if available
-                                            const na853Code = selectedUnit.na853_code || selectedUnit.code || selectedUnit.unit_code;
-                                            console.log("[UnitSelection] NA853 code:", na853Code);
-                                            if (na853Code) {
-                                              form.setValue(
-                                                `location_details.${locationIndex}.na853_code`,
-                                                na853Code
-                                              );
-                                              console.log("[UnitSelection] Set NA853 code:", na853Code);
-                                            }
-                                            
-                                            // Auto-populate default expenditure types for this unit
-                                            const unitExpenditureTypes = selectedUnit.default_expenditure_types || 
-                                              selectedUnit.expenditure_types || [];
-                                            console.log("[UnitSelection] Unit expenditure types:", unitExpenditureTypes);
-                                            if (Array.isArray(unitExpenditureTypes) && unitExpenditureTypes.length > 0) {
-                                              form.setValue(
-                                                `location_details.${locationIndex}.expenditure_types`,
-                                                unitExpenditureTypes
-                                              );
-                                              console.log("[UnitSelection] Set expenditure types:", unitExpenditureTypes);
-                                            }
-                                            
-                                            // Auto-set event type if unit has default
-                                            const defaultEventType = selectedUnit.default_event_type;
-                                            console.log("[UnitSelection] Default event type:", defaultEventType);
-                                            if (defaultEventType) {
-                                              form.setValue(
-                                                `location_details.${locationIndex}.event_type`,
-                                                defaultEventType
-                                              );
-                                              console.log("[UnitSelection] Set event type:", defaultEventType);
-                                            }
-                                          } else {
-                                            console.log("[UnitSelection] No unit found for:", value);
-                                          }
+                                          // Note: The NA853 code and expenditure types will be populated
+                                          // when a specific project is selected from the projects of this unit
+                                          // This follows the same pattern as the create document dialog
+                                          console.log("[UnitSelection] Cleared dependent fields, ready for project selection");
                                         }}
                                         value={field.value}
                                       >
@@ -2485,6 +2455,94 @@ export default function ComprehensiveEditFixed() {
                                       </Select>
                                     </FormItem>
                                   )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.source_project`}
+                                  render={({ field }) => {
+                                    const selectedUnit = form.watch(`location_details.${locationIndex}.implementing_agency`);
+                                    
+                                    // Fetch projects for the selected unit
+                                    const { data: unitProjects = [], isLoading: projectsLoading } = useQuery({
+                                      queryKey: ['projects-working', selectedUnit],
+                                      queryFn: async () => {
+                                        if (!selectedUnit) return [];
+                                        console.log("[ProjectSelect] Fetching projects for unit:", selectedUnit);
+                                        const response = await fetch(`/api/projects-working/${encodeURIComponent(selectedUnit)}`);
+                                        if (!response.ok) throw new Error('Failed to fetch projects');
+                                        return response.json();
+                                      },
+                                      enabled: Boolean(selectedUnit),
+                                      staleTime: 5 * 60 * 1000,
+                                    });
+
+                                    const extractNA853Info = (name: string) => {
+                                      const na853Match = name.match(/ΝΑ853[:\s]*([^,\s]+)/i);
+                                      return na853Match?.[1] || "";
+                                    };
+
+                                    return (
+                                      <FormItem>
+                                        <FormLabel>Πηγαίο Έργο</FormLabel>
+                                        <Select
+                                          onValueChange={(value) => {
+                                            field.onChange(value);
+                                            
+                                            // Find selected project and auto-populate fields
+                                            const selectedProject = unitProjects.find((p: any) => String(p.id) === value);
+                                            if (selectedProject) {
+                                              console.log("[ProjectSelect] Selected project:", selectedProject);
+                                              
+                                              // Extract and set NA853 code
+                                              const na853Code = extractNA853Info(selectedProject.name || selectedProject.project_title || "");
+                                              if (na853Code) {
+                                                form.setValue(
+                                                  `location_details.${locationIndex}.na853_code`,
+                                                  na853Code
+                                                );
+                                                console.log("[ProjectSelect] Set NA853 code:", na853Code);
+                                              }
+                                              
+                                              // Set expenditure types from project
+                                              const expenditureTypes = selectedProject.expenditure_types || [];
+                                              if (Array.isArray(expenditureTypes) && expenditureTypes.length > 0) {
+                                                form.setValue(
+                                                  `location_details.${locationIndex}.expenditure_types`,
+                                                  expenditureTypes
+                                                );
+                                                console.log("[ProjectSelect] Set expenditure types:", expenditureTypes);
+                                              }
+                                            }
+                                          }}
+                                          value={field.value}
+                                          disabled={!selectedUnit || projectsLoading}
+                                        >
+                                          <FormControl>
+                                            <SelectTrigger>
+                                              <SelectValue placeholder={
+                                                !selectedUnit 
+                                                  ? "Επιλέξτε πρώτα μονάδα" 
+                                                  : projectsLoading
+                                                    ? "Φόρτωση έργων..."
+                                                    : "Επιλέξτε έργο"
+                                              } />
+                                            </SelectTrigger>
+                                          </FormControl>
+                                          <SelectContent>
+                                            {unitProjects?.map((project: any) => (
+                                              <SelectItem key={project.id} value={String(project.id)}>
+                                                {project.name || project.project_title || `MIS: ${project.mis}`}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <FormDescription>
+                                          Επιλέξτε έργο για αυτόματη συμπλήρωση κωδικού ΝΑ853 και τύπων δαπάνης
+                                        </FormDescription>
+                                      </FormItem>
+                                    );
+                                  }}
                                 />
 
                                 <FormField
