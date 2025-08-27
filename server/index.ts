@@ -214,6 +214,10 @@ async function startServer() {
         const wss = createWebSocketServer(server);
         console.log('[Startup] WebSocket server initialized on /ws');
         
+        // Store WebSocket server in app for access by routes
+        app.set('wss', wss);
+        console.log('[Startup] WebSocket server stored in app for route access');
+        
         // Connect WebSocket server to admin routes
         if (typeof (server as any).setWebSocketServer === 'function') {
           (server as any).setWebSocketServer(wss);

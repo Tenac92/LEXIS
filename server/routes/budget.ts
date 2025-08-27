@@ -42,11 +42,11 @@ router.get('/notifications', authenticateSession, async (req: AuthenticatedReque
 // Manual budget adjustment endpoint for administrators
 router.post('/adjust', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // Check if user is admin
-    if (req.user?.role !== 'admin') {
+    // Check if user is admin or manager
+    if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
       return res.status(403).json({
         status: 'error',
-        message: 'Access denied. This operation requires admin privileges.'
+        message: 'Access denied. This operation requires admin or manager privileges.'
       });
     }
 
@@ -70,14 +70,21 @@ router.post('/adjust', authenticateSession, async (req: AuthenticatedRequest, re
     );
 
     // Broadcast budget update to all connected clients
-    broadcastBudgetUpdate({
-      type: 'BUDGET_MANUAL_ADJUSTMENT',
-      projectId: project_id,
-      amount: amount,
-      reason: reason,
-      userId: req.user.id,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      const wss = (req as any).app?.get('wss');
+      if (wss) {
+        broadcastBudgetUpdate(wss, {
+          type: 'BUDGET_MANUAL_ADJUSTMENT',
+          projectId: String(project_id),
+          amount: amount,
+          reason: reason,
+          userId: req.user.id,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (wsError) {
+      console.warn('[Budget] WebSocket broadcast failed:', wsError);
+    }
 
     console.log(`[Budget] Successfully processed manual budget adjustment for project ${project_id}`);
 

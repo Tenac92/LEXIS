@@ -783,7 +783,9 @@ export class DatabaseStorage implements IStorage {
         
         // Extract MIS from the joined Projects table
         const projectData = entry.Projects || {};
-        const projectMis = projectData.mis || 'Unknown';
+        const projectMis = Array.isArray(projectData) 
+          ? (projectData[0] as any)?.mis || 'Unknown' 
+          : (projectData as any).mis || 'Unknown';
         
         // The columns already match what the frontend expects, so we can use them directly
         return {

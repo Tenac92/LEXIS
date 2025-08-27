@@ -39,13 +39,13 @@ import { cn } from "@/lib/utils";
 
 // Navigation configuration
 const navigationItems = [
-  { href: "/documents", icon: FileText, label: "Διαβιβαστικά", roles: ["admin", "user"] },
-  { href: "/projects", icon: FolderKanban, label: "Έργα", roles: ["admin", "user"] },
-  { href: "/budget-history", icon: History, label: "Ιστορικό Προϋπ.", roles: ["admin"] },
-  { href: "/employees", icon: Users, label: "Υπάλληλοι", roles: ["admin"] },
+  { href: "/documents", icon: FileText, label: "Διαβιβαστικά", roles: ["admin", "user", "manager"] },
+  { href: "/projects", icon: FolderKanban, label: "Έργα", roles: ["admin", "user", "manager"] },
+  { href: "/budget-history", icon: History, label: "Ιστορικό Προϋπ.", roles: ["admin", "manager"] },
+  { href: "/employees", icon: Users, label: "Υπάλληλοι", roles: ["admin", "manager"] },
   { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user"] },
   { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
-  { href: "/notifications", icon: Bell, label: "Ειδοποιήσεις", roles: ["admin"] }
+  { href: "/notifications", icon: Bell, label: "Ειδοποιήσεις", roles: ["admin", "manager"] }
 ];
 
 /**
@@ -121,7 +121,8 @@ export function Header() {
                         {user?.name || 'Χρήστης'}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {user?.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}
+                        {user?.role === 'admin' ? 'Διαχειριστής' : 
+                         user?.role === 'manager' ? 'Διευθυντής' : 'Χρήστης'}
                       </span>
                     </div>
                     <ChevronDown className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
@@ -140,7 +141,8 @@ export function Header() {
                       <p className="text-sm font-medium text-foreground truncate">{user?.name || 'Χρήστης'}</p>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                       <p className="text-xs text-primary/80 font-medium mt-0.5">
-                        {user?.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}
+                        {user?.role === 'admin' ? 'Διαχειριστής' : 
+                         user?.role === 'manager' ? 'Διευθυντής' : 'Χρήστης'}
                       </p>
                     </div>
                   </div>
@@ -276,7 +278,8 @@ export function Header() {
                       <h3 className="text-sm font-medium text-foreground truncate">{user?.name || 'Χρήστης'}</h3>
                       <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
                       <p className="text-xs text-primary/80 font-medium mt-0.5">
-                        {user?.role === 'admin' ? 'Διαχειριστής' : 'Χρήστης'}
+                        {user?.role === 'admin' ? 'Διαχειριστής' : 
+                         user?.role === 'manager' ? 'Διευθυντής' : 'Χρήστης'}
                       </p>
                     </div>
                   </div>
