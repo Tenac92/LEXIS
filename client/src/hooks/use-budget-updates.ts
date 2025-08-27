@@ -55,110 +55,24 @@ export function useBudgetUpdates(
       }
 
       try {
-        // Fetching budget data using optimized project_id lookup
-        console.log(`[Budget] Fetching budget for project identifier: ${projectId}`);
+        console.log(`[Budget] Fetching budget for project: ${projectId}`);
         
-        // Use direct budget API call - the backend will handle project_id optimization
         const budgetResponse = await fetch(`/api/budget/data/${projectId}`, {
           method: 'GET',
           credentials: 'include'
         });
         
         if (!budgetResponse.ok) {
-          // Handle 404 specifically - this means no budget data exists for the project
-          if (budgetResponse.status === 404) {
-            console.log(`[Budget] No budget data found for project ${projectId} - using zero values`);
-            // Try to get the fallback data from the 404 response
-            try {
-              const errorData = await budgetResponse.json();
-              if (errorData.data) {
-                console.log(`[Budget] Using fallback data from 404 response`);
-                return {
-                  user_view: parseFloat(errorData.data.user_view) || 0,
-                  total_budget: parseFloat(errorData.data.total_budget) || 0,
-                  annual_budget: parseFloat(errorData.data.annual_budget) || 0,
-                  katanomes_etous: parseFloat(errorData.data.katanomes_etous) || 0,
-                  ethsia_pistosi: parseFloat(errorData.data.ethsia_pistosi) || 0,
-                  current_budget: parseFloat(errorData.data.current_budget) || 0,
-                  q1: parseFloat(errorData.data.q1) || 0,
-                  q2: parseFloat(errorData.data.q2) || 0,
-                  q3: parseFloat(errorData.data.q3) || 0,
-                  q4: parseFloat(errorData.data.q4) || 0,
-                  total_spent: parseFloat(errorData.data.total_spent) || 0,
-                  available_budget: parseFloat(errorData.data.available_budget) || 0,
-                  quarter_available: parseFloat(errorData.data.quarter_available) || 0,
-                  yearly_available: parseFloat(errorData.data.yearly_available) || 0
-                };
-              }
-            } catch (parseError) {
-              console.log(`[Budget] Could not parse 404 response, using default zeros`);
-            }
-          } else {
-            console.error(`[Budget] API request failed with status: ${budgetResponse.status}`);
-          }
-          
-          // Return empty budget data structure on any error
-          return {
-            user_view: 0,
-            total_budget: 0,
-            annual_budget: 0,
-            katanomes_etous: 0,
-            ethsia_pistosi: 0,
-            current_budget: 0,
-            q1: 0, q2: 0, q3: 0, q4: 0,
-            total_spent: 0,
-            available_budget: 0,
-            quarter_available: 0,
-            yearly_available: 0
-          };
+          console.warn(`[Budget] API request failed for project ${projectId} - status: ${budgetResponse.status}`);
+          throw new Error(`Budget API returned ${budgetResponse.status}`);
         }
         
-        // Parse the budget response
         const responseData = await budgetResponse.json();
         
-        // Extract budget data based on response structure
-        let budgetData: Record<string, any> = {}; 
-        
-        if (responseData?.status === 'success' && responseData.data) {
-          budgetData = responseData.data;
-          // Successfully extracted budget data from response
-        } else if (responseData?.status === 'error') {
-          // Check if this is just a "no budget data found" situation vs a real error
-          if (responseData.message === 'Budget data not found') {
-            console.log('[Budget] No budget data found for project - using fallback zeros');
-          } else {
-            console.error('[Budget] Budget API returned error:', responseData.message || 'Unknown error');
-          }
-          
-          // Check if the error response includes fallback data (server might return zeros to prevent UI breaking)
-          if (responseData.data && typeof responseData.data === 'object') {
-            // Using fallback data provided in error response
-            budgetData = responseData.data;
-          } else {
-            // Return empty budget on API error - allow UI to still function
-            // No fallback data available, using zeros for budget values
-            return {
-              user_view: 0,
-              total_budget: 0,
-              annual_budget: 0,
-              katanomes_etous: 0,
-              ethsia_pistosi: 0,
-              current_budget: 0,
-              q1: 0,
-              q2: 0,
-              q3: 0,
-              q4: 0,
-              total_spent: 0,
-              available_budget: 0,
-              quarter_available: 0,
-              yearly_available: 0
-            };
-          }
-        } else {
-          // Direct response data (not wrapped in status/data structure)
-          // Processing direct API response data
-          budgetData = responseData;
-        }
+        // Simplified response handling - expect consistent structure from backend
+        const budgetData = responseData?.status === 'success' && responseData.data 
+          ? responseData.data 
+          : responseData;
       
         // Final budget data extracted and ready to use
         
@@ -185,19 +99,8 @@ export function useBudgetUpdates(
           sum: budgetData.sum || undefined
         };
       } catch (error) {
-        // Extract the error message or add a detailed one for debugging
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : 'Network error fetching budget data';
-          
-        // Only log as error if it's a real network/server error, not just missing budget data
-        if (error instanceof Error && error.message.includes('fetch')) {
-          console.error('[Budget] Network error fetching budget data:', error);
-        } else {
-          console.log('[Budget] Budget data fetch issue (possibly no data available):', errorMessage);
-        }
-        
-        // Instead of throwing, return empty but valid budget data
+        console.error('[Budget] Failed to fetch budget data:', error);
+        // Return empty budget structure for graceful degradation
         return {
           user_view: 0,
           total_budget: 0,
@@ -237,57 +140,18 @@ export function useBudgetUpdates(
       }
 
       try {
-        // Get all projects first
-        const allProjects = await queryClient.fetchQuery({
-          queryKey: ["/api/projects"]
-        });
-        
-        // Find the specific project that matches either the ID or na853
-        let projectData;
-        if (Array.isArray(allProjects)) {
-          projectData = allProjects.find(
-            (p: any) => 
-              String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
-              String(p?.mis) === String(projectId)
-          );
-          // Found matching project for budget validation
-        } else {
-          projectData = allProjects;
-        }
-        
-        // Type checking and field extraction
-        const project = projectData as { mis?: string, na853?: string } | null | undefined;
-        
-        // Get the MIS from either the mis field or na853 field (for backward compatibility)
-        const misValue = project?.mis || project?.na853;
-        
-        if (!project || !misValue) {
-          console.error('[Budget] Project or MIS not found', { projectId });
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Δεν βρέθηκε το MIS του έργου. Επιλέξτε έγκυρο έργο.'
-          };
-        }
+        // Simplified project lookup - use projectId directly as MIS
+        // The backend will handle the lookup logic
+        const misValue = projectId;
 
-        // Use the MIS directly for validation (can be numeric or alphanumeric)
+        // Use the MIS directly for validation
         
-        // Validating budget for project MIS and requested amount
-        
-        // For MIS values with special characters or Greek letters, encode for transport in JSON
-        // Note: JSON.stringify handles this for us, but we encode it for consistency
-        
-        // Using fetch directly instead of apiRequest to avoid auto-redirect on 401
         const response = await fetch('/api/budget/validate', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Request-ID': `req-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-          },
+          headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            mis: misValue, // Send the MIS as-is (can be numeric or alphanumeric)
+            mis: misValue,
             amount: currentAmount,
             sessionId: sessionId
           })
@@ -305,15 +169,6 @@ export function useBudgetUpdates(
         }
         
         if (!response.ok) {
-          // Validation request failed with HTTP status code
-          // Try to get error details if possible
-          try {
-            const errorText = await response.text();
-            // Error details received from server
-          } catch (textError) {
-            // Ignore text error, we already have the status code
-          }
-          
           return { 
             status: 'error', 
             canCreate: false,
@@ -322,39 +177,7 @@ export function useBudgetUpdates(
           };
         }
         
-        // Check if the response is actually JSON before parsing
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          // Received non-JSON content type in response
-          try {
-            const text = await response.text();
-            // Non-JSON response received, response might be HTML or plain text error
-          } catch (textError) {
-            // Ignore text error, we already identified the content type issue
-          }
-          
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: `Μη αναμενόμενη απόκριση από τον διακομιστή (${contentType || 'άγνωστος τύπος περιεχομένου'})`
-          };
-        }
-        
-        // Process successful response
-        let data;
-        try {
-          data = await response.json();
-          // Successfully parsed validation response data
-        } catch (jsonError) {
-          // Failed to parse JSON response from validation endpoint
-          return { 
-            status: 'error', 
-            canCreate: false,
-            allowDocx: false,
-            message: 'Μη έγκυρη απόκριση του διακομιστή. Δοκιμάστε ξανά αργότερα.'
-          };
-        }
+        const data = await response.json();
         
         // If we have budget indicators in the validation response metadata,
         // update the budget data with these values to ensure real-time updates
@@ -378,33 +201,12 @@ export function useBudgetUpdates(
         
         return data;
       } catch (error) {
-        // Extract the error message or add a detailed one for debugging
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : 'Unknown error validating budget';
-          
-        // Runtime error occurred during budget validation process
-        // Captured detailed error message for troubleshooting
-        
-        // Create a debug info object to help with troubleshooting
-        const debugInfo = {
-          projectId,
-          mis: projectId,
-          amount: currentAmount,
-          error: errorMessage,
-          timestamp: new Date().toISOString()
-        };
-        // Created debug info object with validation context details
-        
+        console.error('[Budget] Budget validation failed:', error);
         return {
           status: 'error',
           canCreate: false,
           allowDocx: false,
-          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Δοκιμάστε ξανά αργότερα.',
-          metadata: {
-            error: errorMessage,
-            debugInfo: debugInfo
-          }
+          message: 'Αποτυχία επικύρωσης προϋπολογισμού. Δοκιμάστε ξανά αργότερα.'
         };
       }
     },
@@ -426,47 +228,22 @@ export function useBudgetUpdates(
     // Set a new timeout to delay the update broadcast (debouncing)
     const timeout = setTimeout(async () => {
       try {
-        // Get the MIS from projects data
-        const allProjects = await queryClient.getQueryData(["/api/projects"]);
-        
-        let misValue = projectId;
-        
-        // Try to find the actual MIS if we have project data
-        if (Array.isArray(allProjects)) {
-          const projectData = allProjects.find(
-            (p: any) => 
-              String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
-              String(p?.mis) === String(projectId)
-          );
-          
-          if (projectData) {
-            misValue = projectData.mis || projectData.na853 || projectId;
-          }
-        }
-        
-        // Broadcasting real-time budget update via WebSocket
-        
-        // Use the broadcast endpoint for real-time updates
         const response = await fetch('/api/budget/broadcast-update', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json'
-          },
-          credentials: 'include', // Include credentials for authentication
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({
-            mis: misValue,
+            mis: projectId,
             amount: currentAmount,
             sessionId
           })
         });
         
         if (!response.ok) {
-          // Failed to broadcast real-time budget update
-        } else {
-          // Real-time budget update broadcast successful
+          console.warn('[Budget] Failed to broadcast real-time update');
         }
       } catch (error) {
-        // Error occurred during WebSocket budget update broadcast
+        console.warn('[Budget] Error broadcasting update:', error);
       }
     }, 300); // 300ms debounce delay - quick enough for real-time feel, but not too chatty
     
@@ -490,74 +267,37 @@ export function useBudgetUpdates(
     }
 
     try {
-      // Get the MIS from projects data
-      const allProjects = await queryClient.getQueryData(["/api/projects"]);
-      
-      let misValue = projectId;
-      
-      // Try to find the actual MIS if we have project data
-      if (Array.isArray(allProjects)) {
-        const projectData = allProjects.find(
-          (p: any) => 
-            String(p?.na853).toLowerCase() === String(projectId).toLowerCase() ||
-            String(p?.mis) === String(projectId)
-        );
-        
-        if (projectData) {
-          misValue = projectData.mis || projectData.na853 || projectId;
-        }
-      }
-      
-      // IMPROVEMENT: Calculate budget changes directly here for simplicity
-      // This implements the simple subtraction logic the user requested
+      // Calculate simple budget preview (subtract requested amount)
       let simpleBudgetData = null;
       if (budgetQuery.data) {
-        // Get the original values as numbers
         const availableBudget = Number(budgetQuery.data.available_budget || 0);
         const yearlyAvailable = Number(budgetQuery.data.yearly_available || 0);
         const quarterAvailable = Number(budgetQuery.data.quarter_available || 0);
         
-        // Subtract the current amount directly and ensure we have integers
         simpleBudgetData = {
           available_budget: Math.round(availableBudget - amount),
           yearly_available: Math.round(yearlyAvailable - amount),
           quarter_available: Math.round(quarterAvailable - amount)
         };
-        
-        // Calculated remaining budget amounts by subtracting requested amount
       }
       
-      // Manually broadcasting budget update to all connected clients
-      
-      // Send budget update via broadcast endpoint
-      // Note: We need to include credentials as the endpoint still requires authentication
       const response = await fetch('/api/budget/broadcast-update', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include', // Needed for authentication
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
-          mis: misValue,
+          mis: projectId,
           amount,
-          // IMPROVEMENT: Send to ALL connected clients by setting sessionId to null
-          // This ensures everyone (including the current user) gets the update
-          sessionId: null,
-          // Include our simple budget calculation
+          sessionId: null, // Broadcast to all clients
           simpleBudgetData
         })
       });
       
       if (!response.ok) {
-        // Failed to broadcast manual budget update
-        // Try to get error details
-        const errorText = await response.text();
-        // Retrieved detailed error response from server
-      } else {
-        // Manual budget update successfully broadcast to all clients
+        console.warn('[Budget] Failed to broadcast manual update');
       }
     } catch (error) {
-      // Error occurred while attempting to broadcast manual budget update
+      console.warn('[Budget] Error broadcasting manual update:', error);
     }
   };
 

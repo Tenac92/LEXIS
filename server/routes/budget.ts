@@ -74,11 +74,9 @@ router.post('/adjust', authenticateSession, async (req: AuthenticatedRequest, re
       const wss = (req as any).app?.get('wss');
       if (wss) {
         broadcastBudgetUpdate(wss, {
-          type: 'BUDGET_MANUAL_ADJUSTMENT',
-          projectId: String(project_id),
+          mis: String(project_id),
           amount: amount,
-          reason: reason,
-          userId: req.user.id,
+          userId: String(req.user.id),
           timestamp: new Date().toISOString()
         });
       }
