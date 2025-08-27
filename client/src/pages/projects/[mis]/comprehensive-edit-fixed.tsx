@@ -229,6 +229,7 @@ const comprehensiveProjectSchema = z.object({
     .array(
       z.object({
         implementing_agency: z.string().default(""),
+        na853_code: z.string().default(""),
         event_type: z.string().default(""),
         expenditure_types: z.array(z.string()).default([]),
         regions: z
@@ -2398,7 +2399,7 @@ export default function ComprehensiveEditFixed() {
                                 )}
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <FormField
                                   control={form.control}
                                   name={`location_details.${locationIndex}.implementing_agency`}
@@ -2406,7 +2407,57 @@ export default function ComprehensiveEditFixed() {
                                     <FormItem>
                                       <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
                                       <Select
-                                        onValueChange={field.onChange}
+                                        onValueChange={(value) => {
+                                          field.onChange(value);
+                                          
+                                          console.log("[UnitSelection] Selected unit:", value);
+                                          console.log("[UnitSelection] Available units:", typedUnitsData?.length);
+                                          
+                                          // Auto-populate NA853 code and expenditure types based on selected unit
+                                          const selectedUnit = typedUnitsData?.find(unit => 
+                                            (unit.unit_name?.name || unit.name || unit.unit) === value
+                                          );
+                                          
+                                          console.log("[UnitSelection] Found unit data:", selectedUnit);
+                                          
+                                          if (selectedUnit) {
+                                            // Auto-populate NA853 code if available
+                                            const na853Code = selectedUnit.na853_code || selectedUnit.code || selectedUnit.unit_code;
+                                            console.log("[UnitSelection] NA853 code:", na853Code);
+                                            if (na853Code) {
+                                              form.setValue(
+                                                `location_details.${locationIndex}.na853_code`,
+                                                na853Code
+                                              );
+                                              console.log("[UnitSelection] Set NA853 code:", na853Code);
+                                            }
+                                            
+                                            // Auto-populate default expenditure types for this unit
+                                            const unitExpenditureTypes = selectedUnit.default_expenditure_types || 
+                                              selectedUnit.expenditure_types || [];
+                                            console.log("[UnitSelection] Unit expenditure types:", unitExpenditureTypes);
+                                            if (Array.isArray(unitExpenditureTypes) && unitExpenditureTypes.length > 0) {
+                                              form.setValue(
+                                                `location_details.${locationIndex}.expenditure_types`,
+                                                unitExpenditureTypes
+                                              );
+                                              console.log("[UnitSelection] Set expenditure types:", unitExpenditureTypes);
+                                            }
+                                            
+                                            // Auto-set event type if unit has default
+                                            const defaultEventType = selectedUnit.default_event_type;
+                                            console.log("[UnitSelection] Default event type:", defaultEventType);
+                                            if (defaultEventType) {
+                                              form.setValue(
+                                                `location_details.${locationIndex}.event_type`,
+                                                defaultEventType
+                                              );
+                                              console.log("[UnitSelection] Set event type:", defaultEventType);
+                                            }
+                                          } else {
+                                            console.log("[UnitSelection] No unit found for:", value);
+                                          }
+                                        }}
                                         value={field.value}
                                       >
                                         <FormControl>
@@ -2432,6 +2483,27 @@ export default function ComprehensiveEditFixed() {
                                           ))}
                                         </SelectContent>
                                       </Select>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.na853_code`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Κωδικός ΝΑ853</FormLabel>
+                                      <FormControl>
+                                        <Input 
+                                          {...field} 
+                                          placeholder="Αυτόματη συμπλήρωση"
+                                          className="bg-gray-50"
+                                          readOnly
+                                        />
+                                      </FormControl>
+                                      <FormDescription>
+                                        Συμπληρώνεται αυτόματα από τη μονάδα
+                                      </FormDescription>
                                     </FormItem>
                                   )}
                                 />
