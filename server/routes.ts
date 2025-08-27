@@ -186,6 +186,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
     }
   });
+
+  // Create new beneficiary payment
+  app.post('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user?.unit_id) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { beneficiary_id, installment, amount, status, payment_date, expenditure_type } = req.body;
+
+      // Validate required fields
+      if (!beneficiary_id || !installment || !amount) {
+        return res.status(400).json({ message: 'Missing required fields: beneficiary_id, installment, amount' });
+      }
+
+      // Verify beneficiary belongs to user's unit
+      const beneficiary = await storage.getBeneficiaryById(beneficiary_id);
+      if (!beneficiary) {
+        return res.status(404).json({ message: 'Beneficiary not found' });
+      }
+
+      const now = new Date().toISOString();
+      const { data, error } = await supabase
+        .from('beneficiary_payments')
+        .insert([{
+          beneficiary_id: parseInt(beneficiary_id),
+          installment,
+          amount: amount.toString(),
+          status: status || 'pending',
+          payment_date: payment_date || null,
+          expenditure_type: expenditure_type || null,
+          created_at: now,
+          updated_at: now
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[Beneficiary Payments] Error creating payment:', error);
+        return res.status(500).json({ message: 'Failed to create payment', error: error.message });
+      }
+
+      res.status(201).json(data);
+    } catch (error) {
+      console.error('[Beneficiary Payments] Error in create payment:', error);
+      res.status(500).json({ message: 'Failed to create beneficiary payment' });
+    }
+  });
+
+  // Update beneficiary payment
+  app.put('/api/beneficiary-payments/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user?.unit_id) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { id } = req.params;
+      const { installment, amount, status, payment_date, expenditure_type } = req.body;
+
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ message: 'Invalid payment ID' });
+      }
+
+      // Check if payment exists and belongs to user's unit
+      const { data: existingPayment } = await supabase
+        .from('beneficiary_payments')
+        .select('*, beneficiaries(*)')
+        .eq('id', id)
+        .single();
+
+      if (!existingPayment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (installment !== undefined) updateData.installment = installment;
+      if (amount !== undefined) updateData.amount = amount.toString();
+      if (status !== undefined) updateData.status = status;
+      if (payment_date !== undefined) updateData.payment_date = payment_date;
+      if (expenditure_type !== undefined) updateData.expenditure_type = expenditure_type;
+
+      const { data, error } = await supabase
+        .from('beneficiary_payments')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('[Beneficiary Payments] Error updating payment:', error);
+        return res.status(500).json({ message: 'Failed to update payment', error: error.message });
+      }
+
+      res.json(data);
+    } catch (error) {
+      console.error('[Beneficiary Payments] Error in update payment:', error);
+      res.status(500).json({ message: 'Failed to update beneficiary payment' });
+    }
+  });
+
+  // Delete beneficiary payment
+  app.delete('/api/beneficiary-payments/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user?.unit_id) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+
+      const { id } = req.params;
+
+      if (!id || isNaN(parseInt(id))) {
+        return res.status(400).json({ message: 'Invalid payment ID' });
+      }
+
+      // Check if payment exists
+      const { data: existingPayment } = await supabase
+        .from('beneficiary_payments')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (!existingPayment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+
+      const { error } = await supabase
+        .from('beneficiary_payments')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('[Beneficiary Payments] Error deleting payment:', error);
+        return res.status(500).json({ message: 'Failed to delete payment', error: error.message });
+      }
+
+      res.json({ message: 'Payment deleted successfully' });
+    } catch (error) {
+      console.error('[Beneficiary Payments] Error in delete payment:', error);
+      res.status(500).json({ message: 'Failed to delete beneficiary payment' });
+    }
+  });
   
   // Basic document creation endpoint (legacy)
   app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
