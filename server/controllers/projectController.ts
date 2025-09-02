@@ -534,8 +534,12 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     
     console.log(`[ProjectComplete] Before kallikratis loading - got ${eventTypes.length} eventTypes, ${units.length} units, ${expenditureTypes.length} expenditureTypes`);
     
-    // Load kallikratis data asynchronously - it's large but not immediately needed
+    // Load both old kallikratis data (for fallback) and new normalized geographic data
     let kallikratis: any[] = [];
+    let regions: any[] = [];
+    let regionalUnits: any[] = [];
+    let municipalities: any[] = [];
+    
     try {
       console.log('[ProjectComplete] Attempting to load kallikratis data...');
       const kallikratisResponse = await supabase
@@ -552,10 +556,83 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
     } catch (kallikratisError) {
       console.warn('[ProjectComplete] Kallikratis data load failed, continuing without:', kallikratisError);
     }
+
+    // Load normalized geographic data
+    try {
+      console.log('[ProjectComplete] Loading normalized geographic data...');
+      const [regionsRes, regionalUnitsRes, municipalitiesRes] = await Promise.all([
+        supabase.from('regions').select('*'),
+        supabase.from('regional_units').select('*'),
+        supabase.from('municipalities').select('*')
+      ]);
+
+      regions = regionsRes.data || [];
+      regionalUnits = regionalUnitsRes.data || [];
+      municipalities = municipalitiesRes.data || [];
+      
+      console.log(`[ProjectComplete] Loaded normalized geographic data: ${regions.length} regions, ${regionalUnits.length} regional units, ${municipalities.length} municipalities`);
+    } catch (geoError) {
+      console.warn('[ProjectComplete] Normalized geographic data load failed:', geoError);
+    }
     
     // Get related data from project_index entries (the most common ones)
     const projectIndex = indexRes.data || [];
     console.log(`[ProjectComplete] Project has ${projectIndex.length} index entries`);
+    
+    // Fetch project-specific geographic relationships from junction tables
+    let projectRegions: any[] = [];
+    let projectRegionalUnits: any[] = [];
+    let projectMunicipalities: any[] = [];
+    
+    if (projectIndex.length > 0) {
+      try {
+        console.log(`[ProjectComplete] Fetching geographic relationships for project index entries`);
+        
+        // Get all project_index IDs for this project
+        const projectIndexIds = projectIndex.map(idx => idx.id);
+        
+        // Fetch geographic relationships from junction tables
+        const [regionsJunctionRes, unitsJunctionRes, munisJunctionRes] = await Promise.all([
+          supabase.from('project_index_regions')
+            .select(`
+              region_code,
+              regions (
+                code,
+                name
+              )
+            `)
+            .in('project_index_id', projectIndexIds),
+          supabase.from('project_index_units')
+            .select(`
+              unit_code,
+              regional_units (
+                code,
+                name,
+                region_code
+              )
+            `)
+            .in('project_index_id', projectIndexIds),
+          supabase.from('project_index_munis')
+            .select(`
+              muni_code,
+              municipalities (
+                code,
+                name,
+                unit_code
+              )
+            `)
+            .in('project_index_id', projectIndexIds)
+        ]);
+
+        projectRegions = regionsJunctionRes.data || [];
+        projectRegionalUnits = unitsJunctionRes.data || [];
+        projectMunicipalities = munisJunctionRes.data || [];
+        
+        console.log(`[ProjectComplete] Found geographic relationships: ${projectRegions.length} regions, ${projectRegionalUnits.length} units, ${projectMunicipalities.length} municipalities`);
+      } catch (junctionError) {
+        console.warn('[ProjectComplete] Failed to fetch geographic relationships from junction tables:', junctionError);
+      }
+    }
     
     // Find the most common values from project_index (for enhanced fields)
     const mostCommonUnit = projectIndex.length > 0 ? 
@@ -600,11 +677,21 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       eventTypes: eventTypes,
       units: units,
       kallikratis: kallikratis,
-      expenditureTypes: expenditureTypes
+      expenditureTypes: expenditureTypes,
+      // New normalized geographic data
+      regions: regions,
+      regionalUnits: regionalUnits,
+      municipalities: municipalities,
+      // Project-specific geographic relationships
+      projectGeographicData: {
+        regions: projectRegions,
+        regionalUnits: projectRegionalUnits,
+        municipalities: projectMunicipalities
+      }
     };
     
     console.log(`[ProjectComplete] Successfully fetched complete data for project ${projectId}`);
-    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}, eventTypes=${completeData.eventTypes.length}, units=${completeData.units.length}, expenditureTypes=${completeData.expenditureTypes.length}, kallikratis=${completeData.kallikratis.length}`);
+    console.log(`[ProjectComplete] Data counts: decisions=${completeData.decisions.length}, formulations=${completeData.formulations.length}, index=${completeData.index.length}, eventTypes=${completeData.eventTypes.length}, units=${completeData.units.length}, expenditureTypes=${completeData.expenditureTypes.length}, kallikratis=${completeData.kallikratis.length}, regions=${completeData.regions.length}, regionalUnits=${completeData.regionalUnits.length}, municipalities=${completeData.municipalities.length}`);
     
     res.json(completeData);
   } catch (error) {
