@@ -537,6 +537,35 @@ export const kallikratis = pgTable("kallikratis", {
 });
 
 /**
+ * Regions Table - New normalized geographic structure
+ * Greek administrative regions (Περιφέρειες)
+ */
+export const regions = pgTable("regions", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+});
+
+/**
+ * Regional Units Table - New normalized geographic structure  
+ * Greek regional units (Περιφερειακές Ενότητες)
+ */
+export const regionalUnits = pgTable("regional_units", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  region_code: text("region_code").notNull().references(() => regions.code),
+});
+
+/**
+ * Municipalities Table - New normalized geographic structure
+ * Greek municipalities (Δήμοι)
+ */
+export const municipalities = pgTable("municipalities", {
+  code: text("code").primaryKey(),
+  name: text("name").notNull(),
+  unit_code: text("unit_code").notNull().references(() => regionalUnits.code),
+});
+
+/**
  * Legacy Beneficiary Table (for backward compatibility during migration)
  */
 export const beneficiariesLegacy = pgTable(
@@ -809,6 +838,11 @@ export const insertEventTypeSchema = createInsertSchema(eventTypes);
 export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
 export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
+// New geographic table schemas
+export const insertRegionSchema = createInsertSchema(regions);
+export const insertRegionalUnitSchema = createInsertSchema(regionalUnits);
+export const insertMunicipalitySchema = createInsertSchema(municipalities);
+
 // Budget validation schema for validating budget changes
 export const budgetValidationSchema = z.object({
   mis: z.union([z.string().min(1, "Κωδικός MIS απαιτείται"), z.number().int()]),
@@ -835,6 +869,12 @@ export type EventType = typeof eventTypes.$inferSelect;
 export type ExpenditureType = typeof expenditureTypes.$inferSelect;
 export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+
+// New geographic entity types
+export type Region = typeof regions.$inferSelect;
+export type RegionalUnit = typeof regionalUnits.$inferSelect;
+export type Municipality = typeof municipalities.$inferSelect;
+
 export type Employee = typeof employees.$inferSelect;
 export type Beneficiary = typeof beneficiaries.$inferSelect;
 export type BeneficiaryPayment = typeof beneficiaryPayments.$inferSelect;
@@ -862,6 +902,11 @@ export type InsertBeneficiaryPayment = z.infer<
 >;
 export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
+
+// New geographic insert types
+export type InsertRegion = z.infer<typeof insertRegionSchema>;
+export type InsertRegionalUnit = z.infer<typeof insertRegionalUnitSchema>;
+export type InsertMunicipality = z.infer<typeof insertMunicipalitySchema>;
 
 // ==============================================================
 // 5. Insert Types above, Custom Types & Interfaces below

@@ -53,6 +53,10 @@ import {
   getGeographicInfo,
   formatGeographicDisplay,
   getGeographicCodeForSave,
+  getRegionalUnitsForRegion,
+  getMunicipalitiesForRegionalUnit,
+  buildNormalizedGeographicData,
+  getGeographicCodeForSaveNormalized,
 } from "@shared/utils/geographic-utils";
 
 // Helper function to safely convert array or object fields to text
@@ -447,6 +451,19 @@ export default function ComprehensiveEditFixed() {
     refetchOnMount: false,
   });
 
+  // NEW: Normalized geographic data query
+  const {
+    data: geographicData,
+    isLoading: isGeographicDataLoading,
+    error: geographicDataError,
+  } = useQuery({
+    queryKey: ['/api/geographic-data'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache for geographic data
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
   // Extract data from optimized API responses with proper typing
   const projectData = completeProjectData?.project;
   const projectIndexData = completeProjectData?.index;
@@ -470,7 +487,7 @@ export default function ComprehensiveEditFixed() {
 
   // Check if all essential data is loading
   const isEssentialDataLoading = isCompleteDataLoading;
-  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading;
+  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
   console.log("DEBUG - Project Data:", {
@@ -516,15 +533,29 @@ export default function ComprehensiveEditFixed() {
     | ExpenditureTypeData[]
     | undefined;
 
-  // Helper functions for geographic data
+  // Helper functions for geographic data - Updated for normalized structure
   const getUniqueRegions = () => {
+    if (geographicData?.regions) {
+      return geographicData.regions.map(r => r.name).filter(Boolean);
+    }
+    // Fallback to Kallikratis data if geographic data isn't loaded yet
     return [
       ...new Set(typedKallikratisData?.map((k) => k.perifereia) || []),
     ].filter(Boolean);
   };
 
-  const getRegionalUnitsForRegion = (region: string) => {
+  const getRegionalUnitsForRegionNormalized = (region: string) => {
     if (!region) return [];
+    
+    if (geographicData?.regions && geographicData?.regionalUnits) {
+      const selectedRegion = geographicData.regions.find(r => r.name === region);
+      if (selectedRegion) {
+        return getRegionalUnitsForRegion(geographicData.regionalUnits, selectedRegion.code)
+          .map(ru => ru.name);
+      }
+    }
+    
+    // Fallback to Kallikratis data
     return [
       ...new Set(
         typedKallikratisData
@@ -534,11 +565,26 @@ export default function ComprehensiveEditFixed() {
     ].filter(Boolean);
   };
 
-  const getMunicipalitiesForRegionalUnit = (
+  const getMunicipalitiesForRegionalUnitNormalized = (
     region: string,
     regionalUnit: string,
   ) => {
     if (!region || !regionalUnit) return [];
+    
+    if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
+      const selectedRegion = geographicData.regions.find(r => r.name === region);
+      if (selectedRegion) {
+        const selectedRegionalUnit = geographicData.regionalUnits.find(
+          ru => ru.name === regionalUnit && ru.region_code === selectedRegion.code
+        );
+        if (selectedRegionalUnit) {
+          return getMunicipalitiesForRegionalUnit(geographicData.municipalities, selectedRegionalUnit.code)
+            .map(m => m.name);
+        }
+      }
+    }
+    
+    // Fallback to Kallikratis data
     return [
       ...new Set(
         typedKallikratisData
@@ -558,6 +604,13 @@ export default function ComprehensiveEditFixed() {
     uniqueRegionsCount: getUniqueRegions().length,
     uniqueRegions: getUniqueRegions().slice(0, 3),
     sampleKallikratisEntry: typedKallikratisData?.[0],
+    // New normalized data info
+    hasGeographicData: !!geographicData,
+    regionsCount: geographicData?.regions?.length || 0,
+    regionalUnitsCount: geographicData?.regionalUnits?.length || 0,
+    municipalitiesCount: geographicData?.municipalities?.length || 0,
+    isGeographicDataLoading,
+    geographicDataError: geographicDataError?.message,
   });
 
   // Number formatting helper functions
@@ -1088,11 +1141,45 @@ export default function ComprehensiveEditFixed() {
                 continue;
               }
 
-              // Find kallikratis_id and geographic_code
+              // Find kallikratis_id and geographic_code using normalized data or fallback
               let kallikratisId = null;
               let geographicCode = null;
 
-              if (typedKallikratisData && region.region) {
+              // Try normalized approach first, fallback to Kallikratis
+              if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities && region.region) {
+                try {
+                  // Use normalized geographic data for calculation
+                  const normalizedData = buildNormalizedGeographicData(geographicData);
+                  
+                  // Determine the appropriate level based on what data is actually populated
+                  const forceLevel =
+                    !region.municipality ||
+                    region.municipality.trim() === "" ||
+                    region.municipality === "__clear__"
+                      ? "regional_unit"
+                      : "municipality";
+                  
+                  geographicCode = getGeographicCodeForSaveNormalized(
+                    region,
+                    normalizedData,
+                    forceLevel,
+                  );
+
+                  console.log("Normalized Geographic Code Calculation:", {
+                    region: region.region,
+                    regional_unit: region.regional_unit,
+                    municipality: region.municipality,
+                    calculated_code: geographicCode,
+                    forceLevel,
+                    usingNormalizedData: true,
+                  });
+                } catch (error) {
+                  console.warn("Failed to use normalized geographic data, falling back to Kallikratis:", error);
+                }
+              }
+              
+              // Fallback to Kallikratis data if normalized approach failed or data not available
+              if (!geographicCode && typedKallikratisData && region.region) {
                 const kallikratis = typedKallikratisData.find(
                   (k) =>
                     k.perifereia === region.region &&
@@ -1106,8 +1193,6 @@ export default function ComprehensiveEditFixed() {
                   kallikratisId = kallikratis.id;
 
                   // Determine the appropriate level based on what data is actually populated
-                  // If municipality is empty/cleared, use regional unit level
-                  // If municipality is populated, use municipality level
                   const forceLevel =
                     !region.municipality ||
                     region.municipality.trim() === "" ||
@@ -1122,8 +1207,7 @@ export default function ComprehensiveEditFixed() {
                     forceLevel,
                   );
 
-                  // DEBUG: Log the geographic code calculation
-                  console.log("Geographic Code Calculation:", {
+                  console.log("Fallback Kallikratis Geographic Code Calculation:", {
                     region: region.region,
                     regional_unit: region.regional_unit,
                     municipality: region.municipality,
@@ -1135,6 +1219,7 @@ export default function ComprehensiveEditFixed() {
                         kallikratis.kodikos_perifereiakis_enotitas,
                       region_code: kallikratis.kodikos_perifereias,
                     },
+                    usingFallback: true,
                   });
                 }
                 console.log("Kallikratis lookup:", {
@@ -2616,7 +2701,7 @@ export default function ComprehensiveEditFixed() {
                                                 </SelectTrigger>
                                               </FormControl>
                                               <SelectContent>
-                                                {getRegionalUnitsForRegion(
+                                                {getRegionalUnitsForRegionNormalized(
                                                   form.watch(
                                                     `location_details.${locationIndex}.regions.${regionIndex}.region`,
                                                   ),
@@ -2650,7 +2735,7 @@ export default function ComprehensiveEditFixed() {
                                                 </SelectTrigger>
                                               </FormControl>
                                               <SelectContent>
-                                                {getMunicipalitiesForRegionalUnit(
+                                                {getMunicipalitiesForRegionalUnitNormalized(
                                                   form.watch(
                                                     `location_details.${locationIndex}.regions.${regionIndex}.region`,
                                                   ),

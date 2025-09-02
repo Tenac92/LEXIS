@@ -609,6 +609,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // New normalized geographic data endpoints
+  
+  // Regions endpoint
+  app.get('/api/regions', async (req: Request, res: Response) => {
+    try {
+      const { data: regions, error } = await supabase
+        .from('regions')
+        .select('*')
+        .order('name');
+      
+      if (error) {
+        console.error('[API] Error fetching regions:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(regions || []);
+    } catch (error) {
+      console.error('[API] Error in regions endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Regional units endpoint
+  app.get('/api/regional-units', async (req: Request, res: Response) => {
+    try {
+      const { region_code } = req.query;
+      
+      let query = supabase
+        .from('regional_units')
+        .select('*')
+        .order('name');
+      
+      // Filter by region if provided
+      if (region_code) {
+        query = query.eq('region_code', region_code);
+      }
+      
+      const { data: regionalUnits, error } = await query;
+      
+      if (error) {
+        console.error('[API] Error fetching regional units:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(regionalUnits || []);
+    } catch (error) {
+      console.error('[API] Error in regional units endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Municipalities endpoint
+  app.get('/api/municipalities', async (req: Request, res: Response) => {
+    try {
+      const { unit_code } = req.query;
+      
+      let query = supabase
+        .from('municipalities')
+        .select('*')
+        .order('name');
+      
+      // Filter by regional unit if provided
+      if (unit_code) {
+        query = query.eq('unit_code', unit_code);
+      }
+      
+      const { data: municipalities, error } = await query;
+      
+      if (error) {
+        console.error('[API] Error fetching municipalities:', error);
+        return res.status(500).json({ error: error.message });
+      }
+      
+      res.json(municipalities || []);
+    } catch (error) {
+      console.error('[API] Error in municipalities endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Combined geographic data endpoint for easy client-side use
+  app.get('/api/geographic-data', async (req: Request, res: Response) => {
+    try {
+      const [regionsRes, regionalUnitsRes, municipalitiesRes] = await Promise.all([
+        supabase.from('regions').select('*').order('name'),
+        supabase.from('regional_units').select('*').order('name'),
+        supabase.from('municipalities').select('*').order('name')
+      ]);
+
+      if (regionsRes.error) {
+        console.error('[API] Error fetching regions:', regionsRes.error);
+        return res.status(500).json({ error: regionsRes.error.message });
+      }
+
+      if (regionalUnitsRes.error) {
+        console.error('[API] Error fetching regional units:', regionalUnitsRes.error);
+        return res.status(500).json({ error: regionalUnitsRes.error.message });
+      }
+
+      if (municipalitiesRes.error) {
+        console.error('[API] Error fetching municipalities:', municipalitiesRes.error);
+        return res.status(500).json({ error: municipalitiesRes.error.message });
+      }
+
+      res.json({
+        regions: regionsRes.data || [],
+        regionalUnits: regionalUnitsRes.data || [],
+        municipalities: municipalitiesRes.data || []
+      });
+    } catch (error) {
+      console.error('[API] Error in combined geographic data endpoint:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
   
   // Admin system statistics endpoint - admin only access
   app.get('/api/admin/system-stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
@@ -1285,6 +1400,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Error fetching projects',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Geographic API routes
+  app.get('/api/geographic/regions', async (req, res) => {
+    try {
+      console.log('[Geographic API] Fetching regions...');
+      const regions = await storage.getRegions();
+      console.log('[Geographic API] Regions fetched:', regions.length);
+      res.json(regions);
+    } catch (error) {
+      console.error('[Geographic API] Error fetching regions:', error);
+      res.status(500).json({ error: 'Failed to fetch regions' });
+    }
+  });
+
+  app.get('/api/geographic/regional-units', async (req, res) => {
+    try {
+      console.log('[Geographic API] Fetching regional units...');
+      const regionalUnits = await storage.getRegionalUnits();
+      console.log('[Geographic API] Regional units fetched:', regionalUnits.length);
+      res.json(regionalUnits);
+    } catch (error) {
+      console.error('[Geographic API] Error fetching regional units:', error);
+      res.status(500).json({ error: 'Failed to fetch regional units' });
+    }
+  });
+
+  app.get('/api/geographic/municipalities', async (req, res) => {
+    try {
+      console.log('[Geographic API] Fetching municipalities...');
+      const municipalities = await storage.getMunicipalities();
+      console.log('[Geographic API] Municipalities fetched:', municipalities.length);
+      res.json(municipalities);
+    } catch (error) {
+      console.error('[Geographic API] Error fetching municipalities:', error);
+      res.status(500).json({ error: 'Failed to fetch municipalities' });
+    }
+  });
+
+  // Combined geographic data endpoint for efficiency
+  app.get('/api/geographic-data', async (req, res) => {
+    try {
+      console.log('[Geographic API] Fetching all geographic data...');
+      const [regions, regionalUnits, municipalities] = await Promise.all([
+        storage.getRegions(),
+        storage.getRegionalUnits(),
+        storage.getMunicipalities()
+      ]);
+      
+      const geographicData = {
+        regions,
+        regionalUnits,
+        municipalities
+      };
+      
+      console.log('[Geographic API] All geographic data fetched:', {
+        regionsCount: regions.length,
+        regionalUnitsCount: regionalUnits.length,
+        municipalitiesCount: municipalities.length
+      });
+      
+      res.json(geographicData);
+    } catch (error) {
+      console.error('[Geographic API] Error fetching all geographic data:', error);
+      res.status(500).json({ error: 'Failed to fetch geographic data' });
     }
   });
 
