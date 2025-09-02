@@ -1393,7 +1393,7 @@ export default function ComprehensiveEditFixed() {
         }
       });
 
-      // Add geographic data from the new normalized structure
+      // Add geographic data from the new normalized structure OR fallback to project index data
       if (completeProjectData?.projectGeographicData) {
         const { regions, regionalUnits, municipalities } = completeProjectData.projectGeographicData;
         
@@ -1403,7 +1403,7 @@ export default function ComprehensiveEditFixed() {
           municipalitiesCount: municipalities?.length || 0
         });
 
-        // Process project-specific geographic relationships
+        // Process project-specific geographic relationships and build geographic_areas
         locationDetailsMap.forEach((locationDetail) => {
           // Extract unique geographic areas from the normalized data
           const uniqueAreas = new Set<string>();
@@ -1460,60 +1460,40 @@ export default function ComprehensiveEditFixed() {
         });
       }
 
-      // Fallback to old kallikratis approach if new structure doesn't have data
-      if (!completeProjectData?.projectGeographicData?.regions?.length) {
-        console.log('DEBUG: Falling back to kallikratis data for geographic information');
+      // Always ensure geographic_areas are populated from project index data
+      console.log('DEBUG: Converting project index data to geographic_areas format');
+      
+      projectIndexData.forEach((indexItem) => {
+        const kallikratis = typedKallikratisData?.find(
+          (k) => k.id === indexItem.kallikratis_id,
+        );
         
-        projectIndexData.forEach((indexItem) => {
-          const kallikratis = typedKallikratisData.find(
-            (k) => k.id === indexItem.kallikratis_id,
-          );
+        const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
+        const locationDetail = locationDetailsMap.get(key);
+
+        if (kallikratis && locationDetail) {
+          // Create geographic area ID in format: "region|regional_unit|municipality"
+          // Use geographic_code to determine the appropriate level
+          const shouldIncludeMunicipality =
+            indexItem.geographic_code &&
+            parseInt(indexItem.geographic_code.toString()) >= 9000;
           
-          const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
-          const locationDetail = locationDetailsMap.get(key);
-
-          if (kallikratis && locationDetail) {
-            // For geographic codes 804/805, we want regional unit level, not municipality level
-            // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
-            const shouldIncludeMunicipality =
-              indexItem.geographic_code &&
-              parseInt(indexItem.geographic_code) >= 9000;
-            const municipalityToCheck = shouldIncludeMunicipality
-              ? kallikratis.onoma_neou_ota || ""
-              : "";
-
-            // Improved deduplication: compare based on actual fields that will be populated
-            const existingRegion = locationDetail.regions.find((r) => {
-              if (shouldIncludeMunicipality) {
-                // For municipality level, check all three fields
-                return (
-                  r.region === kallikratis.perifereia &&
-                  r.regional_unit === kallikratis.perifereiaki_enotita &&
-                  r.municipality === kallikratis.onoma_neou_ota
-                );
-              } else {
-                // For regional unit level, only check region and regional_unit
-                return (
-                  r.region === kallikratis.perifereia &&
-                  r.regional_unit === kallikratis.perifereiaki_enotita
-                );
-              }
-            });
-
-            // Convert to new geographic areas format
-            let geographicAreaId: string;
-            if (municipalityToCheck) {
-              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${municipalityToCheck}`;
-            } else {
-              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
-            }
-            
-            if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
-              locationDetail.geographic_areas.push(geographicAreaId);
-            }
+          let geographicAreaId: string;
+          if (shouldIncludeMunicipality) {
+            // Municipality level: include all three parts
+            geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${kallikratis.onoma_neou_ota}`;
+          } else {
+            // Regional unit level: only region and regional unit
+            geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
           }
-        });
-      }
+          
+          // Add to geographic_areas if not already present
+          if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
+            locationDetail.geographic_areas.push(geographicAreaId);
+            console.log('DEBUG: Added geographic area to location detail:', geographicAreaId);
+          }
+        }
+      });
 
       const locationDetailsArray = Array.from(locationDetailsMap.values());
       console.log("DEBUG Final locationDetailsArray:", locationDetailsArray);
