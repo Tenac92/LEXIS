@@ -1818,86 +1818,44 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     console.log(`[Projects] Using geographic_code from frontend: ${geographicCode}`);
                   }
                   
-                  const indexEntry: any = {
-                    project_id: updatedProject.id,
-                    event_types_id: eventTypeId,
-                    expenditure_type_id: expenditureTypeId
-                  };
-                  
-                  // Only add optional fields if they're not null
-                  if (monadaId !== null) {
-                    indexEntry.monada_id = monadaId;
-                  }
-                  if (kallikratisId !== null) {
-                    indexEntry.kallikratis_id = kallikratisId;
-                  }
-                  
-                  // Add geographic code if available
-                  if (geographicCode) {
-                    indexEntry.geographic_code = geographicCode;
-                    console.log(`[Projects] Added geographic_code: ${geographicCode}`);
-                  }
+                  // Create project_index entry - must have all required fields per database schema
+                  if (monadaId && eventTypeId && expenditureTypeId) {
+                    const indexEntry = {
+                      project_id: updatedProject.id,
+                      monada_id: monadaId,           // REQUIRED per database schema
+                      event_types_id: eventTypeId,   // REQUIRED per database schema
+                      expenditure_type_id: expenditureTypeId  // REQUIRED per database schema
+                      // NOTE: kallikratis_id and geographic_code don't exist in actual database
+                    };
 
-                  console.log(`[Projects] Inserting project_index entry:`, indexEntry);
-                  const { error: insertError } = await supabase
-                    .from('project_index')
-                    .insert(indexEntry);
+                    console.log(`[Projects] Inserting project_index entry:`, indexEntry);
+                    const { error: insertError } = await supabase
+                      .from('project_index')
+                      .insert(indexEntry);
 
-                  if (insertError) {
-                    console.error(`[Projects] Error inserting project_index entry:`, insertError);
+                    if (insertError) {
+                      console.error(`[Projects] Error inserting project_index entry:`, insertError);
+                    } else {
+                      console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}`);
+                    }
                   } else {
-                    console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}`);
+                    console.warn(`[Projects] Cannot create project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, expenditure_type_id=${expenditureTypeId}`);
                   }
                 } else {
                   console.warn(`[Projects] Could not find expenditure type ID for: ${expType}`);
                 }
               }
             } else {
-              // Use default expenditure type if none specified
+              // Use default expenditure type if none specified - must have all required fields
               const defaultExpenditureType = expenditureTypes.find(et => et.expenditure_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ") || expenditureTypes[0];
-              if (defaultExpenditureType) {
-                // Calculate geographic code for default entry
-                let geographicCode = null;
-                
-                if (kallikratisData && kallikratisId) {
-                  const kallikratisEntry = kallikratisData.find(k => k.id === kallikratisId);
-                  if (kallikratisEntry && line.region) {
-                    // Determine geographic level automatically and get appropriate code
-                    if (line.region.dimos && line.region.dimotiki_enotita) {
-                      // Municipal Community level - use kodikos_dimotikis_enotitas
-                      geographicCode = kallikratisEntry.kodikos_dimotikis_enotitas;
-                    } else if (line.region.dimos) {
-                      // Municipality level - use kodikos_neou_ota
-                      geographicCode = kallikratisEntry.kodikos_neou_ota;
-                    } else if (line.region.perifereiaki_enotita) {
-                      // Regional unit level - use kodikos_perifereiakis_enotitas
-                      geographicCode = kallikratisEntry.kodikos_perifereiakis_enotitas;
-                    } else if (line.region.perifereia) {
-                      // Regional level - use kodikos_perifereias
-                      geographicCode = kallikratisEntry.kodikos_perifereias;
-                    }
-                  }
-                }
-                
-                const indexEntry: any = {
+              if (defaultExpenditureType && monadaId && eventTypeId) {
+                const indexEntry = {
                   project_id: updatedProject.id,
-                  event_types_id: eventTypeId,
-                  expenditure_type_id: defaultExpenditureType.id
+                  monada_id: monadaId,           // REQUIRED per database schema
+                  event_types_id: eventTypeId,   // REQUIRED per database schema
+                  expenditure_type_id: defaultExpenditureType.id  // REQUIRED per database schema
+                  // NOTE: kallikratis_id and geographic_code don't exist in actual database
                 };
-                
-                // Only add optional fields if they're not null
-                if (monadaId !== null) {
-                  indexEntry.monada_id = monadaId;
-                }
-                if (kallikratisId !== null) {
-                  indexEntry.kallikratis_id = kallikratisId;
-                }
-                
-                // Add geographic code if available
-                if (geographicCode) {
-                  indexEntry.geographic_code = geographicCode;
-                  console.log(`[Projects] Default entry added geographic_code: ${geographicCode}`);
-                }
 
                 console.log(`[Projects] Inserting default project_index entry:`, indexEntry);
                 const { error: insertError } = await supabase
@@ -1909,10 +1867,12 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 } else {
                   console.log(`[Projects] Successfully created default project_index entry`);
                 }
+              } else {
+                console.warn(`[Projects] Cannot create default project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, defaultExpenditureType=${defaultExpenditureType?.id}`);
               }
             }
           } else {
-            console.warn(`[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId} (monadaId and kallikratisId are optional)`);
+            console.warn(`[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId}, monadaId: ${monadaId} (all fields required per database schema)`);
           }
         } catch (lineError) {
           console.error(`[Projects] Error processing project line:`, lineError);

@@ -465,34 +465,38 @@ export const projectIndex = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     monada_id: integer("monada_id")
-      .references(() => monada.id),  // NULLABLE - matches database after migration
-    kallikratis_id: bigint("kallikratis_id", { mode: "number" })
-      .references(() => kallikratis.id),  // NULLABLE - matches database after migration
+      .notNull()
+      .references(() => monada.id),  // NOT NULL - matches actual database schema
     event_types_id: integer("event_types_id")
       .notNull()
-      .references(() => eventTypes.id),  // Keep NOT NULL - essential field
+      .references(() => eventTypes.id),  // NOT NULL - matches actual database schema
     expenditure_type_id: integer("expenditure_type_id")
       .notNull()
-      .references(() => expenditureTypes.id),  // Keep NOT NULL - essential field
-    geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
+      .references(() => expenditureTypes.id),  // NOT NULL - matches actual database schema
+    // NOTE: kallikratis_id and geographic_code columns don't exist in actual database
+    // Geographic data should be stored in a separate table or handled differently
   },
   (table) => ({
     // Create unique constraint on id
     uniqueId: unique("project_index_id_key").on(table.id),
-    // Performance indexes
+    // Unique constraint on context - matches actual database
+    contextUnique: unique("project_index_context_unique").on(
+      table.project_id,
+      table.monada_id,
+      table.event_types_id,
+      table.expenditure_type_id,
+    ),
+    // Performance indexes - matching actual database
     projectMonadaIndex: index("idx_project_index_project_monada").on(
       table.project_id,
       table.monada_id,
-    ),
-    kallikratisIndex: index("idx_project_index_kallikratis_id").on(
-      table.kallikratis_id,
     ),
     projectIdIndex: index("idx_project_index_project_id").on(table.project_id),
     monadaIdIndex: index("idx_project_index_monada_id").on(table.monada_id),
     eventTypesIndex: index("idx_project_index_event_types_id").on(
       table.event_types_id,
     ),
-    expenditureTypeIndex: index("idx_project_index_expenditure_type_id").on(
+    expenditureTypeIndex: index("idx_project_index_expediture_type_id").on(
       table.expenditure_type_id,
     ),
   }),
