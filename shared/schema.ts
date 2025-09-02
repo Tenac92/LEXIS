@@ -465,17 +465,15 @@ export const projectIndex = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     monada_id: integer("monada_id")
-      .notNull()
-      .references(() => monada.id),
+      .references(() => monada.id),  // NULLABLE - matches database after migration
     kallikratis_id: bigint("kallikratis_id", { mode: "number" })
-      .notNull()
-      .references(() => kallikratis.id),
+      .references(() => kallikratis.id),  // NULLABLE - matches database after migration
     event_types_id: integer("event_types_id")
       .notNull()
-      .references(() => eventTypes.id),
+      .references(() => eventTypes.id),  // Keep NOT NULL - essential field
     expenditure_type_id: integer("expenditure_type_id")
       .notNull()
-      .references(() => expenditureTypes.id),
+      .references(() => expenditureTypes.id),  // Keep NOT NULL - essential field
     geographic_code: bigint("geographic_code", { mode: "number" }), // Administrative level determined by digit count: 6=municipal, 3=regional_unit, 1=region
   },
   (table) => ({
