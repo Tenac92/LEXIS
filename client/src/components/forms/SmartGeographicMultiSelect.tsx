@@ -92,40 +92,41 @@ export function SmartGeographicMultiSelect({
   const addSelection = (region: string, regionalUnit?: string, municipality?: string) => {
     const newSelections: string[] = [...value];
     
-    // Backward selection: when adding a more specific level, also add the parent levels
-    if (municipality && regionalUnit) {
-      // Add municipality level
-      const municipalityId = `${region}|${regionalUnit}|${municipality}`;
-      if (!newSelections.includes(municipalityId)) {
-        newSelections.push(municipalityId);
-      }
-      
-      // Also add regional unit level if not already present
-      const regionalUnitId = `${region}|${regionalUnit}|`;
-      if (!newSelections.includes(regionalUnitId)) {
-        newSelections.push(regionalUnitId);
-      }
-      
-      // Also add region level if not already present
-      const regionId = `${region}||`;
-      if (!newSelections.includes(regionId)) {
-        newSelections.push(regionId);
-      }
-    } else if (regionalUnit) {
-      // Add regional unit level
-      const regionalUnitId = `${region}|${regionalUnit}|`;
-      if (!newSelections.includes(regionalUnitId)) {
-        newSelections.push(regionalUnitId);
-      }
-      
-      // Also add region level if not already present
-      const regionId = `${region}||`;
-      if (!newSelections.includes(regionId)) {
-        newSelections.push(regionId);
-      }
+    // Handle empty/skipped levels
+    const cleanRegion = region || "";
+    const cleanRegionalUnit = regionalUnit || "";
+    const cleanMunicipality = municipality || "";
+    
+    // Create the ID with potentially empty levels
+    let id: string;
+    if (cleanMunicipality) {
+      id = `${cleanRegion}|${cleanRegionalUnit}|${cleanMunicipality}`;
+    } else if (cleanRegionalUnit) {
+      id = `${cleanRegion}|${cleanRegionalUnit}|`;
     } else {
-      // Add only region level
-      const regionId = `${region}||`;
+      id = `${cleanRegion}||`;
+    }
+    
+    // Add the selection if not already present
+    if (!newSelections.includes(id)) {
+      newSelections.push(id);
+    }
+    
+    // For backward compatibility - also add parent levels when they exist and aren't skipped
+    if (cleanMunicipality && cleanRegionalUnit && cleanRegion) {
+      // Complete hierarchy - add all levels
+      const regionalUnitId = `${cleanRegion}|${cleanRegionalUnit}|`;
+      const regionId = `${cleanRegion}||`;
+      
+      if (!newSelections.includes(regionalUnitId)) {
+        newSelections.push(regionalUnitId);
+      }
+      if (!newSelections.includes(regionId)) {
+        newSelections.push(regionId);
+      }
+    } else if (cleanRegionalUnit && cleanRegion) {
+      // Regional unit level - also add region if not skipped
+      const regionId = `${cleanRegion}||`;
       if (!newSelections.includes(regionId)) {
         newSelections.push(regionId);
       }
@@ -144,7 +145,7 @@ export function SmartGeographicMultiSelect({
   };
 
   const canProceedToRegionalUnits = selectedRegion && regionalUnits.length > 0;
-  const canProceedToMunicipalities = selectedRegion && selectedRegionalUnit && municipalities.length > 0;
+  const canProceedToMunicipalities = selectedRegion && selectedRegionalUnit && selectedRegionalUnit !== "SKIP" && municipalities.length > 0;
 
   return (
     <div className="space-y-4">
@@ -194,28 +195,45 @@ export function SmartGeographicMultiSelect({
           </Select>
           
           {selectedRegion && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => addSelection(selectedRegion)}
-              className="text-xs"
-            >
-              ✓ Προσθήκη περιφέρειας: {selectedRegion}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => addSelection(selectedRegion)}
+                className="text-xs"
+              >
+                ✓ Προσθήκη περιφέρειας: {selectedRegion}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedRegion("")}
+                className="text-xs text-gray-500"
+              >
+                Παράλειψη περιφέρειας
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* Step 2: Regional Unit Selection */}
-        {canProceedToRegionalUnits && (
+        {/* Step 2: Regional Unit Selection or Skip */}
+        {(canProceedToRegionalUnits || selectedRegion) && (
           <div className="space-y-2">
             <div className="text-xs text-gray-600 flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
-              2. Επιλέξτε Περιφερειακή Ενότητα:
+              2. Επιλέξτε Περιφερειακή Ενότητα (ή παραλείψτε):
             </div>
             <Select
               value={selectedRegionalUnit}
-              onValueChange={setSelectedRegionalUnit}
+              onValueChange={(value) => {
+                if (value === "SKIP_LEVEL") {
+                  setSelectedRegionalUnit("SKIP");
+                } else {
+                  setSelectedRegionalUnit(value);
+                }
+              }}
             >
               <FormControl>
                 <SelectTrigger>
@@ -223,6 +241,9 @@ export function SmartGeographicMultiSelect({
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="SKIP_LEVEL">
+                  🚫 Παράλειψη ενότητας (κενό επίπεδο)
+                </SelectItem>
                 {regionalUnits.map((unit) => (
                   <SelectItem key={unit} value={unit}>
                     {unit}
@@ -232,29 +253,46 @@ export function SmartGeographicMultiSelect({
             </Select>
             
             {selectedRegionalUnit && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => addSelection(selectedRegion, selectedRegionalUnit)}
-                className="text-xs"
-              >
-                ✓ Προσθήκη (+ γονικά): {selectedRegion} › {selectedRegionalUnit}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => addSelection(selectedRegion, selectedRegionalUnit)}
+                  className="text-xs"
+                >
+                  ✓ Προσθήκη (+ γονικά): {selectedRegion} › {selectedRegionalUnit}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedRegionalUnit("")}
+                  className="text-xs text-gray-500"
+                >
+                  Παράλειψη ενότητας
+                </Button>
+              </div>
             )}
           </div>
         )}
 
-        {/* Step 3: Municipality Selection */}
-        {canProceedToMunicipalities && (
+        {/* Step 3: Municipality Selection or Skip */}
+        {(canProceedToMunicipalities || selectedRegionalUnit) && (
           <div className="space-y-2">
             <div className="text-xs text-gray-600 flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
-              3. Επιλέξτε Δήμο:
+              3. Επιλέξτε Δήμο (ή παραλείψτε):
             </div>
             <Select
               value=""
-              onValueChange={(municipality) => addSelection(selectedRegion, selectedRegionalUnit, municipality)}
+              onValueChange={(municipality) => {
+                if (municipality === "SKIP_LEVEL") {
+                  addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, "");
+                } else {
+                  addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, municipality);
+                }
+              }}
             >
               <FormControl>
                 <SelectTrigger>
@@ -262,6 +300,9 @@ export function SmartGeographicMultiSelect({
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="SKIP_LEVEL">
+                  🚫 Παράλειψη δήμου (κενό επίπεδο)
+                </SelectItem>
                 {municipalities.map((municipality) => (
                   <SelectItem key={municipality} value={municipality}>
                     ✓ {municipality} (+ περιφέρεια + ενότητα)
