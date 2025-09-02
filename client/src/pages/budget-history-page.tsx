@@ -1041,51 +1041,6 @@ export default function BudgetHistoryPage() {
                 </div>
               ) : (
                 <>
-                  {/* Summary Statistics for Managers */}
-                  {(isManager || isAdmin) && (
-                    <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-blue-900 mb-4">Στατιστικά Περιόδου</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          {(() => {
-                            const totalEntries = history.length;
-                            const documentCreations = history.filter(h => h.change_type === 'document_created').length;
-                            const manualAdjustments = history.filter(h => h.change_type === 'manual_adjustment').length;
-                            const imports = history.filter(h => h.change_type === 'import').length;
-                            
-                            const totalBudgetChange = history.reduce((sum, entry) => {
-                              const prev = parseFloat(entry.previous_amount || '0');
-                              const curr = parseFloat(entry.new_amount || '0');
-                              return sum + (curr - prev);
-                            }, 0);
-
-                            return (
-                              <>
-                                <div className="text-center p-3 bg-white rounded-lg border">
-                                  <div className="text-2xl font-bold text-blue-600">{totalEntries}</div>
-                                  <div className="text-sm text-gray-600">Συνολικές Αλλαγές</div>
-                                </div>
-                                <div className="text-center p-3 bg-white rounded-lg border">
-                                  <div className="text-2xl font-bold text-green-600">{documentCreations}</div>
-                                  <div className="text-sm text-gray-600">Δημιουργίες Εγγράφων</div>
-                                </div>
-                                <div className="text-center p-3 bg-white rounded-lg border">
-                                  <div className="text-2xl font-bold text-orange-600">{manualAdjustments}</div>
-                                  <div className="text-sm text-gray-600">Χειροκίνητες Προσαρμογές</div>
-                                </div>
-                                <div className="text-center p-3 bg-white rounded-lg border">
-                                  <div className={`text-2xl font-bold ${totalBudgetChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                    {formatCurrency(totalBudgetChange)}
-                                  </div>
-                                  <div className="text-sm text-gray-600">Συνολική Μεταβολή</div>
-                                </div>
-                              </>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    </Card>
-                  )}
 
                   {/* Recent Activity Summary for Managers */}
                   {(isManager || isAdmin) && history.length > 0 && (
