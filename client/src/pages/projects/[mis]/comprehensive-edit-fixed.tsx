@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GeographicMultiSelect } from "@/components/forms/GeographicMultiSelect";
+import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import {
   Plus,
   Trash2,
@@ -2677,13 +2677,11 @@ export default function ComprehensiveEditFixed() {
                                   render={({ field }) => (
                                     <FormItem>
                                       <FormLabel>Γεωγραφικές Περιοχές</FormLabel>
-                                      <GeographicMultiSelect
+                                      <SmartGeographicMultiSelect
                                         value={field.value || []}
                                         onChange={field.onChange}
-                                        geographicData={completeProjectData?.projectGeographicData}
                                         kallikratisData={typedKallikratisData}
                                         placeholder="Επιλέξτε γεωγραφικές περιοχές..."
-                                        addLabel="Προσθέστε περιοχή"
                                       />
                                     </FormItem>
                                   )}
