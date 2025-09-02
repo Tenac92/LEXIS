@@ -1091,8 +1091,8 @@ export default function ComprehensiveEditFixed() {
           for (const location of data.location_details) {
             // Skip empty locations
             if (
-              !location.regions ||
-              location.regions.length === 0 ||
+              !location.geographic_areas ||
+              location.geographic_areas.length === 0 ||
               !location.implementing_agency
             ) {
               continue;
@@ -1123,45 +1123,51 @@ export default function ComprehensiveEditFixed() {
               }
             }
 
-            // Create entries for each region
-            for (const region of location.regions) {
-              // Skip empty regions
-              if (
-                !region.region &&
-                !region.regional_unit &&
-                !region.municipality
-              ) {
+            // Create entries for each geographic area
+            for (const geographicAreaId of location.geographic_areas) {
+              // Parse the geographic area ID (format: "region|regional_unit|municipality")
+              const [region, regionalUnit, municipality] = geographicAreaId.split('|');
+              
+              // Skip empty geographic areas
+              if (!region && !regionalUnit && !municipality) {
                 continue;
               }
+              
+              // Create a region object for compatibility with existing logic
+              const regionObj = {
+                region: region || null,
+                regional_unit: regionalUnit || null,
+                municipality: municipality || null
+              };
 
               // Find kallikratis_id and geographic_code using normalized data or fallback
               let kallikratisId = null;
               let geographicCode = null;
 
               // Try normalized approach first, fallback to Kallikratis
-              if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities && region.region) {
+              if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities && regionObj.region) {
                 try {
                   // Use normalized geographic data for calculation
                   const normalizedData = buildNormalizedGeographicData(geographicData);
                   
                   // Determine the appropriate level based on what data is actually populated
                   const forceLevel =
-                    !region.municipality ||
-                    region.municipality.trim() === "" ||
-                    region.municipality === "__clear__"
+                    !regionObj.municipality ||
+                    regionObj.municipality.trim() === "" ||
+                    regionObj.municipality === "__clear__"
                       ? "regional_unit"
                       : "municipality";
                   
                   geographicCode = getGeographicCodeForSaveNormalized(
-                    region,
+                    regionObj,
                     normalizedData,
                     forceLevel,
                   );
 
                   console.log("Normalized Geographic Code Calculation:", {
-                    region: region.region,
-                    regional_unit: region.regional_unit,
-                    municipality: region.municipality,
+                    region: regionObj.region,
+                    regional_unit: regionObj.regional_unit,
+                    municipality: regionObj.municipality,
                     calculated_code: geographicCode,
                     forceLevel,
                     usingNormalizedData: true,
@@ -1172,14 +1178,14 @@ export default function ComprehensiveEditFixed() {
               }
               
               // Fallback to Kallikratis data if normalized approach failed or data not available
-              if (!geographicCode && typedKallikratisData && region.region) {
+              if (!geographicCode && typedKallikratisData && regionObj.region) {
                 const kallikratis = typedKallikratisData.find(
                   (k) =>
-                    k.perifereia === region.region &&
-                    (!region.regional_unit ||
-                      k.perifereiaki_enotita === region.regional_unit) &&
-                    (!region.municipality ||
-                      k.onoma_neou_ota === region.municipality),
+                    k.perifereia === regionObj.region &&
+                    (!regionObj.regional_unit ||
+                      k.perifereiaki_enotita === regionObj.regional_unit) &&
+                    (!regionObj.municipality ||
+                      k.onoma_neou_ota === regionObj.municipality),
                 );
 
                 if (kallikratis) {
@@ -1187,23 +1193,23 @@ export default function ComprehensiveEditFixed() {
 
                   // Determine the appropriate level based on what data is actually populated
                   const forceLevel =
-                    !region.municipality ||
-                    region.municipality.trim() === "" ||
-                    region.municipality === "__clear__"
+                    !regionObj.municipality ||
+                    regionObj.municipality.trim() === "" ||
+                    regionObj.municipality === "__clear__"
                       ? "regional_unit"
                       : "municipality";
 
                   // Calculate geographic code based on what data is selected
                   geographicCode = getGeographicCodeForSave(
-                    region,
+                    regionObj,
                     kallikratis,
                     forceLevel,
                   );
 
                   console.log("Fallback Kallikratis Geographic Code Calculation:", {
-                    region: region.region,
-                    regional_unit: region.regional_unit,
-                    municipality: region.municipality,
+                    region: regionObj.region,
+                    regional_unit: regionObj.regional_unit,
+                    municipality: regionObj.municipality,
                     calculated_code: geographicCode,
                     forceLevel,
                     available_codes: {
@@ -1216,7 +1222,7 @@ export default function ComprehensiveEditFixed() {
                   });
                 }
                 console.log("Kallikratis lookup:", {
-                  region,
+                  regionObj,
                   found: kallikratis,
                   kallikratisId,
                   geographicCode,
@@ -1231,9 +1237,9 @@ export default function ComprehensiveEditFixed() {
                 event_type_id: eventTypeId,
                 expenditure_types: location.expenditure_types || [],
                 region: {
-                  perifereia: region.region,
-                  perifereiaki_enotita: region.regional_unit,
-                  dimos: region.municipality,
+                  perifereia: regionObj.region,
+                  perifereiaki_enotita: regionObj.regional_unit,
+                  dimos: regionObj.municipality,
                   kallikratis_id: kallikratisId,
                   geographic_code: geographicCode,
                 },
