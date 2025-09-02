@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GeographicMultiSelect } from "@/components/forms/GeographicMultiSelect";
 import {
   Plus,
   Trash2,
@@ -228,22 +229,14 @@ const comprehensiveProjectSchema = z.object({
     })
     .default({ event_name: "", event_year: "" }),
 
-  // Section 2 Location details with cascading dropdowns
+  // Section 2 Location details with multi-select geographic areas
   location_details: z
     .array(
       z.object({
         implementing_agency: z.string().default(""),
         event_type: z.string().default(""),
         expenditure_types: z.array(z.string()).default([]),
-        regions: z
-          .array(
-            z.object({
-              region: z.string().default(""),
-              regional_unit: z.string().default(""),
-              municipality: z.string().default(""),
-            }),
-          )
-          .default([{ region: "", regional_unit: "", municipality: "" }]),
+        geographic_areas: z.array(z.string()).default([]),
       }),
     )
     .default([]),
@@ -1380,7 +1373,7 @@ export default function ComprehensiveEditFixed() {
             implementing_agency: implementingAgencyName,
             event_type: eventType?.name || "",
             expenditure_types: [],
-            regions: [],
+            geographic_areas: [],
           };
 
           locationDetailsMap.set(key, locationDetail);
@@ -1406,10 +1399,10 @@ export default function ComprehensiveEditFixed() {
 
         // Process project-specific geographic relationships
         locationDetailsMap.forEach((locationDetail) => {
-          // Extract unique regions from the normalized data
-          const uniqueRegions = new Set();
+          // Extract unique geographic areas from the normalized data
+          const uniqueAreas = new Set<string>();
           
-          // Add regions from project geographic data
+          // Add geographic areas from project geographic data
           regions?.forEach((regionData: any) => {
             if (regionData.regions?.name) {
               const regionName = regionData.regions.name;
@@ -1424,7 +1417,7 @@ export default function ComprehensiveEditFixed() {
                 relatedUnits.some(unitData => unitData.regional_units?.code === muniData.municipalities?.unit_code)
               ) || [];
 
-              // For each regional unit, create a region entry
+              // For each regional unit, create geographic area entries
               relatedUnits.forEach((unitData: any) => {
                 const regionalUnitName = unitData.regional_units?.name;
                 
@@ -1437,35 +1430,27 @@ export default function ComprehensiveEditFixed() {
                   // If there are municipalities, create entries for each municipality
                   unitMunicipalities.forEach((muniData: any) => {
                     const municipalityName = muniData.municipalities?.name;
-                    const regionKey = `${regionName}-${regionalUnitName}-${municipalityName}`;
+                    const geographicAreaId = `${regionName}|${regionalUnitName}|${municipalityName}`;
                     
-                    if (!uniqueRegions.has(regionKey)) {
-                      uniqueRegions.add(regionKey);
-                      locationDetail.regions.push({
-                        region: regionName,
-                        regional_unit: regionalUnitName || "",
-                        municipality: municipalityName || "",
-                      });
+                    if (!uniqueAreas.has(geographicAreaId)) {
+                      uniqueAreas.add(geographicAreaId);
+                      locationDetail.geographic_areas.push(geographicAreaId);
                     }
                   });
                 } else {
                   // If no municipalities, just add the regional unit level
-                  const regionKey = `${regionName}-${regionalUnitName}`;
+                  const geographicAreaId = `${regionName}|${regionalUnitName}|`;
                   
-                  if (!uniqueRegions.has(regionKey)) {
-                    uniqueRegions.add(regionKey);
-                    locationDetail.regions.push({
-                      region: regionName,
-                      regional_unit: regionalUnitName || "",
-                      municipality: "",
-                    });
+                  if (!uniqueAreas.has(geographicAreaId)) {
+                    uniqueAreas.add(geographicAreaId);
+                    locationDetail.geographic_areas.push(geographicAreaId);
                   }
                 }
               });
             }
           });
 
-          console.log('DEBUG: Added regions to location detail:', locationDetail.regions);
+          console.log('DEBUG: Added geographic areas to location detail:', locationDetail.geographic_areas);
         });
       }
 
@@ -1509,12 +1494,16 @@ export default function ComprehensiveEditFixed() {
               }
             });
 
-            if (!existingRegion) {
-              locationDetail.regions.push({
-                region: kallikratis.perifereia || "",
-                regional_unit: kallikratis.perifereiaki_enotita || "",
-                municipality: municipalityToCheck,
-              });
+            // Convert to new geographic areas format
+            let geographicAreaId: string;
+            if (municipalityToCheck) {
+              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${municipalityToCheck}`;
+            } else {
+              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
+            }
+            
+            if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
+              locationDetail.geographic_areas.push(geographicAreaId);
             }
           }
         });
@@ -1529,13 +1518,7 @@ export default function ComprehensiveEditFixed() {
               implementing_agency: typedProjectData.enhanced_unit?.name || "",
               event_type: "",
               expenditure_types: [],
-              regions: [
-                {
-                  region: "",
-                  regional_unit: "",
-                  municipality: "",
-                },
-              ],
+              geographic_areas: [],
             },
           ];
     }
@@ -2686,176 +2669,25 @@ export default function ComprehensiveEditFixed() {
                                 </div>
                               </div>
 
-                              {/* Regions */}
+                              {/* Geographic Areas */}
                               <div className="space-y-4">
-                                <FormLabel>Περιοχές</FormLabel>
-                                {form
-                                  .watch(
-                                    `location_details.${locationIndex}.regions`,
-                                  )
-                                  .map((_, regionIndex) => (
-                                    <div
-                                      key={regionIndex}
-                                      className="grid grid-cols-1 md:grid-3 gap-4 p-3 border rounded"
-                                    >
-                                      <div className="md:col-span-3 flex justify-between items-center mb-2">
-                                        <span className="text-sm font-medium">
-                                          Περιοχή {regionIndex + 1}
-                                        </span>
-                                        {form.watch(
-                                          `location_details.${locationIndex}.regions`,
-                                        ).length > 1 && (
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => {
-                                              const locations =
-                                                form.getValues(
-                                                  "location_details",
-                                                );
-                                              locations[
-                                                locationIndex
-                                              ].regions.splice(regionIndex, 1);
-                                              form.setValue(
-                                                "location_details",
-                                                locations,
-                                              );
-                                            }}
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        )}
-                                      </div>
-
-                                      <FormField
-                                        control={form.control}
-                                        name={`location_details.${locationIndex}.regions.${regionIndex}.region`}
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Περιφέρεια</FormLabel>
-                                            <Select
-                                              onValueChange={field.onChange}
-                                              value={field.value}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Επιλέξτε περιφέρεια" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                {getUniqueRegions().map(
-                                                  (region) => (
-                                                    <SelectItem
-                                                      key={region}
-                                                      value={region}
-                                                    >
-                                                      {region}
-                                                    </SelectItem>
-                                                  ),
-                                                )}
-                                              </SelectContent>
-                                            </Select>
-                                          </FormItem>
-                                        )}
+                                <FormField
+                                  control={form.control}
+                                  name={`location_details.${locationIndex}.geographic_areas`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Γεωγραφικές Περιοχές</FormLabel>
+                                      <GeographicMultiSelect
+                                        value={field.value || []}
+                                        onChange={field.onChange}
+                                        geographicData={completeProjectData?.projectGeographicData}
+                                        kallikratisData={typedKallikratisData}
+                                        placeholder="Επιλέξτε γεωγραφικές περιοχές..."
+                                        addLabel="Προσθέστε περιοχή"
                                       />
-
-                                      <FormField
-                                        control={form.control}
-                                        name={`location_details.${locationIndex}.regions.${regionIndex}.regional_unit`}
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>
-                                              Περιφερειακή Ενότητα
-                                            </FormLabel>
-                                            <Select
-                                              onValueChange={field.onChange}
-                                              value={field.value}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Επιλέξτε ενότητα" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                {getRegionalUnitsForRegionNormalized(
-                                                  form.watch(
-                                                    `location_details.${locationIndex}.regions.${regionIndex}.region`,
-                                                  ),
-                                                ).map((unit) => (
-                                                  <SelectItem
-                                                    key={unit}
-                                                    value={unit}
-                                                  >
-                                                    {unit}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          </FormItem>
-                                        )}
-                                      />
-
-                                      <FormField
-                                        control={form.control}
-                                        name={`location_details.${locationIndex}.regions.${regionIndex}.municipality`}
-                                        render={({ field }) => (
-                                          <FormItem>
-                                            <FormLabel>Δήμος</FormLabel>
-                                            <Select
-                                              onValueChange={field.onChange}
-                                              value={field.value}
-                                            >
-                                              <FormControl>
-                                                <SelectTrigger>
-                                                  <SelectValue placeholder="Επιλέξτε δήμο" />
-                                                </SelectTrigger>
-                                              </FormControl>
-                                              <SelectContent>
-                                                {getMunicipalitiesForRegionalUnitNormalized(
-                                                  form.watch(
-                                                    `location_details.${locationIndex}.regions.${regionIndex}.region`,
-                                                  ),
-                                                  form.watch(
-                                                    `location_details.${locationIndex}.regions.${regionIndex}.regional_unit`,
-                                                  ),
-                                                ).map((municipality) => (
-                                                  <SelectItem
-                                                    key={municipality}
-                                                    value={municipality}
-                                                  >
-                                                    {municipality}
-                                                  </SelectItem>
-                                                ))}
-                                              </SelectContent>
-                                            </Select>
-                                          </FormItem>
-                                        )}
-                                      />
-                                    </div>
-                                  ))}
-
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const locations =
-                                      form.getValues("location_details");
-                                    locations[locationIndex].regions.push({
-                                      region: "",
-                                      regional_unit: "",
-                                      municipality: "",
-                                    });
-                                    form.setValue(
-                                      "location_details",
-                                      locations,
-                                    );
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Προσθήκη Περιοχής
-                                </Button>
+                                    </FormItem>
+                                  )}
+                                />
                               </div>
                             </div>
                           ))}
@@ -2870,13 +2702,7 @@ export default function ComprehensiveEditFixed() {
                               implementing_agency: "",
                               event_type: "",
                               expenditure_types: [],
-                              regions: [
-                                {
-                                  region: "",
-                                  regional_unit: "",
-                                  municipality: "",
-                                },
-                              ],
+                              geographic_areas: [],
                             });
                             form.setValue("location_details", locations);
                           }}
