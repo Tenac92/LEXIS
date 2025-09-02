@@ -306,11 +306,16 @@ export class DatabaseStorage implements IStorage {
         throw updateError;
       }
       
-      // Create budget history entry for this spending transaction
+      // Create budget history entry showing the decrease in available budget (katanomes_etous)
+      // When spending increases, available budget decreases
+      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
+      const previousAvailableBudget = katanomesEtous - currentSpending;
+      const newAvailableBudget = katanomesEtous - newSpending;
+      
       await this.createBudgetHistoryEntry({
         project_id: projectId,
-        previous_amount: String(currentSpending),
-        new_amount: String(newSpending),
+        previous_amount: String(previousAvailableBudget),
+        new_amount: String(newAvailableBudget),
         change_type: 'spending',
         change_reason: `Document-related spending: €${amount}`,
         document_id: documentId,
