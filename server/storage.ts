@@ -1430,6 +1430,157 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // New normalized geographic data methods
+  async getRegions(): Promise<any[]> {
+    try {
+      console.log('[Storage] Fetching regions...');
+      
+      const { data, error } = await supabase
+        .from('regions')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        console.error('[Storage] Error fetching regions:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} regions`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getRegions:', error);
+      throw error;
+    }
+  }
+
+  async getRegionalUnits(): Promise<any[]> {
+    try {
+      console.log('[Storage] Fetching regional units...');
+      
+      const { data, error } = await supabase
+        .from('regional_units')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        console.error('[Storage] Error fetching regional units:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} regional units`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getRegionalUnits:', error);
+      throw error;
+    }
+  }
+
+  async getMunicipalities(): Promise<any[]> {
+    try {
+      console.log('[Storage] Fetching municipalities...');
+      
+      const { data, error } = await supabase
+        .from('municipalities')
+        .select('*')
+        .order('name');
+        
+      if (error) {
+        console.error('[Storage] Error fetching municipalities:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} municipalities`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getMunicipalities:', error);
+      throw error;
+    }
+  }
+
+  // Junction table methods for normalized geographic relationships
+  async getProjectIndexRegions(projectIndexId: number): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching regions for project_index ${projectIndexId}`);
+      
+      const { data, error } = await supabase
+        .from('project_index_regions')
+        .select(`
+          region_code,
+          regions (
+            code,
+            name
+          )
+        `)
+        .eq('project_index_id', projectIndexId);
+        
+      if (error) {
+        console.error('[Storage] Error fetching project index regions:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getProjectIndexRegions:', error);
+      throw error;
+    }
+  }
+
+  async getProjectIndexUnits(projectIndexId: number): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching regional units for project_index ${projectIndexId}`);
+      
+      const { data, error } = await supabase
+        .from('project_index_units')
+        .select(`
+          unit_code,
+          regional_units (
+            code,
+            name,
+            region_code
+          )
+        `)
+        .eq('project_index_id', projectIndexId);
+        
+      if (error) {
+        console.error('[Storage] Error fetching project index units:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getProjectIndexUnits:', error);
+      throw error;
+    }
+  }
+
+  async getProjectIndexMunicipalities(projectIndexId: number): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching municipalities for project_index ${projectIndexId}`);
+      
+      const { data, error } = await supabase
+        .from('project_index_munis')
+        .select(`
+          muni_code,
+          municipalities (
+            code,
+            name,
+            unit_code
+          )
+        `)
+        .eq('project_index_id', projectIndexId);
+        
+      if (error) {
+        console.error('[Storage] Error fetching project index municipalities:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getProjectIndexMunicipalities:', error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();
