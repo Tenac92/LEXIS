@@ -176,7 +176,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Update project budget with spending amount and create budget history
     try {
       console.log('[DocumentsController] V1 Updating budget for spending amount:', total_amount);
-      const { default: storage } = await import('../storage');
+      const { storage } = await import('../storage');
       await storage.updateProjectBudgetSpending(
         project_id, 
         parseFloat(String(total_amount)) || 0, 
@@ -609,7 +609,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     // Update project budget with spending amount and create budget history
     try {
       console.log('[DocumentsController] V2 Updating budget for spending amount:', total_amount);
-      const { default: storage } = await import('../storage');
+      const { storage } = await import('../storage');
       await storage.updateProjectBudgetSpending(
         project_id, 
         parseFloat(String(total_amount)) || 0, 
