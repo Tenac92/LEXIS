@@ -1309,7 +1309,6 @@ export class BudgetService {
           // Convert to correct decimal type using Zod schema expectations
           await storage.createBudgetHistoryEntry({
             project_id: projectId, // Use project_id instead of mis
-            mis: numericalMis ?? ((/^\d+$/.test(mis)) ? parseInt(mis) : 0), // Keep legacy MIS for compatibility
             previous_amount: previousAvailable.toString(), // Convert to string for decimal type
             new_amount: newAvailable.toString(), // Convert to string for decimal type
             change_type: 'document_created',
@@ -1338,9 +1337,9 @@ export class BudgetService {
         const updatedBudgetResult = await this.getBudget(mis);
         if (updatedBudgetResult.status === 'success' && updatedBudgetResult.data) {
           await broadcastBudgetUpdate(mis, {
-            available_budget: updatedBudgetResult.data.available_budget,
-            quarter_available: updatedBudgetResult.data.quarter_available,
-            yearly_available: updatedBudgetResult.data.yearly_available,
+            available_budget: updatedBudgetResult.data.available_budget || 0,
+            quarter_available: updatedBudgetResult.data.quarter_available || 0,
+            yearly_available: updatedBudgetResult.data.yearly_available || 0,
             user_view: updatedBudgetResult.data.user_view,
             ethsia_pistosi: updatedBudgetResult.data.ethsia_pistosi,
             katanomes_etous: updatedBudgetResult.data.katanomes_etous
