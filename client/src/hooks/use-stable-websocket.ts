@@ -86,7 +86,12 @@ export function useStableWebSocket() {
       console.log('[StableWebSocket] URL construction:', { protocol, hostname, port });
       
       // Handle various port scenarios more robustly
-      if (port && port !== '80' && port !== '443' && port !== '' && port !== 'undefined' && !isNaN(parseInt(port))) {
+      // Check if port is a valid non-default port number
+      const portNum = port ? parseInt(port, 10) : NaN;
+      const isValidPort = !isNaN(portNum) && portNum > 0 && portNum !== 80 && portNum !== 443;
+      const hasCustomPort = port && port !== '' && port !== 'undefined' && typeof port === 'string' && isValidPort;
+      
+      if (hasCustomPort) {
         wsUrl = `${protocol}//${hostname}:${port}/ws`;
       } else {
         // For default ports or missing ports, don't include port in URL
