@@ -31,6 +31,7 @@ import {
   bigint,
   unique,
   index,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -564,6 +565,66 @@ export const municipalities = pgTable("municipalities", {
   name: text("name").notNull(),
   unit_code: text("unit_code").notNull().references(() => regionalUnits.code),
 });
+
+/**
+ * Project Index Regions Junction Table
+ * Many-to-many relationship between project_index and regions
+ */
+export const projectIndexRegions = pgTable(
+  "project_index_regions",
+  {
+    project_index_id: integer("project_index_id")
+      .notNull()
+      .references(() => projectIndex.id, { onDelete: "cascade" }),
+    region_code: text("region_code")
+      .notNull()
+      .references(() => regions.code, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.project_index_id, table.region_code] }),
+    projectIndexIndex: index("idx_pir_pi").on(table.project_index_id),
+  }),
+);
+
+/**
+ * Project Index Regional Units Junction Table
+ * Many-to-many relationship between project_index and regional_units
+ */
+export const projectIndexUnits = pgTable(
+  "project_index_units",
+  {
+    project_index_id: integer("project_index_id")
+      .notNull()
+      .references(() => projectIndex.id, { onDelete: "cascade" }),
+    unit_code: text("unit_code")
+      .notNull()
+      .references(() => regionalUnits.code, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.project_index_id, table.unit_code] }),
+    projectIndexIndex: index("idx_piu_pi").on(table.project_index_id),
+  }),
+);
+
+/**
+ * Project Index Municipalities Junction Table
+ * Many-to-many relationship between project_index and municipalities
+ */
+export const projectIndexMunis = pgTable(
+  "project_index_munis",
+  {
+    project_index_id: integer("project_index_id")
+      .notNull()
+      .references(() => projectIndex.id, { onDelete: "cascade" }),
+    muni_code: text("muni_code")
+      .notNull()
+      .references(() => municipalities.code, { onDelete: "cascade" }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.project_index_id, table.muni_code] }),
+    projectIndexIndex: index("idx_pim_pi").on(table.project_index_id),
+  }),
+);
 
 /**
  * Legacy Beneficiary Table (for backward compatibility during migration)
