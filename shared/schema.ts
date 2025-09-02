@@ -141,7 +141,6 @@ export const projectBudget = pgTable("project_budget", {
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
   project_id: integer("project_id")
-    .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
   previous_amount: decimal("previous_amount", {
     precision: 12,
@@ -150,8 +149,8 @@ export const budgetHistory = pgTable("budget_history", {
   new_amount: decimal("new_amount", { precision: 12, scale: 2 }).notNull(),
   change_type: text("change_type").notNull(),
   change_reason: text("change_reason"),
-  document_id: integer("document_id"),
-  created_by: integer("created_by"),
+  document_id: bigint("document_id", { mode: "number" }),
+  created_by: bigint("created_by", { mode: "number" }),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
