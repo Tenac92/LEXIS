@@ -1361,9 +1361,6 @@ export default function ComprehensiveEditFixed() {
 
       // Group by implementing agency and event type
       projectIndexData.forEach((indexItem) => {
-        const kallikratis = typedKallikratisData.find(
-          (k) => k.id === indexItem.kallikratis_id,
-        );
         const unit = typedUnitsData.find((u) => u.id === indexItem.monada_id);
         const eventType = typedEventTypesData.find(
           (et) => et.id === indexItem.event_types_id,
@@ -1391,57 +1388,137 @@ export default function ComprehensiveEditFixed() {
 
         const locationDetail = locationDetailsMap.get(key);
 
-        // Add region if it doesn't exist
-        if (kallikratis) {
-          // For geographic codes 804/805, we want regional unit level, not municipality level
-          // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
-          const shouldIncludeMunicipality =
-            indexItem.geographic_code &&
-            parseInt(indexItem.geographic_code) >= 9000;
-          const municipalityToCheck = shouldIncludeMunicipality
-            ? kallikratis.onoma_neou_ota || ""
-            : "";
+        // Add expenditure type if it doesn't exist
+        if (expenditureType && !locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
+          locationDetail.expenditure_types.push(expenditureType.expenditure_types);
+        }
+      });
 
-          // Improved deduplication: compare based on actual fields that will be populated
-          const existingRegion = locationDetail.regions.find((r) => {
-            if (shouldIncludeMunicipality) {
-              // For municipality level, check all three fields
-              return (
-                r.region === kallikratis.perifereia &&
-                r.regional_unit === kallikratis.perifereiaki_enotita &&
-                r.municipality === kallikratis.onoma_neou_ota
-              );
-            } else {
-              // For regional unit level, only check region and regional_unit
-              return (
-                r.region === kallikratis.perifereia &&
-                r.regional_unit === kallikratis.perifereiaki_enotita
-              );
+      // Add geographic data from the new normalized structure
+      if (completeProjectData?.projectGeographicData) {
+        const { regions, regionalUnits, municipalities } = completeProjectData.projectGeographicData;
+        
+        console.log('DEBUG: Processing new geographic data structure:', {
+          regionsCount: regions?.length || 0,
+          regionalUnitsCount: regionalUnits?.length || 0,
+          municipalitiesCount: municipalities?.length || 0
+        });
+
+        // Process project-specific geographic relationships
+        locationDetailsMap.forEach((locationDetail) => {
+          // Extract unique regions from the normalized data
+          const uniqueRegions = new Set();
+          
+          // Add regions from project geographic data
+          regions?.forEach((regionData: any) => {
+            if (regionData.regions?.name) {
+              const regionName = regionData.regions.name;
+              
+              // Find corresponding regional units for this region
+              const relatedUnits = regionalUnits?.filter((unitData: any) => 
+                unitData.regional_units?.region_code === regionData.regions.code
+              ) || [];
+              
+              // Find corresponding municipalities for these regional units
+              const relatedMunicipalities = municipalities?.filter((muniData: any) => 
+                relatedUnits.some(unitData => unitData.regional_units?.code === muniData.municipalities?.unit_code)
+              ) || [];
+
+              // For each regional unit, create a region entry
+              relatedUnits.forEach((unitData: any) => {
+                const regionalUnitName = unitData.regional_units?.name;
+                
+                // Find municipalities for this specific regional unit
+                const unitMunicipalities = relatedMunicipalities.filter((muniData: any) => 
+                  muniData.municipalities?.unit_code === unitData.regional_units?.code
+                );
+
+                if (unitMunicipalities.length > 0) {
+                  // If there are municipalities, create entries for each municipality
+                  unitMunicipalities.forEach((muniData: any) => {
+                    const municipalityName = muniData.municipalities?.name;
+                    const regionKey = `${regionName}-${regionalUnitName}-${municipalityName}`;
+                    
+                    if (!uniqueRegions.has(regionKey)) {
+                      uniqueRegions.add(regionKey);
+                      locationDetail.regions.push({
+                        region: regionName,
+                        regional_unit: regionalUnitName || "",
+                        municipality: municipalityName || "",
+                      });
+                    }
+                  });
+                } else {
+                  // If no municipalities, just add the regional unit level
+                  const regionKey = `${regionName}-${regionalUnitName}`;
+                  
+                  if (!uniqueRegions.has(regionKey)) {
+                    uniqueRegions.add(regionKey);
+                    locationDetail.regions.push({
+                      region: regionName,
+                      regional_unit: regionalUnitName || "",
+                      municipality: "",
+                    });
+                  }
+                }
+              });
             }
           });
 
-          if (!existingRegion) {
-            locationDetail.regions.push({
-              region: kallikratis.perifereia || "",
-              regional_unit: kallikratis.perifereiaki_enotita || "",
-              municipality: municipalityToCheck,
-            });
-          }
-        }
+          console.log('DEBUG: Added regions to location detail:', locationDetail.regions);
+        });
+      }
 
-        // Add expenditure type if it exists
-        if (expenditureType && expenditureType.expenditure_types) {
-          if (
-            !locationDetail.expenditure_types.includes(
-              expenditureType.expenditure_types,
-            )
-          ) {
-            locationDetail.expenditure_types.push(
-              expenditureType.expenditure_types,
-            );
+      // Fallback to old kallikratis approach if new structure doesn't have data
+      if (!completeProjectData?.projectGeographicData?.regions?.length) {
+        console.log('DEBUG: Falling back to kallikratis data for geographic information');
+        
+        projectIndexData.forEach((indexItem) => {
+          const kallikratis = typedKallikratisData.find(
+            (k) => k.id === indexItem.kallikratis_id,
+          );
+          
+          const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
+          const locationDetail = locationDetailsMap.get(key);
+
+          if (kallikratis && locationDetail) {
+            // For geographic codes 804/805, we want regional unit level, not municipality level
+            // Only populate municipality if the geographic code is a 4-digit municipality code (>= 9000)
+            const shouldIncludeMunicipality =
+              indexItem.geographic_code &&
+              parseInt(indexItem.geographic_code) >= 9000;
+            const municipalityToCheck = shouldIncludeMunicipality
+              ? kallikratis.onoma_neou_ota || ""
+              : "";
+
+            // Improved deduplication: compare based on actual fields that will be populated
+            const existingRegion = locationDetail.regions.find((r) => {
+              if (shouldIncludeMunicipality) {
+                // For municipality level, check all three fields
+                return (
+                  r.region === kallikratis.perifereia &&
+                  r.regional_unit === kallikratis.perifereiaki_enotita &&
+                  r.municipality === kallikratis.onoma_neou_ota
+                );
+              } else {
+                // For regional unit level, only check region and regional_unit
+                return (
+                  r.region === kallikratis.perifereia &&
+                  r.regional_unit === kallikratis.perifereiaki_enotita
+                );
+              }
+            });
+
+            if (!existingRegion) {
+              locationDetail.regions.push({
+                region: kallikratis.perifereia || "",
+                regional_unit: kallikratis.perifereiaki_enotita || "",
+                municipality: municipalityToCheck,
+              });
+            }
           }
-        }
-      });
+        });
+      }
 
       const locationDetailsArray = Array.from(locationDetailsMap.values());
       console.log("DEBUG Final locationDetailsArray:", locationDetailsArray);
