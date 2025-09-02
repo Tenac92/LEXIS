@@ -34,29 +34,29 @@ export function SmartGeographicMultiSelect({
   // Get unique regions
   const regions = useMemo(() => {
     if (!kallikratisData?.length) return [];
-    const uniqueRegions = [...new Set(kallikratisData.map(k => k.perifereia))].filter(Boolean);
+    const uniqueRegions = Array.from(new Set(kallikratisData.map(k => k.perifereia))).filter(Boolean);
     return uniqueRegions.sort((a, b) => a.localeCompare(b, 'el'));
   }, [kallikratisData]);
 
   // Get regional units for selected region
   const regionalUnits = useMemo(() => {
     if (!selectedRegion || !kallikratisData?.length) return [];
-    const units = [...new Set(
+    const units = Array.from(new Set(
       kallikratisData
         .filter(k => k.perifereia === selectedRegion)
         .map(k => k.perifereiaki_enotita)
-    )].filter(Boolean);
+    )).filter(Boolean);
     return units.sort((a, b) => a.localeCompare(b, 'el'));
   }, [selectedRegion, kallikratisData]);
 
   // Get municipalities for selected regional unit
   const municipalities = useMemo(() => {
     if (!selectedRegion || !selectedRegionalUnit || !kallikratisData?.length) return [];
-    const munis = [...new Set(
+    const munis = Array.from(new Set(
       kallikratisData
         .filter(k => k.perifereia === selectedRegion && k.perifereiaki_enotita === selectedRegionalUnit)
         .map(k => k.onoma_neou_ota)
-    )].filter(Boolean);
+    )).filter(Boolean);
     return munis.sort((a, b) => a.localeCompare(b, 'el'));
   }, [selectedRegion, selectedRegionalUnit, kallikratisData]);
 
@@ -90,18 +90,48 @@ export function SmartGeographicMultiSelect({
   }, [value]);
 
   const addSelection = (region: string, regionalUnit?: string, municipality?: string) => {
-    let id: string;
-    if (municipality) {
-      id = `${region}|${regionalUnit}|${municipality}`;
+    const newSelections: string[] = [...value];
+    
+    // Backward selection: when adding a more specific level, also add the parent levels
+    if (municipality && regionalUnit) {
+      // Add municipality level
+      const municipalityId = `${region}|${regionalUnit}|${municipality}`;
+      if (!newSelections.includes(municipalityId)) {
+        newSelections.push(municipalityId);
+      }
+      
+      // Also add regional unit level if not already present
+      const regionalUnitId = `${region}|${regionalUnit}|`;
+      if (!newSelections.includes(regionalUnitId)) {
+        newSelections.push(regionalUnitId);
+      }
+      
+      // Also add region level if not already present
+      const regionId = `${region}||`;
+      if (!newSelections.includes(regionId)) {
+        newSelections.push(regionId);
+      }
     } else if (regionalUnit) {
-      id = `${region}|${regionalUnit}|`;
+      // Add regional unit level
+      const regionalUnitId = `${region}|${regionalUnit}|`;
+      if (!newSelections.includes(regionalUnitId)) {
+        newSelections.push(regionalUnitId);
+      }
+      
+      // Also add region level if not already present
+      const regionId = `${region}||`;
+      if (!newSelections.includes(regionId)) {
+        newSelections.push(regionId);
+      }
     } else {
-      id = `${region}||`;
+      // Add only region level
+      const regionId = `${region}||`;
+      if (!newSelections.includes(regionId)) {
+        newSelections.push(regionId);
+      }
     }
     
-    if (!value.includes(id)) {
-      onChange([...value, id]);
-    }
+    onChange(newSelections);
     
     // Reset selections for next pick
     setSelectedRegion("");
@@ -171,7 +201,7 @@ export function SmartGeographicMultiSelect({
               onClick={() => addSelection(selectedRegion)}
               className="text-xs"
             >
-              Προσθήκη μόνο περιφέρειας: {selectedRegion}
+              ✓ Προσθήκη περιφέρειας: {selectedRegion}
             </Button>
           )}
         </div>
@@ -209,7 +239,7 @@ export function SmartGeographicMultiSelect({
                 onClick={() => addSelection(selectedRegion, selectedRegionalUnit)}
                 className="text-xs"
               >
-                Προσθήκη: {selectedRegion} › {selectedRegionalUnit}
+                ✓ Προσθήκη (+ γονικά): {selectedRegion} › {selectedRegionalUnit}
               </Button>
             )}
           </div>
@@ -228,13 +258,13 @@ export function SmartGeographicMultiSelect({
             >
               <FormControl>
                 <SelectTrigger>
-                  <SelectValue placeholder="Επιλέξτε δήμο..." />
+                  <SelectValue placeholder="Επιλέξτε δήμο (θα προστεθούν όλα τα επίπεδα)..." />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {municipalities.map((municipality) => (
                   <SelectItem key={municipality} value={municipality}>
-                    {municipality}
+                    ✓ {municipality} (+ περιφέρεια + ενότητα)
                   </SelectItem>
                 ))}
               </SelectContent>
