@@ -502,6 +502,7 @@ export const projectIndex = pgTable(
   }),
 );
 
+
 /**
  * Event Types Table
  * Reference table for event types
@@ -544,7 +545,7 @@ export const kallikratis = pgTable("kallikratis", {
  * Greek administrative regions (Περιφέρειες)
  */
 export const regions = pgTable("regions", {
-  code: text("code").primaryKey(),
+  code: bigint("code", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
 });
 
@@ -553,9 +554,9 @@ export const regions = pgTable("regions", {
  * Greek regional units (Περιφερειακές Ενότητες)
  */
 export const regionalUnits = pgTable("regional_units", {
-  code: text("code").primaryKey(),
+  code: bigint("code", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
-  region_code: text("region_code").notNull().references(() => regions.code),
+  region_code: bigint("region_code", { mode: "number" }).notNull().references(() => regions.code),
 });
 
 /**
@@ -563,14 +564,14 @@ export const regionalUnits = pgTable("regional_units", {
  * Greek municipalities (Δήμοι)
  */
 export const municipalities = pgTable("municipalities", {
-  code: text("code").primaryKey(),
+  code: bigint("code", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
-  unit_code: text("unit_code").notNull().references(() => regionalUnits.code),
+  unit_code: bigint("unit_code", { mode: "number" }).notNull().references(() => regionalUnits.code),
 });
 
 /**
- * Project Index Regions Junction Table
- * Many-to-many relationship between project_index and regions
+ * Project Index Geographic Junction Tables
+ * Links project_index entries to specific geographic entities
  */
 export const projectIndexRegions = pgTable(
   "project_index_regions",
@@ -578,7 +579,7 @@ export const projectIndexRegions = pgTable(
     project_index_id: integer("project_index_id")
       .notNull()
       .references(() => projectIndex.id, { onDelete: "cascade" }),
-    region_code: text("region_code")
+    region_code: bigint("region_code", { mode: "number" })
       .notNull()
       .references(() => regions.code, { onDelete: "cascade" }),
   },
@@ -588,17 +589,13 @@ export const projectIndexRegions = pgTable(
   }),
 );
 
-/**
- * Project Index Regional Units Junction Table
- * Many-to-many relationship between project_index and regional_units
- */
 export const projectIndexUnits = pgTable(
-  "project_index_units",
+  "project_index_units", 
   {
     project_index_id: integer("project_index_id")
       .notNull()
       .references(() => projectIndex.id, { onDelete: "cascade" }),
-    unit_code: text("unit_code")
+    unit_code: bigint("unit_code", { mode: "number" })
       .notNull()
       .references(() => regionalUnits.code, { onDelete: "cascade" }),
   },
@@ -608,17 +605,13 @@ export const projectIndexUnits = pgTable(
   }),
 );
 
-/**
- * Project Index Municipalities Junction Table
- * Many-to-many relationship between project_index and municipalities
- */
 export const projectIndexMunis = pgTable(
   "project_index_munis",
   {
     project_index_id: integer("project_index_id")
       .notNull()
       .references(() => projectIndex.id, { onDelete: "cascade" }),
-    muni_code: text("muni_code")
+    muni_code: bigint("muni_code", { mode: "number" })
       .notNull()
       .references(() => municipalities.code, { onDelete: "cascade" }),
   },

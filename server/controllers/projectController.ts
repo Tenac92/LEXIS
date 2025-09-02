@@ -1449,6 +1449,93 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// Helper function to insert geographic relationships
+async function insertGeographicRelationships(projectIndexId: number, region: any) {
+  try {
+    console.log(`[Geographic] Inserting relationships for project_index ID: ${projectIndexId}`, region);
+    
+    // Load all geographic data for lookups
+    const [regionsRes, unitsRes, munisRes] = await Promise.all([
+      supabase.from('regions').select('*'),
+      supabase.from('regional_units').select('*'), 
+      supabase.from('municipalities').select('*')
+    ]);
+
+    const regions = regionsRes.data || [];
+    const units = unitsRes.data || [];
+    const munis = munisRes.data || [];
+
+    // Insert region relationship
+    if (region.perifereia && regions.length > 0) {
+      const regionEntry = regions.find(r => r.name === region.perifereia);
+      if (regionEntry) {
+        console.log(`[Geographic] Inserting region relationship: ${regionEntry.code}`);
+        const { error: regionError } = await supabase
+          .from('project_index_regions')
+          .insert({
+            project_index_id: projectIndexId,
+            region_code: regionEntry.code
+          });
+        
+        if (regionError) {
+          console.error(`[Geographic] Error inserting region relationship:`, regionError);
+        } else {
+          console.log(`[Geographic] Successfully inserted region relationship`);
+        }
+      } else {
+        console.log(`[Geographic] No region found for: ${region.perifereia}`);
+      }
+    }
+
+    // Insert regional unit relationship  
+    if (region.perifereiaki_enotita && units.length > 0) {
+      const unitEntry = units.find(u => u.name === region.perifereiaki_enotita);
+      if (unitEntry) {
+        console.log(`[Geographic] Inserting regional unit relationship: ${unitEntry.code}`);
+        const { error: unitError } = await supabase
+          .from('project_index_units')
+          .insert({
+            project_index_id: projectIndexId,
+            unit_code: unitEntry.code
+          });
+        
+        if (unitError) {
+          console.error(`[Geographic] Error inserting unit relationship:`, unitError);
+        } else {
+          console.log(`[Geographic] Successfully inserted unit relationship`);
+        }
+      } else {
+        console.log(`[Geographic] No regional unit found for: ${region.perifereiaki_enotita}`);
+      }
+    }
+
+    // Insert municipality relationship
+    if (region.dimos && munis.length > 0) {
+      const muniEntry = munis.find(m => m.name === region.dimos);
+      if (muniEntry) {
+        console.log(`[Geographic] Inserting municipality relationship: ${muniEntry.code}`);
+        const { error: muniError } = await supabase
+          .from('project_index_munis')
+          .insert({
+            project_index_id: projectIndexId,
+            muni_code: muniEntry.code
+          });
+        
+        if (muniError) {
+          console.error(`[Geographic] Error inserting municipality relationship:`, muniError);
+        } else {
+          console.log(`[Geographic] Successfully inserted municipality relationship`);
+        }
+      } else {
+        console.log(`[Geographic] No municipality found for: ${region.dimos}`);
+      }
+    }
+
+  } catch (error) {
+    console.error(`[Geographic] Error in insertGeographicRelationships:`, error);
+  }
+}
+
 // Mount routes
 router.get('/', listProjects);
 router.get('/export', exportProjectsXLSX);
@@ -1829,14 +1916,21 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     };
 
                     console.log(`[Projects] Inserting project_index entry:`, indexEntry);
-                    const { error: insertError } = await supabase
+                    const { data: insertedEntry, error: insertError } = await supabase
                       .from('project_index')
-                      .insert(indexEntry);
+                      .insert(indexEntry)
+                      .select('id')
+                      .single();
 
                     if (insertError) {
                       console.error(`[Projects] Error inserting project_index entry:`, insertError);
                     } else {
-                      console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}`);
+                      console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}, ID: ${insertedEntry.id}`);
+                      
+                      // Insert geographic relationships if we have region data
+                      if (line.region && insertedEntry.id) {
+                        await insertGeographicRelationships(insertedEntry.id, line.region);
+                      }
                     }
                   } else {
                     console.warn(`[Projects] Cannot create project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, expenditure_type_id=${expenditureTypeId}`);
@@ -1858,14 +1952,21 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                 };
 
                 console.log(`[Projects] Inserting default project_index entry:`, indexEntry);
-                const { error: insertError } = await supabase
+                const { data: insertedEntry, error: insertError } = await supabase
                   .from('project_index')
-                  .insert(indexEntry);
+                  .insert(indexEntry)
+                  .select('id')
+                  .single();
 
                 if (insertError) {
                   console.error(`[Projects] Error inserting default project_index entry:`, insertError);
                 } else {
-                  console.log(`[Projects] Successfully created default project_index entry`);
+                  console.log(`[Projects] Successfully created default project_index entry, ID: ${insertedEntry.id}`);
+                  
+                  // Insert geographic relationships if we have region data
+                  if (line.region && insertedEntry.id) {
+                    await insertGeographicRelationships(insertedEntry.id, line.region);
+                  }
                 }
               } else {
                 console.warn(`[Projects] Cannot create default project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, defaultExpenditureType=${defaultExpenditureType?.id}`);
