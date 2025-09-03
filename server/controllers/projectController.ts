@@ -628,6 +628,14 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
         projectRegionalUnits = unitsJunctionRes.data || [];
         projectMunicipalities = munisJunctionRes.data || [];
         
+        // DEBUG: Detailed logging for municipality fetch
+        console.log(`[ProjectComplete] Municipality query result:`, {
+          error: munisJunctionRes.error,
+          dataLength: munisJunctionRes.data?.length || 0,
+          data: munisJunctionRes.data,
+          projectIndexIds: projectIndexIds
+        });
+        
         console.log(`[ProjectComplete] Found geographic relationships: ${projectRegions.length} regions, ${projectRegionalUnits.length} units, ${projectMunicipalities.length} municipalities`);
       } catch (junctionError) {
         console.warn('[ProjectComplete] Failed to fetch geographic relationships from junction tables:', junctionError);
@@ -660,7 +668,7 @@ router.get('/:mis/complete', async (req: Request, res: Response) => {
       } : null,
       enhanced_unit: mostCommonUnit ? {
         id: mostCommonUnit.id,
-        name: mostCommonUnit.unit || mostCommonUnit.name
+        name: mostCommonUnit.unit || mostCommonUnit.unit_name
       } : null,
       enhanced_kallikratis: mostCommonKallikratis ? {
         id: mostCommonKallikratis.id,
