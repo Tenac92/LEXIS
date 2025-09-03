@@ -1,0 +1,58 @@
+Geographic Code Selection Debug: 
+Object {hasRegion: undefined, hasRegionalUnit: undefined, hasMunicipality: undefined, region_value: undefined, regional_unit_value: undefined, …}
+Fallback Kallikratis Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: null, dimos: null, calculated_code: null, forceLevel: "regional_unit", …}
+Kallikratis lookup: 
+Object {regionObj: {…}, found: {…}, kallikratisId: 91, geographicCode: null}
+Normalized Geographic Code Selection: 
+Object {hasRegion: true, hasRegionalUnit: true, hasMunicipality: null, region_value: "ΘΕΣΣΑΛΙΑΣ", regional_unit_value: "ΛΑΡΙΣΑΣ", …}
+Normalized Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: null, calculated_code: null, forceLevel: "regional_unit", …}
+Geographic Code Selection Debug: 
+Object {hasRegion: undefined, hasRegionalUnit: undefined, hasMunicipality: undefined, region_value: undefined, regional_unit_value: undefined, …}
+Fallback Kallikratis Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: null, calculated_code: null, forceLevel: "regional_unit", …}
+Kallikratis lookup: 
+Object {regionObj: {…}, found: {…}, kallikratisId: 97, geographicCode: null}
+Normalized Geographic Code Selection: 
+Object {hasRegion: true, hasRegionalUnit: true, hasMunicipality: true, region_value: "ΘΕΣΣΑΛΙΑΣ", regional_unit_value: "ΛΑΡΙΣΑΣ", …}
+Normalized Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΑΓΙΑΣ", calculated_code: null, forceLevel: "municipality", …}
+Geographic Code Selection Debug: 
+Object {hasRegion: undefined, hasRegionalUnit: undefined, hasMunicipality: undefined, region_value: undefined, regional_unit_value: undefined, …}
+Fallback Kallikratis Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΑΓΙΑΣ", calculated_code: null, forceLevel: "municipality", …}
+Kallikratis lookup: 
+Object {regionObj: {…}, found: {…}, kallikratisId: 97, geographicCode: null}
+Normalized Geographic Code Selection: 
+Object {hasRegion: true, hasRegionalUnit: true, hasMunicipality: true, region_value: "ΘΕΣΣΑΛΙΑΣ", regional_unit_value: "ΛΑΡΙΣΑΣ", …}
+Normalized Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΕΛΑΣΣΟΝΑΣ", calculated_code: null, forceLevel: "municipality", …}
+Geographic Code Selection Debug: 
+Object {hasRegion: undefined, hasRegionalUnit: undefined, hasMunicipality: undefined, region_value: undefined, regional_unit_value: undefined, …}
+Fallback Kallikratis Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΕΛΑΣΣΟΝΑΣ", calculated_code: null, forceLevel: "municipality", …}
+Kallikratis lookup: 
+Object {regionObj: {…}, found: {…}, kallikratisId: 98, geographicCode: null}
+Normalized Geographic Code Selection: 
+Object {hasRegion: true, hasRegionalUnit: true, hasMunicipality: true, region_value: "ΘΕΣΣΑΛΙΑΣ", regional_unit_value: "ΛΑΡΙΣΑΣ", …}
+forceLevel: "municipality"
+hasMunicipality: true
+hasRegion: true
+hasRegionalUnit: true
+municipality_value: "ΚΙΛΕΛΕΡ"
+region_value: "ΘΕΣΣΑΛΙΑΣ"
+regional_unit_value: "ΛΑΡΙΣΑΣ"
+[[Prototype]]: Object
+Normalized Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΚΙΛΕΛΕΡ", calculated_code: null, forceLevel: "municipality", …}
+Geographic Code Selection Debug: 
+Object {hasRegion: undefined, hasRegionalUnit: undefined, hasMunicipality: undefined, region_value: undefined, regional_unit_value: undefined, …}
+Fallback Kallikratis Geographic Code Calculation: 
+Object {perifereia: "ΘΕΣΣΑΛΙΑΣ", perifereiaki_enotita: "ΛΑΡΙΣΑΣ", dimos: "ΚΙΛΕΛΕΡ", calculated_code: null, forceLevel: "municipality", …}
+Kallikratis lookup: 
+Object {regionObj: {…}, found: {…}, kallikratisId: 99, geographicCode: null}
+Including project_lines in main project update: 
+(6) [{…}, {…}, {…}, {…}, {…}, {…}]
+6. Final project update with all data: 
+Object {project_title: "Δωρεάν κρατική αρωγή για την αποκατάσταση των ζημιών σε κτίρια που προκλήθηκαν από τις πυρκαγιές…", event_description: "2023 πυρκαγιές Βοιωτίας και Φθιώτιδας", inc_year: 2024, updates: Array(0), na853: "ΝΑ853", …}

@@ -1519,6 +1519,18 @@ async function insertGeographicRelationships(projectIndexId: number, region: any
 
     // Insert municipality relationship
     if (region.dimos && munis.length > 0) {
+      console.log(`[Geographic] DEBUG: Looking for municipality "${region.dimos}"`);
+      console.log(`[Geographic] DEBUG: Available municipalities (first 10):`, munis.slice(0, 10).map(m => ({ name: m.name, code: m.code })));
+      
+      // Filter municipalities by regional unit to show only relevant ones
+      const regionEntry = regions.find(r => r.name === region.perifereia);
+      const unitEntry = units.find(u => u.name === region.perifereiaki_enotita && u.region_code === regionEntry?.code);
+      
+      if (unitEntry) {
+        const relevantMunis = munis.filter(m => m.unit_code === unitEntry.code);
+        console.log(`[Geographic] DEBUG: Relevant municipalities for ${region.perifereiaki_enotita}:`, relevantMunis.map(m => ({ name: m.name, code: m.code })));
+      }
+      
       const muniEntry = munis.find(m => m.name === region.dimos);
       if (muniEntry) {
         console.log(`[Geographic] Inserting municipality relationship: ${muniEntry.code}`);
@@ -1536,6 +1548,18 @@ async function insertGeographicRelationships(projectIndexId: number, region: any
         }
       } else {
         console.log(`[Geographic] No municipality found for: ${region.dimos}`);
+        
+        // Try fuzzy matching
+        const fuzzyMatch = munis.find(m => 
+          m.name && region.dimos && (
+            m.name.includes(region.dimos) || 
+            region.dimos.includes(m.name) ||
+            m.name.replace(/\s+/g, '') === region.dimos.replace(/\s+/g, '')
+          )
+        );
+        if (fuzzyMatch) {
+          console.log(`[Geographic] DEBUG: Potential fuzzy match found: "${fuzzyMatch.name}" for "${region.dimos}"`);
+        }
       }
     }
 
