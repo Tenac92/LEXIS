@@ -184,7 +184,29 @@ export function SmartGeographicMultiSelect({
   };
 
   const removeSelection = (id: string) => {
-    onChange(value.filter(v => v !== id));
+    // Smart removal: also remove dependent child levels
+    const [region, regionalUnit, municipality] = id.split('|');
+    
+    const newValue = value.filter(existingId => {
+      const [existingRegion, existingRegionalUnit, existingMunicipality] = existingId.split('|');
+      
+      // Remove the exact match
+      if (existingId === id) return false;
+      
+      // If removing a region, also remove all its children
+      if (!municipality && !regionalUnit && existingRegion === region) {
+        return false;
+      }
+      
+      // If removing a regional unit, also remove all its municipalities
+      if (!municipality && regionalUnit && existingRegion === region && existingRegionalUnit === regionalUnit) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    onChange(newValue);
   };
 
   const canProceedToRegionalUnits = selectedRegion && regionalUnits.length > 0;
@@ -194,9 +216,9 @@ export function SmartGeographicMultiSelect({
     <div className="space-y-4">
       {/* Display selected values as badges */}
       <div className="flex flex-wrap gap-2">
-        {selectedItems.map((item) => (
+        {selectedItems.map((item, index) => (
           <Badge 
-            key={item.id} 
+            key={`${item.id}-${index}`} 
             className="flex items-center gap-1"
             variant="outline"
           >
