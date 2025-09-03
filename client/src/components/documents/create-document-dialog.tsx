@@ -2216,10 +2216,10 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        // Extract project-specific geographic areas (correct field names)
-        const projectRegions = (response as any)?.projectRegions || [];
-        const projectUnits = (response as any)?.projectRegionalUnits || [];
-        const projectMunicipalities = (response as any)?.projectMunicipalities || [];
+        // Extract project-specific geographic areas (correct nested structure)
+        const projectRegions = (response as any)?.projectGeographicData?.regions || [];
+        const projectUnits = (response as any)?.projectGeographicData?.regionalUnits || [];
+        const projectMunicipalities = (response as any)?.projectGeographicData?.municipalities || [];
 
         console.log("[CreateDocument] Project-specific geographic data:", {
           regions: projectRegions.length,
