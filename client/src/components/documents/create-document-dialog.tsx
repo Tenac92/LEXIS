@@ -2176,10 +2176,20 @@ export function CreateDocumentDialog({
     }
   }, [units?.length, user?.units?.[0], open]); // Stabilized dependencies
 
-  const { data: regions = [], isLoading: regionsLoading } = useQuery({
-    queryKey: ["regions", selectedProjectId],
+  // Geographic data query using the new normalized structure
+  const { data: geographicData, isLoading: geographicDataLoading } = useQuery({
+    queryKey: ["geographic-data"],
     queryFn: async () => {
-      // If no project selected, return empty array
+      const response = await apiRequest("/api/geographic-data");
+      console.log("[CreateDocument] Geographic data loaded:", response);
+      return response;
+    },
+  });
+
+  // Project-specific geographic areas
+  const { data: projectGeographicAreas = [], isLoading: regionsLoading } = useQuery({
+    queryKey: ["project-geographic-areas", selectedProjectId],
+    queryFn: async () => {
       if (!selectedProjectId) {
         return [];
       }
@@ -2192,121 +2202,75 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        console.log("Fetching regions for project:", {
+        console.log("Fetching geographic areas for project:", {
           id: selectedProjectId,
           mis: project.mis,
         });
 
-        // Fetch regions data from API
+        // Fetch project complete data which includes geographic relationships
         const response = await apiRequest(
-          `/api/projects/${encodeURIComponent(project.mis || "")}/regions`,
+          `/api/projects/${encodeURIComponent(project.mis || "")}/complete`,
         );
-        console.log("Region API response:", response);
-
-        // Handle invalid response
-        if (!response || typeof response !== "object") {
-          console.log("Invalid response format:", response);
+        
+        if (!response || !geographicData) {
           return [];
         }
 
-        // Handle the actual API response format
-        try {
-          let processedRegions: Array<{
-            id: string;
-            name: string;
-            type: string;
-          }> = [];
-          const typedResponse = response as Record<string, any>;
+        // Extract geographic areas from project data
+        const projectRegions = response?.regions || [];
+        const projectUnits = response?.regionalUnits || [];
+        const projectMunicipalities = response?.municipalities || [];
 
-          // Handle the standard regions API response format: {"regions": [...]}
-          if (typedResponse.regions && Array.isArray(typedResponse.regions)) {
-            // Processing regions from API response
-            
-            for (const regionItem of typedResponse.regions) {
-              if (regionItem && typeof regionItem === "string") {
-                // Handle string regions (main regions)
-                processedRegions.push({
-                  id: regionItem,
-                  name: regionItem,
-                  type: "region",
-                });
-              } else if (regionItem && typeof regionItem === "object") {
-                // Extract region information based on available fields
-                const regionName = regionItem.name || regionItem.regional_unit || regionItem.region;
-                const regionId = regionItem.id || regionName;
-                
-                if (regionName) {
-                  // Determine type based on the level field or available data
-                  let regionType = "region";
-                  if (regionItem.level === "municipality" || regionItem.regional_unit) {
-                    regionType = "regional_unit";
-                  }
-                  
-                  processedRegions.push({
-                    id: String(regionId),
-                    name: String(regionName),
-                    type: regionType,
-                  });
-                }
-              }
-            }
+        let processedAreas: Array<{
+          id: string;
+          name: string;
+          type: string;
+        }> = [];
+
+        // Add regions
+        projectRegions.forEach((region: any) => {
+          processedAreas.push({
+            id: `region-${region.code}`,
+            name: region.name,
+            type: "region",
+          });
+        });
+
+        // Add regional units
+        projectUnits.forEach((unit: any) => {
+          processedAreas.push({
+            id: `unit-${unit.code}`,
+            name: unit.name,
+            type: "regional_unit",
+          });
+        });
+
+        // Add municipalities
+        projectMunicipalities.forEach((municipality: any) => {
+          processedAreas.push({
+            id: `municipality-${municipality.code}`,
+            name: municipality.name,
+            type: "municipality",
+          });
+        });
+
+        console.log("[CreateDocument] Processed geographic areas:", processedAreas);
+
+        // If no specific geographic areas found for project, show all available options
+        if (processedAreas.length === 0 && geographicData) {
+          // Fallback to showing all regions as options
+          if (geographicData?.regions && Array.isArray(geographicData.regions)) {
+            processedAreas = geographicData.regions.map((region: any) => ({
+              id: `region-${region.code}`,
+              name: region.name,
+              type: "region",
+            }));
           }
-
-          // Also handle regional_units array if present
-          if (typedResponse.regional_units && Array.isArray(typedResponse.regional_units)) {
-            for (const unitItem of typedResponse.regional_units) {
-              if (unitItem && typeof unitItem === "string") {
-                processedRegions.push({
-                  id: unitItem,
-                  name: unitItem,
-                  type: "regional_unit",
-                });
-              }
-            }
-          }
-
-          // CRITICAL FIX: Only show regions that match the geographic level stored in project_index
-          // The regions array contains mixed levels (regions, regional_units, municipalities)
-          // We need to filter to show only the level that matches the project's geographic scope
-          
-          // Group regions by type to understand the data structure
-          const regionsByType = processedRegions.reduce((acc, region) => {
-            if (!acc[region.type]) {
-              acc[region.type] = [];
-            }
-            acc[region.type].push(region);
-            return acc;
-          }, {} as Record<string, typeof processedRegions>);
-
-          console.log("Regions grouped by type:", regionsByType);
-          
-          // Determine the appropriate level based on what's available in project_index
-          // Priority: municipality > regional_unit > region
-          if (regionsByType.municipality && regionsByType.municipality.length > 0) {
-            // Show only municipalities if available
-            return regionsByType.municipality;
-          } else if (regionsByType.regional_unit && regionsByType.regional_unit.length > 0) {
-            // Show only regional units if no municipalities
-            return regionsByType.regional_unit;
-          } else if (regionsByType.region && regionsByType.region.length > 0) {
-            // Show only regions if no lower levels
-            return regionsByType.region;
-          } else {
-            // Return first available type if none of the expected types found
-            const firstType = Object.keys(regionsByType)[0];
-            return firstType ? regionsByType[firstType] : processedRegions;
-          }
-        } catch (err) {
-          console.error("Error processing region data:", err);
-          return [];
         }
 
-        // Shouldn't reach here due to earlier check, but just in case
-        console.log("No valid region or regional_unit data found");
-        return [];
+        return processedAreas;
       } catch (error) {
-        // Handle any errors
-        console.error("Error fetching regions:", error);
+        console.error("Error fetching project geographic areas:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης περιοχών",
@@ -2315,8 +2279,11 @@ export function CreateDocumentDialog({
         return [];
       }
     },
-    enabled: Boolean(selectedProjectId) && projects.length > 0,
+    enabled: Boolean(selectedProjectId) && projects.length > 0 && !!geographicData,
   });
+
+  // Alias for backward compatibility
+  const regions = projectGeographicAreas;
 
   const handleNext = async () => {
     try {
