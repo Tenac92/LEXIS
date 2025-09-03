@@ -479,13 +479,9 @@ export const projectIndex = pgTable(
   (table) => ({
     // Create unique constraint on id
     uniqueId: unique("project_index_id_key").on(table.id),
-    // Unique constraint on context - matches actual database
-    contextUnique: unique("project_index_context_unique").on(
-      table.project_id,
-      table.monada_id,
-      table.event_types_id,
-      table.expenditure_type_id,
-    ),
+    // NOTE: Removed project_index_context_unique constraint to allow multiple geographic areas
+    // per project+agency+event+expenditure combination. Geographic uniqueness is handled
+    // by separate relationship tables (project_index_regions, project_index_units, project_index_munis)
     // Performance indexes - matching actual database
     projectMonadaIndex: index("idx_project_index_project_monada").on(
       table.project_id,

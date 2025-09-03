@@ -2087,12 +2087,7 @@ export default function ComprehensiveEditFixed() {
 
         <Form key={formKey} {...form}>
           <form
-            onSubmit={form.handleSubmit((data) => {
-              console.log("🔥 FORM SUBMISSION TRIGGERED");
-              console.log("🔥 Form data before mutation:", data);
-              console.log("🔥 Form validation errors:", form.formState.errors);
-              mutation.mutate(data);
-            })}
+            onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
             className="space-y-6"
           >
             <Tabs defaultValue="project" className="space-y-6">

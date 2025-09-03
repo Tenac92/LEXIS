@@ -1,0 +1,710 @@
+  total_public_expense: 0,
+  eligible_public_expense: 0,
+  decision_status: 'Ενεργή',
+  change_type: 'Έγκριση',
+  connected_decisions: [ 486 ],
+  comments: ''
+}
+[ProjectFormulations] Successfully updated formulation 470
+10:16:19 AM [express] PATCH /api/projects/5222801/formulations/470 200 in 303ms
+10:16:20 AM [cors] [CORS] Request from allowed origin: https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev
+10:16:20 AM [cors] [CORS] Headers: {"host":"da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","user-agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36","content-length":"3445","accept":"*/*","accept-encoding":"gzip, br, zstd","accept-language":"el-GR,el;q=0.9","content-type":"application/json","cookie":"sid=s%3AKZiHKH9Avx0AegEQguBx4rfHBPO1yrv3.n%2B71%2B63AC0SFdS7UD1yYp%2Fwy1Dxqt%2FwE0nHc%2Bc%2FC1o0","origin":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev","referer":"https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/projects/5222801/edit","sec-ch-ua":"\"Google Chrome\";v=\"129\", \"Not=A?Brand\";v=\"8\", \"Chromium\";v=\"129\"","sec-ch-ua-mobile":"?0","sec-ch-ua-platform":"\"Windows\"","sec-fetch-dest":"empty","sec-fetch-mode":"cors","sec-fetch-site":"same-origin","x-forwarded-for":"84.205.214.13, 10.81.11.37","x-forwarded-proto":"https","x-imforwards":"20","x-replit-user-bio":"","x-replit-user-id":"","x-replit-user-name":"","x-replit-user-profile-image":"","x-replit-user-roles":"","x-replit-user-teams":"","x-replit-user-url":"","x-request-id":"req-1756894583241-hx52uee"}
+10:16:20 AM [cors] [CORS] Method: PATCH, Path: /api/projects/5222801
+10:16:20 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:16:20 AM [express] [Request] PATCH /api/projects/5222801 from 10.81.11.37
+[Auth] authenticateSession middleware called for: /5222801
+[Auth] Session ID: KZiHKH9Avx0AegEQguBx4rfHBPO1yrv3
+[Auth] Session user exists: true
+[Auth] User authenticated: {
+  id: 49,
+  name: 'KONSTANTINOS KYRIAKOU',
+  email: 'kkiriakou92@gmail.com',
+  role: 'admin',
+  unit_id: [ 2 ],
+  sessionID: 'KZiHKH9Avx0AegEQguBx4rfHBPO1yrv3',
+  ip: '10.81.11.37'
+}
+[Projects] Updating project with MIS: 5222801 {
+  project_title: 'Δωρεάν κρατική αρωγή για την αποκατάσταση των ζημιών σε κτίρια που προκλήθηκαν από τις πυρκαγιές των 17/07, 18/07, 26/07 και 21/08/2023 σε περιοχές των Π.Ε. Βοιωτίας και Φθιώτιδας της Π. Στ. Ελλάδας καθώς και δαπ. μετακ. μηχανικών',
+  event_description: '2023 πυρκαγιές Βοιωτίας και Φθιώτιδας',
+  inc_year: 2024,
+  updates: [],
+  na853: 'ΝΑ853',
+  event_type: 12,
+  event_year: '2023',
+  status: 'Ενεργό',
+  budget_e069: null,
+  budget_na271: null,
+  budget_na853: 316928.95,
+  project_lines: [
+    {
+      implementing_agency: 'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+      implementing_agency_id: 2,
+      event_type: 'ΠΥΡΚΑΓΙΑ',
+      event_type_id: 12,
+      expenditure_types: [Array],
+      region: [Object]
+    },
+    {
+      implementing_agency: 'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+      implementing_agency_id: 2,
+      event_type: 'ΠΥΡΚΑΓΙΑ',
+      event_type_id: 12,
+      expenditure_types: [Array],
+      region: [Object]
+    },
+    {
+      implementing_agency: 'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+      implementing_agency_id: 2,
+      event_type: 'ΠΥΡΚΑΓΙΑ',
+      event_type_id: 12,
+      expenditure_types: [Array],
+      region: [Object]
+    },
+    {
+      implementing_agency: 'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+      implementing_agency_id: 2,
+      event_type: 'ΠΥΡΚΑΓΙΑ',
+      event_type_id: 12,
+      expenditure_types: [Array],
+      region: [Object]
+    },
+    {
+      implementing_agency: 'ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ',
+      implementing_agency_id: 2,
+      event_type: 'ΠΥΡΚΑΓΙΑ',
+      event_type_id: 12,
+      expenditure_types: [Array],
+      region: [Object]
+    }
+  ]
+}
+[Projects] Setting event_type_id to: 12 (type: number)
+[Projects] Received budget values: { budget_e069: null, budget_na271: null, budget_na853: 316928.95 }
+[Projects] Setting budget_e069 to: null (type: object)
+[Projects] Setting budget_na271 to: null (type: object)
+[Projects] Setting budget_na853 to: 316928.95 (type: number)
+[Projects] Setting inc_year to: 2024
+[Projects] Setting updates with 0 entries
+[Projects] Conservative update - only updating confirmed fields: [
+  'project_title',
+  'event_description',
+  'event_type_id',
+  'budget_e069',
+  'budget_na271',
+  'budget_na853',
+  'status',
+  'event_year',
+  'inc_year',
+  'updates',
+  'updated_at'
+]
+[Projects] Fields to update for MIS 5222801: {
+  project_title: 'Δωρεάν κρατική αρωγή για την αποκατάσταση των ζημιών σε κτίρια που προκλήθηκαν από τις πυρκαγιές των 17/07, 18/07, 26/07 και 21/08/2023 σε περιοχές των Π.Ε. Βοιωτίας και Φθιώτιδας της Π. Στ. Ελλάδας καθώς και δαπ. μετακ. μηχανικών',
+  event_description: '2023 πυρκαγιές Βοιωτίας και Φθιώτιδας',
+  event_type_id: 12,
+  budget_e069: null,
+  budget_na271: null,
+  budget_na853: 316928.95,
+  status: 'Ενεργό',
+  event_year: [ '2023' ],
+  inc_year: 2024,
+  updates: [],
+  updated_at: '2025-09-03T10:16:20.787Z'
+}
+[Projects] Starting project_index update for project ID: 194
+[Projects] Number of project_lines to process: 5
+[Projects] Project lines data: [
+  {
+    "implementing_agency": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+    "implementing_agency_id": 2,
+    "event_type": "ΠΥΡΚΑΓΙΑ",
+    "event_type_id": 12,
+    "expenditure_types": [
+      "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+      "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+      "ΕΚΤΟΣ ΕΔΡΑΣ",
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"
+    ],
+    "region": {
+      "perifereia": "ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ",
+      "perifereiaki_enotita": "ΒΟΙΩΤΙΑΣ",
+      "dimos": null,
+      "dimotiki_enotita": null,
+      "kallikratis_id": 142,
+      "geographic_code": null
+    }
+  },
+  {
+    "implementing_agency": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+    "implementing_agency_id": 2,
+    "event_type": "ΠΥΡΚΑΓΙΑ",
+    "event_type_id": 12,
+    "expenditure_types": [
+      "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+      "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+      "ΕΚΤΟΣ ΕΔΡΑΣ",
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"
+    ],
+    "region": {
+      "perifereia": "ΘΕΣΣΑΛΙΑΣ",
+      "perifereiaki_enotita": null,
+      "dimos": null,
+      "dimotiki_enotita": null,
+      "kallikratis_id": 91,
+      "geographic_code": null
+    }
+  },
+  {
+    "implementing_agency": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+    "implementing_agency_id": 2,
+    "event_type": "ΠΥΡΚΑΓΙΑ",
+    "event_type_id": 12,
+    "expenditure_types": [
+      "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+      "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+      "ΕΚΤΟΣ ΕΔΡΑΣ",
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"
+    ],
+    "region": {
+      "perifereia": "ΘΕΣΣΑΛΙΑΣ",
+      "perifereiaki_enotita": "ΛΑΡΙΣΑΣ",
+      "dimos": null,
+      "dimotiki_enotita": null,
+      "kallikratis_id": 97,
+      "geographic_code": null
+    }
+  },
+  {
+    "implementing_agency": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+    "implementing_agency_id": 2,
+    "event_type": "ΠΥΡΚΑΓΙΑ",
+    "event_type_id": 12,
+    "expenditure_types": [
+      "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+      "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+      "ΕΚΤΟΣ ΕΔΡΑΣ",
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"
+    ],
+    "region": {
+      "perifereia": "ΘΕΣΣΑΛΙΑΣ",
+      "perifereiaki_enotita": "ΛΑΡΙΣΑΣ",
+      "dimos": "ΑΓΙΑΣ",
+      "dimotiki_enotita": null,
+      "kallikratis_id": 97,
+      "geographic_code": null
+    }
+  },
+  {
+    "implementing_agency": "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
+    "implementing_agency_id": 2,
+    "event_type": "ΠΥΡΚΑΓΙΑ",
+    "event_type_id": 12,
+    "expenditure_types": [
+      "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ",
+      "ΔΚΑ ΕΠΙΣΚΕΥΗ",
+      "ΕΚΤΟΣ ΕΔΡΑΣ",
+      "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"
+    ],
+    "region": {
+      "perifereia": "ΘΕΣΣΑΛΙΑΣ",
+      "perifereiaki_enotita": "ΛΑΡΙΣΑΣ",
+      "dimos": "ΕΛΑΣΣΟΝΑΣ",
+      "dimotiki_enotita": null,
+      "kallikratis_id": 98,
+      "geographic_code": null
+    }
+  }
+]
+[Projects] Successfully deleted existing project_index entries for project 194
+[Projects] Using provided implementing_agency_id: 2
+[Projects] DEBUG: Looking for kallikratis with region: {
+  perifereia: 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ',
+  perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 142,
+  geographic_code: null
+}
+[Projects] Using provided kallikratis_id: 142
+[Projects] Processing line 1:
+[Projects] - Event Type ID: 12
+[Projects] - Monada ID: 2
+[Projects] - Kallikratis ID: 142
+[Projects] Creating project_index entries - event_type_id is valid: 12
+[Projects] Creating project_index entry with eventTypeId: 12, monadaId: 2, kallikratisId: 142
+[Projects] DEBUG: Processing expenditure types: [
+  'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ',
+  'ΔΚΑ ΕΠΙΣΚΕΥΗ',
+  'ΕΚΤΟΣ ΕΔΡΑΣ',
+  'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'
+]
+[Projects] DEBUG: Available expenditure types: [
+  { id: 1, name: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ' },
+  { id: 2, name: 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ' },
+  { id: 3, name: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ' },
+  { id: 4, name: 'ΔΚΑ ΕΠΙΣΚΕΥΗ' },
+  { id: 5, name: 'ΕΚΤΟΣ ΕΔΡΑΣ' },
+  { id: 6, name: 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ' },
+  { id: 7, name: 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ' },
+  { id: 8, name: 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ' }
+]
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ" -> ID: 3
+[Projects] Regional unit level, Code: 801
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 3
+}
+[Projects] Successfully created project_index entry for expenditure type: ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ, ID: 3509
+[Geographic] Inserting relationships for project_index ID: 3509 {
+  perifereia: 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ',
+  perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 142,
+  geographic_code: null
+}
+[WebSocket] Heartbeat - Clients: 1 (1 active, 0 terminated)
+[Geographic] Inserting region relationship: 8
+[Geographic] Successfully inserted region relationship
+[Geographic] Inserting regional unit relationship: 801
+[Geographic] Successfully inserted unit relationship
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΕΠΙΣΚΕΥΗ" -> ID: 4
+[Projects] Regional unit level, Code: 801
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 4
+}
+[Projects] Successfully created project_index entry for expenditure type: ΔΚΑ ΕΠΙΣΚΕΥΗ, ID: 3510
+[Geographic] Inserting relationships for project_index ID: 3510 {
+  perifereia: 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ',
+  perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 142,
+  geographic_code: null
+}
+[Geographic] Inserting region relationship: 8
+[Geographic] Successfully inserted region relationship
+[Geographic] Inserting regional unit relationship: 801
+[Geographic] Successfully inserted unit relationship
+[Projects] DEBUG: Expenditure type "ΕΚΤΟΣ ΕΔΡΑΣ" -> ID: 5
+[Projects] Regional unit level, Code: 801
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 5
+}
+[Projects] Successfully created project_index entry for expenditure type: ΕΚΤΟΣ ΕΔΡΑΣ, ID: 3511
+[Geographic] Inserting relationships for project_index ID: 3511 {
+  perifereia: 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ',
+  perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 142,
+  geographic_code: null
+}
+[Geographic] Inserting region relationship: 8
+[Geographic] Successfully inserted region relationship
+[Geographic] Inserting regional unit relationship: 801
+[Geographic] Successfully inserted unit relationship
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ" -> ID: 1
+[Projects] Regional unit level, Code: 801
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 1
+}
+[Projects] Successfully created project_index entry for expenditure type: ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ, ID: 3512
+[Geographic] Inserting relationships for project_index ID: 3512 {
+  perifereia: 'ΣΤΕΡΕΑΣ ΕΛΛΑΔΑΣ',
+  perifereiaki_enotita: 'ΒΟΙΩΤΙΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 142,
+  geographic_code: null
+}
+[Geographic] Inserting region relationship: 8
+[Geographic] Successfully inserted region relationship
+[Geographic] Inserting regional unit relationship: 801
+[Geographic] Successfully inserted unit relationship
+[Projects] Using provided implementing_agency_id: 2
+[Projects] DEBUG: Looking for kallikratis with region: {
+  perifereia: 'ΘΕΣΣΑΛΙΑΣ',
+  perifereiaki_enotita: null,
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 91,
+  geographic_code: null
+}
+[Projects] Using provided kallikratis_id: 91
+[Projects] Processing line 2:
+[Projects] - Event Type ID: 12
+[Projects] - Monada ID: 2
+[Projects] - Kallikratis ID: 91
+[Projects] Creating project_index entries - event_type_id is valid: 12
+[Projects] Creating project_index entry with eventTypeId: 12, monadaId: 2, kallikratisId: 91
+[Projects] DEBUG: Processing expenditure types: [
+  'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ',
+  'ΔΚΑ ΕΠΙΣΚΕΥΗ',
+  'ΕΚΤΟΣ ΕΔΡΑΣ',
+  'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'
+]
+[Projects] DEBUG: Available expenditure types: [
+  { id: 1, name: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ' },
+  { id: 2, name: 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ' },
+  { id: 3, name: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ' },
+  { id: 4, name: 'ΔΚΑ ΕΠΙΣΚΕΥΗ' },
+  { id: 5, name: 'ΕΚΤΟΣ ΕΔΡΑΣ' },
+  { id: 6, name: 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ' },
+  { id: 7, name: 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ' },
+  { id: 8, name: 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ' }
+]
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ" -> ID: 3
+[Projects] Regional level, Code: 5
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 3
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 3) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΕΠΙΣΚΕΥΗ" -> ID: 4
+[Projects] Regional level, Code: 5
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 4
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 4) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΕΚΤΟΣ ΕΔΡΑΣ" -> ID: 5
+[Projects] Regional level, Code: 5
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 5
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 5) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ" -> ID: 1
+[Projects] Regional level, Code: 5
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 1
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 1) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] Using provided implementing_agency_id: 2
+[Projects] DEBUG: Looking for kallikratis with region: {
+  perifereia: 'ΘΕΣΣΑΛΙΑΣ',
+  perifereiaki_enotita: 'ΛΑΡΙΣΑΣ',
+  dimos: null,
+  dimotiki_enotita: null,
+  kallikratis_id: 97,
+  geographic_code: null
+}
+[Projects] Using provided kallikratis_id: 97
+[Projects] Processing line 3:
+[Projects] - Event Type ID: 12
+[Projects] - Monada ID: 2
+[Projects] - Kallikratis ID: 97
+[Projects] Creating project_index entries - event_type_id is valid: 12
+[Projects] Creating project_index entry with eventTypeId: 12, monadaId: 2, kallikratisId: 97
+[Projects] DEBUG: Processing expenditure types: [
+  'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ',
+  'ΔΚΑ ΕΠΙΣΚΕΥΗ',
+  'ΕΚΤΟΣ ΕΔΡΑΣ',
+  'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'
+]
+[Projects] DEBUG: Available expenditure types: [
+  { id: 1, name: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ' },
+  { id: 2, name: 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ' },
+  { id: 3, name: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ' },
+  { id: 4, name: 'ΔΚΑ ΕΠΙΣΚΕΥΗ' },
+  { id: 5, name: 'ΕΚΤΟΣ ΕΔΡΑΣ' },
+  { id: 6, name: 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ' },
+  { id: 7, name: 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ' },
+  { id: 8, name: 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ' }
+]
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ" -> ID: 3
+[Projects] Regional unit level, Code: 502
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 3
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 3) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΕΠΙΣΚΕΥΗ" -> ID: 4
+[Projects] Regional unit level, Code: 502
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 4
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 4) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΕΚΤΟΣ ΕΔΡΑΣ" -> ID: 5
+[Projects] Regional unit level, Code: 502
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 5
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 5) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ" -> ID: 1
+[Projects] Regional unit level, Code: 502
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 1
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 1) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] Using provided implementing_agency_id: 2
+[Projects] DEBUG: Looking for kallikratis with region: {
+  perifereia: 'ΘΕΣΣΑΛΙΑΣ',
+  perifereiaki_enotita: 'ΛΑΡΙΣΑΣ',
+  dimos: 'ΑΓΙΑΣ',
+  dimotiki_enotita: null,
+  kallikratis_id: 97,
+  geographic_code: null
+}
+[Projects] Using provided kallikratis_id: 97
+[Projects] Processing line 4:
+[Projects] - Event Type ID: 12
+[Projects] - Monada ID: 2
+[Projects] - Kallikratis ID: 97
+[Projects] Creating project_index entries - event_type_id is valid: 12
+[Projects] Creating project_index entry with eventTypeId: 12, monadaId: 2, kallikratisId: 97
+[Projects] DEBUG: Processing expenditure types: [
+  'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ',
+  'ΔΚΑ ΕΠΙΣΚΕΥΗ',
+  'ΕΚΤΟΣ ΕΔΡΑΣ',
+  'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'
+]
+[Projects] DEBUG: Available expenditure types: [
+  { id: 1, name: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ' },
+  { id: 2, name: 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ' },
+  { id: 3, name: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ' },
+  { id: 4, name: 'ΔΚΑ ΕΠΙΣΚΕΥΗ' },
+  { id: 5, name: 'ΕΚΤΟΣ ΕΔΡΑΣ' },
+  { id: 6, name: 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ' },
+  { id: 7, name: 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ' },
+  { id: 8, name: 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ' }
+]
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ" -> ID: 3
+[Projects] Municipality level, Code: 9097
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 3
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 3) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΕΠΙΣΚΕΥΗ" -> ID: 4
+[Projects] Municipality level, Code: 9097
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 4
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 4) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΕΚΤΟΣ ΕΔΡΑΣ" -> ID: 5
+[Projects] Municipality level, Code: 9097
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 5
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 5) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ" -> ID: 1
+[Projects] Municipality level, Code: 9097
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 1
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 1) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] Using provided implementing_agency_id: 2
+[Projects] DEBUG: Looking for kallikratis with region: {
+  perifereia: 'ΘΕΣΣΑΛΙΑΣ',
+  perifereiaki_enotita: 'ΛΑΡΙΣΑΣ',
+  dimos: 'ΕΛΑΣΣΟΝΑΣ',
+  dimotiki_enotita: null,
+  kallikratis_id: 98,
+  geographic_code: null
+}
+[Projects] Using provided kallikratis_id: 98
+[Projects] Processing line 5:
+[Projects] - Event Type ID: 12
+[Projects] - Monada ID: 2
+[Projects] - Kallikratis ID: 98
+[Projects] Creating project_index entries - event_type_id is valid: 12
+[Projects] Creating project_index entry with eventTypeId: 12, monadaId: 2, kallikratisId: 98
+[Projects] DEBUG: Processing expenditure types: [
+  'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ',
+  'ΔΚΑ ΕΠΙΣΚΕΥΗ',
+  'ΕΚΤΟΣ ΕΔΡΑΣ',
+  'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ'
+]
+[Projects] DEBUG: Available expenditure types: [
+  { id: 1, name: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ' },
+  { id: 2, name: 'ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ' },
+  { id: 3, name: 'ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ' },
+  { id: 4, name: 'ΔΚΑ ΕΠΙΣΚΕΥΗ' },
+  { id: 5, name: 'ΕΚΤΟΣ ΕΔΡΑΣ' },
+  { id: 6, name: 'ΣΥΜΒΑΤΙΚΕΣ ΥΠΟΧΡΕΩΣΕΙΣ' },
+  { id: 7, name: 'ΠΕΡΙΒΑΛΛΟΝΤΕΣ ΧΩΡΟΙ' },
+  { id: 8, name: 'ΕΠΙΔΟΤΗΣΗ ΚΑΤΕΔΑΦΙΣΗΣ' }
+]
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ" -> ID: 3
+[Projects] Municipality level, Code: 9098
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 3
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 3) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΕΠΙΣΚΕΥΗ" -> ID: 4
+[Projects] Municipality level, Code: 9098
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 4
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 4) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΕΚΤΟΣ ΕΔΡΑΣ" -> ID: 5
+[Projects] Municipality level, Code: 9098
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 5
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 5) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] DEBUG: Expenditure type "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ" -> ID: 1
+[Projects] Municipality level, Code: 9098
+[Projects] Inserting project_index entry: {
+  project_id: 194,
+  monada_id: 2,
+  event_types_id: 12,
+  expenditure_type_id: 1
+}
+[Projects] Error inserting project_index entry: {
+  code: '23505',
+  details: 'Key (project_id, monada_id, event_types_id, expenditure_type_id)=(194, 2, 12, 1) already exists.',
+  hint: null,
+  message: 'duplicate key value violates unique constraint "project_index_context_unique"'
+}
+[Projects] Successfully updated project with MIS: 5222801
+10:16:30 AM [express] PATCH /api/projects/5222801 200 in 10200ms
+10:16:31 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+10:16:31 AM [express] [Request] GET /api/projects/5222801/complete from 10.81.11.37
+[ProjectComplete] Fetching complete data for project MIS: 5222801
+[ProjectComplete] Before kallikratis loading - got 17 eventTypes, 11 units, 8 expenditureTypes
+[ProjectComplete] Attempting to load kallikratis data...
+[ProjectComplete] Successfully loaded 324 kallikratis entries for complete data
+[ProjectComplete] Loading normalized geographic data...
+[ProjectComplete] Loaded normalized geographic data: 13 regions, 74 regional units, 324 municipalities
+[ProjectComplete] Project has 4 index entries
+[ProjectComplete] Fetching geographic relationships for project index entries
+[ProjectComplete] Municipality query result: {
+  error: null,
+  dataLength: 0,
+  data: [],
+  projectIndexIds: [ 3509, 3512, 3510, 3511 ]
+}
+[ProjectComplete] Found geographic relationships: 4 regions, 4 units, 0 municipalities
+[ProjectComplete] Successfully fetched complete data for project 194
+[ProjectComplete] Data counts: decisions=2, formulations=1, index=4, eventTypes=17, units=11, expenditureTypes=8, kallikratis=324, regions=13, regionalUnits=74, municipalities=324
+10:16:33 AM [express] GET /api/projects/5222801/complete 200 in 1911ms
