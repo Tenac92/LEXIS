@@ -350,6 +350,35 @@ export function SmartGeographicMultiSelect({
               3. Επιλέξτε Δήμους (πολλαπλή επιλογή):
             </div>
             
+            {/* Select All / Deselect All Toggle */}
+            {municipalities.length > 0 && (
+              <div className="flex justify-between items-center">
+                <div className="text-xs text-gray-600">
+                  Επιλεγμένοι: {selectedMunicipalities.length} από {municipalities.length} δήμους
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (selectedMunicipalities.length === municipalities.length) {
+                      // All selected - deselect all
+                      setSelectedMunicipalities([]);
+                    } else {
+                      // Not all selected - select all
+                      setSelectedMunicipalities([...municipalities]);
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {selectedMunicipalities.length === municipalities.length 
+                    ? "📋 Αποεπιλογή όλων" 
+                    : "✅ Επιλογή όλων"
+                  }
+                </Button>
+              </div>
+            )}
+            
             {/* Checkbox List for Multiple Municipality Selection */}
             <div className="max-h-48 overflow-y-auto border rounded-lg p-3 bg-white space-y-2">
               {municipalities.length > 0 ? (
