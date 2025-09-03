@@ -2227,30 +2227,64 @@ export function CreateDocumentDialog({
           municipalities: projectMunicipalities.length
         });
         
-        // Debug: Check actual data structure
+        // Debug: Check actual data structure and duplicates
         console.log("[CreateDocument] Sample data structures:", {
           sampleRegion: projectRegions[0],
           sampleUnit: projectUnits[0], 
           sampleMunicipality: projectMunicipalities[0]
         });
+        
+        console.log("[CreateDocument] All raw data for duplicate analysis:", {
+          allRegions: projectRegions,
+          allUnits: projectUnits,
+          allMunicipalities: projectMunicipalities
+        });
 
         // Return structured data for smart hierarchical selection
         // Backend returns joined data: { region_code: "...", regions: { code: "...", name: "..." } }
+        // Remove duplicates by using a Set based on code
+        const uniqueRegions = Array.from(
+          new Map(projectRegions.map((item: any) => [
+            item.region_code || item.regions?.code, 
+            item
+          ])).values()
+        );
+        
+        const uniqueUnits = Array.from(
+          new Map(projectUnits.map((item: any) => [
+            item.unit_code || item.regional_units?.code, 
+            item
+          ])).values()
+        );
+        
+        const uniqueMunicipalities = Array.from(
+          new Map(projectMunicipalities.map((item: any) => [
+            item.muni_code || item.municipalities?.code, 
+            item
+          ])).values()
+        );
+        
+        console.log("[CreateDocument] After deduplication:", {
+          regions: uniqueRegions.length,
+          units: uniqueUnits.length, 
+          municipalities: uniqueMunicipalities.length
+        });
+
         const smartGeographicData = {
-          availableRegions: projectRegions.map((item: any) => ({
+          availableRegions: uniqueRegions.map((item: any) => ({
             id: `region-${item.region_code || item.regions?.code}`,
             code: item.region_code || item.regions?.code,
             name: item.regions?.name || item.name,
             type: "region",
           })),
-          availableUnits: projectUnits.map((item: any) => ({
+          availableUnits: uniqueUnits.map((item: any) => ({
             id: `unit-${item.unit_code || item.regional_units?.code}`,
             code: item.unit_code || item.regional_units?.code,
             name: item.regional_units?.name || item.name,
             type: "regional_unit",
             region_code: item.regional_units?.region_code
           })),
-          availableMunicipalities: projectMunicipalities.map((item: any) => ({
+          availableMunicipalities: uniqueMunicipalities.map((item: any) => ({
             id: `municipality-${item.muni_code || item.municipalities?.code}`,
             code: item.muni_code || item.municipalities?.code,
             name: item.municipalities?.name || item.name,
@@ -2562,7 +2596,7 @@ export function CreateDocumentDialog({
                   {/* Smart Hierarchical Geographic Selection */}
                   {(availableRegions.length > 0 || availableUnits.length > 0 || availableMunicipalities.length > 0) && (
                     <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-                      <h3 className="text-sm font-medium text-gray-700">Γεωγραφική Περιοχή διβιβαστικου</h3>
+                      <h3 className="text-sm font-medium text-gray-700">Γεωγραφική Περιοχή Διαβιβαστίκου</h3>
                       
                       {/* Filter by Region */}
                       {availableRegions.length > 0 && (
@@ -2571,10 +2605,17 @@ export function CreateDocumentDialog({
                           <Select
                             value={selectedRegionFilter}
                             onValueChange={(value) => {
-                              setSelectedRegionFilter(value === "all" ? "" : value);
+                              const regionCode = value === "all" ? "" : value;
+                              setSelectedRegionFilter(regionCode);
                               setSelectedUnitFilter(""); // Reset unit filter when region changes
-                              if (value !== "all") {
-                                form.setValue("region", `region-${value}`);
+                              
+                              // Set as final selected region for document (last hierarchy choice)
+                              if (regionCode) {
+                                const selectedRegionName = availableRegions.find((r: any) => r.code === regionCode)?.name || "";
+                                form.setValue("region", selectedRegionName);
+                                console.log("[Geographic] Selected region as final choice:", selectedRegionName);
+                              } else {
+                                form.setValue("region", "");
                               }
                             }}
                           >
@@ -2607,9 +2648,16 @@ export function CreateDocumentDialog({
                           <Select
                             value={selectedUnitFilter}
                             onValueChange={(value) => {
-                              setSelectedUnitFilter(value === "all" ? "" : value);
-                              if (value !== "all") {
-                                form.setValue("region", `unit-${value}`);
+                              const unitCode = value === "all" ? "" : value;
+                              setSelectedUnitFilter(unitCode);
+                              
+                              // Set as final selected region for document (last hierarchy choice)
+                              if (unitCode) {
+                                const selectedUnitName = availableUnits.find((u: any) => u.code === unitCode)?.name || "";
+                                form.setValue("region", selectedUnitName);
+                                console.log("[Geographic] Selected regional unit as final choice:", selectedUnitName);
+                              } else if (!selectedRegionFilter) {
+                                form.setValue("region", "");
                               }
                             }}
                           >
@@ -2641,7 +2689,14 @@ export function CreateDocumentDialog({
                           </label>
                           <Select
                             value={form.watch("region")}
-                            onValueChange={(value) => form.setValue("region", value)}
+                            onValueChange={(value) => {
+                              // Set as final selected region for document (last hierarchy choice - municipality)
+                              const selectedMunicipality = availableMunicipalities.find((m: any) => m.id === value);
+                              if (selectedMunicipality) {
+                                form.setValue("region", selectedMunicipality.name);
+                                console.log("[Geographic] Selected municipality as final choice:", selectedMunicipality.name);
+                              }
+                            }}
                             disabled={regionsLoading}
                           >
                             <SelectTrigger>
