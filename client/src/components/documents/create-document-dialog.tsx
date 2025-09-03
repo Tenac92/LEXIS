@@ -2226,28 +2226,36 @@ export function CreateDocumentDialog({
           units: projectUnits.length,
           municipalities: projectMunicipalities.length
         });
+        
+        // Debug: Check actual data structure
+        console.log("[CreateDocument] Sample data structures:", {
+          sampleRegion: projectRegions[0],
+          sampleUnit: projectUnits[0], 
+          sampleMunicipality: projectMunicipalities[0]
+        });
 
         // Return structured data for smart hierarchical selection
+        // Backend returns joined data: { region_code: "...", regions: { code: "...", name: "..." } }
         const smartGeographicData = {
-          availableRegions: projectRegions.map((region: any) => ({
-            id: `region-${region.code}`,
-            code: region.code,
-            name: region.name,
+          availableRegions: projectRegions.map((item: any) => ({
+            id: `region-${item.region_code || item.regions?.code}`,
+            code: item.region_code || item.regions?.code,
+            name: item.regions?.name || item.name,
             type: "region",
           })),
-          availableUnits: projectUnits.map((unit: any) => ({
-            id: `unit-${unit.code}`,
-            code: unit.code,
-            name: unit.name,
+          availableUnits: projectUnits.map((item: any) => ({
+            id: `unit-${item.unit_code || item.regional_units?.code}`,
+            code: item.unit_code || item.regional_units?.code,
+            name: item.regional_units?.name || item.name,
             type: "regional_unit",
-            region_code: unit.region_code
+            region_code: item.regional_units?.region_code
           })),
-          availableMunicipalities: projectMunicipalities.map((municipality: any) => ({
-            id: `municipality-${municipality.code}`,
-            code: municipality.code,
-            name: municipality.name,
+          availableMunicipalities: projectMunicipalities.map((item: any) => ({
+            id: `municipality-${item.muni_code || item.municipalities?.code}`,
+            code: item.muni_code || item.municipalities?.code,
+            name: item.municipalities?.name || item.name,
             type: "municipality",
-            unit_code: municipality.unit_code
+            unit_code: item.municipalities?.unit_code
           }))
         };
 
@@ -2554,7 +2562,7 @@ export function CreateDocumentDialog({
                   {/* Smart Hierarchical Geographic Selection */}
                   {(availableRegions.length > 0 || availableUnits.length > 0 || availableMunicipalities.length > 0) && (
                     <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-                      <h3 className="text-sm font-medium text-gray-700">Γεωγραφική Περιοχή Έργου</h3>
+                      <h3 className="text-sm font-medium text-gray-700">Γεωγραφική Περιοχή διβιβαστικου</h3>
                       
                       {/* Filter by Region */}
                       {availableRegions.length > 0 && (
@@ -2576,7 +2584,7 @@ export function CreateDocumentDialog({
                             <SelectContent>
                               <SelectItem value="all">Όλες οι περιφέρειες</SelectItem>
                               {availableRegions.map((region: any) => (
-                                <SelectItem key={region.code} value={region.code}>
+                                <SelectItem key={`region-${region.code}`} value={region.code}>
                                   {region.name}
                                 </SelectItem>
                               ))}
@@ -2611,7 +2619,7 @@ export function CreateDocumentDialog({
                             <SelectContent>
                               <SelectItem value="all">Όλες οι περιφερειακές ενότητες</SelectItem>
                               {availableUnits.map((unit: any) => (
-                                <SelectItem key={unit.code} value={unit.code}>
+                                <SelectItem key={`unit-${unit.code}`} value={unit.code}>
                                   {unit.name}
                                 </SelectItem>
                               ))}
@@ -2641,9 +2649,9 @@ export function CreateDocumentDialog({
                             </SelectTrigger>
                             <SelectContent className="max-h-60">
                               {availableMunicipalities
-                                .filter((municipality: any) => municipality.id && municipality.name)
+                                .filter((municipality: any) => municipality.code && municipality.name)
                                 .map((municipality: any) => (
-                                <SelectItem key={municipality.id} value={municipality.id}>
+                                <SelectItem key={`municipality-${municipality.code}`} value={municipality.id}>
                                   <div className="flex flex-col">
                                     <span className="font-medium">{municipality.name}</span>
                                     <span className="text-xs text-gray-500">
