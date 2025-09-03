@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FormControl } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface GeographicSelection {
   id: string;
@@ -30,6 +31,7 @@ export function SmartGeographicMultiSelect({
   const [currentLevel, setCurrentLevel] = useState<'region' | 'regional_unit' | 'municipality'>('region');
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [selectedRegionalUnit, setSelectedRegionalUnit] = useState<string>("");
+  const [selectedMunicipalities, setSelectedMunicipalities] = useState<string[]>([]);
 
   // Get unique regions
   const regions = useMemo(() => {
@@ -137,6 +139,7 @@ export function SmartGeographicMultiSelect({
     // Reset selections for next pick
     setSelectedRegion("");
     setSelectedRegionalUnit("");
+    setSelectedMunicipalities([]);
     setCurrentLevel('region');
   };
 
@@ -277,39 +280,98 @@ export function SmartGeographicMultiSelect({
           </div>
         )}
 
-        {/* Step 3: Municipality Selection or Skip */}
+        {/* Step 3: Municipality Multi-Selection with Checkboxes */}
         {(canProceedToMunicipalities || selectedRegionalUnit) && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="text-xs text-gray-600 flex items-center gap-1">
               <ChevronRight className="h-3 w-3" />
-              3. Επιλέξτε Δήμο (ή παραλείψτε):
+              3. Επιλέξτε Δήμους (πολλαπλή επιλογή):
             </div>
-            <Select
-              value=""
-              onValueChange={(municipality) => {
-                if (municipality === "SKIP_LEVEL") {
+            
+            {/* Checkbox List for Multiple Municipality Selection */}
+            <div className="max-h-48 overflow-y-auto border rounded-lg p-3 bg-white space-y-2">
+              {municipalities.length > 0 ? (
+                municipalities.map((municipality) => (
+                  <div key={municipality} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`municipality-${municipality}`}
+                      checked={selectedMunicipalities.includes(municipality)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedMunicipalities(prev => [...prev, municipality]);
+                        } else {
+                          setSelectedMunicipalities(prev => prev.filter(m => m !== municipality));
+                        }
+                      }}
+                    />
+                    <label 
+                      htmlFor={`municipality-${municipality}`}
+                      className="text-sm cursor-pointer hover:text-blue-600"
+                    >
+                      {municipality}
+                    </label>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500 text-sm italic">
+                  Δεν υπάρχουν διαθέσιμοι δήμοι για την επιλεγμένη ενότητα
+                </div>
+              )}
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2 flex-wrap">
+              {selectedMunicipalities.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    // Add all selected municipalities
+                    selectedMunicipalities.forEach(municipality => {
+                      addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, municipality);
+                    });
+                    setSelectedMunicipalities([]);
+                  }}
+                  className="text-xs"
+                >
+                  ✓ Προσθήκη {selectedMunicipalities.length} δήμων
+                </Button>
+              )}
+              
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  // Skip municipalities (add without municipality)
                   addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, "");
-                } else {
-                  addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, municipality);
-                }
-              }}
-            >
-              <FormControl>
-                <SelectTrigger>
-                  <SelectValue placeholder="Επιλέξτε δήμο (θα προστεθούν όλα τα επίπεδα)..." />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                <SelectItem value="SKIP_LEVEL">
-                  🚫 Παράλειψη δήμου (κενό επίπεδο)
-                </SelectItem>
-                {municipalities.map((municipality) => (
-                  <SelectItem key={municipality} value={municipality}>
-                    ✓ {municipality} (+ περιφέρεια + ενότητα)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  setSelectedMunicipalities([]);
+                }}
+                className="text-xs text-gray-500"
+              >
+                🚫 Παράλειψη δήμων
+              </Button>
+              
+              {selectedMunicipalities.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedMunicipalities([])}
+                  className="text-xs text-red-500"
+                >
+                  Καθαρισμός επιλογών
+                </Button>
+              )}
+            </div>
+            
+            {/* Show currently selected municipalities */}
+            {selectedMunicipalities.length > 0 && (
+              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                Επιλεγμένοι δήμοι ({selectedMunicipalities.length}): {selectedMunicipalities.join(", ")}
+              </div>
+            )}
           </div>
         )}
       </div>
