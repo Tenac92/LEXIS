@@ -2311,6 +2311,7 @@ export function CreateDocumentDialog({
   // Smart cascading selection state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
   const [selectedUnitFilter, setSelectedUnitFilter] = useState<string>("");
+  const [selectedMunicipalityId, setSelectedMunicipalityId] = useState<string>("");
   
   // Computed available options based on current selections
   const availableRegions = (projectGeographicAreas as any)?.availableRegions || [];
@@ -2613,9 +2614,11 @@ export function CreateDocumentDialog({
                               if (regionCode) {
                                 const selectedRegionName = availableRegions.find((r: any) => r.code === regionCode)?.name || "";
                                 form.setValue("region", selectedRegionName);
+                                setSelectedMunicipalityId(""); // Clear municipality selection
                                 console.log("[Geographic] Selected region as final choice:", selectedRegionName);
                               } else {
                                 form.setValue("region", "");
+                                setSelectedMunicipalityId("");
                               }
                             }}
                           >
@@ -2655,9 +2658,11 @@ export function CreateDocumentDialog({
                               if (unitCode) {
                                 const selectedUnitName = availableUnits.find((u: any) => u.code === unitCode)?.name || "";
                                 form.setValue("region", selectedUnitName);
+                                setSelectedMunicipalityId(""); // Clear municipality selection
                                 console.log("[Geographic] Selected regional unit as final choice:", selectedUnitName);
                               } else if (!selectedRegionFilter) {
                                 form.setValue("region", "");
+                                setSelectedMunicipalityId("");
                               }
                             }}
                           >
@@ -2688,12 +2693,13 @@ export function CreateDocumentDialog({
                             )}
                           </label>
                           <Select
-                            value={form.watch("region")}
+                            value={selectedMunicipalityId}
                             onValueChange={(value) => {
                               // Set as final selected region for document (last hierarchy choice - municipality)
                               const selectedMunicipality = availableMunicipalities.find((m: any) => m.id === value);
                               if (selectedMunicipality) {
                                 form.setValue("region", selectedMunicipality.name);
+                                setSelectedMunicipalityId(value); // Store ID for dropdown
                                 console.log("[Geographic] Selected municipality as final choice:", selectedMunicipality.name);
                               }
                             }}
