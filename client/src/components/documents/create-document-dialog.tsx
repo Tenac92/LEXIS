@@ -2216,59 +2216,43 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        // Extract geographic areas from project data
-        const projectRegions = response?.regions || [];
-        const projectUnits = response?.regionalUnits || [];
-        const projectMunicipalities = response?.municipalities || [];
+        // Extract project-specific geographic areas (correct field names)
+        const projectRegions = (response as any)?.projectRegions || [];
+        const projectUnits = (response as any)?.projectRegionalUnits || [];
+        const projectMunicipalities = (response as any)?.projectMunicipalities || [];
 
-        let processedAreas: Array<{
-          id: string;
-          name: string;
-          type: string;
-        }> = [];
+        console.log("[CreateDocument] Project-specific geographic data:", {
+          regions: projectRegions.length,
+          units: projectUnits.length,
+          municipalities: projectMunicipalities.length
+        });
 
-        // Add regions
-        projectRegions.forEach((region: any) => {
-          processedAreas.push({
+        // Return structured data for smart hierarchical selection
+        const smartGeographicData = {
+          availableRegions: projectRegions.map((region: any) => ({
             id: `region-${region.code}`,
+            code: region.code,
             name: region.name,
             type: "region",
-          });
-        });
-
-        // Add regional units
-        projectUnits.forEach((unit: any) => {
-          processedAreas.push({
+          })),
+          availableUnits: projectUnits.map((unit: any) => ({
             id: `unit-${unit.code}`,
+            code: unit.code,
             name: unit.name,
             type: "regional_unit",
-          });
-        });
-
-        // Add municipalities
-        projectMunicipalities.forEach((municipality: any) => {
-          processedAreas.push({
+            region_code: unit.region_code
+          })),
+          availableMunicipalities: projectMunicipalities.map((municipality: any) => ({
             id: `municipality-${municipality.code}`,
+            code: municipality.code,
             name: municipality.name,
             type: "municipality",
-          });
-        });
+            unit_code: municipality.unit_code
+          }))
+        };
 
-        console.log("[CreateDocument] Processed geographic areas:", processedAreas);
-
-        // If no specific geographic areas found for project, show all available options
-        if (processedAreas.length === 0 && geographicData) {
-          // Fallback to showing all regions as options
-          if (geographicData?.regions && Array.isArray(geographicData.regions)) {
-            processedAreas = geographicData.regions.map((region: any) => ({
-              id: `region-${region.code}`,
-              name: region.name,
-              type: "region",
-            }));
-          }
-        }
-
-        return processedAreas;
+        console.log("[CreateDocument] Smart geographic data:", smartGeographicData);
+        return smartGeographicData;
       } catch (error) {
         console.error("Error fetching project geographic areas:", error);
         toast({
@@ -2282,8 +2266,30 @@ export function CreateDocumentDialog({
     enabled: Boolean(selectedProjectId) && projects.length > 0 && !!geographicData,
   });
 
-  // Alias for backward compatibility
-  const regions = projectGeographicAreas;
+  // Smart cascading selection state
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
+  const [selectedUnitFilter, setSelectedUnitFilter] = useState<string>("");
+  
+  // Computed available options based on current selections
+  const availableRegions = (projectGeographicAreas as any)?.availableRegions || [];
+  const availableUnits = selectedRegionFilter 
+    ? ((projectGeographicAreas as any)?.availableUnits || []).filter((unit: any) => unit.region_code === selectedRegionFilter)
+    : ((projectGeographicAreas as any)?.availableUnits || []);
+  const availableMunicipalities = selectedUnitFilter
+    ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter((municipality: any) => municipality.unit_code === selectedUnitFilter)
+    : selectedRegionFilter
+    ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter((municipality: any) => {
+        const unit = ((projectGeographicAreas as any)?.availableUnits || []).find((u: any) => u.code === municipality.unit_code);
+        return unit?.region_code === selectedRegionFilter;
+      })
+    : ((projectGeographicAreas as any)?.availableMunicipalities || []);
+
+  // All available options for the region dropdown (flattened for backward compatibility)
+  const regions = [
+    ...availableRegions,
+    ...availableUnits,
+    ...availableMunicipalities
+  ];
 
   const handleNext = async () => {
     try {
@@ -2545,44 +2551,134 @@ export function CreateDocumentDialog({
                       </FormItem>
                     )}
                   />
-                  {regions.length > 0 && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        {regions[0]?.type === "regional_unit"
-                          ? "Περιφερειακή Ενότητα"
-                          : "Περιφέρεια"}
-                      </label>
-                      <Select
-                        value={form.watch("region")}
-                        onValueChange={(value) =>
-                          form.setValue("region", value)
-                        }
-                        disabled={regions.length === 1 || regionsLoading}
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              regions[0]?.type === "regional_unit"
-                                ? "Επιλέξτε Περιφερειακή Ενότητα"
-                                : "Επιλέξτε Περιφέρεια"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {regions
-                            .filter((region) => region.id && String(region.id).trim() !== '')
-                            .map((region) => (
-                            <SelectItem key={region.id} value={String(region.id)}>
-                              {region.name}
-                            </SelectItem>
-                          ))}
-                          {regions.length === 0 && (
-                            <SelectItem value="no-regions" disabled>
-                              Δεν υπάρχουν διαθέσιμες περιοχές
-                            </SelectItem>
+                  {/* Smart Hierarchical Geographic Selection */}
+                  {(availableRegions.length > 0 || availableUnits.length > 0 || availableMunicipalities.length > 0) && (
+                    <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
+                      <h3 className="text-sm font-medium text-gray-700">Γεωγραφική Περιοχή Έργου</h3>
+                      
+                      {/* Filter by Region */}
+                      {availableRegions.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-600">Φίλτρο Περιφέρειας</label>
+                          <Select
+                            value={selectedRegionFilter}
+                            onValueChange={(value) => {
+                              setSelectedRegionFilter(value === "all" ? "" : value);
+                              setSelectedUnitFilter(""); // Reset unit filter when region changes
+                              if (value !== "all") {
+                                form.setValue("region", `region-${value}`);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Όλες οι περιφέρειες" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Όλες οι περιφέρειες</SelectItem>
+                              {availableRegions.map((region: any) => (
+                                <SelectItem key={region.code} value={region.code}>
+                                  {region.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Filter by Regional Unit */}
+                      {availableUnits.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-600">
+                            Φίλτρο Περιφερειακής Ενότητας 
+                            {selectedRegionFilter && (
+                              <span className="text-gray-500">
+                                (στην {availableRegions.find((r: any) => r.code === selectedRegionFilter)?.name})
+                              </span>
+                            )}
+                          </label>
+                          <Select
+                            value={selectedUnitFilter}
+                            onValueChange={(value) => {
+                              setSelectedUnitFilter(value === "all" ? "" : value);
+                              if (value !== "all") {
+                                form.setValue("region", `unit-${value}`);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Όλες οι περιφερειακές ενότητες</SelectItem>
+                              {availableUnits.map((unit: any) => (
+                                <SelectItem key={unit.code} value={unit.code}>
+                                  {unit.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Final Municipality Selection */}
+                      {availableMunicipalities.length > 0 && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Τελική Επιλογή Δήμου/Κοινότητας
+                            {(selectedRegionFilter || selectedUnitFilter) && (
+                              <span className="text-sm text-gray-500 ml-2">
+                                ({availableMunicipalities.length} διαθέσιμες επιλογές)
+                              </span>
+                            )}
+                          </label>
+                          <Select
+                            value={form.watch("region")}
+                            onValueChange={(value) => form.setValue("region", value)}
+                            disabled={regionsLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-60">
+                              {availableMunicipalities
+                                .filter((municipality: any) => municipality.id && municipality.name)
+                                .map((municipality: any) => (
+                                <SelectItem key={municipality.id} value={municipality.id}>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{municipality.name}</span>
+                                    <span className="text-xs text-gray-500">
+                                      Δήμος/Κοινότητα
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                              {availableMunicipalities.length === 0 && (
+                                <SelectItem value="no-municipalities" disabled>
+                                  Δεν υπάρχουν διαθέσιμοι δήμοι
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Show current filters */}
+                      {(selectedRegionFilter || selectedUnitFilter) && (
+                        <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
+                          Ενεργά φίλτρα: 
+                          {selectedRegionFilter && (
+                            <span className="ml-1 font-medium">
+                              Περιφέρεια: {availableRegions.find((r: any) => r.code === selectedRegionFilter)?.name}
+                            </span>
                           )}
-                        </SelectContent>
-                      </Select>
+                          {selectedUnitFilter && (
+                            <span className="ml-1 font-medium">
+                              {selectedRegionFilter && " • "}
+                              Π.Ε.: {availableUnits.find((u: any) => u.code === selectedUnitFilter)?.name}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                   {currentStep === 1 && selectedProject && (
