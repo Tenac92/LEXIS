@@ -1924,11 +1924,33 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
                     };
 
                     console.log(`[Projects] Inserting project_index entry:`, indexEntry);
-                    const { data: insertedEntry, error: insertError } = await supabase
+                    // First check if entry already exists
+                    const { data: existingEntry } = await supabase
                       .from('project_index')
-                      .insert(indexEntry)
                       .select('id')
+                      .eq('project_id', indexEntry.project_id)
+                      .eq('monada_id', indexEntry.monada_id)
+                      .eq('event_types_id', indexEntry.event_types_id)
+                      .eq('expenditure_type_id', indexEntry.expenditure_type_id)
                       .single();
+
+                    let insertedEntry;
+                    let insertError;
+
+                    if (existingEntry) {
+                      // Entry exists, use existing ID
+                      insertedEntry = existingEntry;
+                      console.log(`[Projects] Using existing project_index entry ID: ${existingEntry.id}`);
+                    } else {
+                      // Entry doesn't exist, insert new one
+                      const result = await supabase
+                        .from('project_index')
+                        .insert(indexEntry)
+                        .select('id')
+                        .single();
+                      insertedEntry = result.data;
+                      insertError = result.error;
+                    }
 
                     if (insertError) {
                       console.error(`[Projects] Error inserting project_index entry:`, insertError);
