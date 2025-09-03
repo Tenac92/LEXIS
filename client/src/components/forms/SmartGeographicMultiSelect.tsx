@@ -143,6 +143,46 @@ export function SmartGeographicMultiSelect({
     setCurrentLevel('region');
   };
 
+  // Batch addition for multiple municipalities to avoid state conflicts
+  const addMultipleMunicipalities = (municipalities: string[]) => {
+    const newSelections: string[] = [...value];
+    
+    const cleanRegion = selectedRegion || "";
+    const cleanRegionalUnit = selectedRegionalUnit === "SKIP" ? "" : (selectedRegionalUnit || "");
+    
+    // Add parent levels first (region and regional unit)
+    if (cleanRegion) {
+      const regionId = `${cleanRegion}||`;
+      if (!newSelections.includes(regionId)) {
+        newSelections.push(regionId);
+      }
+    }
+    
+    if (cleanRegionalUnit && cleanRegion) {
+      const regionalUnitId = `${cleanRegion}|${cleanRegionalUnit}|`;
+      if (!newSelections.includes(regionalUnitId)) {
+        newSelections.push(regionalUnitId);
+      }
+    }
+    
+    // Add all municipalities
+    municipalities.forEach(municipality => {
+      const municipalityId = `${cleanRegion}|${cleanRegionalUnit}|${municipality}`;
+      if (!newSelections.includes(municipalityId)) {
+        newSelections.push(municipalityId);
+      }
+    });
+    
+    // Update once with all changes
+    onChange(newSelections);
+    
+    // Reset selections for next pick
+    setSelectedRegion("");
+    setSelectedRegionalUnit("");
+    setSelectedMunicipalities([]);
+    setCurrentLevel('region');
+  };
+
   const removeSelection = (id: string) => {
     onChange(value.filter(v => v !== id));
   };
@@ -327,11 +367,8 @@ export function SmartGeographicMultiSelect({
                   size="sm"
                   variant="outline"
                   onClick={() => {
-                    // Add all selected municipalities
-                    selectedMunicipalities.forEach(municipality => {
-                      addSelection(selectedRegion, selectedRegionalUnit === "SKIP" ? "" : selectedRegionalUnit, municipality);
-                    });
-                    setSelectedMunicipalities([]);
+                    // Use batch addition to avoid state conflicts
+                    addMultipleMunicipalities(selectedMunicipalities);
                   }}
                   className="text-xs"
                 >
