@@ -1472,37 +1472,94 @@ export default function ComprehensiveEditFixed() {
       // Always ensure geographic_areas are populated from project index data
       console.log('DEBUG: Converting project index data to geographic_areas format');
       
-      projectIndexData.forEach((indexItem) => {
-        const kallikratis = typedKallikratisData?.find(
-          (k) => k.id === indexItem.kallikratis_id,
-        );
+      // NEW: Use normalized geographic data from projectGeographicData instead of old kallikratis approach
+      const projectGeographicData = completeProjectData?.projectGeographicData;
+      if (projectGeographicData) {
+        console.log('DEBUG: Using new normalized geographic data structure');
+        console.log('DEBUG: Available geographic data:', {
+          regions: projectGeographicData.regions?.length || 0,
+          units: projectGeographicData.regionalUnits?.length || 0,
+          municipalities: projectGeographicData.municipalities?.length || 0
+        });
         
-        const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
-        const locationDetail = locationDetailsMap.get(key);
-
-        if (kallikratis && locationDetail) {
-          // Create geographic area ID in format: "region|regional_unit|municipality"
-          // Use geographic_code to determine the appropriate level
-          const shouldIncludeMunicipality =
-            indexItem.geographic_code &&
-            parseInt(indexItem.geographic_code.toString()) >= 9000;
-          
-          let geographicAreaId: string;
-          if (shouldIncludeMunicipality) {
-            // Municipality level: include all three parts
-            geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${kallikratis.onoma_neou_ota}`;
-          } else {
-            // Regional unit level: only region and regional unit
-            geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
-          }
-          
-          // Add to geographic_areas if not already present
-          if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
-            locationDetail.geographic_areas.push(geographicAreaId);
-            console.log('DEBUG: Added geographic area to location detail:', geographicAreaId);
-          }
+        // Create a map to collect geographic areas by location key
+        const geographicAreasByLocation = new Map();
+        
+        // Process municipalities (highest level of detail)
+        if (projectGeographicData.municipalities) {
+          projectGeographicData.municipalities.forEach((muniData) => {
+            if (muniData.municipalities?.name) {
+              // Find corresponding regional unit and region
+              const regionData = projectGeographicData.regions?.find(r => 
+                r.region_code && projectGeographicData.regionalUnits?.find(u => 
+                  u.unit_code && u.regional_units?.region_code === r.region_code
+                )
+              );
+              const unitData = projectGeographicData.regionalUnits?.find(u => 
+                u.unit_code === muniData.municipalities?.unit_code
+              );
+              
+              if (regionData?.regions?.name && unitData?.regional_units?.name) {
+                const geographicAreaId = `${regionData.regions.name}|${unitData.regional_units.name}|${muniData.municipalities.name}`;
+                
+                // Add to all location details (since we don't have specific mapping from new structure)
+                locationDetailsMap.forEach((locationDetail, key) => {
+                  if (!geographicAreasByLocation.has(key)) {
+                    geographicAreasByLocation.set(key, []);
+                  }
+                  if (!geographicAreasByLocation.get(key).includes(geographicAreaId)) {
+                    geographicAreasByLocation.get(key).push(geographicAreaId);
+                  }
+                });
+              }
+            }
+          });
         }
-      });
+        
+        // Apply collected geographic areas to location details
+        geographicAreasByLocation.forEach((geographicAreas, key) => {
+          const locationDetail = locationDetailsMap.get(key);
+          if (locationDetail) {
+            locationDetail.geographic_areas = [...(locationDetail.geographic_areas || []), ...geographicAreas];
+            console.log(`DEBUG: Added geographic areas to location ${key}:`, geographicAreas);
+          }
+        });
+      } else {
+        console.log('DEBUG: No projectGeographicData available, falling back to old kallikratis approach');
+        
+        // FALLBACK: Old kallikratis-based approach for backward compatibility
+        projectIndexData.forEach((indexItem) => {
+          const kallikratis = typedKallikratisData?.find(
+            (k) => k.id === indexItem.kallikratis_id,
+          );
+          
+          const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
+          const locationDetail = locationDetailsMap.get(key);
+
+          if (kallikratis && locationDetail) {
+            // Create geographic area ID in format: "region|regional_unit|municipality"
+            // Use geographic_code to determine the appropriate level
+            const shouldIncludeMunicipality =
+              indexItem.geographic_code &&
+              parseInt(indexItem.geographic_code.toString()) >= 9000;
+            
+            let geographicAreaId: string;
+            if (shouldIncludeMunicipality) {
+              // Municipality level: include all three parts
+              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${kallikratis.onoma_neou_ota}`;
+            } else {
+              // Regional unit level: only region and regional unit
+              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
+            }
+            
+            // Add to geographic_areas if not already present
+            if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
+              locationDetail.geographic_areas.push(geographicAreaId);
+              console.log('DEBUG: Added geographic area to location detail:', geographicAreaId);
+            }
+          }
+        });
+      }
 
       const locationDetailsArray = Array.from(locationDetailsMap.values());
       console.log("DEBUG Final locationDetailsArray:", locationDetailsArray);
