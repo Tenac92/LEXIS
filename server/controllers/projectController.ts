@@ -2672,6 +2672,21 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
     console.log(`[ComprehensiveUpdate] Decisions provided:`, !!formData.decisions, formData.decisions?.length || 0);
     console.log(`[ComprehensiveUpdate] Location details provided:`, !!formData.location_details, formData.location_details?.length || 0);
     console.log(`[ComprehensiveUpdate] Formulation details provided:`, !!formData.formulation_details, formData.formulation_details?.length || 0);
+    
+    // DEBUG: Log location_details content
+    if (formData.location_details) {
+      console.log(`[ComprehensiveUpdate] DEBUG: location_details content:`, JSON.stringify(formData.location_details, null, 2));
+      formData.location_details.forEach((detail: any, index: number) => {
+        console.log(`[ComprehensiveUpdate] Location ${index + 1}:`, {
+          implementing_agency: detail.implementing_agency,
+          event_type: detail.event_type,
+          expenditure_types: detail.expenditure_types,
+          geographic_areas: detail.geographic_areas
+        });
+      });
+    } else {
+      console.log(`[ComprehensiveUpdate] DEBUG: NO location_details received in request`);
+    }
 
     if (!req.user) {
       console.log(`[ComprehensiveUpdate] Authentication failed - no user session`);
