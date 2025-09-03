@@ -2798,6 +2798,146 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
       }
     }
 
+    // NEW: Process location_details with geographic areas
+    if (formData.location_details && Array.isArray(formData.location_details)) {
+      console.log(`[ComprehensiveUpdate] Processing ${formData.location_details.length} location details`);
+      
+      // First, delete existing project_index entries for this project
+      const { error: deleteIndexError } = await supabase
+        .from('project_index')
+        .delete()
+        .eq('project_id', project.id);
+
+      if (deleteIndexError) {
+        console.error(`[ComprehensiveUpdate] Error deleting existing project_index:`, deleteIndexError);
+      } else {
+        console.log(`[ComprehensiveUpdate] Deleted existing project_index entries`);
+      }
+      
+      // Also delete existing geographic relationships
+      const projectIndexIdsToDelete = await supabase
+        .from('project_index')
+        .select('id')
+        .eq('project_id', project.id);
+      
+      if (projectIndexIdsToDelete.data && projectIndexIdsToDelete.data.length > 0) {
+        const indexIds = projectIndexIdsToDelete.data.map(idx => idx.id);
+        await Promise.all([
+          supabase.from('project_index_regions').delete().in('project_index_id', indexIds),
+          supabase.from('project_index_units').delete().in('project_index_id', indexIds),
+          supabase.from('project_index_munis').delete().in('project_index_id', indexIds)
+        ]);
+        console.log(`[ComprehensiveUpdate] Deleted existing geographic relationships`);
+      }
+
+      // Get reference data for lookups
+      const [eventTypesRes, expenditureTypesRes, monadaRes] = await Promise.all([
+        supabase.from('event_types').select('*'),
+        supabase.from('expenditure_types').select('*'),
+        supabase.from('Monada').select('*')
+      ]);
+
+      const eventTypes = eventTypesRes.data || [];
+      const expenditureTypes = expenditureTypesRes.data || [];
+      const monadaData = monadaRes.data || [];
+
+      // Process each location detail
+      for (const locationDetail of formData.location_details) {
+        try {
+          console.log(`[ComprehensiveUpdate] Processing location detail:`, {
+            implementing_agency: locationDetail.implementing_agency,
+            event_type: locationDetail.event_type,
+            expenditure_types: locationDetail.expenditure_types?.length || 0,
+            geographic_areas: locationDetail.geographic_areas?.length || 0
+          });
+
+          // Find event type ID
+          let eventTypeId = null;
+          if (locationDetail.event_type) {
+            const eventType = eventTypes.find(et => et.name === locationDetail.event_type);
+            eventTypeId = eventType?.id || null;
+            console.log(`[ComprehensiveUpdate] Event type "${locationDetail.event_type}" -> ID: ${eventTypeId}`);
+          }
+
+          // Find implementing agency ID
+          let monadaId = null;
+          if (locationDetail.implementing_agency) {
+            const monada = monadaData.find(m => {
+              const unitName = (typeof m.unit_name === 'object' && m.unit_name.name) ? m.unit_name.name : m.unit_name;
+              return unitName === locationDetail.implementing_agency || m.unit === locationDetail.implementing_agency;
+            });
+            monadaId = monada?.id || null;
+            console.log(`[ComprehensiveUpdate] Agency "${locationDetail.implementing_agency}" -> ID: ${monadaId}`);
+          }
+
+          // Process each expenditure type
+          const expenditureTypesToProcess = locationDetail.expenditure_types || [];
+          if (expenditureTypesToProcess.length === 0) {
+            // Use default expenditure type if none specified
+            expenditureTypesToProcess.push("ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ");
+          }
+
+          for (const expType of expenditureTypesToProcess) {
+            const expenditureType = expenditureTypes.find(et => et.expenditure_types === expType);
+            const expenditureTypeId = expenditureType?.id || null;
+
+            if (expenditureTypeId && eventTypeId && monadaId) {
+              // Process each geographic area
+              const geographicAreas = locationDetail.geographic_areas || [];
+              
+              for (const geographicArea of geographicAreas) {
+                // Parse geographic area string: "REGION|REGIONAL_UNIT|MUNICIPALITY"
+                const parts = geographicArea.split('|');
+                const regionName = parts[0] || '';
+                const regionalUnitName = parts[1] || '';
+                const municipalityName = parts[2] || '';
+
+                console.log(`[ComprehensiveUpdate] Processing geographic area:`, {
+                  region: regionName,
+                  regionalUnit: regionalUnitName,
+                  municipality: municipalityName
+                });
+
+                // Create project_index entry
+                const { data: insertedEntry, error: insertError } = await supabase
+                  .from('project_index')
+                  .insert({
+                    project_id: project.id,
+                    monada_id: monadaId,
+                    event_types_id: eventTypeId,
+                    expenditure_type_id: expenditureTypeId
+                  })
+                  .select('id')
+                  .single();
+
+                if (insertError) {
+                  console.error(`[ComprehensiveUpdate] Error inserting project_index:`, insertError);
+                } else {
+                  console.log(`[ComprehensiveUpdate] Created project_index entry ID: ${insertedEntry.id}`);
+                  
+                  // Create region object for geographic relationships
+                  const regionObject = {
+                    perifereia: regionName,
+                    perifereiaki_enotita: regionalUnitName,
+                    dimos: municipalityName || null // Municipality can be empty for regional unit level
+                  };
+
+                  // Insert geographic relationships
+                  await insertGeographicRelationships(insertedEntry.id, regionObject);
+                }
+              }
+            } else {
+              console.warn(`[ComprehensiveUpdate] Missing required IDs: expenditure=${expenditureTypeId}, event=${eventTypeId}, monada=${monadaId}`);
+            }
+          }
+        } catch (locationError) {
+          console.error(`[ComprehensiveUpdate] Error processing location detail:`, locationError);
+        }
+      }
+
+      console.log(`[ComprehensiveUpdate] Completed processing location details`);
+    }
+
     res.json({ 
       message: "Project updated successfully",
       project_id: project.id,
