@@ -162,14 +162,14 @@ const comprehensiveProjectSchema = z.object({
     mis: z.string().default(""),
     sa: z.string().default(""),
     enumeration_code: z.string().default(""),
-    inclusion_year: z.string().default(""),
+    inc_year: z.string().default(""),
     project_title: z.string().default(""),
     project_description: z.string().default(""),
     summary_description: z.string().default(""),
     expenses_executed: z.string().default(""),
     project_status: z.string().default("Ενεργό"),
   }).default({ 
-    mis: "", sa: "", enumeration_code: "", inclusion_year: "", 
+    mis: "", sa: "", enumeration_code: "", inc_year: "", 
     project_title: "", project_description: "", summary_description: "", 
     expenses_executed: "", project_status: "Ενεργό" 
   }),
@@ -240,7 +240,7 @@ export default function NewProjectPage() {
         mis: "", 
         sa: "ΝΑ853", 
         enumeration_code: generateEnumerationCode("ΝΑ853"), 
-        inclusion_year: "", 
+        inc_year: "", 
         project_title: "", 
         project_description: "", 
         summary_description: "", 
@@ -1176,7 +1176,7 @@ export default function NewProjectPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="project_details.inclusion_year"
+                        name="project_details.inc_year"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Έτος Ένταξης</FormLabel>

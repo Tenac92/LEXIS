@@ -1954,11 +1954,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
                     if (insertError) {
                       console.error(`[Projects] Error inserting project_index entry:`, insertError);
-                    } else {
+                    } else if (insertedEntry && insertedEntry.id) {
                       console.log(`[Projects] Successfully created project_index entry for expenditure type: ${expType}, ID: ${insertedEntry.id}`);
                       
                       // Insert geographic relationships if we have region data
-                      if (line.region && insertedEntry.id) {
+                      if (line.region) {
                         await insertGeographicRelationships(insertedEntry.id, line.region);
                       }
                     }
@@ -1990,11 +1990,11 @@ router.patch('/:mis', authenticateSession, async (req: AuthenticatedRequest, res
 
                 if (insertError) {
                   console.error(`[Projects] Error inserting default project_index entry:`, insertError);
-                } else {
+                } else if (insertedEntry && insertedEntry.id) {
                   console.log(`[Projects] Successfully created default project_index entry, ID: ${insertedEntry.id}`);
                   
                   // Insert geographic relationships if we have region data
-                  if (line.region && insertedEntry.id) {
+                  if (line.region) {
                     await insertGeographicRelationships(insertedEntry.id, line.region);
                   }
                 }
