@@ -357,8 +357,9 @@ export function CreateDocumentDialog({
       return [];
     }
     
-    console.log('DEBUG: selectedUnit:', selectedUnit, 'selectedUnitNumber:', selectedUnitNumber);
+    console.log('DEBUG: selectedUnit:', selectedUnit, 'selectedUnitNumber:', selectedUnitNumber, 'type:', typeof selectedUnit);
     console.log('DEBUG: monada length:', monada.length);
+    console.log('DEBUG: monada structure:', monada.map(u => ({ id: u.id, unit: u.unit, hasParts: !!u.parts })));
     
     monada.forEach((unit: any, index: number) => {
       console.log(`DEBUG: Unit ${index} - id: ${unit.id}, has parts:`, !!unit.parts);
