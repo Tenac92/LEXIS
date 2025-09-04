@@ -358,19 +358,34 @@ export function CreateDocumentDialog({
       return [];
     }
     
+    console.log('[Signature] Debug: Full monada data:', monada);
+    console.log('[Signature] Debug: Selected unit number:', selectedUnitNumber);
+    
     monada.forEach((unit: any) => {
+      console.log('[Signature] Debug: Processing unit:', unit);
+      
       if (unit && unit.unit === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
+        console.log('[Signature] Debug: Unit parts structure:', unit.parts);
+        
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
+          console.log('[Signature] Debug: Processing part key:', key, 'value:', value);
+          
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
-            managers.push({
+            const manager = {
               unit: unit.unit,
               department: value.tmima || key,
-              manager: value.manager
-            });
+              manager: value.manager,
+              partKey: key // Add the part key (e.g., "Γ") for reference
+            };
+            
+            console.log('[Signature] Debug: Adding manager:', manager);
+            managers.push(manager);
           }
         });
       }
     });
+    
+    console.log('[Signature] Debug: Final managers list:', managers);
     return managers;
   }, [monada, form.watch("unit")]);
 
