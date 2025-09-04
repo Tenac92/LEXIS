@@ -347,9 +347,6 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
     
-    // Convert selectedUnit to number for comparison since monada data uses numeric unit IDs
-    const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
-    
     const managers: any[] = [];
     
     // Add safety check for monada data
@@ -357,31 +354,22 @@ export function CreateDocumentDialog({
       return [];
     }
     
-    console.log('DEBUG: selectedUnit:', selectedUnit, 'selectedUnitNumber:', selectedUnitNumber, 'type:', typeof selectedUnit);
-    console.log('DEBUG: monada length:', monada.length);
-    console.log('DEBUG: monada structure:', monada.map(u => ({ id: u.id, unit: u.unit, hasParts: !!u.parts })));
-    
-    monada.forEach((unit: any, index: number) => {
-      console.log(`DEBUG: Unit ${index} - id: ${unit.id}, has parts:`, !!unit.parts);
-      if (unit && unit.id === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
-        console.log('DEBUG: Found matching unit with parts:', unit.id);
+    monada.forEach((unit: any) => {
+      // Compare against the unit string field, not the numeric ID
+      if (unit && unit.unit === selectedUnit && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
-          console.log(`DEBUG: Processing part ${key}:`, value);
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
-            const manager = {
-              unit: unit.id,
+            managers.push({
+              unit: unit.unit,
               department: value.tmima || key,
               manager: value.manager,
               partKey: key
-            };
-            console.log('DEBUG: Adding manager:', manager);
-            managers.push(manager);
+            });
           }
         });
       }
     });
     
-    console.log('DEBUG: Final managers:', managers);
     return managers;
   }, [monada, form.watch("unit")]);
 

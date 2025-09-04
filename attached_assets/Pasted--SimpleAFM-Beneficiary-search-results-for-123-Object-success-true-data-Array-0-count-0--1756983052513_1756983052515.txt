@@ -1,0 +1,67 @@
+[SimpleAFM] Beneficiary search results for "123": 
+Object {success: true, data: Array(0), count: 0}
+[Budget] Broadcasting amount update: 900
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[SimpleAFM] Beneficiary search results for "12312312": 
+Object {success: true, data: Array(0), count: 0}
+[Budget] Broadcasting amount update: 900
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[SimpleAFM] Beneficiary search results for "123123123": 
+Object {success: true, data: Array(1), count: 1}
+[Budget] Broadcasting amount update: 900
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[SmartAutocomplete] Person selected: 
+Object {id: 26, afm: 123123123, surname: "test2", name: "test2", fathername: "test2", …}
+[SmartAutocomplete] Context: 
+Object {expenditureType: "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ", userUnit: "ΔΑΕΦΚ-ΚΕ", projectNa853: "5203922", useEmployeeData: false}
+[SmartAutocomplete] Processing beneficiary with oikonomika: 
+Object {UNKNOWN: Array(10)}
+[SmartAutocomplete] Smart data result: 
+Object {installment: "Α", amount: 0, suggestedInstallments: Array(1), installmentAmounts: {…}}
+[SmartAutocomplete] Enhanced person data: 
+Object {id: 26, afm: 123123123, surname: "test2", name: "test2", fathername: "test2", …}
+[AFMAutocomplete] Selection made for index: 0 personData: 
+Object {id: 26, afm: 123123123, surname: "test2", name: "test2", fathername: "test2", …}
+[AFMAutocomplete] Enhanced person data: 
+Object {id: 26, afm: 123123123, surname: "test2", name: "test2", fathername: "test2", …}
+[SmartAutocomplete] Using suggested data: 
+Object {installments: Array(1), amounts: {…}, total: 0}
+[AFMAutocomplete] Successfully updated all fields for recipient 0 with data: 
+Object {amount: 0, installments: Array(1), installmentAmounts: {…}}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[SimpleAFM] Beneficiary search results for "1231231": 
+Object {success: true, data: Array(0), count: 0}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[BudgetIndicator] Received budget data: 
+Object {user_view: 0, total_budget: 220000, katanomes_etous: 100000, ethsia_pistosi: 220000, current_budget: 0, …}
+[Budget Debug] Quarter information: 
+Object {currentQuarter: "q3", currentQuarterNumber: 3, currentQuarterValue: 220000, userView: 0, q1: 0, …}
+[DocumentForm Context] Current state: 
+Object {step: 2, projectId: 124, unit: "ΔΑΕΦΚ-ΚΕ", hasRecipients: true, recipientsCount: 1}
+[Budget] Broadcasting amount update: 900
+[DocumentForm Context] Current state: 
+Object {step: 3, projectId: 124, unit: "ΔΑΕΦΚ-ΚΕ", hasRecipients: true, recipientsCount: 1}
+[Budget] Broadcasting amount update: 900
