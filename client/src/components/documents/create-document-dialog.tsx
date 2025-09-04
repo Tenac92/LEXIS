@@ -3012,6 +3012,14 @@ export function CreateDocumentDialog({
                 <div className="space-y-6">
                   <h3 className="text-lg font-medium">Επιλογή Υπογραφής</h3>
                   
+                  {/* Helpful info about signature availability */}
+                  {form.watch("unit") && availableDirectors.length === 0 && availableDepartmentManagers.length === 0 && (
+                    <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                      <p>Η επιλεγμένη μονάδα δεν έχει διαθέσιμα στοιχεία υπογραφούντων στη βάση δεδομένων.</p>
+                      <p className="mt-1">Μονάδες με διαθέσιμους υπογραφούντες: ΔΑΕΦΚ-ΚΕ, ΔΑΕΦΚ-ΑΚ, ΔΑΕΦΚ-ΔΕ</p>
+                    </div>
+                  )}
+                  
                   {/* Single Signature Selection */}
                   <div className="space-y-4">
                     <FormField
@@ -3019,7 +3027,14 @@ export function CreateDocumentDialog({
                       name="director_signature"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Επιλογή Υπογραφούντος</FormLabel>
+                          <FormLabel>
+                            Επιλογή Υπογραφούντος
+                            {availableDirectors.length === 0 && availableDepartmentManagers.length === 0 && form.watch("unit") && (
+                              <span className="text-sm text-muted-foreground ml-2">
+                                (Δεν διατίθενται υπογραφές για αυτή τη μονάδα)
+                              </span>
+                            )}
+                          </FormLabel>
                           <Select
                             value={field.value ? JSON.stringify(field.value) : undefined}
                             onValueChange={(value) => {
@@ -3059,7 +3074,7 @@ export function CreateDocumentDialog({
                               {/* Fallback for empty signature lists */}
                               {availableDirectors.length === 0 && availableDepartmentManagers.length === 0 && (
                                 <SelectItem value="no-signature" disabled>
-                                  Δεν υπάρχουν διαθέσιμοι υπογραφούντες
+                                  Δεν υπάρχουν διαθέσιμοι υπογραφούντες για την επιλεγμένη μονάδα
                                 </SelectItem>
                               )}
                             </SelectContent>
@@ -3348,19 +3363,8 @@ export function CreateDocumentDialog({
     }
   }, [regions, form]);
 
-  // Call broadcastUpdate whenever the amount changes to update other users in real-time
-  useEffect(() => {
-    // Only broadcast if we have a valid project ID and amount > 0
-    if (selectedProjectId && broadcastUpdate && currentAmount > 0) {
-      // Debounce broadcast to prevent excessive updates during typing
-      const broadcastTimeout = setTimeout(() => {
-        broadcastUpdate(currentAmount);
-        console.log("[Budget] Broadcasting amount update:", currentAmount);
-      }, 300); // 300ms debounce
-
-      return () => clearTimeout(broadcastTimeout);
-    }
-  }, [selectedProjectId, currentAmount, broadcastUpdate]);
+  // NOTE: Budget broadcasting is now handled by useBudgetUpdates hook with proper debouncing
+  // This duplicate effect was causing performance issues and has been removed
 
   // Budget data availability tracking (removed excessive logging for performance)
 
