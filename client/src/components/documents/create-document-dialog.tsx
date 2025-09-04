@@ -357,21 +357,30 @@ export function CreateDocumentDialog({
       return [];
     }
     
-    monada.forEach((unit: any) => {
+    console.log('DEBUG: selectedUnit:', selectedUnit, 'selectedUnitNumber:', selectedUnitNumber);
+    console.log('DEBUG: monada length:', monada.length);
+    
+    monada.forEach((unit: any, index: number) => {
+      console.log(`DEBUG: Unit ${index} - id: ${unit.id}, has parts:`, !!unit.parts);
       if (unit && unit.id === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
+        console.log('DEBUG: Found matching unit with parts:', unit.id);
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
+          console.log(`DEBUG: Processing part ${key}:`, value);
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
-            managers.push({
+            const manager = {
               unit: unit.id,
               department: value.tmima || key,
               manager: value.manager,
               partKey: key
-            });
+            };
+            console.log('DEBUG: Adding manager:', manager);
+            managers.push(manager);
           }
         });
       }
     });
     
+    console.log('DEBUG: Final managers:', managers);
     return managers;
   }, [monada, form.watch("unit")]);
 
