@@ -259,24 +259,37 @@ export default function NewProjectPage() {
     },
   });
 
-  // Fetch supporting data (similar to edit form)
-  const { 
-    data: completeProjectData, 
-    isLoading: isCompleteDataLoading, 
-    error: completeDataError 
+  // PERFORMANCE OPTIMIZATION: Separate query for reference data with aggressive caching (same as edit form)
+  const {
+    data: referenceData,
+    isLoading: isReferenceDataLoading,
+    error: referenceDataError,
   } = useQuery({
-    queryKey: [`/api/projects/reference-data`],
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
+    queryKey: ['/api/projects/reference-data'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache for reference data
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
     refetchOnWindowFocus: false,
-    refetchOnMount: false, 
+    refetchOnMount: false,
   });
 
-  // Extract data from unified API response with proper typing (match edit form structure)
-  const eventTypesData = (completeProjectData as any)?.eventTypes;
-  const unitsData = (completeProjectData as any)?.units;
-  const kallikratisData = (completeProjectData as any)?.kallikratis;
-  const expenditureTypesData = (completeProjectData as any)?.expenditureTypes;
+  // NEW: Normalized geographic data query (same as edit form)
+  const {
+    data: geographicData,
+    isLoading: isGeographicDataLoading,
+    error: geographicDataError,
+  } = useQuery({
+    queryKey: ['/api/geographic-data'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache for geographic data
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Extract reference data (exactly like edit form)
+  const eventTypesData = referenceData?.eventTypes;
+  const unitsData = referenceData?.units; 
+  const expenditureTypesData = referenceData?.expenditureTypes;
+  const kallikratisData = geographicData?.kallikratis;
 
   // Type-safe data casting
   const typedUnitsData = unitsData as UnitData[] | undefined;
@@ -412,7 +425,11 @@ export default function NewProjectPage() {
   console.log("DEBUG - Event types data:", typedEventTypesData?.length || 0, "items");
   console.log("DEBUG - Kallikratis data:", typedKallikratisData?.length || 0, "items");
 
-  if (isCompleteDataLoading) {
+  // Check if all essential data is loading (same as edit form)
+  const isEssentialDataLoading = isReferenceDataLoading;
+  const isAllDataLoading = isReferenceDataLoading || isGeographicDataLoading;
+
+  if (isEssentialDataLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
