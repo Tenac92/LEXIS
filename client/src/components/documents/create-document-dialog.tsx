@@ -335,9 +335,9 @@ export function CreateDocumentDialog({
     const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
     
     return monada
-      .filter((unit: any) => unit.unit === selectedUnitNumber && unit.director && unit.director.name)
+      .filter((unit: any) => unit.id === selectedUnitNumber && unit.director && unit.director.name)
       .map((unit: any) => ({
-        unit: unit.unit,
+        unit: unit.id,
         director: unit.director
       }));
   }, [monada, form.watch("unit")]);
@@ -354,38 +354,24 @@ export function CreateDocumentDialog({
     
     // Add safety check for monada data
     if (!monada || !Array.isArray(monada)) {
-      console.warn('Monada data is not available or not an array:', monada);
       return [];
     }
     
-    console.log('[Signature] Debug: Full monada data:', monada);
-    console.log('[Signature] Debug: Selected unit number:', selectedUnitNumber);
-    
     monada.forEach((unit: any) => {
-      console.log('[Signature] Debug: Processing unit:', unit);
-      
-      if (unit && unit.unit === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
-        console.log('[Signature] Debug: Unit parts structure:', unit.parts);
-        
+      if (unit && unit.id === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
-          console.log('[Signature] Debug: Processing part key:', key, 'value:', value);
-          
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
-            const manager = {
-              unit: unit.unit,
+            managers.push({
+              unit: unit.id,
               department: value.tmima || key,
               manager: value.manager,
-              partKey: key // Add the part key (e.g., "Γ") for reference
-            };
-            
-            console.log('[Signature] Debug: Adding manager:', manager);
-            managers.push(manager);
+              partKey: key
+            });
           }
         });
       }
     });
     
-    console.log('[Signature] Debug: Final managers list:', managers);
     return managers;
   }, [monada, form.watch("unit")]);
 
