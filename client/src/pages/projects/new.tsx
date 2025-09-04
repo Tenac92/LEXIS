@@ -272,11 +272,11 @@ export default function NewProjectPage() {
     refetchOnMount: false, 
   });
 
-  // Extract data from unified API response with proper typing
-  const eventTypesData = (completeProjectData as any)?.event_types;
+  // Extract data from unified API response with proper typing (match edit form structure)
+  const eventTypesData = (completeProjectData as any)?.eventTypes;
   const unitsData = (completeProjectData as any)?.units;
   const kallikratisData = (completeProjectData as any)?.kallikratis;
-  const expenditureTypesData = (completeProjectData as any)?.expenditure_types;
+  const expenditureTypesData = (completeProjectData as any)?.expenditureTypes;
 
   // Type-safe data casting
   const typedUnitsData = unitsData as UnitData[] | undefined;
@@ -964,7 +964,7 @@ export default function NewProjectPage() {
                                   <SmartGeographicMultiSelect
                                     value={field.value || []}
                                     onChange={field.onChange}
-                                    kallikratisData={typedKallikratisData}
+                                    kallikratisData={typedKallikratisData || []}
                                     placeholder="Επιλέξτε γεωγραφικές περιοχές..."
                                   />
                                 </FormItem>
