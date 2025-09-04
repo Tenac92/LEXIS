@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Save, X, FileText, Calendar, CheckCircle, Building2, RefreshCw } from "lucide-react";
 import { SmartRegionalUnitSelect } from "@/components/forms/SmartRegionalUnitSelect";
+import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
@@ -145,16 +146,12 @@ const comprehensiveProjectSchema = z.object({
     event_year: z.string().default(""),
   }).default({ event_name: "", event_year: "" }),
   
-  // Section 2 Location details with cascading dropdowns
+  // Section 2 Location details with multi-select geographic areas
   location_details: z.array(z.object({
     implementing_agency: z.string().default(""),
     event_type: z.string().default(""),
     expenditure_types: z.array(z.string()).default([]),
-    regions: z.array(z.object({
-      region: z.string().default(""),
-      regional_unit: z.string().default(""),
-      municipality: z.string().default(""),
-    })).default([{ region: "", regional_unit: "", municipality: "" }]),
+    geographic_areas: z.array(z.string()).default([]),
   })).default([]),
   
   // Section 3: Project details
@@ -230,11 +227,7 @@ export default function NewProjectPage() {
         implementing_agency: "", 
         event_type: "", 
         expenditure_types: [],
-        regions: [{ 
-          region: "", 
-          regional_unit: "", 
-          municipality: "" 
-        }]
+        geographic_areas: []
       }],
       project_details: { 
         mis: "", 
@@ -415,49 +408,9 @@ export default function NewProjectPage() {
     mutation.mutate(data);
   };
 
-  // Helper functions for dynamic dropdowns (similar to edit form)
-  const getUniqueRegions = () => {
-    if (!typedKallikratisData) return [];
-    const regions = new Set(typedKallikratisData.map(k => k.perifereia));
-    return Array.from(regions).sort();
-  };
-
-  // Pre-compute regional units map for performance
-  const regionUnitsMap = useMemo(() => {
-    if (!typedKallikratisData) return new Map<string, string[]>();
-    
-    const map = new Map<string, Set<string>>();
-    typedKallikratisData.forEach(k => {
-      if (k.perifereia && k.perifereiaki_enotita) {
-        if (!map.has(k.perifereia)) {
-          map.set(k.perifereia, new Set());
-        }
-        map.get(k.perifereia)!.add(k.perifereiaki_enotita);
-      }
-    });
-    
-    // Convert sets to sorted arrays for final performance
-    const finalMap = new Map<string, string[]>();
-    map.forEach((units, region) => {
-      finalMap.set(region, Array.from(units).sort((a, b) => a.localeCompare(b, 'el')));
-    });
-    
-    return finalMap;
-  }, [typedKallikratisData]);
-
-  const getRegionalUnitsForRegion = (region: string) => {
-    return regionUnitsMap.get(region) || [];
-  };
-
-  const getMunicipalitiesForRegionalUnit = (region: string, regionalUnit: string) => {
-    if (!typedKallikratisData || !region || !regionalUnit) return [];
-    const municipalities = new Set(
-      typedKallikratisData
-        .filter(k => k.perifereia === region && k.perifereiaki_enotita === regionalUnit)
-        .map(k => k.onoma_neou_ota)
-    );
-    return Array.from(municipalities).sort();
-  };
+  // Debug data loading
+  console.log("DEBUG - Event types data:", typedEventTypesData?.length || 0, "items");
+  console.log("DEBUG - Kallikratis data:", typedKallikratisData?.length || 0, "items");
 
   if (isCompleteDataLoading) {
     return (
@@ -1000,82 +953,23 @@ export default function NewProjectPage() {
                             </div>
                           </div>
 
-                          {/* Regions */}
+                          {/* Geographic Areas */}
                           <div className="space-y-4">
-                            <FormLabel>Περιοχές</FormLabel>
-                            {form.watch(`location_details.${locationIndex}.regions`).map((_, regionIndex) => (
-                              <div key={regionIndex} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-3 border rounded">
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.regions.${regionIndex}.region`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Περιφέρεια</FormLabel>
-                                      <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Επιλέξτε περιφέρεια" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {getUniqueRegions().map((region) => (
-                                            <SelectItem key={region} value={region}>
-                                              {region}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.regions.${regionIndex}.regional_unit`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Περιφερειακή Ενότητα</FormLabel>
-                                      <FormControl>
-                                        <SmartRegionalUnitSelect
-                                          value={field.value}
-                                          onValueChange={field.onChange}
-                                          region={form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`)}
-                                          kallikratisData={typedKallikratisData || []}
-                                          placeholder="Επιλέξτε περιφερειακή ενότητα"
-                                        />
-                                      </FormControl>
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.regions.${regionIndex}.municipality`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Δήμος</FormLabel>
-                                      <Select onValueChange={field.onChange} value={field.value}>
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Επιλέξτε δήμο" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {getMunicipalitiesForRegionalUnit(
-                                            form.watch(`location_details.${locationIndex}.regions.${regionIndex}.region`),
-                                            form.watch(`location_details.${locationIndex}.regions.${regionIndex}.regional_unit`)
-                                          ).map((municipality) => (
-                                            <SelectItem key={municipality} value={municipality}>
-                                              {municipality}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                            ))}
+                            <FormField
+                              control={form.control}
+                              name={`location_details.${locationIndex}.geographic_areas`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Γεωγραφικές Περιοχές</FormLabel>
+                                  <SmartGeographicMultiSelect
+                                    value={field.value || []}
+                                    onChange={field.onChange}
+                                    kallikratisData={typedKallikratisData}
+                                    placeholder="Επιλέξτε γεωγραφικές περιοχές..."
+                                  />
+                                </FormItem>
+                              )}
+                            />
                           </div>
                         </div>
                       ))}
@@ -1089,7 +983,7 @@ export default function NewProjectPage() {
                             implementing_agency: "",
                             event_type: "",
                             expenditure_types: [],
-                            regions: [{ region: "", regional_unit: "", municipality: "" }],
+                            geographic_areas: [],
                           });
                           form.setValue("location_details", locations);
                         }}
