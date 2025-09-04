@@ -50,6 +50,12 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
+
+// Development logging helper
+const isDev = import.meta.env.DEV;
+const devLog = (label: string, ...args: any[]) => {
+  if (isDev) console.log(`[CreateDocument:${label}]`, ...args);
+};
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
@@ -438,7 +444,7 @@ export function CreateDocumentDialog({
         
         // Filter units based on user's assigned unit_id array
         const userAllowedUnits = user?.unit_id || [];
-        console.log("[CreateDocument] User allowed units:", userAllowedUnits, "Available units from API:", data.length);
+        devLog("UserUnits", "Allowed:", userAllowedUnits.length, "Available:", data.length);
         
         const filteredUnits = data.filter((item: any) => {
           // If user has no unit restrictions, show all units (admin case)
@@ -452,7 +458,7 @@ export function CreateDocumentDialog({
           return userAllowedUnits.includes(unitNumber);
         });
         
-        console.log("[CreateDocument] Filtered units count:", filteredUnits.length, "User unit restrictions:", userAllowedUnits);
+        devLog("FilteredUnits", filteredUnits.length, "restrictions:", userAllowedUnits.length);
 
         const processedUnits = filteredUnits.map((item: any) => {
           // For debugging purposes
@@ -568,13 +574,13 @@ export function CreateDocumentDialog({
       let defaultUnit = "";
       if (user?.unit_id && user.unit_id.length > 0) {
         // Convert user's unit ID to unit name for form
-        console.log("[CreateDocument] User unit_id:", user.unit_id, "Available units:", units);
+        devLog("UserSetup", "unit_id:", user.unit_id, "available:", units.length);
         const userUnitData = units.find((item: any) => item.unit === user.unit_id![0]);
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
-          console.log("[CreateDocument] Auto-selected unit:", defaultUnit, "for user unit_id:", user.unit_id[0]);
+          devLog("AutoSelect", defaultUnit, "for ID:", user.unit_id[0]);
         } else {
-          console.log("[CreateDocument] No matching unit found for user unit_id:", user.unit_id[0]);
+          devLog("NoMatch", "No unit found for ID:", user.unit_id[0]);
         }
       }
       
@@ -736,14 +742,14 @@ export function CreateDocumentDialog({
       // Case 1: Only one unit available - auto-select it
       if (units.length === 1) {
         unitToSelect = units[0].id;
-        console.log("[CreateDocument] Auto-selecting single available unit:", unitToSelect);
+        devLog("AutoUnit", unitToSelect);
       }
       // Case 2: User has only one assigned unit - auto-select it
       else if (user?.unit_id && user.unit_id.length === 1) {
         const userUnitData = units.find((unit: any) => unit.unit === user.unit_id![0]);
         if (userUnitData) {
           unitToSelect = userUnitData.id;
-          console.log("[CreateDocument] Auto-selecting user's assigned unit:", unitToSelect);
+          devLog("AssignedUnit", unitToSelect);
         }
       }
       
@@ -769,7 +775,7 @@ export function CreateDocumentDialog({
           const currentValue = form.getValues().unit;
           if (!currentValue || currentValue !== unitToSelect) {
             form.setValue("unit", unitToSelect, { shouldValidate: false });
-            console.log("[CreateDocument] Re-enforced unit selection:", unitToSelect);
+            devLog("ReEnforce", unitToSelect);
           }
         }, 500);
       }
@@ -780,7 +786,7 @@ export function CreateDocumentDialog({
         unitAutoSelectionRef.current.selectedUnit && 
         !currentUnit) {
       form.setValue("unit", unitAutoSelectionRef.current.selectedUnit, { shouldValidate: false });
-      console.log("[CreateDocument] Restored cleared unit:", unitAutoSelectionRef.current.selectedUnit);
+      devLog("Restore", unitAutoSelectionRef.current.selectedUnit);
     }
   }, [user, open, units, form, formData, updateFormData]);
   
@@ -1700,31 +1706,24 @@ export function CreateDocumentDialog({
 
   const handleSubmit = async (data: CreateDocumentForm) => {
     try {
-      console.log("[HandleSubmit] Starting form submission with data:", {
+      devLog("Submit", "Starting submission", {
         project_id: data.project_id,
-        recipients_count: data.recipients?.length,
-        recipients: data.recipients,
+        recipients: data.recipients?.length,
         unit: data.unit,
-        region: data.region,
-        expenditure_type: data.expenditure_type
+        type: data.expenditure_type
       });
 
       // Begin form submission process
 
       // Basic form validation
-      console.log("[HandleSubmit] Checking project_id:", data.project_id);
       if (!data.project_id) {
-        console.log("[HandleSubmit] Validation failed: No project_id");
         throw new Error("Πρέπει να επιλέξετε έργο");
       }
 
-      console.log("[HandleSubmit] Checking recipients:", data.recipients?.length);
       if (!data.recipients?.length) {
-        console.log("[HandleSubmit] Validation failed: No recipients");
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
-      console.log("[HandleSubmit] Validating recipients individually...");
       const invalidRecipients = data.recipients.some(
         (r, index) => {
           const isInvalid = !r.firstname ||
@@ -1734,35 +1733,12 @@ export function CreateDocumentDialog({
             !r.installments ||
             r.installments.length === 0;
           
-          console.log(`[Validation] Checking recipient ${index}:`, {
-            firstname: r.firstname,
-            lastname: r.lastname,
-            fathername: r.fathername, // fathername is optional per schema
-            afm: r.afm,
-            amount: r.amount,
-            amountType: typeof r.amount,
-            installments: r.installments,
-            installmentsLength: r.installments?.length,
-            isInvalid: isInvalid
-          });
-          
           if (isInvalid) {
-            console.log(`[Validation] Invalid recipient at index ${index}:`, {
-              firstname: r.firstname,
-              lastname: r.lastname,
-              fathername: r.fathername, // fathername is optional per schema
-              afm: r.afm,
-              amount: r.amount,
-              amountType: typeof r.amount,
-              installments: r.installments,
-              installmentsLength: r.installments?.length
-            });
+            devLog("ValidationFail", `Recipient ${index} invalid fields`);
           }
           return isInvalid;
         }
       );
-
-      console.log("[HandleSubmit] Invalid recipients found:", invalidRecipients);
       if (invalidRecipients) {
         throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
       }
@@ -2132,9 +2108,8 @@ export function CreateDocumentDialog({
   };
 
   const removeRecipient = (index: number) => {
-    console.log("[RemoveRecipient] Removing recipient at index:", index);
+    devLog("RemoveRecipient", "Removing at index:", index);
     const currentRecipients = form.watch("recipients") || [];
-    console.log("[RemoveRecipient] Current recipients before removal:", currentRecipients.length);
     form.setValue(
       "recipients",
       currentRecipients.filter((_, i) => i !== index),

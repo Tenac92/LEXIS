@@ -125,8 +125,8 @@ export function useBudgetUpdates(
   // Fetch validation data - this will also trigger real-time updates via WebSocket
   const validationQuery = useQuery<BudgetValidationResponse>({
     queryKey: ["budget-validation", projectId, currentAmount],
-    // Reduced stale time for real-time feel on amount changes
-    staleTime: 2000, // 2 seconds - balance between real-time and network load
+    // Optimized stale time for better performance
+    staleTime: 5000, // 5 seconds - balance between real-time and network load
     // Disable automatic refetching on window focus to prevent flickering during typing
     refetchOnWindowFocus: false,
     queryFn: async () => {
@@ -213,10 +213,15 @@ export function useBudgetUpdates(
     enabled: Boolean(projectId) && currentAmount > 0
   });
 
-  // Effect to broadcast amount changes in real-time with debouncing
+  // Effect to broadcast amount changes in real-time with debouncing and throttling
   useEffect(() => {
     // Skip if we don't have a valid project or amount
     if (!projectId || currentAmount <= 0 || !sessionId || !isConnected) {
+      return;
+    }
+    
+    // Skip very small amounts to avoid spam
+    if (currentAmount < 1) {
       return;
     }
 
@@ -245,7 +250,7 @@ export function useBudgetUpdates(
       } catch (error) {
         console.warn('[Budget] Error broadcasting update:', error);
       }
-    }, 300); // 300ms debounce delay - quick enough for real-time feel, but not too chatty
+    }, 1000); // 1000ms debounce delay - balanced between real-time feel and performance
     
     setTypingTimeout(timeout);
     
