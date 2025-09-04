@@ -331,8 +331,9 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
     
-    // Convert selectedUnit to number for comparison since monada data uses numeric unit IDs
-    const selectedUnitNumber = typeof selectedUnit === 'string' ? parseInt(selectedUnit) : selectedUnit;
+    // Convert selectedUnit to number since form stores string but monada uses numeric IDs
+    const selectedUnitNumber = parseInt(selectedUnit);
+    if (isNaN(selectedUnitNumber)) return [];
     
     return monada
       .filter((unit: any) => unit.id === selectedUnitNumber && unit.director && unit.director.name)
@@ -347,6 +348,10 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
     
+    // Convert selectedUnit to number since form stores string but monada uses numeric IDs
+    const selectedUnitNumber = parseInt(selectedUnit);
+    if (isNaN(selectedUnitNumber)) return [];
+    
     const managers: any[] = [];
     
     // Add safety check for monada data
@@ -355,12 +360,12 @@ export function CreateDocumentDialog({
     }
     
     monada.forEach((unit: any) => {
-      // Compare against the unit string field, not the numeric ID
-      if (unit && unit.unit === selectedUnit && unit.parts && typeof unit.parts === 'object') {
+      // Compare against the numeric ID since that's what the form is using
+      if (unit && unit.id === selectedUnitNumber && unit.parts && typeof unit.parts === 'object') {
         Object.entries(unit.parts).forEach(([key, value]: [string, any]) => {
           if (value && typeof value === 'object' && value.manager && value.manager.name) {
             managers.push({
-              unit: unit.unit,
+              unit: unit.id,
               department: value.tmima || key,
               manager: value.manager,
               partKey: key
