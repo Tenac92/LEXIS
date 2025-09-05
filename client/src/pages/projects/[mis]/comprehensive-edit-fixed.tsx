@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Form,
   FormControl,
@@ -3180,26 +3181,21 @@ export default function ComprehensiveEditFixed() {
                           </div>
 
 
-                          {/* Budget Versions Tabs - ΠΔΕ and ΕΠΑ */}
+                          {/* Budget Versions Accordions - ΠΔΕ and ΕΠΑ */}
                           <div className="mt-6">
-                            <Tabs defaultValue="pde" className="w-full">
-                              <TabsList className="grid w-full grid-cols-2">
-                                <TabsTrigger value="pde" className="flex items-center gap-2">
-                                  <span>ΠΔΕ</span>
-                                  <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
-                                    {form.watch(`formulation_details.${index}.budget_versions.pde`)?.length || 0}
-                                  </span>
-                                </TabsTrigger>
-                                <TabsTrigger value="epa" className="flex items-center gap-2">
-                                  <span>ΕΠΑ</span>
-                                  <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
-                                    {form.watch(`formulation_details.${index}.budget_versions.epa`)?.length || 0}
-                                  </span>
-                                </TabsTrigger>
-                              </TabsList>
-
-                              {/* ΠΔΕ Tab */}
-                              <TabsContent value="pde">
+                            <Accordion type="multiple" defaultValue={["pde"]} className="w-full">
+                              
+                              {/* ΠΔΕ Accordion */}
+                              <AccordionItem value="pde">
+                                <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
+                                  <div className="flex items-center gap-2">
+                                    <span>ΠΔΕ (Πρόγραμμα Δημοσίων Επενδύσεων)</span>
+                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
+                                      {form.watch(`formulation_details.${index}.budget_versions.pde`)?.length || 0}
+                                    </span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
                                 <Card>
                                   <CardHeader>
                                     <CardTitle className="flex items-center justify-between">
@@ -3477,10 +3473,20 @@ export default function ComprehensiveEditFixed() {
                                     )}
                                   </CardContent>
                                 </Card>
-                              </TabsContent>
+                                </AccordionContent>
+                              </AccordionItem>
 
-                              {/* ΕΠΑ Tab */}
-                              <TabsContent value="epa">
+                              {/* ΕΠΑ Accordion */}
+                              <AccordionItem value="epa">
+                                <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
+                                  <div className="flex items-center gap-2">
+                                    <span>ΕΠΑ (Ευρωπαϊκά Προγράμματα)</span>
+                                    <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
+                                      {form.watch(`formulation_details.${index}.budget_versions.epa`)?.length || 0}
+                                    </span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
                                 <Card>
                                   <CardHeader>
                                     <CardTitle className="flex items-center justify-between">
@@ -3745,73 +3751,11 @@ export default function ComprehensiveEditFixed() {
                                     )}
                                   </CardContent>
                                 </Card>
-                              </TabsContent>
-                            </Tabs>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`formulation_details.${index}.decision_status`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Κατάσταση Απόφασης</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Ενεργή">
-                                        Ενεργή
-                                      </SelectItem>
-                                      <SelectItem value="Ανενεργή">
-                                        Ανενεργή
-                                      </SelectItem>
-                                      <SelectItem value="Αναστολή">
-                                        Αναστολή
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`formulation_details.${index}.change_type`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Τύπος Αλλαγής</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Επιλέξτε τύπο" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Έγκριση">
-                                        Έγκριση
-                                      </SelectItem>
-                                      <SelectItem value="Τροποποίηση">
-                                        Τροποποίηση
-                                      </SelectItem>
-                                      <SelectItem value="Παράταση">
-                                        Παράταση
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
 
 
                           <FormField
