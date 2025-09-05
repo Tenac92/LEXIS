@@ -188,6 +188,42 @@ export function getMunicipalitiesForRegionalUnit(
 }
 
 /**
+ * Convert new geographic data structure to legacy kallikratis format for SmartGeographicMultiSelect
+ */
+export function convertGeographicDataToKallikratis(geographicData: {
+  regions?: Array<{code: string; name: string}>;
+  regionalUnits?: Array<{code: string; name: string; region_code: string}>;
+  municipalities?: Array<{code: string; name: string; unit_code: string}>;
+}): Array<{perifereia: string; perifereiaki_enotita: string; onoma_neou_ota: string}> {
+  if (!geographicData?.regions || !geographicData?.regionalUnits || !geographicData?.municipalities) {
+    return [];
+  }
+
+  const kallikratisEntries: Array<{perifereia: string; perifereiaki_enotita: string; onoma_neou_ota: string}> = [];
+
+  // Create all possible combinations of region -> regional unit -> municipality
+  geographicData.regions.forEach(region => {
+    // Find all regional units for this region
+    const regionalUnits = geographicData.regionalUnits!.filter(ru => ru.region_code === region.code);
+    
+    regionalUnits.forEach(regionalUnit => {
+      // Find all municipalities for this regional unit
+      const municipalities = geographicData.municipalities!.filter(m => m.unit_code === regionalUnit.code);
+      
+      municipalities.forEach(municipality => {
+        kallikratisEntries.push({
+          perifereia: region.name,
+          perifereiaki_enotita: regionalUnit.name,
+          onoma_neou_ota: municipality.name
+        });
+      });
+    });
+  });
+
+  return kallikratisEntries;
+}
+
+/**
  * Build complete geographic data from separate tables based on location selection
  */
 export function buildNormalizedGeographicData(

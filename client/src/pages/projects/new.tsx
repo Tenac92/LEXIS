@@ -18,7 +18,7 @@ import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMu
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
-import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave } from "@shared/utils/geographic-utils";
+import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave, convertGeographicDataToKallikratis } from "@shared/utils/geographic-utils";
 
 // Helper function to safely convert array or object fields to text
 function safeText(value: any): string {
@@ -286,10 +286,12 @@ export default function NewProjectPage() {
   });
 
   // Extract reference data (exactly like edit form)
-  const eventTypesData = referenceData?.eventTypes;
-  const unitsData = referenceData?.units; 
-  const expenditureTypesData = referenceData?.expenditureTypes;
-  const kallikratisData = geographicData?.kallikratis;
+  const eventTypesData = (referenceData as any)?.eventTypes;
+  const unitsData = (referenceData as any)?.units; 
+  const expenditureTypesData = (referenceData as any)?.expenditureTypes;
+  
+  // Convert new geographic data format to legacy kallikratis format for SmartGeographicMultiSelect
+  const kallikratisData = geographicData ? convertGeographicDataToKallikratis(geographicData as any) : [];
 
   // Type-safe data casting
   const typedUnitsData = unitsData as UnitData[] | undefined;
@@ -424,6 +426,11 @@ export default function NewProjectPage() {
   // Debug data loading
   console.log("DEBUG - Event types data:", typedEventTypesData?.length || 0, "items");
   console.log("DEBUG - Kallikratis data:", typedKallikratisData?.length || 0, "items");
+  console.log("DEBUG - Geographic data:", geographicData ? {
+    regions: (geographicData as any).regions?.length || 0,
+    regionalUnits: (geographicData as any).regionalUnits?.length || 0,
+    municipalities: (geographicData as any).municipalities?.length || 0
+  } : "none");
 
   // Check if all essential data is loading (same as edit form)
   const isEssentialDataLoading = isReferenceDataLoading;
