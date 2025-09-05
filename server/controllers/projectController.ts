@@ -2605,9 +2605,9 @@ router.put('/:mis/decisions', authenticateSession, async (req: AuthenticatedRequ
 router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
-    const { formulation_details } = req.body;
+    const { formulation_details, budget_versions } = req.body;
     
-    console.log(`[ProjectFormulations] Updating formulations for project MIS: ${mis}`, formulation_details);
+    console.log(`[ProjectFormulations] Updating formulations with budget versions for project MIS: ${mis}`, { formulation_details, budget_versions });
 
     if (!req.user) {
       return res.status(401).json({ message: "Authentication required" });
@@ -2650,28 +2650,23 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
       return res.status(500).json({ message: "Failed to delete existing formulations" });
     }
 
-    // Insert new formulations
+    // Delete existing budget versions for this project
+    const { error: deleteBudgetVersionsError } = await supabase
+      .from('project_budget_versions')
+      .delete()
+      .eq('project_id', project.id);
+
+    if (deleteBudgetVersionsError) {
+      console.error(`[ProjectFormulations] Error deleting existing budget versions:`, deleteBudgetVersionsError);
+      return res.status(500).json({ message: "Failed to delete existing budget versions" });
+    }
+
+    // Insert new formulations (without budget fields)
     if (formulation_details && Array.isArray(formulation_details) && formulation_details.length > 0) {
       const formulationsToInsert = formulation_details.map((formulation: any, index: number) => {
-        // Parse European formatted budget values to numbers
-        const parseEuropeanBudget = (value: string | number) => {
-          if (!value) return 0;
-          if (typeof value === 'number') return value;
-          
-          const strValue = String(value).replace(/[^\d,.-]/g, ''); // Remove currency symbols
-          if (strValue.includes('.') && strValue.includes(',')) {
-            return parseFloat(strValue.replace(/\./g, '').replace(',', '.')) || 0;
-          }
-          if (strValue.includes(',')) {
-            return parseFloat(strValue.replace(',', '.')) || 0;
-          }
-          return parseFloat(strValue) || 0;
-        };
-
         console.log(`[ProjectFormulations] Processing formulation ${index + 1}:`, {
           sa: formulation.sa,
-          project_budget: formulation.project_budget,
-          parsed_budget: parseEuropeanBudget(formulation.project_budget)
+          enumeration_code: formulation.enumeration_code
         });
 
         return {
@@ -2682,10 +2677,7 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
           protocol_number: formulation.protocol_number || null,
           ada: formulation.ada || null,
           decision_year: formulation.decision_year ? parseInt(formulation.decision_year) : null,
-          project_budget: parseEuropeanBudget(formulation.project_budget),
-          total_public_expense: parseEuropeanBudget(formulation.total_public_expense),
-          eligible_public_expense: parseEuropeanBudget(formulation.eligible_public_expense),
-          epa_version: formulation.epa_version || null,
+          // Remove budget fields - they go to budget_versions table now
           decision_status: formulation.decision_status || 'Ενεργή',
           change_type: formulation.change_type || 'Έγκριση',
           connected_decision_ids: Array.isArray(formulation.connected_decisions) 
@@ -2720,8 +2712,97 @@ router.put('/:mis/formulations', authenticateSession, async (req: AuthenticatedR
       }
 
       console.log(`[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${mis}`);
+
+      // Now insert budget versions if provided
+      if (budget_versions && Array.isArray(budget_versions) && budget_versions.length > 0) {
+        const budgetVersionsToInsert: any[] = [];
+
+        // Parse European formatted budget values to numbers
+        const parseEuropeanBudget = (value: string | number) => {
+          if (!value) return 0;
+          if (typeof value === 'number') return value;
+          
+          const strValue = String(value).replace(/[^\d,.-]/g, ''); // Remove currency symbols
+          if (strValue.includes('.') && strValue.includes(',')) {
+            return parseFloat(strValue.replace(/\./g, '').replace(',', '.')) || 0;
+          }
+          if (strValue.includes(',')) {
+            return parseFloat(strValue.replace(',', '.')) || 0;
+          }
+          return parseFloat(strValue) || 0;
+        };
+
+        // Process each formulation's budget versions
+        budget_versions.forEach((budgetVersions: any, formulationIndex: number) => {
+          const formulation = insertedFormulations[formulationIndex];
+          if (!formulation) return;
+
+          // Process ΠΔΕ versions
+          if (budgetVersions.pde && Array.isArray(budgetVersions.pde)) {
+            budgetVersions.pde.forEach((pdeVersion: any) => {
+              budgetVersionsToInsert.push({
+                project_id: project.id,
+                formulation_id: formulation.id,
+                budget_type: 'ΠΔΕ',
+                version_name: pdeVersion.version_name || `ΠΔΕ Version ${budgetVersionsToInsert.filter(v => v.budget_type === 'ΠΔΕ').length + 1}`,
+                amount: parseEuropeanBudget(pdeVersion.project_budget),
+                // ΠΔΕ specific fields stored in comments for now
+                total_public_expense: parseEuropeanBudget(pdeVersion.total_public_expense),
+                eligible_public_expense: parseEuropeanBudget(pdeVersion.eligible_public_expense),
+                protocol_number: pdeVersion.protocol_number || null,
+                ada: pdeVersion.ada || null,
+                decision_date: pdeVersion.decision_date || null,
+                decision_type: pdeVersion.decision_type || 'Έγκριση',
+                status: pdeVersion.status || 'Ενεργή',
+                comments: pdeVersion.comments || null,
+                created_by: req.user?.id || null,
+                updated_by: req.user?.id || null
+              });
+            });
+          }
+
+          // Process ΕΠΑ versions
+          if (budgetVersions.epa && Array.isArray(budgetVersions.epa)) {
+            budgetVersions.epa.forEach((epaVersion: any) => {
+              budgetVersionsToInsert.push({
+                project_id: project.id,
+                formulation_id: formulation.id,
+                budget_type: 'ΕΠΑ',
+                version_name: epaVersion.version_name || `ΕΠΑ Version ${budgetVersionsToInsert.filter(v => v.budget_type === 'ΕΠΑ').length + 1}`,
+                amount: parseEuropeanBudget(epaVersion.amount),
+                // ΕΠΑ specific fields
+                epa_version: epaVersion.epa_version || null,
+                protocol_number: epaVersion.protocol_number || null,
+                ada: epaVersion.ada || null,
+                decision_date: epaVersion.decision_date || null,
+                decision_type: epaVersion.decision_type || 'Έγκριση',
+                status: epaVersion.status || 'Ενεργή',
+                comments: epaVersion.comments || null,
+                created_by: req.user?.id || null,
+                updated_by: req.user?.id || null
+              });
+            });
+          }
+        });
+
+        // Insert budget versions if any
+        if (budgetVersionsToInsert.length > 0) {
+          const { data: insertedBudgetVersions, error: budgetInsertError } = await supabase
+            .from('project_budget_versions')
+            .insert(budgetVersionsToInsert)
+            .select();
+
+          if (budgetInsertError) {
+            console.error(`[ProjectFormulations] Error inserting budget versions:`, budgetInsertError);
+            return res.status(500).json({ message: "Failed to insert budget versions" });
+          }
+
+          console.log(`[ProjectFormulations] Successfully inserted ${insertedBudgetVersions.length} budget versions`);
+        }
+      }
+
       res.json({ 
-        message: "Formulations updated successfully", 
+        message: "Formulations and budget versions updated successfully", 
         formulations: insertedFormulations,
         count: insertedFormulations.length 
       });

@@ -491,14 +491,28 @@ export default function NewProjectPage() {
           console.log("✓ Decisions creation successful");
         }
         
-        // 3. Create project formulations if provided
-        if (data.formulation_details && data.formulation_details.length > 0 && data.formulation_details[0].protocol_number) {
-          console.log("3. Creating project formulations:", data.formulation_details);
+        // 3. Create project formulations with budget versions if provided (ENHANCED for budget_versions)
+        if (data.formulation_details && data.formulation_details.length > 0 && data.formulation_details[0].enumeration_code) {
+          console.log("3. Creating project formulations with budget versions:", data.formulation_details);
+          
+          // Transform formulation_details to new structure for backend
+          const transformedFormulations = data.formulation_details.map(formulation => ({
+            ...formulation,
+            // Remove old budget fields as they're now in budget_versions
+            project_budget: undefined,
+            total_public_expense: undefined,
+            eligible_public_expense: undefined,
+            epa_version: undefined,
+          }));
+          
           await apiRequest(`/api/projects/${projectMis}/formulations`, {
             method: "PUT",
-            body: JSON.stringify({ formulation_details: data.formulation_details }),
+            body: JSON.stringify({ 
+              formulation_details: transformedFormulations,
+              budget_versions: data.formulation_details.map(f => f.budget_versions).filter(Boolean)
+            }),
           });
-          console.log("✓ Formulations creation successful");
+          console.log("✓ Formulations and budget versions creation successful");
         }
         
         return createdProject;
@@ -2061,8 +2075,32 @@ export default function NewProjectPage() {
                       variant="outline"
                       onClick={() => {
                         const formulations = form.getValues("formulation_details");
+                        const existingSaTypes = formulations.map(f => f.sa);
+                        
+                        // Find next available SA type
+                        let newSaType: "ΝΑ853" | "ΝΑ271" | "E069" | null = null;
+                        
+                        if (!existingSaTypes.includes("ΝΑ853")) {
+                          newSaType = "ΝΑ853";
+                        } else if (!existingSaTypes.includes("ΝΑ271")) {
+                          newSaType = "ΝΑ271";
+                        } else if (!existingSaTypes.includes("E069")) {
+                          newSaType = "E069";
+                        }
+                        
+                        if (newSaType === null) {
+                          // All SA types already exist - show error
+                          toast({
+                            variant: "destructive",
+                            title: "Σφάλμα",
+                            description: "Έχετε ήδη προσθέσει διατυπώσεις για όλους τους διαθέσιμους τύπους ΣΑ (ΝΑ853, ΝΑ271, E069). Κάθε έργο μπορεί να έχει μέχρι 3 διατυπώσεις."
+                          });
+                          return;
+                        }
+                        
+                        // Add new formulation with available SA type
                         formulations.push({
-                          sa: "ΝΑ853",
+                          sa: newSaType,
                           enumeration_code: "",
                           protocol_number: "",
                           ada: "",
@@ -2077,6 +2115,11 @@ export default function NewProjectPage() {
                           },
                         });
                         form.setValue("formulation_details", formulations);
+                        
+                        toast({
+                          title: "Επιτυχία",
+                          description: `Προστέθηκε νέα διατύπωση με τύπο ΣΑ: ${newSaType}`
+                        });
                       }}
                     >
                       <Plus className="h-4 w-4 mr-2" />

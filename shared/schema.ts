@@ -803,8 +803,18 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   // Budget version type: "ΠΔΕ" or "ΕΠΑ"
   budget_type: text("budget_type").notNull(), // "ΠΔΕ" | "ΕΠΑ"
   
+  // Version identification
+  version_name: text("version_name"), // User-friendly name for the version
+  
   // Financial data
   amount: decimal("amount", { precision: 12, scale: 2 }),
+  
+  // ΠΔΕ specific fields
+  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 }),
+  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 }),
+  
+  // ΕΠΑ specific fields
+  epa_version: text("epa_version"),
   
   // Document references
   protocol_number: text("protocol_number"),
