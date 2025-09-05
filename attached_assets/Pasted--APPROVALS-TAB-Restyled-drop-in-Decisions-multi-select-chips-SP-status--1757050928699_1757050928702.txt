@@ -1,0 +1,647 @@
+<!-- ====== APPROVALS TAB – Restyled (drop-in) + Decisions multi-select chips & SP status ====== -->
+<style>
+:root{
+  --ink:#0b1950; --muted:#667085; --line:#e7ecf5; --line2:#d7e1f5; --accent:#1d4ed8; --accent2:#2563eb;
+  --soft:#f6f9ff; --bg:#fbfcff;
+  --radius:14px; --radius-sm:10px;
+  --shadow-sm:0 2px 8px rgba(2,6,23,.06); --shadow-md:0 8px 22px rgba(2,6,23,.06);
+  --gap-1:8px; --gap-2:12px; --gap-3:16px; --gap-4:20px;
+}
+.approvals{overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--bg);padding:2px}
+.approvals, .approvals *{box-sizing:border-box}
+
+/* ========== CARDS (top summary) ========== */
+.approvals .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:12px 0}
+.approvals .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-md); display:flex; flex-direction:column; gap:6px; min-height:78px}
+.approvals .card .k{font-size:.86rem;color:var(--muted);letter-spacing:.1px}
+.approvals .card .v{font-weight:800;font-size:1.08rem;color:var(--ink)}
+
+/* ========== STATIC INFO STRIP ========== */
+.approvals .static-row{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}
+.approvals .static{background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;box-shadow:var(--shadow-sm)}
+.approvals .static .k{font-size:.8rem;color:var(--muted)}
+.approvals .static .v{font-weight:700;margin-top:2px}
+
+/* ========== SUMMARY (accordion) ========== */
+.approvals .summary{border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow-md);margin:10px 0 8px}
+.approvals .summary-h{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+.approvals .summary-h strong{font-size:1.02rem}
+.approvals .caret{transition:.18s ease;display:inline-block;transform:rotate(0deg)}
+.approvals .summary.open .caret{transform:rotate(90deg)}
+.approvals .summary-b{display:none;padding:12px 14px;border-top:1px solid #eef2f7;background:#fcfdff}
+.approvals .summary.open .summary-b{display:block}
+.approvals .summary .item{padding:6px 0;border-bottom:1px dashed #eef2f7}
+.approvals .summary .item:last-child{border-bottom:none}
+.approvals .summary .title{font-weight:700}
+.approvals .summary .muted{color:var(--muted);font-size:.9rem}
+
+/* ========== FILTER TABS (SA & System) ========== */
+.approvals .sa-tabs,.approvals .sys-tabs{display:flex;gap:8px;margin:10px 0 6px;flex-wrap:wrap; align-items:center}
+.approvals .sa-tabs::before,.approvals .sys-tabs::before{ content:'';flex:1 1 0;max-width:0 }
+.approvals .sa-tab,.approvals .sys-tab{
+  padding:8px 12px;border:1px solid #dbeafe;background:#f5f8ff;color:#1e3a8a;border-radius:999px;cursor:pointer;font-weight:700;
+  user-select:none; box-shadow:var(--shadow-sm); transition:background .15s, box-shadow .15s, transform .03s
+}
+.approvals .sa-tab:hover,.approvals .sys-tab:hover{filter:brightness(1.02)}
+.approvals .sa-tab:active,.approvals .sys-tab:active{transform:translateY(1px)}
+.approvals .sa-tab.active,.approvals .sys-tab.active{background:#eaf2ff;box-shadow:inset 0 0 0 1px #cfe0ff}
+.approvals .filter-hint{font-size:.9rem;color:var(--muted);margin:0 0 8px}
+
+/* ========== BUTTONS ========== */
+.approvals .btn{
+  appearance:none;border:1px solid var(--line2);background:#fff;border-radius:12px;padding:10px 14px;cursor:pointer;font-weight:800;
+  box-shadow:var(--shadow-sm); transition:transform .03s, filter .15s, border .15s, background .15s
+}
+.approvals .btn:hover{filter:brightness(1.02)}
+.approvals .btn:active{transform:translateY(1px)}
+.approvals .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.approvals .btn.ghost{background:#fff;color:var(--accent)}
+
+/* ========== AUTO GRID ========== */
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+@media (max-width:520px){.grid-auto{grid-template-columns:1fr}}
+.approvals .small{font-size:.86rem}
+
+/* ========== DRAWERS ========== */
+.approvals .drawer{border:1px dashed #cfe0ff;border-radius:var(--radius);padding:14px;background:#f7fbff;display:none;margin:8px 0 12px;box-shadow:var(--shadow-sm)}
+.approvals .drawer.open{display:block}
+.approvals label{display:block;font-size:.9rem;color:#334155;margin-bottom:6px;font-weight:600}
+.approvals input,.approvals select{
+  width:100%;max-width:100%;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;outline:none;min-height:42px;
+  transition:border .15s, box-shadow .15s; box-shadow:inset 0 1px 0 rgba(2,6,23,.04)
+}
+.approvals input:focus,.approvals select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(147,197,253,.25)}
+.approvals .cap{font-weight:800;color:var(--ink);margin:12px 0 8px}
+
+/* ========== MINI TABLES ========== */
+.approvals .mini{width:100%;border-collapse:collapse;border:1px solid #e6edf9;border-radius:12px;overflow:hidden;margin-top:6px;background:#fff}
+.approvals .mini th,.approvals .mini td{padding:8px 10px;border-bottom:1px solid #eef2f7;font-size:.86rem}
+.approvals .mini th{background:#f8fbff;color:var(--ink);text-align:left}
+.approvals .mini tfoot td{background:#f3f8ff;font-weight:800}
+.approvals .mini-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+
+/* ========== NESTED BLOCKS (analysis) ========== */
+.approvals .blk{background:#fff;border:1px solid #dfe6f7;border-radius:12px;padding:12px;margin-top:10px;box-shadow:var(--shadow-sm)}
+.approvals .blk.sub{position:relative;padding-left:16px;border-left:6px solid #eaf2ff;margin-left:10px}
+.approvals .blk.sub .label{
+  position:absolute;left:-6px;top:-10px;background:#eaf2ff;color:#103b9b;padding:2px 8px;border-radius:0 10px 10px 0;border:1px solid #cfe0ff;
+  font-size:.8rem;font-weight:800
+}
+.approvals .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
+.approvals .kv .k{color:var(--muted);font-size:.86rem}
+.approvals .kv .v{font-weight:700}
+
+/* ========== HISTORY TABLE ========== */
+.approvals table.main{
+  width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:1100px;box-shadow:var(--shadow-md)
+}
+.approvals th,.approvals td{padding:10px;border-bottom:1px solid #eef2f7;font-size:.88rem}
+.approvals thead th{background:#f6f9ff;text-align:left;color:var(--ink);position:sticky;top:0;z-index:2;border-bottom:1px solid #e7edf9}
+.approvals tbody tr:nth-child(odd){background:#fcfdff}
+.approvals tbody tr:hover{background:#f7fbff}
+.approvals td:nth-child(8), .approvals td:nth-child(9), .approvals td:nth-child(10){text-align:right; font-variant-numeric:tabular-nums}
+.approvals .row-badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.8rem;border:1px solid #dbeafe;background:#edf2ff;color:#1e3a8a;font-weight:800}
+.approvals .row-badge.pde{background:#f0f9ff;border-color:#cfe8ff;color:#0b4a6e}
+.approvals .row-badge.epa{background:#f8f5ff;border-color:#e3d8ff;color:#4b2aa5}
+.approvals .expander{cursor:pointer;user-select:none}
+.approvals .expander .caret{transition:.18s ease;display:inline-block}
+.approvals tr.detail{display:none;background:#fbfdff}
+.approvals tr.detail.open{display:table-row}
+.approvals .detail-wrap{padding:10px 4px}
+
+/* ========== DECISION CHIPS ========== */
+.approvals .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}
+.approvals .chip{
+  display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;border:1px solid #dbe0ee;background:#fff;
+  cursor:pointer;user-select:none;transition:background .15s,border-color .15s,box-shadow .15s,transform .03s; line-height:1.1
+}
+.approvals .chip:hover{background:#f8fbff}
+.approvals .chip:active{transform:translateY(1px)}
+.approvals .chip input{display:none}
+.approvals .chip .tick{width:18px;height:18px;border-radius:999px;border:2px solid #a9c8ff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#2563eb;background:#fff;transition:all .15s; flex:0 0 18px}
+.approvals .chip.active{background:linear-gradient(180deg,#eaf2ff,#e7f6ff);border-color:#c7dcff;box-shadow:0 1px 0 rgba(2,6,23,.04) inset}
+.approvals .chip.active .tick{background:#dceaff;border-color:#a7c6ff}
+.approvals .chip.active .tick::after{content:"✔"; line-height:1}
+.approvals .chip.passive{opacity:.75;cursor:default}
+.approvals .chip.passive .tick{border-color:#e1e7f5}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width:1100px){ .approvals .cards{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:720px){  .approvals .cards{grid-template-columns:1fr} }
+</style>
+
+<div class="approvals" id="approvalsRoot">
+  <!-- Global header -->
+  <div class="cards">
+    <div class="card"><div class="k">ΣΑ (τελευταίας πράξης)</div><div id="apSaGlobal" class="v">—</div></div>
+    <div class="card"><div class="k">Τρέχων Π/Υ</div><div id="apCurBudGlobal" class="v">—</div></div>
+    <div class="card"><div class="k">ΣΔΔ / ΕΔΔ</div><div id="apCurPublicGlobal" class="v">—</div></div>
+    <div class="card"><div class="k">Τελευταία πράξη</div><div id="apLastActGlobal" class="v">—</div></div>
+  </div>
+
+  <!-- Static info -->
+  <div class="static-row">
+    <div class="static"><div class="k">MIS</div><div class="v" id="stMis">—</div></div>
+    <div class="static"><div class="k">Ενάριθμος έργου</div><div class="v" id="stEnar">—</div></div>
+    <div class="static"><div class="k">Ενεργές ΣΑ (φίλτρο)</div><div class="v" id="stSaList">—</div></div>
+  </div>
+
+  <!-- Summary (accordion; expand = only EPA) -->
+  <div class="summary" id="apSummary">
+    <div class="summary-h" onclick="apToggleSummary()">
+      <span class="caret">▸</span>
+      <strong>Σύνοψη ανάλυσης</strong>
+      <span class="muted" id="apSummaryHint" style="margin-left:8px"></span>
+    </div>
+    <div class="summary-b" id="apSummaryBody"></div>
+  </div>
+
+  <!-- SA & System multi-select -->
+  <div class="sa-tabs">
+    <div class="sa-tab active" data-sa="Ε069">Ε069</div>
+    <div class="sa-tab active" data-sa="ΝΑ271">ΝΑ271</div>
+    <div class="sa-tab active" data-sa="ΝΑ853">ΝΑ853</div>
+  </div>
+  <div class="sys-tabs">
+    <div class="sys-tab active" data-sys="ΠΔΕ">ΠΔΕ</div>
+    <div class="sys-tab active" data-sys="ΕΠΑ">ΕΠΑ</div>
+  </div>
+  <div class="filter-hint" id="apFilterHint">Φίλτρο: Ε069, ΝΑ271, ΝΑ853 • ΠΔΕ, ΕΠΑ</div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:6px">
+    <button class="btn" id="btnNewPDE">+ Νέα πράξη ΠΔΕ</button>
+    <button class="btn" id="btnNewEPA">+ Νέα πράξη ΕΠΑ</button>
+  </div>
+
+  <!-- Drawer: ΠΔΕ -->
+  <div id="drawerPDE" class="drawer">
+    <div class="cap">Καταχώρηση ΠΔΕ</div>
+    <div class="static-row">
+      <div class="static"><div class="k">Τίτλος έργου</div><div class="v" id="refTitlePDE">—</div></div>
+      <div class="static"><div class="k">Κατάσταση</div><div class="v" id="refStatusPDE">—</div></div>
+      <div class="static"><div class="k">Ενάριθμος</div><div class="v" id="refEnarPDE">—</div></div>
+    </div>
+    <div class="grid-auto">
+      <div><label>ΣΑ</label><select id="pdeSa"></select></div>
+      <div><label>Είδος πράξης</label><select id="pdeType"><option>Έγκριση</option><option>Τροποποίηση</option><option>Κλείσιμο στο ύψος πληρωμών</option></select></div>
+      <div><label>Ημερομηνία</label><input id="pdeDate" type="date"></div>
+      <div><label>Αρ. Πρωτ.</label><input id="pdeProto" placeholder="π.χ. ΑΠ123/2025"></div>
+      <div><label>ΑΔΑ</label><input id="pdeAda" placeholder="π.χ. ΨΧ123-ABC"></div>
+      <div><label>Π/Υ Οριοθέτησης (auto)</label><input id="pdeBounded" disabled></div>
+      <div><label>Π/Υ έργου</label><input id="pdeBudget" placeholder="π.χ. 45.000.000"></div>
+    </div>
+
+    <!-- Σύνδεση με απόφαση (μόνο στο ΠΔΕ) -->
+    <div class="inline-control" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #e6edff;border-radius:12px;background:#f8fbff;margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;white-space:nowrap;">
+        <input type="checkbox" id="pdeLinkDecToggle" />
+        Σύνδεση με απόφαση
+      </label>
+      <div class="muted" style="opacity:.9">Επιλέγεις πολλαπλές «μη συνδεδεμένες». Το ιστορικό εμφανίζεται παρακάτω.</div>
+    </div>
+
+    <!-- Minimal, χωρίς κουτιά -->
+    <div id="pdeLinkDecWrap" style="display:none;margin-top:8px">
+      <div class="small muted" style="margin:2px 0 6px">Διαθέσιμες (μη συνδεδεμένες) αποφάσεις</div>
+      <div id="pdeAvailableDecisions" class="chips"></div>
+
+      <div id="pdeHistoryWrap" style="display:none;margin-top:10px">
+        <div class="small muted" style="margin-bottom:6px">Ιστορικό συνδέσεων (παλαιότερες εκδόσεις)</div>
+        <div id="pdeHistoryList" class="chips"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" onclick="closeDrawer('drawerPDE')">Ακύρωση</button>
+      <button class="btn primary" onclick="mockSave('PDE')">Καταχώρηση (mock)</button>
+    </div>
+  </div>
+
+  <!-- Drawer: ΕΠΑ -->
+  <div id="drawerEPA" class="drawer">
+    <div class="cap">Καταχώρηση ΕΠΑ</div>
+    <div class="static-row">
+      <div class="static"><div class="k">Τίτλος έργου</div><div class="v" id="refTitleEPA">—</div></div>
+      <div class="static"><div class="k">Κατάσταση</div><div class="v" id="refStatusEPA">—</div></div>
+      <div class="static"><div class="k">Ενάριθμος</div><div class="v" id="refEnarEPA">—</div></div>
+    </div>
+    <div class="grid-auto">
+      <div><label>ΣΑ</label><select id="epaSa"></select></div>
+      <div><label>Είδος πράξης</label><select id="epaType"><option>Έγκριση</option><option>Τροποποίηση</option><option>Ολοκλήρωση</option></select></div>
+      <div><label>Ημερομηνία</label><input id="epaDate" type="date"></div>
+      <div><label>Αρ. Πρωτ.</label><input id="epaProto" placeholder="π.χ. ΑΠ321/2025"></div>
+      <div><label>ΑΔΑ</label><input id="epaAda" placeholder="π.χ. ΩΩ999-XYZ"></div>
+      <div><label>Έκδοση</label><input id="epaVersion" placeholder="π.χ. Β/2025"></div>
+    </div>
+
+    <div class="cap">Οικονομικά έργου</div>
+    <table class="mini" id="tbl-epa-main"><thead><tr><th>Έτος</th><th>ΣΔΔ</th><th>ΕΔΔ</th><th></th></tr></thead><tbody></tbody><tfoot><tr><td>Σύνολο</td><td data-sum="pt">—</td><td data-sum="pe">—</td><td></td></tr></tfoot></table>
+    <div class="mini-actions"><button class="btn" onclick="apAddYear('tbl-epa-main')">+ Προσθήκη έτους</button></div>
+
+    <div class="cap">Υποέργα (επιλέγονται από την καρτέλα "Στοιχεία έργου")</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <select id="spPicker"></select>
+      <button class="btn" onclick="apAddSubprojectFromPicker()">+ Προσθήκη υποέργου</button>
+      <span class="muted">Τροποποιούνται <strong>Έκδοση</strong> & <strong>Κατάσταση</strong> εδώ.</span>
+    </div>
+    <div id="subWrap"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" onclick="closeDrawer('drawerEPA')">Ακύρωση</button>
+      <button class="btn primary" onclick="mockSave('EPA')">Καταχώρηση (mock)</button>
+    </div>
+  </div>
+
+  <!-- Unified history -->
+  <table class="main">
+    <thead>
+      <tr>
+        <th style="width:36px"></th>
+        <th>Ημερ. ισχύος</th>
+        <th>Σύστημα</th>
+        <th>ΣΑ</th>
+        <th>Είδος</th>
+        <th>Αρ. πρωτ.</th>
+        <th>ΑΔΑ</th>
+        <th>Π/Υ (έργου)</th>
+        <th>ΣΔΔ</th>
+        <th>ΕΔΔ</th>
+        <th>Σχόλιο</th>
+      </tr>
+    </thead>
+    <tbody id="apRows"><tr><td colspan="11" style="padding:16px;text-align:center;color:var(--muted)">Φορτώνει…</td></tr></tbody>
+  </table>
+</div>
+
+<script>
+(function(){
+  /* ---------- Mock "Project" static references ---------- */
+  const PROJECT = {
+    MIS:'5203848',
+    enar:'2024ΝΑ85300084',
+    title:'Αποκατάσταση ζημιών από φυσικές καταστροφές',
+    status:'Συνεχιζόμενο',
+    boundedBudget:44740000,
+    SAs:['Ε069','ΝΑ271','ΝΑ853'],
+    SUBS:[
+      {code:'2024ΝΑ85300084-1', title:'Υποέργο 1', status:'Συνεχιζόμενο', version:'Α/2024'},
+      {code:'2024ΝΑ85300084-2', title:'Υποέργο 2', status:'Συνεχιζόμενο', version:'Α/2024'},
+      {code:'2024ΝΑ85300084-3', title:'Υποέργο 3', status:'Ανενεργό',     version:'—'}
+    ]
+  };
+
+  /* ---------- Mock Μητρώο Αποφάσεων ---------- */
+  // linked:true => έχει ήδη συνδεθεί σε παλαιότερη έκδοση
+  const DECISIONS_REGISTRY = [
+    {id:'d1', label:'Οριοθέτηση — ΦΕΚ Β/123/2024', type:'Οριοθέτηση', linked:true},
+    {id:'d2', label:'Συμπληρωματική οριοθέτηση — ΦΕΚ Β/456/2025', type:'Συμπληρωματική οριοθέτηση', linked:false},
+    {id:'d3', label:'Παράταση προθεσμίας-ΔΚΑ — ΦΕΚ Β/789/2024', type:'Παράταση προθεσμίας-ΔΚΑ', linked:true},
+    {id:'d4', label:'Επιδότηση Ενοικίου/Συγκατοίκησης — ΦΕΚ Β/987/2025', type:'Επιδότηση Ενοικίου/Συγκατοίκησης', linked:false}
+  ];
+  const PREV_LINKED = DECISIONS_REGISTRY.filter(d=> d.linked);
+  const UNLINKED    = DECISIONS_REGISTRY.filter(d=> !d.linked);
+
+  /* ---------- Demo data (history) ---------- */
+  const AP_DATA_PDE = {
+    'Ε069': [
+      {id:'pde-e069-20180630', date:'2018-06-30', type:'Έγκριση',    proto:'—',           ada:'—',             budget:1500000,  note:'Αρχική'},
+      {id:'pde-e069-20210630', date:'2021-06-30', type:'Κλείσιμο στο ύψος πληρωμών', proto:'—', ada:'—', budget:null, note:'Κλείσιμο στη μετάπτωση'}
+    ],
+    'ΝΑ271': [
+      {id:'pde-na271-20210701', date:'2021-07-01', type:'Έγκριση',    proto:'ΑΠ456/2021',  ada:'9Π7Μ46ΝΠΙΘ-7ΓΚ',budget:23597927, note:'Ένταξη από Ε069'},
+      {id:'pde-na271-20231231', date:'2023-12-31', type:'Τροποποίηση',proto:'—',           ada:'—',             budget:23597927, note:'Μετάπτωση σε ΝΑ853'}
+    ],
+    'ΝΑ853': [
+      {id:'pde-na853-20240101', date:'2024-01-01', type:'Έγκριση',    proto:'ΑΠ123/2024',  ada:'Ρ1ΤΘ465ΧΘΞ-ΖΥΣ',budget:44240000, note:'Ένταξη'},
+      {id:'pde-na853-20250310', date:'2025-03-10', type:'Τροποποίηση',proto:'ΑΠ456/2025',  ada:'ΩΩ999-XYZ',     budget:44740000, note:'Αναθεώρηση +500.000'}
+    ]
+  };
+
+  const AP_DATA_EPA = {
+    'ΝΑ853': [
+      {id:'epa-na853-20240101', date:'2024-01-01', type:'Έγκριση',    proto:'ΑΠ123/2024', ada:'Ρ1ΤΘ465ΧΘΞ-ΖΥΣ', pt:21398056.34, pe:21398056.34, version:'Β/2024', note:'Ένταξη'},
+      {id:'epa-na853-20250310', date:'2025-03-10', type:'Τροποποίηση',proto:'ΑΠ456/2025', ada:'ΩΩ999-XYZ',     pt:21398056.34, pe:21398056.34, version:'Β/2025', note:'Επικαιροποίηση'}
+    ],
+    'ΝΑ271': [
+      {id:'epa-na271-20210701', date:'2021-07-01', type:'Έγκριση',    proto:'ΑΠ456/2021', ada:'9Π7Μ46ΝΠΙΘ-7ΓΚ', pt:3058995.65,  pe:0,            version:'—',     note:'Μεταφορά από Ε069'}
+    ]
+  };
+
+  const ANALYSIS = {
+    'epa-na853-20250310': {
+      project: { title:'Κύριο έργο', status:PROJECT.status, epav:'Β/2025', years:[
+        {y:2021, pt:2705067.70, pe:2705067.70}, {y:2022, pt:2806364.49, pe:2806364.49}
+      ]},
+      subs: [
+        { title:'Υποέργο 1', code:'2024ΝΑ85300084-1', status:'Συνεχιζόμενο', epav:'Β/2025', years:[
+          {y:2024, pt:4522909.14, pe:4522909.14}
+        ]},
+        { title:'Υποέργο 2', code:'2024ΝΑ85300084-2', status:'Συνεχιζόμενο', epav:'Β/2025', years:[
+          {y:2023, pt:6324906.46, pe:2265521.38}
+        ]}
+      ]
+    },
+    'epa-na853-20240101': {
+      project: { title:'Κύριο έργο', status:'Σε διαδικασία ένταξης', epav:'Β/2024', years:[{y:2024, pt:0, pe:0}]},
+      subs: []
+    },
+    'epa-na271-20210701': {
+      project: { title:'Κύριο έργο (ΝΑ271)', status:'Συνεχιζόμενο', epav:'—', years:[
+        {y:2021, pt:3058995.65, pe:0}
+      ]},
+      subs: [{ title:'Υποέργο Α', code:'2023ΝΑ27100228-1', status:'Συνεχιζόμενο', epav:'—', years:[{y:2021, pt:0, pe:0}]}]
+    }
+  };
+
+  /* ---------- State ---------- */
+  const activeSAs = new Set(PROJECT.SAs);
+  const activeSystems = new Set(['ΠΔΕ','ΕΠΑ']);
+  const root = document.getElementById('approvalsRoot');
+
+  /* ---------- Helpers ---------- */
+  const cur = (n)=> new Intl.NumberFormat('el-GR',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format((n??0));
+  const fmtMoney = n => (n==null ? '—' : cur(n));
+  const byDescDate = (a,b)=> a.date < b.date ? 1 : -1;
+  const q = (sel,ctx=document)=> ctx.querySelector(sel);
+
+  function flattenAll(){
+    const pde = Object.entries(AP_DATA_PDE).flatMap(([sa, arr]) => (arr||[]).map(x => ({...x, sa, system:'ΠΔΕ'})));
+    const epa = Object.entries(AP_DATA_EPA).flatMap(([sa, arr]) => (arr||[]).map(x => ({...x, sa, system:'ΕΠΑ'})));
+    return [...pde, ...epa].sort(byDescDate);
+  }
+  function lastEPA(){ return flattenAll().find(r=>r.system==='ΕΠΑ'); }
+  function latestEpaOnOrBefore(sa, dateISO){
+    const list = (AP_DATA_EPA[sa]||[]).filter(x=> x.date<=dateISO).sort(byDescDate);
+    return list[0] || null;
+  }
+
+  /* ---------- Global header & summary ---------- */
+  function renderGlobalHeader(){
+    q('#stMis').textContent = PROJECT.MIS;
+    q('#stEnar').textContent = PROJECT.enar;
+    q('#stSaList').textContent = PROJECT.SAs.join(', ');
+
+    const all = flattenAll();
+    const last = all[0];
+    q('#apSaGlobal').textContent = last?.sa ?? '—';
+    q('#apCurBudGlobal').textContent = fmtMoney(last?.budget ?? PROJECT.boundedBudget);
+    q('#apCurPublicGlobal').textContent = `${fmtMoney(last?.pt)} / ${fmtMoney(last?.pe)}`;
+    q('#apLastActGlobal').textContent = last ? `${last.system} • ${last.type} • ${new Date(last.date).toLocaleDateString('el-GR')}` : '—';
+    renderSummary();
+  }
+  function summaryEPAHTML(act){
+    const data = act ? ANALYSIS[act.id] : null;
+    if(!data){ return `<div class="muted">Δεν υπάρχει διαθέσιμη ανάλυση ΕΠΑ για την τελευταία καταχώρηση.</div>`; }
+    const projRows = (data.project.years||[]).map(r=> `<tr><td>${r.y}</td><td>${fmtMoney(r.pt)}</td><td>${fmtMoney(r.pe)}</td></tr>`).join('');
+    const subsHTML = (data.subs||[]).map((s,i)=>{
+      const rows = (s.years||[]).map(r=> `<tr><td>${r.y}</td><td>${fmtMoney(r.pt)}</td><td>${fmtMoney(r.pe)}</td></tr>`).join('');
+      return `
+        <div class="blk sub" style="margin-top:8px">
+          <div class="label">Υποέργο ${i+1}</div>
+          <div class="kv" style="grid-template-columns:160px 1fr 160px 1fr">
+            <div class="k">Τίτλος</div><div class="v">${s.title}</div>
+            <div class="k">Κωδικός</div><div class="v">${s.code||'—'}</div>
+            <div class="k">Κατάσταση</div><div class="v">${s.status}</div>
+            <div class="k">Έκδοση ΕΠΑ</div><div class="v">${s.epav||'—'}</div>
+          </div>
+          <table class="mini"><thead><tr><th>Έτος</th><th>ΣΔΔ</th><th>ΕΔΔ</th></tr></thead><tbody>${rows||''}</tbody></table>
+        </div>`;
+    }).join('');
+    return `
+      <div class="blk">
+        <div class="kv" style="grid-template-columns:160px 1fr 160px 1fr">
+          <div class="k">ΕΡΓΟ</div><div class="v">${data.project.title}</div>
+          <div class="k">Κατάσταση</div><div class="v">${data.project.status}</div>
+          <div class="k">Έκδοση ΕΠΑ</div><div class="v">${data.project.epav||'—'}</div>
+        </div>
+        <table class="mini"><thead><tr><th>Έτος</th><th>ΣΔΔ</th><th>ΕΔΔ</th></tr></thead><tbody>${projRows||''}</tbody></table>
+      </div>
+      ${subsHTML}`;
+  }
+  function renderSummary(){
+    const wrap = q('#apSummaryBody');
+    const hint = q('#apSummaryHint');
+    const last = lastEPA();
+    hint.textContent = last ? `(τελευταία ΕΠΑ: ${new Date(last.date).toLocaleDateString('el-GR')} • ΣΑ ${last.sa})` : '(δεν υπάρχει ΕΠΑ)';
+    wrap.innerHTML = summaryEPAHTML(last);
+  }
+  window.apToggleSummary = function(){ q('#apSummary').classList.toggle('open'); };
+
+  /* ---------- History (unified) ---------- */
+  function detailHTML(row){
+    const relEpa = latestEpaOnOrBefore(row.sa, row.date);
+    return summaryEPAHTML(relEpa);
+  }
+  function renderTable(){
+    const tb = q('#apRows');
+    const chosenSAs = Array.from(activeSAs);
+    const chosenSys = Array.from(activeSystems);
+    q('#apFilterHint').textContent = `${chosenSAs.length?`Φίλτρο: ${chosenSAs.join(', ')}`:'Φίλτρο: (καμία ΣΑ)'} • ${chosenSys.join(', ')}`;
+    const rows = flattenAll().filter(r => chosenSAs.includes(r.sa) && chosenSys.includes(r.system));
+    if (!rows.length){
+      tb.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:16px">Δεν υπάρχουν εγγραφές για τα επιλεγμένα φίλτρα.</td></tr>`; return;
+    }
+    tb.innerHTML = rows.map(r => {
+      const id = `det-${r.id}`;
+      const pt = r.pt!=null ? fmtMoney(r.pt) : '—';
+      const pe = r.pe!=null ? fmtMoney(r.pe) : '—';
+      const bud = r.system==='ΠΔΕ' ? (r.budget!=null ? fmtMoney(r.budget) : fmtMoney(PROJECT.boundedBudget)) : '—';
+      const badgeClass = r.system==='ΠΔΕ' ? 'row-badge pde' : 'row-badge epa';
+      return `
+        <tr>
+          <td class="expander" onclick="apToggleDetail('${id}', this)"><span class="caret">▸</span></td>
+          <td>${new Date(r.date).toLocaleDateString('el-GR')}</td>
+          <td><span class="${badgeClass}">${r.system}</span></td>
+          <td>${r.sa}</td>
+          <td>${r.type}</td>
+          <td>${r.proto || '—'}</td>
+          <td>${r.ada || '—'}</td>
+          <td>${bud}</td>
+          <td>${pt}</td>
+          <td>${pe}</td>
+          <td>${r.note || '—'}</td>
+        </tr>
+        <tr id="${id}" class="detail"><td colspan="11"><div class="detail-wrap">${detailHTML(r)}</div></td></tr>`;
+    }).join('');
+  }
+  window.apToggleDetail = function(id, cell){
+    const row = document.getElementById(id);
+    row.classList.toggle('open');
+    const caret = cell.querySelector('.caret');
+    caret.style.transform = row.classList.contains('open') ? 'rotate(90deg)' : 'rotate(0deg)';
+  };
+  function bindTabs(){
+    document.querySelectorAll('.sa-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const sa = btn.getAttribute('data-sa');
+        if (activeSAs.has(sa)){ activeSAs.delete(sa); btn.classList.remove('active'); }
+        else { activeSAs.add(sa); btn.classList.add('active'); }
+        renderTable();
+      });
+    });
+    document.querySelectorAll('.sys-tab').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const sys = btn.getAttribute('data-sys');
+        if (activeSystems.has(sys)){ activeSystems.delete(sys); btn.classList.remove('active'); }
+        else { activeSystems.add(sys); btn.classList.add('active'); }
+        if(activeSystems.size===0){ activeSystems.add(sys); btn.classList.add('active'); }
+        renderTable();
+      });
+    });
+  }
+
+  /* ---------- Chips builder for Decisions ---------- */
+  function buildDecisionChips(container, decisions){
+    container.innerHTML = '';
+    const selected = new Set();
+    decisions.forEach(d=>{
+      const chip = document.createElement('label');
+      chip.className = 'chip';
+      chip.innerHTML = `<span class="tick" aria-hidden="true"></span><span>${d.label}</span><input type="checkbox" value="${d.id}">`;
+      const input = chip.querySelector('input');
+      chip.addEventListener('click', (e)=>{
+        if (e.target.tagName==='INPUT') return;
+        const active = chip.classList.toggle('active');
+        input.checked = active;
+        if(active){ selected.add(d.id); } else { selected.delete(d.id); }
+      });
+      container.appendChild(chip);
+    });
+    return { getSelected: ()=> Array.from(selected) };
+  }
+  function renderPassiveHistory(container, decisions){
+    container.innerHTML = '';
+    decisions.forEach(d=>{
+      const el = document.createElement('span');
+      el.className = 'chip passive';
+      el.innerHTML = `<span class="tick" aria-hidden="true"></span><span>${d.label}</span>`;
+      container.appendChild(el);
+    });
+  }
+
+  /* ---------- Drawers open/close ---------- */
+  function openDrawer(id){
+    if(id==='drawerPDE'){
+      q('#refTitlePDE').textContent = PROJECT.title;
+      q('#refStatusPDE').textContent = PROJECT.status;
+      q('#refEnarPDE').textContent  = PROJECT.enar;
+      fillSelect(q('#pdeSa'), PROJECT.SAs);
+      q('#pdeBounded').value = cur(PROJECT.boundedBudget);
+
+      // ΣΥΝΔΕΣΗ ΜΕ ΑΠΟΦΑΣΗ (πολλαπλή επιλογή για μη-συνδεδεμένες)
+      const toggle = q('#pdeLinkDecToggle');
+      const wrap   = q('#pdeLinkDecWrap');
+      const avail  = q('#pdeAvailableDecisions');
+      const histW  = q('#pdeHistoryWrap');
+      const histL  = q('#pdeHistoryList');
+
+      toggle.checked = false;
+      wrap.style.display = 'none';
+
+      const chipsCtl = buildDecisionChips(avail, UNLINKED);
+      renderPassiveHistory(histL, PREV_LINKED);
+      histW.style.display = PREV_LINKED.length ? 'block' : 'none';
+
+      // Expose selection for potential save
+      window._pdeSelectedDecisionIds = ()=> chipsCtl.getSelected();
+
+      toggle.onchange = ()=>{ wrap.style.display = toggle.checked ? 'block' : 'none'; if(!toggle.checked){ avail.querySelectorAll('.chip.active').forEach(c=>c.classList.remove('active')); } };
+    } else {
+      q('#refTitleEPA').textContent = PROJECT.title;
+      q('#refStatusEPA').textContent = PROJECT.status;
+      q('#refEnarEPA').textContent  = PROJECT.enar;
+      fillSelect(q('#epaSa'), PROJECT.SAs);
+      const picker = q('#spPicker');
+      picker.innerHTML = PROJECT.SUBS.map(s=>`<option value="${s.code}">${s.title} — ${s.code}</option>`).join('');
+    }
+    document.getElementById(id).classList.add('open');
+  }
+  function fillSelect(sel, opts){ sel.innerHTML = opts.map(x=>`<option>${x}</option>`).join(''); }
+  window.closeDrawer = function(id){ document.getElementById(id).classList.remove('open'); };
+  q('#btnNewPDE').addEventListener('click', ()=> openDrawer('drawerPDE'));
+  q('#btnNewEPA').addEventListener('click', ()=> openDrawer('drawerEPA'));
+
+  /* ---------- EPA mini tables (user input) ---------- */
+  function makeYearRow(year){
+    return `<tr>
+      <td><input value="${year}" placeholder="Έτος"></td>
+      <td><input placeholder="ΣΔΔ" oninput="apRecalc(this)"></td>
+      <td><input placeholder="ΕΔΔ" oninput="apRecalc(this)"></td>
+      <td><button class="btn" onclick="this.closest('tr').remove(); apRecalc(this)">−</button></td>
+    </tr>`;
+  }
+  window.apAddYear = function(tblId){
+    const tb = document.querySelector('#'+tblId+' tbody');
+    const next = (()=>{
+      const ys = Array.from(tb.querySelectorAll('tr td:first-child input')).map(i => parseInt(i.value,10)).filter(Boolean);
+      return ys.length ? Math.max(...ys)+1 : new Date().getFullYear();
+    })();
+    tb.insertAdjacentHTML('beforeend', makeYearRow(next));
+    apRecalc(document.getElementById(tblId));
+  };
+  window.apRecalc = function(el){
+    const table = (el.closest? el.closest('table') : el);
+    if(!table) return;
+    const rows = table.querySelectorAll('tbody tr');
+    let sPT=0, sPE=0;
+    rows.forEach(r=>{
+      const pt = parseFloat((r.children[1].querySelector('input')?.value||'').replace(/[^0-9.,-]/g,'').replace(',','.'))||0;
+      const pe = parseFloat((r.children[2].querySelector('input')?.value||'').replace(/[^0-9.,-]/g,'').replace(',','.'))||0;
+      sPT+=pt; sPE+=pe;
+    });
+    const tPT = table.querySelector('tfoot [data-sum="pt"]');
+    const tPE = table.querySelector('tfoot [data-sum="pe"]');
+    if(tPT) tPT.textContent = cur(sPT);
+    if(tPE) tPE.textContent = cur(sPE);
+  };
+
+  /* ---------- Subprojects: now status dropdown (single select) ---------- */
+  window.apAddSubprojectFromPicker = function(){
+    const picker = q('#spPicker');
+    const code = picker.value;
+    const meta = PROJECT.SUBS.find(s=>s.code===code);
+    if(!meta) return;
+    if(q(`[data-sp-code="${code}"]`)) { alert('Το υποέργο έχει ήδη προστεθεί.'); return; }
+    const idx = document.querySelectorAll('.approvals .blk.sub').length + 1;
+    const tblId = `tbl-sub-${idx}`;
+    const wrap = document.createElement('div');
+    wrap.className = 'blk sub';
+    wrap.setAttribute('data-sp-code', code);
+    const statusOptions = ['Συνεχιζόμενο','Σε αναμονή','Ολοκληρωμένο'];
+    const defaultStatus = statusOptions.includes(meta.status) ? meta.status : 'Συνεχιζόμενο';
+    wrap.innerHTML = `
+      <div class="label">Υποέργο ${idx}</div>
+      <div class="kv" style="grid-template-columns:160px 1fr 160px 1fr">
+        <div class="k">Τίτλος</div><div class="v">${meta.title}</div>
+        <div class="k">Κωδικός</div><div class="v">${meta.code}</div>
+        <div class="k">Κατάσταση</div>
+        <div class="v">
+          <select class="sp-status" style="width:220px">
+            ${statusOptions.map(s=>`<option ${s===defaultStatus?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="k">Έκδοση</div><div class="v"><input value="${meta.version||''}" placeholder="π.χ. Β/2025" style="width:220px"></div>
+      </div>
+      <table class="mini" id="${tblId}"><thead><tr><th>Έτος</th><th>ΣΔΔ</th><th>ΕΔΔ</th><th></th></tr></thead><tbody></tbody><tfoot><tr><td>Σύνολο</td><td data-sum="pt">—</td><td data-sum="pe">—</td><td></td></tr></tfoot></table>
+      <div class="mini-actions"><button class="btn" onclick="apAddYear('${tblId}')">+ Προσθήκη έτους</button></div>`;
+    q('#subWrap').appendChild(wrap);
+    apAddYear(tblId);
+  };
+
+  /* ---------- Mock save ---------- */
+  window.mockSave = function(kind){
+    // Μόνο επίδειξη: θα δείξει τι έχει επιλέξει ο χειριστής για αποφάσεις στο ΠΔΕ (αν υπάρχει)
+    const selectedDecs = typeof window._pdeSelectedDecisionIds==='function' ? window._pdeSelectedDecisionIds() : [];
+    alert('Mock καταχώρηση '+kind+'\\nΕπιλεγμένες αποφάσεις: '+ (selectedDecs.join(', ') || '—'));
+    closeDrawer(kind==='PDE'?'drawerPDE':'drawerEPA');
+  };
+
+  /* ---------- Init ---------- */
+  function fillSelect(sel, opts){ sel.innerHTML = opts.map(x=>`<option>${x}</option>`).join(''); }
+  renderGlobalHeader();
+  document.querySelectorAll('.sa-tab').forEach(el=>{ if(!PROJECT.SAs.includes(el.dataset.sa)) el.remove(); });
+  bindTabs();
+  renderTable();
+})();
+</script>

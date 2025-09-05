@@ -787,6 +787,49 @@ export const projectFormulations = pgTable(
   }),
 );
 
+/**
+ * Project Budget Versions Table
+ * Junction table for storing ΠΔΕ and ΕΠΑ budget versions for each enumeration code
+ * Links to project formulations to support multiple budget versions per SA type
+ */
+export const projectBudgetVersions = pgTable("project_budget_versions", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  formulation_id: bigint("formulation_id", { mode: "number" })
+    .references(() => projectFormulations.id, { onDelete: "cascade" }),
+  
+  // Budget version type: "ΠΔΕ" or "ΕΠΑ"
+  budget_type: text("budget_type").notNull(), // "ΠΔΕ" | "ΕΠΑ"
+  
+  // Financial data
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  
+  // Document references
+  protocol_number: text("protocol_number"),
+  ada: text("ada"),
+  decision_date: date("decision_date"),
+  
+  // Decision details
+  decision_type: text("decision_type").default("Έγκριση"), // Έγκριση, Τροποποίηση, Κλείσιμο στο ύψος πληρωμών
+  
+  // Status and metadata
+  status: text("status").default("Ενεργή"),
+  comments: text("comments"),
+  
+  // Audit fields
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  created_by: integer("created_by"),
+  updated_by: integer("updated_by"),
+}, (table) => ({
+  // Indexes for performance
+  projectIdIndex: index("idx_budget_versions_project_id").on(table.project_id),
+  formulationIdIndex: index("idx_budget_versions_formulation_id").on(table.formulation_id),
+  budgetTypeIndex: index("idx_budget_versions_budget_type").on(table.budget_type),
+}));
+
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
 // ==============================================================
@@ -819,6 +862,20 @@ export const extendedUserSchema = insertUserSchema.extend({
 export const insertProjectSchema = createInsertSchema(projects);
 
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog);
+
+export const insertProjectFormulationSchema = createInsertSchema(projectFormulations);
+
+export const insertProjectBudgetVersionSchema = createInsertSchema(projectBudgetVersions);
+
+// Enhanced schema for budget versions with validation
+export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
+  budget_type: z.enum(["ΠΔΕ", "ΕΠΑ"], {
+    required_error: "Ο τύπος προϋπολογισμού είναι υποχρεωτικός",
+  }),
+  amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
+  decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
+  status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+});
 
 // Schema for document recipients
 export const recipientSchema = z.object({
@@ -1069,6 +1126,13 @@ export const budgetValidationResponseSchema = z.object({
     .optional(),
   allowDocx: z.boolean().optional(),
 });
+
+// ==============================================================
+// 7. TypeScript Types for new tables
+// ==============================================================
+
+export type ProjectBudgetVersion = InferSelectModel<typeof projectBudgetVersions>;
+export type InsertProjectBudgetVersion = InferInsertModel<typeof projectBudgetVersions>;
 
 // Budget validation type
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
