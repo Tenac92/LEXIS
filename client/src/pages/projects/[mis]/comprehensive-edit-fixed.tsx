@@ -3242,16 +3242,17 @@ export default function ComprehensiveEditFixed() {
                                       <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.pde`)?.map((_, pdeIndex) => (
                                           <AccordionItem key={pdeIndex} value={`pde-${pdeIndex}`}>
-                                            <AccordionTrigger className="flex items-center justify-between hover:no-underline">
-                                              <div className="flex items-center gap-2">
-                                                <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
-                                              </div>
+                                            <div className="flex items-center justify-between pr-4">
+                                              <AccordionTrigger className="flex-1 hover:no-underline">
+                                                <div className="flex items-center gap-2">
+                                                  <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
+                                                </div>
+                                              </AccordionTrigger>
                                               <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
+                                                onClick={() => {
                                                   const formulations = form.getValues("formulation_details");
                                                   formulations[index].budget_versions.pde.splice(pdeIndex, 1);
                                                   form.setValue("formulation_details", formulations);
@@ -3259,7 +3260,7 @@ export default function ComprehensiveEditFixed() {
                                               >
                                                 <Trash2 className="h-4 w-4" />
                                               </Button>
-                                            </AccordionTrigger>
+                                            </div>
                                             <AccordionContent className="pt-4">
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -3527,16 +3528,17 @@ export default function ComprehensiveEditFixed() {
                                       <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((_, epaIndex) => (
                                           <AccordionItem key={epaIndex} value={`epa-${epaIndex}`}>
-                                            <AccordionTrigger className="flex items-center justify-between hover:no-underline">
-                                              <div className="flex items-center gap-2">
-                                                <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
-                                              </div>
+                                            <div className="flex items-center justify-between pr-4">
+                                              <AccordionTrigger className="flex-1 hover:no-underline">
+                                                <div className="flex items-center gap-2">
+                                                  <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
+                                                </div>
+                                              </AccordionTrigger>
                                               <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
+                                                onClick={() => {
                                                   const formulations = form.getValues("formulation_details");
                                                   formulations[index].budget_versions.epa.splice(epaIndex, 1);
                                                   form.setValue("formulation_details", formulations);
@@ -3544,7 +3546,7 @@ export default function ComprehensiveEditFixed() {
                                               >
                                                 <Trash2 className="h-4 w-4" />
                                               </Button>
-                                            </AccordionTrigger>
+                                            </div>
                                             <AccordionContent className="pt-4">
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
