@@ -225,11 +225,10 @@ const comprehensiveProjectSchema = z.object({
     geographic_areas: z.array(z.string()).default([]),
   })).default([]),
   
-  // Section 3: Project details
+  // Section 3: Project details (enumeration_code moved to formulation level only)
   project_details: z.object({
     mis: z.string().default(""),
     sa: z.string().default(""),
-    enumeration_code: z.string().default(""),
     inc_year: z.string().default(""),
     project_title: z.string().default(""),
     project_description: z.string().default(""),
@@ -237,7 +236,7 @@ const comprehensiveProjectSchema = z.object({
     expenses_executed: z.string().default(""),
     project_status: z.string().default("Ενεργό"),
   }).default({ 
-    mis: "", sa: "", enumeration_code: "", inc_year: "", 
+    mis: "", sa: "", inc_year: "", 
     project_title: "", project_description: "", summary_description: "", 
     expenses_executed: "", project_status: "Ενεργό" 
   }),
@@ -246,12 +245,9 @@ const comprehensiveProjectSchema = z.object({
   formulation_details: z.array(z.object({
     sa: z.enum(["ΝΑ853", "ΝΑ271", "E069"]).default("ΝΑ853"),
     enumeration_code: z.string().default(""),
-    protocol_number: z.string().default(""), // General protocol
-    ada: z.string().default(""), // General ADA
     decision_year: z.string().default(""),
     decision_status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
-    connected_decisions: z.array(z.number()).default([]),
     comments: z.string().default(""),
     
     // RESTRUCTURED: Multiple budget versions for ΠΔΕ and ΕΠΑ
@@ -332,7 +328,6 @@ export default function NewProjectPage() {
       project_details: { 
         mis: "", 
         sa: "ΝΑ853", 
-        enumeration_code: "", 
         inc_year: "", 
         project_title: "", 
         project_description: "", 
@@ -343,12 +338,9 @@ export default function NewProjectPage() {
       formulation_details: [{ 
         sa: "ΝΑ853", 
         enumeration_code: "", 
-        protocol_number: "", 
-        ada: "", 
         decision_year: "", 
         decision_status: "Ενεργή", 
         change_type: "Έγκριση", 
-        connected_decisions: [], 
         comments: "",
         budget_versions: {
           pde: [],
@@ -411,7 +403,11 @@ export default function NewProjectPage() {
         // 1. Create core project data first
         const projectCreateData = {
           mis: parseInt(data.project_details.mis) || 0,
-          na853: data.project_details.enumeration_code || "",
+          na853: (() => {
+            // Get enumeration code from first formulation with ΝΑ853
+            const na853Formulation = data.formulation_details.find(f => f.sa === "ΝΑ853");
+            return na853Formulation?.enumeration_code || "";
+          })(),
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
           event_year: data.event_details.event_year,
@@ -1198,70 +1194,6 @@ export default function NewProjectPage() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="project_details.enumeration_code"
-                        render={({ field }) => {
-                          const validationState = getValidationState("project_details.enumeration_code");
-                          return (
-                            <FormItem>
-                              <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
-                              <FormControl>
-                                <div className="relative">
-                                  <Input 
-                                    {...field} 
-                                    placeholder="π.χ. ΝΑ853, ΝΑ271, E069" 
-                                    onChange={(e) => {
-                                      field.onChange(e);
-                                      
-                                      // Bi-directional sync: Main → Formulation
-                                      if (!isUpdating && e.target.value.trim()) {
-                                        syncMainToFormulation(e.target.value.trim());
-                                      }
-                                      
-                                      // ΣΑ validation
-                                      if (e.target.value.trim()) {
-                                        const timeoutId = setTimeout(() => {
-                                          validateSA(e.target.value.trim(), "project_details.enumeration_code");
-                                        }, 500);
-                                        return () => clearTimeout(timeoutId);
-                                      }
-                                    }}
-                                    className={
-                                      validationState.exists 
-                                        ? "border-red-500" 
-                                        : validationState.isChecking 
-                                        ? "border-yellow-500" 
-                                        : field.value && !validationState.exists && !validationState.isChecking
-                                        ? "border-green-500"
-                                        : ""
-                                    }
-                                  />
-                                  {validationState.isChecking && (
-                                    <RefreshCw className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-yellow-500" />
-                                  )}
-                                  {field.value && !validationState.isChecking && !validationState.exists && (
-                                    <CheckCircle className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />
-                                  )}
-                                  {validationState.exists && (
-                                    <X className="absolute right-2 top-2.5 h-4 w-4 text-red-500" />
-                                  )}
-                                </div>
-                              </FormControl>
-                              {validationState.exists && validationState.existingProject && (
-                                <div className="text-sm text-red-600 mt-1">
-                                  ΣΑ ήδη χρησιμοποιείται στο έργο #{validationState.existingProject.mis} - {validationState.existingProject.project_title}
-                                </div>
-                              )}
-                              {field.value && !validationState.isChecking && !validationState.exists && (
-                                <div className="text-sm text-green-600 mt-1">
-                                  ΣΑ διαθέσιμο ✓
-                                </div>
-                              )}
-                            </FormItem>
-                          );
-                        }}
-                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1507,33 +1439,6 @@ export default function NewProjectPage() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.protocol_number`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="π.χ. 12345/2024" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.ada`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>ΑΔΑ</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
 
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1582,41 +1487,6 @@ export default function NewProjectPage() {
                           />
                         </div>
 
-                        {/* Connected Decisions Multi-select */}
-                        <div>
-                          <FormLabel>Αποφάσεις που συνδέονται</FormLabel>
-                          <div className="grid grid-cols-1 gap-2 mt-2">
-                            {form.watch("decisions").map((decision: any, decisionIndex: number) => (
-                              <FormField
-                                key={decisionIndex}
-                                control={form.control}
-                                name={`formulation_details.${index}.connected_decisions`}
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(decisionIndex)}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            field.onChange([...(field.value || []), decisionIndex]);
-                                          } else {
-                                            field.onChange((field.value || []).filter((item: number) => item !== decisionIndex));
-                                          }
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="text-sm font-normal">
-                                      Απόφαση {decisionIndex + 1}: {decision.protocol_number || `#${decisionIndex + 1}`} ({decision.decision_type || "Έγκριση"})
-                                    </FormLabel>
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
-                            {(!form.watch("decisions") || form.watch("decisions").length === 0) && (
-                              <p className="text-sm text-gray-500">Δεν υπάρχουν διαθέσιμες αποφάσεις για σύνδεση. Προσθέστε αποφάσεις στην πρώτη καρτέλα.</p>
-                            )}
-                          </div>
-                        </div>
 
                         <FormField
                           control={form.control}
@@ -2200,12 +2070,9 @@ export default function NewProjectPage() {
                         formulations.push({
                           sa: "ΝΑ853", // Default SA type, user can change it
                           enumeration_code: "",
-                          protocol_number: "",
-                          ada: "",
                           decision_year: "",
                           decision_status: "Ενεργή",
                           change_type: "Έγκριση",
-                          connected_decisions: [],
                           comments: "",
                           budget_versions: {
                             pde: [],

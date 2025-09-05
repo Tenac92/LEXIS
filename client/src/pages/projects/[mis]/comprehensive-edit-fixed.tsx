@@ -286,8 +286,6 @@ const comprehensiveProjectSchema = z.object({
       z.object({
         sa: z.enum(["ΝΑ853", "ΝΑ271", "E069"]).default("ΝΑ853"),
         enumeration_code: z.string().default(""),
-        protocol_number: z.string().default(""),
-        ada: z.string().default(""),
         decision_year: z.string().default(""),
         decision_status: z
           .enum(["Ενεργή", "Ανενεργή", "Αναστολή"])
@@ -295,7 +293,6 @@ const comprehensiveProjectSchema = z.object({
         change_type: z
           .enum(["Τροποποίηση", "Παράταση", "Έγκριση"])
           .default("Έγκριση"),
-        connected_decisions: z.array(z.number()).default([]),
         comments: z.string().default(""),
         budget_versions: z.object({
           pde: z.array(z.object({
@@ -3131,39 +3128,6 @@ export default function ComprehensiveEditFixed() {
                             />
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`formulation_details.${index}.protocol_number`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. 12345/2024"
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`formulation_details.${index}.ada`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>ΑΔΑ</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ"
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
 
                           {/* Budget Versions Tabs - ΠΔΕ and ΕΠΑ */}
                           <div className="mt-6">
