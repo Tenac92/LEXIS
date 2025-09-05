@@ -409,7 +409,7 @@ export default function NewProjectPage() {
         // 1. Create core project data first
         const projectCreateData = {
           mis: parseInt(data.project_details.mis) || 0,
-          na853: data.project_details.sa || "",
+          na853: data.project_details.enumeration_code || "",
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
           event_year: data.event_details.event_year,
@@ -2075,32 +2075,10 @@ export default function NewProjectPage() {
                       variant="outline"
                       onClick={() => {
                         const formulations = form.getValues("formulation_details");
-                        const existingSaTypes = formulations.map(f => f.sa);
                         
-                        // Find next available SA type
-                        let newSaType: "ΝΑ853" | "ΝΑ271" | "E069" | null = null;
-                        
-                        if (!existingSaTypes.includes("ΝΑ853")) {
-                          newSaType = "ΝΑ853";
-                        } else if (!existingSaTypes.includes("ΝΑ271")) {
-                          newSaType = "ΝΑ271";
-                        } else if (!existingSaTypes.includes("E069")) {
-                          newSaType = "E069";
-                        }
-                        
-                        if (newSaType === null) {
-                          // All SA types already exist - show error
-                          toast({
-                            variant: "destructive",
-                            title: "Σφάλμα",
-                            description: "Έχετε ήδη προσθέσει διατυπώσεις για όλους τους διαθέσιμους τύπους ΣΑ (ΝΑ853, ΝΑ271, E069). Κάθε έργο μπορεί να έχει μέχρι 3 διατυπώσεις."
-                          });
-                          return;
-                        }
-                        
-                        // Add new formulation with available SA type
+                        // Add new formulation (SA types can be duplicated, enumeration codes must be unique)
                         formulations.push({
-                          sa: newSaType,
+                          sa: "ΝΑ853", // Default SA type, user can change it
                           enumeration_code: "",
                           protocol_number: "",
                           ada: "",
@@ -2118,7 +2096,7 @@ export default function NewProjectPage() {
                         
                         toast({
                           title: "Επιτυχία",
-                          description: `Προστέθηκε νέα διατύπωση με τύπο ΣΑ: ${newSaType}`
+                          description: `Προστέθηκε νέα διατύπωση`
                         });
                       }}
                     >
