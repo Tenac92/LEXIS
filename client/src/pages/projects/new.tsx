@@ -100,13 +100,12 @@ function useBidirectionalSync(form: any) {
       const newFormulation = {
         sa: saType,
         enumeration_code: enumerationCode,
-        protocol_number: "", ada: "", decision_year: "", project_budget: "",
-        epa_version: "", total_public_expense: "", eligible_public_expense: "",
+        protocol_number: "", ada: "", decision_year: "",
         decision_status: "Ενεργή", change_type: "Έγκριση", connected_decisions: [],
         comments: "",
         budget_versions: {
-          pde: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" },
-          epa: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" }
+          pde: [],
+          epa: []
         }
       };
       
@@ -243,25 +242,35 @@ const comprehensiveProjectSchema = z.object({
     expenses_executed: "", project_status: "Ενεργό" 
   }),
   
-  // Section 4: Project formulation details with budget versions
+  // Section 4: Project formulation details with multiple budget versions
   formulation_details: z.array(z.object({
     sa: z.enum(["ΝΑ853", "ΝΑ271", "E069"]).default("ΝΑ853"),
     enumeration_code: z.string().default(""),
-    protocol_number: z.string().default(""),
-    ada: z.string().default(""),
+    protocol_number: z.string().default(""), // General protocol
+    ada: z.string().default(""), // General ADA
     decision_year: z.string().default(""),
-    project_budget: z.string().default(""),
-    epa_version: z.string().default(""),
-    total_public_expense: z.string().default(""),
-    eligible_public_expense: z.string().default(""),
     decision_status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     connected_decisions: z.array(z.number()).default([]),
     comments: z.string().default(""),
     
-    // NEW: Budget versions for ΠΔΕ and ΕΠΑ
+    // RESTRUCTURED: Multiple budget versions for ΠΔΕ and ΕΠΑ
     budget_versions: z.object({
-      pde: z.object({
+      pde: z.array(z.object({
+        version_name: z.string().default(""),
+        project_budget: z.string().default(""), // Moved from main level
+        total_public_expense: z.string().default(""), // Moved from main level  
+        eligible_public_expense: z.string().default(""), // Moved from main level
+        protocol_number: z.string().default(""),
+        ada: z.string().default(""),
+        decision_date: z.string().default(""),
+        decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
+        status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+        comments: z.string().default(""),
+      })).default([]),
+      epa: z.array(z.object({
+        version_name: z.string().default(""),
+        epa_version: z.string().default(""), // Moved from main level
         amount: z.string().default(""),
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
@@ -269,25 +278,10 @@ const comprehensiveProjectSchema = z.object({
         decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
         status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
         comments: z.string().default(""),
-      }).default({
-        amount: "", protocol_number: "", ada: "", decision_date: "",
-        decision_type: "Έγκριση", status: "Ενεργή", comments: ""
-      }),
-      epa: z.object({
-        amount: z.string().default(""),
-        protocol_number: z.string().default(""),
-        ada: z.string().default(""),
-        decision_date: z.string().default(""),
-        decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
-        status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
-        comments: z.string().default(""),
-      }).default({
-        amount: "", protocol_number: "", ada: "", decision_date: "",
-        decision_type: "Έγκριση", status: "Ενεργή", comments: ""
-      }),
+      })).default([]),
     }).default({
-      pde: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" },
-      epa: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" }
+      pde: [],
+      epa: []
     }),
   })).default([]),
   
@@ -350,17 +344,13 @@ export default function NewProjectPage() {
         protocol_number: "", 
         ada: "", 
         decision_year: "", 
-        project_budget: "", 
-        epa_version: "", 
-        total_public_expense: "", 
-        eligible_public_expense: "", 
         decision_status: "Ενεργή", 
         change_type: "Έγκριση", 
         connected_decisions: [], 
         comments: "",
         budget_versions: {
-          pde: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" },
-          epa: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" }
+          pde: [],
+          epa: []
         }
       }],
       changes: [{ description: "" }],
@@ -438,18 +428,24 @@ export default function NewProjectPage() {
             return null;
           })(),
           
-          // Budget fields - parse European format to numbers
+          // Budget fields - get from latest active PDE version
           budget_e069: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "E069");
-            return formEntry?.project_budget ? parseEuropeanNumber(formEntry.project_budget) : null;
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
+            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
           })(),
           budget_na271: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
-            return formEntry?.project_budget ? parseEuropeanNumber(formEntry.project_budget) : null;
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
+            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
           })(),
           budget_na853: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
-            return formEntry?.project_budget ? parseEuropeanNumber(formEntry.project_budget) : null;
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
+            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
           })(),
         };
         
@@ -1523,67 +1519,6 @@ export default function NewProjectPage() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.project_budget`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Προϋπολογισμός Έργου</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    placeholder="π.χ. 1.000.000,00" 
-                                    onChange={(e) => {
-                                      const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
-                                    }}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.total_public_expense`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Συνολική Δημόσια Δαπάνη</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    placeholder="π.χ. 800.000,00" 
-                                    onChange={(e) => {
-                                      const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
-                                    }}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.eligible_public_expense`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Επιλέξιμη Δημόσια Δαπάνη</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    placeholder="π.χ. 750.000,00" 
-                                    onChange={(e) => {
-                                      const formatted = formatNumberWhileTyping(e.target.value);
-                                      field.onChange(formatted);
-                                    }}
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField
@@ -1680,255 +1615,439 @@ export default function NewProjectPage() {
                           )}
                         />
 
-                        {/* NEW: Budget Versions (ΠΔΕ/ΕΠΑ) Tabs */}
+                        {/* RESTRUCTURED: Multiple Budget Versions (ΠΔΕ/ΕΠΑ) */}
                         <div className="mt-6">
                           <h4 className="text-lg font-medium mb-4">Εκδόσεις Προϋπολογισμού</h4>
                           <Tabs defaultValue="pde" className="w-full">
                             <TabsList className="grid w-full grid-cols-2">
-                              <TabsTrigger value="pde">ΠΔΕ</TabsTrigger>
-                              <TabsTrigger value="epa">ΕΠΑ</TabsTrigger>
+                              <TabsTrigger value="pde">ΠΔΕ ({form.watch(`formulation_details.${index}.budget_versions.pde`)?.length || 0})</TabsTrigger>
+                              <TabsTrigger value="epa">ΕΠΑ ({form.watch(`formulation_details.${index}.budget_versions.epa`)?.length || 0})</TabsTrigger>
                             </TabsList>
                             
-                            {/* ΠΔΕ Tab */}
+                            {/* ΠΔΕ Tab - Multiple Versions */}
                             <TabsContent value="pde">
                               <Card>
                                 <CardHeader>
-                                  <CardTitle className="text-base">Πρόγραμμα Δημοσίων Επενδύσεων (ΠΔΕ)</CardTitle>
+                                  <CardTitle className="text-base flex justify-between items-center">
+                                    <span>Πρόγραμμα Δημοσίων Επενδύσεων (ΠΔΕ)</span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const formulations = form.getValues("formulation_details");
+                                        const currentFormulation = formulations[index];
+                                        const newPdeVersion = {
+                                          version_name: `Έκδοση ${(currentFormulation.budget_versions.pde?.length || 0) + 1}`,
+                                          project_budget: "",
+                                          total_public_expense: "",
+                                          eligible_public_expense: "",
+                                          protocol_number: "",
+                                          ada: "",
+                                          decision_date: "",
+                                          decision_type: "Έγκριση" as const,
+                                          status: "Ενεργή" as const,
+                                          comments: ""
+                                        };
+                                        
+                                        if (!currentFormulation.budget_versions.pde) {
+                                          currentFormulation.budget_versions.pde = [];
+                                        }
+                                        currentFormulation.budget_versions.pde.push(newPdeVersion);
+                                        form.setValue("formulation_details", formulations);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Προσθήκη Έκδοσης ΠΔΕ
+                                    </Button>
+                                  </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.amount`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Ποσό (€)</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 1000000" type="number" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.protocol_number`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 12345/2024" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.ada`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>ΑΔΑ</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 6ΔΛ5465ΦΘΞ-ΨΩΣ" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.decision_date`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Ημερομηνία Απόφασης</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} type="date" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.decision_type`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Τύπος Απόφασης</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Επιλέξτε τύπο" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              <SelectItem value="Έγκριση">Έγκριση</SelectItem>
-                                              <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
-                                              <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.pde.status`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Κατάσταση</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                              <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                              <SelectItem value="Αναστολή">Αναστολή</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <FormField
-                                    control={form.control}
-                                    name={`formulation_details.${index}.budget_versions.pde.comments`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Σχόλια ΠΔΕ</FormLabel>
-                                        <FormControl>
-                                          <Textarea {...field} placeholder="Σχόλια για την έκδοση ΠΔΕ..." />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
+                                <CardContent>
+                                  {form.watch(`formulation_details.${index}.budget_versions.pde`)?.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                      <p>Δεν υπάρχουν εκδόσεις ΠΔΕ</p>
+                                      <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΠΔΕ" για να προσθέσετε την πρώτη έκδοση</p>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-6">
+                                      {form.watch(`formulation_details.${index}.budget_versions.pde`)?.map((_, pdeIndex) => (
+                                        <div key={pdeIndex} className="border rounded-lg p-4 bg-gray-50">
+                                          <div className="flex justify-between items-center mb-4">
+                                            <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                const formulations = form.getValues("formulation_details");
+                                                formulations[index].budget_versions.pde.splice(pdeIndex, 1);
+                                                form.setValue("formulation_details", formulations);
+                                              }}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.version_name`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Όνομα Έκδοσης</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_date`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Ημερομηνία Απόφασης</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} type="date" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.project_budget`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Προϋπολογισμός Έργου (€)</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 1000000" type="number" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.total_public_expense`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 800000" type="number" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.eligible_public_expense`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 750000" type="number" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.protocol_number`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 12345/2024" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.ada`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>ΑΔΑ</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 6ΔΛ5465ΦΘΞ-ΨΩΣ" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_type`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Τύπος Απόφασης</FormLabel>
+                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε τύπο" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                                      <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.status`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Κατάσταση</FormLabel>
+                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="Ενεργή">Ενεργή</SelectItem>
+                                                      <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
+                                                      <SelectItem value="Αναστολή">Αναστολή</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <FormField
+                                            control={form.control}
+                                            name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.comments`}
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Σχόλια ΠΔΕ</FormLabel>
+                                                <FormControl>
+                                                  <Textarea {...field} placeholder="Σχόλια για αυτή την έκδοση ΠΔΕ..." />
+                                                </FormControl>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </CardContent>
                               </Card>
                             </TabsContent>
                             
-                            {/* ΕΠΑ Tab */}
+                            {/* ΕΠΑ Tab - Multiple Versions */}
                             <TabsContent value="epa">
                               <Card>
                                 <CardHeader>
-                                  <CardTitle className="text-base">Ευρωπαϊκό Πρόγραμμα Ανάπτυξης (ΕΠΑ)</CardTitle>
+                                  <CardTitle className="text-base flex justify-between items-center">
+                                    <span>Ευρωπαϊκό Πρόγραμμα Ανάπτυξης (ΕΠΑ)</span>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const formulations = form.getValues("formulation_details");
+                                        const currentFormulation = formulations[index];
+                                        const newEpaVersion = {
+                                          version_name: `ΕΠΑ ${(currentFormulation.budget_versions.epa?.length || 0) + 1}`,
+                                          epa_version: "",
+                                          amount: "",
+                                          protocol_number: "",
+                                          ada: "",
+                                          decision_date: "",
+                                          decision_type: "Έγκριση" as const,
+                                          status: "Ενεργή" as const,
+                                          comments: ""
+                                        };
+                                        
+                                        if (!currentFormulation.budget_versions.epa) {
+                                          currentFormulation.budget_versions.epa = [];
+                                        }
+                                        currentFormulation.budget_versions.epa.push(newEpaVersion);
+                                        form.setValue("formulation_details", formulations);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Προσθήκη Έκδοσης ΕΠΑ
+                                    </Button>
+                                  </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-4">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.amount`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Ποσό (€)</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 1000000" type="number" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.protocol_number`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 12345/2024" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.ada`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>ΑΔΑ</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} placeholder="π.χ. 6ΔΛ5465ΦΘΞ-ΨΩΣ" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.decision_date`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Ημερομηνία Απόφασης</FormLabel>
-                                          <FormControl>
-                                            <Input {...field} type="date" />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.decision_type`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Τύπος Απόφασης</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Επιλέξτε τύπο" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              <SelectItem value="Έγκριση">Έγκριση</SelectItem>
-                                              <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
-                                              <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormItem>
-                                      )}
-                                    />
-                                    <FormField
-                                      control={form.control}
-                                      name={`formulation_details.${index}.budget_versions.epa.status`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Κατάσταση</FormLabel>
-                                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                            <FormControl>
-                                              <SelectTrigger>
-                                                <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                              <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                              <SelectItem value="Αναστολή">Αναστολή</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </FormItem>
-                                      )}
-                                    />
-                                  </div>
-                                  
-                                  <FormField
-                                    control={form.control}
-                                    name={`formulation_details.${index}.budget_versions.epa.comments`}
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormLabel>Σχόλια ΕΠΑ</FormLabel>
-                                        <FormControl>
-                                          <Textarea {...field} placeholder="Σχόλια για την έκδοση ΕΠΑ..." />
-                                        </FormControl>
-                                      </FormItem>
-                                    )}
-                                  />
+                                <CardContent>
+                                  {form.watch(`formulation_details.${index}.budget_versions.epa`)?.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                      <p>Δεν υπάρχουν εκδόσεις ΕΠΑ</p>
+                                      <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΕΠΑ" για να προσθέσετε την πρώτη έκδοση</p>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-6">
+                                      {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((_, epaIndex) => (
+                                        <div key={epaIndex} className="border rounded-lg p-4 bg-gray-50">
+                                          <div className="flex justify-between items-center mb-4">
+                                            <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                const formulations = form.getValues("formulation_details");
+                                                formulations[index].budget_versions.epa.splice(epaIndex, 1);
+                                                form.setValue("formulation_details", formulations);
+                                              }}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.version_name`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Όνομα Έκδοσης</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. ΕΠΑ 2021-2027" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.epa_version`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Έκδοση ΕΠΑ</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. v2.1" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.amount`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Ποσό (€)</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 900000" type="number" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.protocol_number`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. 67890/2024" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.ada`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>ΑΔΑ</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} placeholder="π.χ. ΤΓΕΚ7891ΦΗ-ΓΞΤ" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Ημερομηνία Απόφασης</FormLabel>
+                                                  <FormControl>
+                                                    <Input {...field} type="date" />
+                                                  </FormControl>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_type`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Τύπος Απόφασης</FormLabel>
+                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε τύπο" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                                      <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </FormItem>
+                                              )}
+                                            />
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.status`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Κατάσταση</FormLabel>
+                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                                                      </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                      <SelectItem value="Ενεργή">Ενεργή</SelectItem>
+                                                      <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
+                                                      <SelectItem value="Αναστολή">Αναστολή</SelectItem>
+                                                    </SelectContent>
+                                                  </Select>
+                                                </FormItem>
+                                              )}
+                                            />
+                                          </div>
+                                          
+                                          <FormField
+                                            control={form.control}
+                                            name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.comments`}
+                                            render={({ field }) => (
+                                              <FormItem>
+                                                <FormLabel>Σχόλια ΕΠΑ</FormLabel>
+                                                <FormControl>
+                                                  <Textarea {...field} placeholder="Σχόλια για αυτή την έκδοση ΕΠΑ..." />
+                                                </FormControl>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </CardContent>
                               </Card>
                             </TabsContent>
@@ -1945,21 +2064,17 @@ export default function NewProjectPage() {
                         formulations.push({
                           sa: "ΝΑ853",
                           enumeration_code: "",
-                          budget_versions: {
-                            pde: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" },
-                            epa: { amount: "", protocol_number: "", ada: "", decision_date: "", decision_type: "Έγκριση", status: "Ενεργή", comments: "" }
-                          },
                           protocol_number: "",
                           ada: "",
                           decision_year: "",
-                          project_budget: "",
-                          epa_version: "",
-                          total_public_expense: "",
-                          eligible_public_expense: "",
                           decision_status: "Ενεργή",
                           change_type: "Έγκριση",
                           connected_decisions: [],
                           comments: "",
+                          budget_versions: {
+                            pde: [],
+                            epa: []
+                          },
                         });
                         form.setValue("formulation_details", formulations);
                       }}
