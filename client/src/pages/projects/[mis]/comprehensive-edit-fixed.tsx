@@ -354,6 +354,79 @@ export default function ComprehensiveEditFixed() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
+
+  // 🔗 Auto-inheritance logic για connected decisions
+  const handleConnectedDecisionChange = (
+    formulationIndex: number, 
+    budgetType: 'pde' | 'epa', 
+    versionIndex: number, 
+    newDecisionId: number,
+    isAdding: boolean = true
+  ) => {
+    const formulations = form.getValues('formulation_details');
+    const versions = formulations[formulationIndex].budget_versions[budgetType];
+    
+    if (isAdding) {
+      // Προσθήκη decision στην τρέχουσα έκδοση
+      const currentDecisions = versions[versionIndex].connected_decisions || [];
+      if (!currentDecisions.includes(newDecisionId)) {
+        currentDecisions.push(newDecisionId);
+        versions[versionIndex].connected_decisions = currentDecisions;
+        
+        // 🚀 AUTO-INHERITANCE: Προσθήκη σε όλες τις μεταγενέστερες εκδόσεις
+        for (let i = versionIndex + 1; i < versions.length; i++) {
+          const laterVersionDecisions = versions[i].connected_decisions || [];
+          if (!laterVersionDecisions.includes(newDecisionId)) {
+            versions[i].connected_decisions = [...laterVersionDecisions, newDecisionId];
+          }
+        }
+        
+        // Ενημέρωση form
+        form.setValue(`formulation_details.${formulationIndex}.budget_versions.${budgetType}`, versions);
+        
+        console.log(`[Auto-Inheritance] Decision ${newDecisionId} added to ${budgetType} version ${versionIndex} and ${versions.length - versionIndex - 1} later versions`);
+      }
+    }
+  };
+
+  // 🗑️ Helper για αφαίρεση decision (χωρίς auto-inheritance για removal)
+  const handleConnectedDecisionRemoval = (
+    formulationIndex: number,
+    budgetType: 'pde' | 'epa',
+    versionIndex: number,
+    decisionIdToRemove: number
+  ) => {
+    const formulations = form.getValues('formulation_details');
+    const versions = formulations[formulationIndex].budget_versions[budgetType];
+    
+    const currentDecisions = versions[versionIndex].connected_decisions || [];
+    versions[versionIndex].connected_decisions = currentDecisions.filter(id => id !== decisionIdToRemove);
+    
+    form.setValue(`formulation_details.${formulationIndex}.budget_versions.${budgetType}`, versions);
+    
+    console.log(`[Decision Removal] Decision ${decisionIdToRemove} removed from ${budgetType} version ${versionIndex}`);
+  };
+
+  // 🔍 Helper για εντοπισμό inherited vs direct decisions
+  const getDecisionOrigin = (
+    formulationIndex: number,
+    budgetType: 'pde' | 'epa',
+    versionIndex: number,
+    decisionId: number
+  ): { isInherited: boolean; inheritedFromVersion: number | null } => {
+    const formulations = form.getValues('formulation_details');
+    const versions = formulations[formulationIndex].budget_versions[budgetType];
+    
+    // Ελέγχουμε αν το decision υπάρχει σε παλαιότερη έκδοση
+    for (let i = versionIndex - 1; i >= 0; i--) {
+      const olderVersionDecisions = versions[i].connected_decisions || [];
+      if (olderVersionDecisions.includes(decisionId)) {
+        return { isInherited: true, inheritedFromVersion: i };
+      }
+    }
+    
+    return { isInherited: false, inheritedFromVersion: null };
+  };
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(
     new Set(),
   );
@@ -414,17 +487,14 @@ export default function ComprehensiveEditFixed() {
         {
           sa: "ΝΑ853",
           enumeration_code: "",
-          protocol_number: "",
-          ada: "",
           decision_year: "",
-          project_budget: "",
-          epa_version: "",
-          total_public_expense: "",
-          eligible_public_expense: "",
           decision_status: "Ενεργή",
           change_type: "Έγκριση",
-          connected_decisions: [],
           comments: "",
+          budget_versions: {
+            pde: [],
+            epa: []
+          }
         },
       ],
       changes: [{ 
@@ -944,25 +1014,6 @@ export default function ComprehensiveEditFixed() {
               budget_versions: formulation.budget_versions,
               decision_status: formulation.decision_status,
               change_type: formulation.change_type,
-              connected_decisions: (() => {
-                // Convert indices back to decision IDs
-                if (!formulation.connected_decisions || !Array.isArray(formulation.connected_decisions)) {
-                  return [];
-                }
-                
-                const decisionIds = formulation.connected_decisions
-                  .map((index: number) => {
-                    const decision = decisionsData?.[index];
-                    return decision?.id;
-                  })
-                  .filter((id: any) => id !== undefined);
-                
-                console.log(
-                  `[FormulationSave] Converting indices ${JSON.stringify(formulation.connected_decisions)} to IDs ${JSON.stringify(decisionIds)}`,
-                );
-                
-                return decisionIds;
-              })(),
               comments: formulation.comments,
             };
 
@@ -3187,10 +3238,10 @@ export default function ComprehensiveEditFixed() {
                                         <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΠΔΕ" για να προσθέσετε την πρώτη έκδοση</p>
                                       </div>
                                     ) : (
-                                      <div className="space-y-6">
+                                      <div className="space-y-4">
                                         {form.watch(`formulation_details.${index}.budget_versions.pde`)?.map((_, pdeIndex) => (
-                                          <div key={pdeIndex} className="border rounded-lg p-4 bg-gray-50">
-                                            <div className="flex justify-between items-center mb-4">
+                                          <div key={pdeIndex} className="border rounded-lg p-3 bg-gray-50">
+                                            <div className="flex justify-between items-center mb-3">
                                               <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
                                               <Button
                                                 type="button"
@@ -3206,7 +3257,7 @@ export default function ComprehensiveEditFixed() {
                                               </Button>
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.version_name`}
@@ -3272,7 +3323,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.protocol_number`}
@@ -3299,7 +3350,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_type`}
@@ -3354,11 +3405,9 @@ export default function ComprehensiveEditFixed() {
                                                   <FormControl>
                                                     <Select
                                                       onValueChange={(value) => {
-                                                        const currentDecisions = field.value || [];
                                                         const decisionId = parseInt(value);
-                                                        if (!currentDecisions.includes(decisionId)) {
-                                                          field.onChange([...currentDecisions, decisionId]);
-                                                        }
+                                                        // 🚀 Auto-inheritance logic για PDE
+                                                        handleConnectedDecisionChange(index, 'pde', pdeIndex, decisionId, true);
                                                       }}
                                                     >
                                                       <SelectTrigger>
@@ -3377,19 +3426,27 @@ export default function ComprehensiveEditFixed() {
                                                     <div className="flex flex-wrap gap-1 mt-2">
                                                       {field.value.map((decisionId: number) => {
                                                         const decision = form.watch("decisions")?.[decisionId];
+                                                        const { isInherited, inheritedFromVersion } = getDecisionOrigin(index, 'pde', pdeIndex, decisionId);
+                                                        
                                                         return (
                                                           <span
                                                             key={decisionId}
-                                                            className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
+                                                            className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                                                              isInherited 
+                                                                ? 'bg-orange-100 text-orange-800 border border-orange-300' 
+                                                                : 'bg-blue-100 text-blue-800 border border-blue-300'
+                                                            }`}
+                                                            title={isInherited ? `Κληρονομήθηκε από έκδοση ${inheritedFromVersion! + 1}` : 'Άμεσα προστεθειμένη απόφαση'}
                                                           >
+                                                            {isInherited && <span className="mr-1">🔗</span>}
                                                             {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
                                                             <button
                                                               type="button"
                                                               onClick={() => {
-                                                                const newDecisions = field.value.filter((id: number) => id !== decisionId);
-                                                                field.onChange(newDecisions);
+                                                                // 🗑️ PDE Removal με dedicated function
+                                                                handleConnectedDecisionRemoval(index, 'pde', pdeIndex, decisionId);
                                                               }}
-                                                              className="hover:text-blue-600"
+                                                              className={isInherited ? 'hover:text-orange-600' : 'hover:text-blue-600'}
                                                             >
                                                               ×
                                                             </button>
@@ -3461,10 +3518,10 @@ export default function ComprehensiveEditFixed() {
                                         <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΕΠΑ" για να προσθέσετε την πρώτη έκδοση</p>
                                       </div>
                                     ) : (
-                                      <div className="space-y-6">
+                                      <div className="space-y-4">
                                         {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((_, epaIndex) => (
-                                          <div key={epaIndex} className="border rounded-lg p-4 bg-gray-50">
-                                            <div className="flex justify-between items-center mb-4">
+                                          <div key={epaIndex} className="border rounded-lg p-3 bg-gray-50">
+                                            <div className="flex justify-between items-center mb-3">
                                               <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
                                               <Button
                                                 type="button"
@@ -3519,7 +3576,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
@@ -3546,7 +3603,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.ada`}
@@ -3616,11 +3673,9 @@ export default function ComprehensiveEditFixed() {
                                                   <FormControl>
                                                     <Select
                                                       onValueChange={(value) => {
-                                                        const currentDecisions = field.value || [];
                                                         const decisionId = parseInt(value);
-                                                        if (!currentDecisions.includes(decisionId)) {
-                                                          field.onChange([...currentDecisions, decisionId]);
-                                                        }
+                                                        // 🚀 Auto-inheritance logic για EPA
+                                                        handleConnectedDecisionChange(index, 'epa', epaIndex, decisionId, true);
                                                       }}
                                                     >
                                                       <SelectTrigger>
@@ -3639,19 +3694,27 @@ export default function ComprehensiveEditFixed() {
                                                     <div className="flex flex-wrap gap-1 mt-2">
                                                       {field.value.map((decisionId: number) => {
                                                         const decision = form.watch("decisions")?.[decisionId];
+                                                        const { isInherited, inheritedFromVersion } = getDecisionOrigin(index, 'epa', epaIndex, decisionId);
+                                                        
                                                         return (
                                                           <span
                                                             key={decisionId}
-                                                            className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
+                                                            className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
+                                                              isInherited 
+                                                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
+                                                                : 'bg-green-100 text-green-800 border border-green-300'
+                                                            }`}
+                                                            title={isInherited ? `Κληρονομήθηκε από έκδοση ${inheritedFromVersion! + 1}` : 'Άμεσα προστεθειμένη απόφαση'}
                                                           >
+                                                            {isInherited && <span className="mr-1">🔗</span>}
                                                             {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
                                                             <button
                                                               type="button"
                                                               onClick={() => {
-                                                                const newDecisions = field.value.filter((id: number) => id !== decisionId);
-                                                                field.onChange(newDecisions);
+                                                                // 🗑️ EPA Removal με dedicated function
+                                                                handleConnectedDecisionRemoval(index, 'epa', epaIndex, decisionId);
                                                               }}
-                                                              className="hover:text-green-600"
+                                                              className={isInherited ? 'hover:text-yellow-600' : 'hover:text-green-600'}
                                                             >
                                                               ×
                                                             </button>
@@ -3750,77 +3813,6 @@ export default function ComprehensiveEditFixed() {
                             />
                           </div>
 
-                          {/* Connected Decisions Multi-select */}
-                          <FormField
-                            control={form.control}
-                            name={`formulation_details.${index}.connected_decisions`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <div className="mb-4">
-                                  <FormLabel className="text-base">
-                                    Αποφάσεις που συνδέονται
-                                  </FormLabel>
-                                  <div className="grid grid-cols-1 gap-2 mt-2">
-                                    {(decisionsData || []).map(
-                                      (
-                                        decision: any,
-                                        decisionIndex: number,
-                                      ) => (
-                                        <FormItem
-                                          key={decisionIndex}
-                                          className="flex flex-row items-start space-x-3 space-y-0"
-                                        >
-                                          <FormControl>
-                                            <Checkbox
-                                              checked={
-                                                field.value?.includes(
-                                                  decisionIndex,
-                                                ) || false
-                                              }
-                                              onCheckedChange={(checked) => {
-                                                const currentValue =
-                                                  field.value || [];
-                                                if (checked) {
-                                                  field.onChange([
-                                                    ...currentValue,
-                                                    decisionIndex,
-                                                  ]);
-                                                } else {
-                                                  field.onChange(
-                                                    currentValue.filter(
-                                                      (item: number) =>
-                                                        item !== decisionIndex,
-                                                    ),
-                                                  );
-                                                }
-                                              }}
-                                            />
-                                          </FormControl>
-                                          <FormLabel className="text-sm font-normal cursor-pointer">
-                                            Απόφαση {decisionIndex + 1}:{" "}
-                                            {decision.protocol_number ||
-                                              decision.kya ||
-                                              `#${decisionIndex + 1}`}{" "}
-                                            (
-                                            {decision.decision_type ||
-                                              "Έγκριση"}
-                                            )
-                                          </FormLabel>
-                                        </FormItem>
-                                      ),
-                                    )}
-                                    {(!decisionsData ||
-                                      decisionsData.length === 0) && (
-                                      <p className="text-sm text-gray-500">
-                                        Δεν υπάρχουν διαθέσιμες αποφάσεις για
-                                        σύνδεση
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
 
                           <FormField
                             control={form.control}

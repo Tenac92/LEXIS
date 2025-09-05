@@ -114,3 +114,25 @@ Core architectural decisions include:
 - Enhanced "Προσθήκη Απόφασης" (Add More Decision) button functionality
 - Improved button styling for consistency and professional appearance
 - Added proper form state management for all add/delete operations
+
+### ✅ Connected Decisions Auto-Inheritance System (September 5, 2025)
+
+**🚀 Auto-Inheritance Logic Implementation**
+- Implemented smart auto-inheritance system for connected decisions at PDE/EPA budget version level
+- When a decision is added to an older version, it automatically propagates to all newer versions within the same formulation
+- Added comprehensive utility functions (handleConnectedDecisionChange, handleConnectedDecisionRemoval) for managing inheritance logic
+- **Business Rule**: Connected decisions automatically inherit from older to newer budget versions, ensuring consistency across formulation versions
+
+**🎨 Visual Decision Origin Indicators**
+- Added visual differentiation between inherited and direct connected decisions with color-coded tags
+- **PDE Decisions**: Blue tags for direct decisions, orange tags with 🔗 icon for inherited decisions
+- **EPA Decisions**: Green tags for direct decisions, yellow tags with 🔗 icon for inherited decisions
+- Tooltip hover functionality shows inheritance origin (e.g., "Κληρονομήθηκε από έκδοση 1")
+- Enhanced user experience with clear visual feedback on decision propagation patterns
+
+**🎯 Compact UI Improvements**
+- Reduced vertical spacing throughout formulation sections (space-y-6 → space-y-4, space-y-4 → space-y-3)
+- Minimized padding in version containers (p-4 → p-3) for more efficient space utilization
+- Optimized grid layouts with tighter gaps (gap-4 → gap-3) for better content density
+- Enhanced form responsiveness while maintaining professional visual hierarchy
+- **Result**: More compact, user-friendly interface that displays more information per screen without sacrificing readability
