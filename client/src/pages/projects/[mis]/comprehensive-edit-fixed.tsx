@@ -308,6 +308,7 @@ const comprehensiveProjectSchema = z.object({
             decision_date: z.string().default(""),
             decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
             status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+            connected_decisions: z.array(z.number()).default([]), // Each PDE version can have different connected decisions
             comments: z.string().default(""),
           })).default([]),
           epa: z.array(z.object({
@@ -319,6 +320,7 @@ const comprehensiveProjectSchema = z.object({
             decision_date: z.string().default(""),
             decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
             status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+            connected_decisions: z.array(z.number()).default([]), // Each EPA version can have different connected decisions
             comments: z.string().default(""),
           })).default([]),
         }).default({ pde: [], epa: [] }),
@@ -3203,6 +3205,7 @@ export default function ComprehensiveEditFixed() {
                                             decision_date: "",
                                             decision_type: "Έγκριση",
                                             status: "Ενεργή",
+                                            connected_decisions: [],
                                             comments: ""
                                           });
                                           form.setValue("formulation_details", formulations);
@@ -3377,6 +3380,64 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
+                                            {/* Connected Decisions Multi-Select for PDE Version */}
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.connected_decisions`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
+                                                  <FormControl>
+                                                    <Select
+                                                      onValueChange={(value) => {
+                                                        const currentDecisions = field.value || [];
+                                                        const decisionId = parseInt(value);
+                                                        if (!currentDecisions.includes(decisionId)) {
+                                                          field.onChange([...currentDecisions, decisionId]);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε αποφάσεις..." />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {form.watch("decisions")?.map((decision, decIndex) => (
+                                                          <SelectItem key={decIndex} value={decIndex.toString()}>
+                                                            {decision.protocol_number || `Απόφαση ${decIndex + 1}`}
+                                                          </SelectItem>
+                                                        ))}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </FormControl>
+                                                  {field.value && field.value.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                      {field.value.map((decisionId: number) => {
+                                                        const decision = form.watch("decisions")?.[decisionId];
+                                                        return (
+                                                          <span
+                                                            key={decisionId}
+                                                            className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
+                                                          >
+                                                            {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
+                                                            <button
+                                                              type="button"
+                                                              onClick={() => {
+                                                                const newDecisions = field.value.filter((id: number) => id !== decisionId);
+                                                                field.onChange(newDecisions);
+                                                              }}
+                                                              className="hover:text-blue-600"
+                                                            >
+                                                              ×
+                                                            </button>
+                                                          </span>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </FormItem>
+                                              )}
+                                            />
+                                            
                                             <FormField
                                               control={form.control}
                                               name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.comments`}
@@ -3418,6 +3479,7 @@ export default function ComprehensiveEditFixed() {
                                             decision_date: "",
                                             decision_type: "Έγκριση",
                                             status: "Ενεργή",
+                                            connected_decisions: [],
                                             comments: ""
                                           });
                                           form.setValue("formulation_details", formulations);
@@ -3579,6 +3641,64 @@ export default function ComprehensiveEditFixed() {
                                                 )}
                                               />
                                             </div>
+                                            
+                                            {/* Connected Decisions Multi-Select for EPA Version */}
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.connected_decisions`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
+                                                  <FormControl>
+                                                    <Select
+                                                      onValueChange={(value) => {
+                                                        const currentDecisions = field.value || [];
+                                                        const decisionId = parseInt(value);
+                                                        if (!currentDecisions.includes(decisionId)) {
+                                                          field.onChange([...currentDecisions, decisionId]);
+                                                        }
+                                                      }}
+                                                    >
+                                                      <SelectTrigger>
+                                                        <SelectValue placeholder="Επιλέξτε αποφάσεις..." />
+                                                      </SelectTrigger>
+                                                      <SelectContent>
+                                                        {form.watch("decisions")?.map((decision, decIndex) => (
+                                                          <SelectItem key={decIndex} value={decIndex.toString()}>
+                                                            {decision.protocol_number || `Απόφαση ${decIndex + 1}`}
+                                                          </SelectItem>
+                                                        ))}
+                                                      </SelectContent>
+                                                    </Select>
+                                                  </FormControl>
+                                                  {field.value && field.value.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-2">
+                                                      {field.value.map((decisionId: number) => {
+                                                        const decision = form.watch("decisions")?.[decisionId];
+                                                        return (
+                                                          <span
+                                                            key={decisionId}
+                                                            className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
+                                                          >
+                                                            {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
+                                                            <button
+                                                              type="button"
+                                                              onClick={() => {
+                                                                const newDecisions = field.value.filter((id: number) => id !== decisionId);
+                                                                field.onChange(newDecisions);
+                                                              }}
+                                                              className="hover:text-green-600"
+                                                            >
+                                                              ×
+                                                            </button>
+                                                          </span>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </FormItem>
+                                              )}
+                                            />
                                             
                                             <FormField
                                               control={form.control}
