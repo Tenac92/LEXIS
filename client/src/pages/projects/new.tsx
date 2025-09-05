@@ -32,38 +32,50 @@ function safeText(value: any): string {
   return "";
 }
 
-// Helper function to generate enumeration code based on ΣΑ type
-function generateEnumerationCode(saType: string, currentCode?: string): string {
-  const currentYear = new Date().getFullYear();
-  
-  // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
-  if (currentCode) {
-    const patterns = {
-      "ΝΑ853": /^\d{4}ΕΠ\d{8}$/,
-      "ΝΑ271": /^\d{4}ΣΕ\d{8}$/,
-      "E069": /^\d{4}ΕΦ\d{8}$/
+// Hook for validating ΣΑ numbers in real-time
+function useSAValidation() {
+  const [validationStates, setValidationStates] = useState<Record<string, { 
+    isChecking: boolean;
+    exists: boolean;
+    existingProject?: {
+      id: number;
+      mis: number;
+      project_title: string;
     };
-    
-    if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
-      return currentCode;
+  }>>({});
+
+  const validateSA = async (saValue: string, fieldKey: string) => {
+    if (!saValue?.trim()) {
+      setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
+      return;
     }
-  }
-  
-  // Generate new code based on ΣΑ type
-  const prefixes = {
-    "ΝΑ853": "ΕΠ",
-    "ΝΑ271": "ΣΕ", 
-    "E069": "ΕΦ"
+
+    setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: true, exists: false } }));
+
+    try {
+      const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
+      setValidationStates(prev => ({ 
+        ...prev, 
+        [fieldKey]: { 
+          isChecking: false, 
+          exists: response.exists,
+          existingProject: response.existingProject
+        } 
+      }));
+    } catch (error) {
+      console.error('Error validating ΣΑ:', error);
+      setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
+    }
   };
-  
-  const prefix = prefixes[saType as keyof typeof prefixes];
-  if (!prefix) return currentCode || "";
-  
-  // Generate a sequential number (in real implementation, this would come from database)
-  const sequentialNumber = Math.floor(Math.random() * 99999999).toString().padStart(8, '0');
-  
-  return `${currentYear}${prefix}${sequentialNumber}`;
+
+  const getValidationState = (fieldKey: string) => {
+    return validationStates[fieldKey] || { isChecking: false, exists: false };
+  };
+
+  return { validateSA, getValidationState };
 }
+
+// Note: Enumeration codes are now user-entered fields, not auto-generated
 
 // Helper function to convert FEK data from old string format to new object format
 function normalizeFekData(fekValue: any): { year: string; issue: string; number: string } {
@@ -201,6 +213,7 @@ export default function NewProjectPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
+  const { validateSA, getValidationState } = useSAValidation();
 
   // Form initialization matching edit form
   const form = useForm<ComprehensiveFormData>({
@@ -232,7 +245,7 @@ export default function NewProjectPage() {
       project_details: { 
         mis: "", 
         sa: "ΝΑ853", 
-        enumeration_code: generateEnumerationCode("ΝΑ853"), 
+        enumeration_code: "", 
         inc_year: "", 
         project_title: "", 
         project_description: "", 
@@ -242,7 +255,7 @@ export default function NewProjectPage() {
       },
       formulation_details: [{ 
         sa: "ΝΑ853", 
-        enumeration_code: generateEnumerationCode("ΝΑ853"), 
+        enumeration_code: "", 
         protocol_number: "", 
         ada: "", 
         decision_year: "", 
@@ -1056,9 +1069,7 @@ export default function NewProjectPage() {
                               onValueChange={(value) => {
                                 field.onChange(value);
                                 // Auto-populate enumeration code based on selected ΣΑ
-                                const currentEnumerationCode = form.getValues("project_details.enumeration_code");
-                                const newEnumerationCode = generateEnumerationCode(value, currentEnumerationCode);
-                                form.setValue("project_details.enumeration_code", newEnumerationCode);
+                                // Enumeration code is now user-entered, not auto-generated
                               }} 
                               defaultValue={field.value}
                             >
@@ -1080,14 +1091,59 @@ export default function NewProjectPage() {
                       <FormField
                         control={form.control}
                         name="project_details.enumeration_code"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
-                            </FormControl>
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const validationState = getValidationState("project_details.enumeration_code");
+                          return (
+                            <FormItem>
+                              <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input 
+                                    {...field} 
+                                    placeholder="π.χ. ΝΑ853, ΝΑ271, E069" 
+                                    onChange={(e) => {
+                                      field.onChange(e);
+                                      if (e.target.value.trim()) {
+                                        const timeoutId = setTimeout(() => {
+                                          validateSA(e.target.value.trim(), "project_details.enumeration_code");
+                                        }, 500);
+                                        return () => clearTimeout(timeoutId);
+                                      }
+                                    }}
+                                    className={
+                                      validationState.exists 
+                                        ? "border-red-500" 
+                                        : validationState.isChecking 
+                                        ? "border-yellow-500" 
+                                        : field.value && !validationState.exists && !validationState.isChecking
+                                        ? "border-green-500"
+                                        : ""
+                                    }
+                                  />
+                                  {validationState.isChecking && (
+                                    <RefreshCw className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-yellow-500" />
+                                  )}
+                                  {field.value && !validationState.isChecking && !validationState.exists && (
+                                    <CheckCircle className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />
+                                  )}
+                                  {validationState.exists && (
+                                    <X className="absolute right-2 top-2.5 h-4 w-4 text-red-500" />
+                                  )}
+                                </div>
+                              </FormControl>
+                              {validationState.exists && validationState.existingProject && (
+                                <div className="text-sm text-red-600 mt-1">
+                                  ΣΑ ήδη χρησιμοποιείται στο έργο #{validationState.existingProject.mis} - {validationState.existingProject.project_title}
+                                </div>
+                              )}
+                              {field.value && !validationState.isChecking && !validationState.exists && (
+                                <div className="text-sm text-green-600 mt-1">
+                                  ΣΑ διαθέσιμο ✓
+                                </div>
+                              )}
+                            </FormItem>
+                          );
+                        }}
                       />
                     </div>
 
@@ -1234,9 +1290,7 @@ export default function NewProjectPage() {
                                   onValueChange={(value) => {
                                     field.onChange(value);
                                     // Auto-populate enumeration code based on selected ΣΑ
-                                    const currentEnumerationCode = form.getValues(`formulation_details.${index}.enumeration_code`);
-                                    const newEnumerationCode = generateEnumerationCode(value, currentEnumerationCode);
-                                    form.setValue(`formulation_details.${index}.enumeration_code`, newEnumerationCode);
+                                    // Enumeration code is now user-entered, not auto-generated
                                   }} 
                                   defaultValue={field.value}
                                 >
@@ -1258,14 +1312,60 @@ export default function NewProjectPage() {
                           <FormField
                             control={form.control}
                             name={`formulation_details.${index}.enumeration_code`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="π.χ. 2023ΕΠ00100001" />
-                                </FormControl>
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              const fieldKey = `formulation_details.${index}.enumeration_code`;
+                              const validationState = getValidationState(fieldKey);
+                              return (
+                                <FormItem>
+                                  <FormLabel>Κωδικός Απαρίθμησης</FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <Input 
+                                        {...field} 
+                                        placeholder="π.χ. ΝΑ853, ΝΑ271, E069" 
+                                        onChange={(e) => {
+                                          field.onChange(e);
+                                          if (e.target.value.trim()) {
+                                            const timeoutId = setTimeout(() => {
+                                              validateSA(e.target.value.trim(), fieldKey);
+                                            }, 500);
+                                            return () => clearTimeout(timeoutId);
+                                          }
+                                        }}
+                                        className={
+                                          validationState.exists 
+                                            ? "border-red-500" 
+                                            : validationState.isChecking 
+                                            ? "border-yellow-500" 
+                                            : field.value && !validationState.exists && !validationState.isChecking
+                                            ? "border-green-500"
+                                            : ""
+                                        }
+                                      />
+                                      {validationState.isChecking && (
+                                        <RefreshCw className="absolute right-2 top-2.5 h-4 w-4 animate-spin text-yellow-500" />
+                                      )}
+                                      {field.value && !validationState.isChecking && !validationState.exists && (
+                                        <CheckCircle className="absolute right-2 top-2.5 h-4 w-4 text-green-500" />
+                                      )}
+                                      {validationState.exists && (
+                                        <X className="absolute right-2 top-2.5 h-4 w-4 text-red-500" />
+                                      )}
+                                    </div>
+                                  </FormControl>
+                                  {validationState.exists && validationState.existingProject && (
+                                    <div className="text-sm text-red-600 mt-1">
+                                      ΣΑ ήδη χρησιμοποιείται στο έργο #{validationState.existingProject.mis} - {validationState.existingProject.project_title}
+                                    </div>
+                                  )}
+                                  {field.value && !validationState.isChecking && !validationState.exists && (
+                                    <div className="text-sm text-green-600 mt-1">
+                                      ΣΑ διαθέσιμο ✓
+                                    </div>
+                                  )}
+                                </FormItem>
+                              );
+                            }}
                           />
 
                           <FormField

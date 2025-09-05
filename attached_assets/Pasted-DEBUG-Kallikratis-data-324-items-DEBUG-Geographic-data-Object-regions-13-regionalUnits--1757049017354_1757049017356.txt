@@ -1,0 +1,72 @@
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+Form submission triggered: 
+Object {decisions: Array(1), event_details: {…}, location_details: Array(1), project_details: {…}, formulation_details: Array(1), …}
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+=== NEW PROJECT CREATION ===
+Form data: 
+Object {decisions: Array(1), event_details: {…}, location_details: Array(1), project_details: {…}, formulation_details: Array(1), …}
+1. Creating core project data: 
+Object {mis: 213123213, na853: "ΝΑ853", project_title: "test", event_description: "test", event_year: "", …}
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Failed to create project", requestInfo: {…}, stack: "Error: Failed to create project↵    at apiRequest…"}
+
+Error creating project: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}
+=== NEW PROJECT CREATION ===
+Form data: 
+Object {decisions: Array(1), event_details: {…}, location_details: Array(1), project_details: {…}, formulation_details: Array(1), …}
+1. Creating core project data: 
+Object {mis: 213123213, na853: "ΝΑ853", project_title: "test", event_description: "test", event_year: "", …}
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Failed to create project", requestInfo: {…}, stack: "Error: Failed to create project↵    at apiRequest…"}
+
+Error creating project: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+isApiError: true
+originalError: Error
+requestInfo: Object
+message: "Failed to create project"
+stack: "Error: Failed to create project↵ at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:71:27)↵ at async Object.mutationFn (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/new.tsx:290:33)"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Project creation failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+DEBUG - Event types data: 17 items
+DEBUG - Kallikratis data: 324 items
+DEBUG - Geographic data: 
+Object {regions: 13, regionalUnits: 74, municipalities: 324}

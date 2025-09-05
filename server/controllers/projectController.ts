@@ -1396,6 +1396,62 @@ router.post('/:mis/changes', authenticateSession, async (req: AuthenticatedReque
   }
 });
 
+// Check if ΣΑ number already exists
+router.get('/check-sa/:saValue', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { saValue } = req.params;
+    console.log(`[Projects] Checking ΣΑ availability: ${saValue}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    if (!saValue?.trim()) {
+      return res.status(400).json({ message: "ΣΑ value is required" });
+    }
+
+    // Check if the ΣΑ number exists in any of the ΣΑ fields
+    const { data: existingProject, error } = await supabase
+      .from('Projects')
+      .select('id, mis, project_title, na853, na271, e069')
+      .or(`na853.eq.${saValue},na271.eq.${saValue},e069.eq.${saValue}`)
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('[Projects] Error checking ΣΑ availability:', error);
+      return res.status(500).json({ 
+        message: "Failed to check ΣΑ availability",
+        error: error.message
+      });
+    }
+
+    const exists = !!existingProject;
+    const response = {
+      exists,
+      available: !exists,
+      ...(existingProject && {
+        existingProject: {
+          id: existingProject.id,
+          mis: existingProject.mis,
+          project_title: existingProject.project_title,
+          sa_field: existingProject.na853 === saValue ? 'na853' : 
+                   existingProject.na271 === saValue ? 'na271' : 'e069'
+        }
+      })
+    };
+
+    console.log(`[Projects] ΣΑ ${saValue} check result:`, response);
+    res.json(response);
+  } catch (error) {
+    console.error('[Projects] Error checking ΣΑ availability:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 // Create a new project
 router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
