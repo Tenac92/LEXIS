@@ -805,6 +805,7 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   
   // Version identification
   version_name: text("version_name"), // User-friendly name for the version
+  version_number: decimal("version_number", { precision: 3, scale: 1 }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
   
   // Financial data
   amount: decimal("amount", { precision: 12, scale: 2 }),

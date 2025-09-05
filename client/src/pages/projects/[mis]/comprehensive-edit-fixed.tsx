@@ -298,6 +298,7 @@ const comprehensiveProjectSchema = z.object({
         budget_versions: z.object({
           pde: z.array(z.object({
             version_name: z.string().default(""),
+            version_number: z.string().default("1.0"),
             project_budget: z.string().default(""),
             total_public_expense: z.string().default(""),
             eligible_public_expense: z.string().default(""),
@@ -311,6 +312,7 @@ const comprehensiveProjectSchema = z.object({
           })).default([]),
           epa: z.array(z.object({
             version_name: z.string().default(""),
+            version_number: z.string().default("1.0"),
             epa_version: z.string().default(""),
             amount: z.string().default(""),
             protocol_number: z.string().default(""),
@@ -3211,8 +3213,13 @@ export default function ComprehensiveEditFixed() {
                                         size="sm"
                                         onClick={() => {
                                           const formulations = form.getValues("formulation_details");
+                                          const existingPdeVersions = formulations[index].budget_versions.pde;
+                                          const nextVersionNumber = existingPdeVersions.length > 0 
+                                            ? (Math.max(...existingPdeVersions.map(v => parseFloat(v.version_number || "1.0"))) + 0.1).toFixed(1)
+                                            : "1.0";
                                           formulations[index].budget_versions.pde.push({
                                             version_name: "",
+                                            version_number: nextVersionNumber,
                                             project_budget: "",
                                             total_public_expense: "",
                                             eligible_public_expense: "",
@@ -3240,12 +3247,31 @@ export default function ComprehensiveEditFixed() {
                                       </div>
                                     ) : (
                                       <Accordion type="multiple" className="w-full">
-                                        {form.watch(`formulation_details.${index}.budget_versions.pde`)?.map((_, pdeIndex) => (
-                                          <AccordionItem key={pdeIndex} value={`pde-${pdeIndex}`}>
+                                        {form.watch(`formulation_details.${index}.budget_versions.pde`)
+                                          ?.sort((a, b) => parseFloat(a.version_number || "1.0") - parseFloat(b.version_number || "1.0"))
+                                          ?.map((versionData, pdeIndex) => {
+                                            const originalIndex = form.watch(`formulation_details.${index}.budget_versions.pde`).findIndex(
+                                              v => v === versionData
+                                            );
+                                            const isActiveVersion = form.watch(`formulation_details.${index}.budget_versions.pde`)
+                                              ?.reduce((max, current) => 
+                                                parseFloat(current.version_number || "1.0") > parseFloat(max.version_number || "1.0") 
+                                                  ? current : max, versionData
+                                              ) === versionData;
+                                            return (
+                                          <AccordionItem key={originalIndex} value={`pde-${originalIndex}`}>
                                             <div className="flex items-center justify-between pr-4">
                                               <AccordionTrigger className="flex-1 hover:no-underline">
                                                 <div className="flex items-center gap-2">
-                                                  <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
+                                                  <h5 className="font-medium">ΠΔΕ v{versionData.version_number || "1.0"}</h5>
+                                                  {isActiveVersion && (
+                                                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                      ΕΝΕΡΓΟ
+                                                    </span>
+                                                  )}
+                                                  <span className="text-sm text-gray-500">
+                                                    {versionData.version_name && `- ${versionData.version_name}`}
+                                                  </span>
                                                 </div>
                                               </AccordionTrigger>
                                               <Button
@@ -3254,7 +3280,7 @@ export default function ComprehensiveEditFixed() {
                                                 size="sm"
                                                 onClick={() => {
                                                   const formulations = form.getValues("formulation_details");
-                                                  formulations[index].budget_versions.pde.splice(pdeIndex, 1);
+                                                  formulations[index].budget_versions.pde.splice(originalIndex, 1);
                                                   form.setValue("formulation_details", formulations);
                                                 }}
                                               >
@@ -3263,22 +3289,40 @@ export default function ComprehensiveEditFixed() {
                                             </div>
                                             <AccordionContent className="pt-4">
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                            {/* Version Information */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 p-3 bg-blue-50 rounded-lg">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.version_name`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.version_number`}
                                                 render={({ field }) => (
                                                   <FormItem>
-                                                    <FormLabel>Όνομα Έκδοσης</FormLabel>
+                                                    <FormLabel>Αριθμός Έκδοσης</FormLabel>
                                                     <FormControl>
-                                                      <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
+                                                      <Input 
+                                                        {...field} 
+                                                        placeholder="π.χ. 1.0, 1.1, 2.0" 
+                                                        pattern="[0-9]+\.[0-9]+"
+                                                        title="Εισάγετε έκδοση π.χ. 1.0, 1.1, 2.0"
+                                                      />
                                                     </FormControl>
                                                   </FormItem>
                                                 )}
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_date`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.version_name`}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormLabel>Όνομα Έκδοσης</FormLabel>
+                                                    <FormControl>
+                                                      <Input {...field} placeholder="π.χ. Αρχική έγκριση, Τροποποίηση" />
+                                                    </FormControl>
+                                                  </FormItem>
+                                                )}
+                                              />
+                                              <FormField
+                                                control={form.control}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_date`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Ημερομηνία Απόφασης</FormLabel>
@@ -3290,10 +3334,11 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
+                                            {/* Budget Information */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.project_budget`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.project_budget`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Προϋπολογισμός Έργου (€)</FormLabel>
@@ -3305,7 +3350,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.total_public_expense`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.total_public_expense`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
@@ -3317,7 +3362,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.eligible_public_expense`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.eligible_public_expense`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
@@ -3332,7 +3377,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.protocol_number`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.protocol_number`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
@@ -3344,7 +3389,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.ada`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.ada`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>ΑΔΑ</FormLabel>
@@ -3359,7 +3404,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_type`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_type`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Τύπος Απόφασης</FormLabel>
@@ -3380,7 +3425,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.status`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.status`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Κατάσταση</FormLabel>
@@ -3450,7 +3495,7 @@ export default function ComprehensiveEditFixed() {
                                                               type="button"
                                                               onClick={() => {
                                                                 // 🗑️ PDE Removal με dedicated function
-                                                                handleConnectedDecisionRemoval(index, 'pde', pdeIndex, decisionId);
+                                                                handleConnectedDecisionRemoval(index, 'pde', originalIndex, decisionId);
                                                               }}
                                                               className={isInherited ? 'hover:text-orange-600' : 'hover:text-blue-600'}
                                                             >
@@ -3467,7 +3512,7 @@ export default function ComprehensiveEditFixed() {
                                             
                                             <FormField
                                               control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.comments`}
+                                              name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.comments`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Σχόλια</FormLabel>
@@ -3479,7 +3524,8 @@ export default function ComprehensiveEditFixed() {
                                             />
                                             </AccordionContent>
                                           </AccordionItem>
-                                        ))}
+                                          );
+                                        })}
                                       </Accordion>
                                     )}
                                   </CardContent>
@@ -3498,8 +3544,13 @@ export default function ComprehensiveEditFixed() {
                                         size="sm"
                                         onClick={() => {
                                           const formulations = form.getValues("formulation_details");
+                                          const existingEpaVersions = formulations[index].budget_versions.epa;
+                                          const nextVersionNumber = existingEpaVersions.length > 0 
+                                            ? (Math.max(...existingEpaVersions.map(v => parseFloat(v.version_number || "1.0"))) + 0.1).toFixed(1)
+                                            : "1.0";
                                           formulations[index].budget_versions.epa.push({
                                             version_name: "",
+                                            version_number: nextVersionNumber,
                                             epa_version: "",
                                             amount: "",
                                             protocol_number: "",
@@ -3526,12 +3577,31 @@ export default function ComprehensiveEditFixed() {
                                       </div>
                                     ) : (
                                       <Accordion type="multiple" className="w-full">
-                                        {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((_, epaIndex) => (
-                                          <AccordionItem key={epaIndex} value={`epa-${epaIndex}`}>
+                                        {form.watch(`formulation_details.${index}.budget_versions.epa`)
+                                          ?.sort((a, b) => parseFloat(a.version_number || "1.0") - parseFloat(b.version_number || "1.0"))
+                                          ?.map((versionData, epaIndex) => {
+                                            const originalIndex = form.watch(`formulation_details.${index}.budget_versions.epa`).findIndex(
+                                              v => v === versionData
+                                            );
+                                            const isActiveVersion = form.watch(`formulation_details.${index}.budget_versions.epa`)
+                                              ?.reduce((max, current) => 
+                                                parseFloat(current.version_number || "1.0") > parseFloat(max.version_number || "1.0") 
+                                                  ? current : max, versionData
+                                              ) === versionData;
+                                            return (
+                                          <AccordionItem key={originalIndex} value={`epa-${originalIndex}`}>
                                             <div className="flex items-center justify-between pr-4">
                                               <AccordionTrigger className="flex-1 hover:no-underline">
                                                 <div className="flex items-center gap-2">
-                                                  <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
+                                                  <h5 className="font-medium">ΕΠΑ v{versionData.version_number || "1.0"}</h5>
+                                                  {isActiveVersion && (
+                                                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                      ΕΝΕΡΓΟ
+                                                    </span>
+                                                  )}
+                                                  <span className="text-sm text-gray-500">
+                                                    {versionData.version_name && `- ${versionData.version_name}`}
+                                                  </span>
                                                 </div>
                                               </AccordionTrigger>
                                               <Button
@@ -3540,7 +3610,7 @@ export default function ComprehensiveEditFixed() {
                                                 size="sm"
                                                 onClick={() => {
                                                   const formulations = form.getValues("formulation_details");
-                                                  formulations[index].budget_versions.epa.splice(epaIndex, 1);
+                                                  formulations[index].budget_versions.epa.splice(originalIndex, 1);
                                                   form.setValue("formulation_details", formulations);
                                                 }}
                                               >
@@ -3552,7 +3622,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.version_name`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.version_name`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Όνομα Έκδοσης</FormLabel>
@@ -3564,7 +3634,19 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.epa_version`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.version_number`}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormLabel>Αριθμός Έκδοσης</FormLabel>
+                                                    <FormControl>
+                                                      <Input {...field} placeholder="π.χ. 1.0" />
+                                                    </FormControl>
+                                                  </FormItem>
+                                                )}
+                                              />
+                                              <FormField
+                                                control={form.control}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.epa_version`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Έκδοση ΕΠΑ</FormLabel>
@@ -3576,7 +3658,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.amount`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.amount`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Ποσό (€)</FormLabel>
@@ -3591,7 +3673,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.decision_date`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Ημερομηνία Απόφασης</FormLabel>
@@ -3603,7 +3685,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.protocol_number`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.protocol_number`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
@@ -3618,7 +3700,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.ada`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.ada`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>ΑΔΑ</FormLabel>
@@ -3630,7 +3712,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_type`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.decision_type`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Τύπος Απόφασης</FormLabel>
@@ -3654,7 +3736,7 @@ export default function ComprehensiveEditFixed() {
                                             <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.status`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.status`}
                                                 render={({ field }) => (
                                                   <FormItem>
                                                     <FormLabel>Κατάσταση</FormLabel>
@@ -3678,7 +3760,7 @@ export default function ComprehensiveEditFixed() {
                                             {/* Connected Decisions Multi-Select for EPA Version */}
                                             <FormField
                                               control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.connected_decisions`}
+                                              name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.connected_decisions`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
@@ -3687,7 +3769,7 @@ export default function ComprehensiveEditFixed() {
                                                       onValueChange={(value) => {
                                                         const decisionId = parseInt(value);
                                                         // 🚀 Auto-inheritance logic για EPA
-                                                        handleConnectedDecisionChange(index, 'epa', epaIndex, decisionId, true);
+                                                        handleConnectedDecisionChange(index, 'epa', originalIndex, decisionId, true);
                                                       }}
                                                     >
                                                       <SelectTrigger>
@@ -3706,7 +3788,7 @@ export default function ComprehensiveEditFixed() {
                                                     <div className="flex flex-wrap gap-1 mt-2">
                                                       {field.value.map((decisionId: number) => {
                                                         const decision = form.watch("decisions")?.[decisionId];
-                                                        const { isInherited, inheritedFromVersion } = getDecisionOrigin(index, 'epa', epaIndex, decisionId);
+                                                        const { isInherited, inheritedFromVersion } = getDecisionOrigin(index, 'epa', originalIndex, decisionId);
                                                         
                                                         return (
                                                           <span
@@ -3724,7 +3806,7 @@ export default function ComprehensiveEditFixed() {
                                                               type="button"
                                                               onClick={() => {
                                                                 // 🗑️ EPA Removal με dedicated function
-                                                                handleConnectedDecisionRemoval(index, 'epa', epaIndex, decisionId);
+                                                                handleConnectedDecisionRemoval(index, 'epa', originalIndex, decisionId);
                                                               }}
                                                               className={isInherited ? 'hover:text-yellow-600' : 'hover:text-green-600'}
                                                             >
@@ -3741,7 +3823,7 @@ export default function ComprehensiveEditFixed() {
                                             
                                             <FormField
                                               control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.comments`}
+                                              name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.comments`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Σχόλια</FormLabel>
@@ -3753,7 +3835,8 @@ export default function ComprehensiveEditFixed() {
                                             />
                                             </AccordionContent>
                                           </AccordionItem>
-                                        ))}
+                                          );
+                                        })}
                                       </Accordion>
                                     )}
                                   </CardContent>
