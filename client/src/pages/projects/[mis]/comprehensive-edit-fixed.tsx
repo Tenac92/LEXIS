@@ -3181,21 +3181,26 @@ export default function ComprehensiveEditFixed() {
                           </div>
 
 
-                          {/* Budget Versions Accordions - ΠΔΕ and ΕΠΑ */}
+                          {/* Budget Versions Tabs - ΠΔΕ and ΕΠΑ */}
                           <div className="mt-6">
-                            <Accordion type="multiple" defaultValue={["pde"]} className="w-full">
-                              
-                              {/* ΠΔΕ Accordion */}
-                              <AccordionItem value="pde">
-                                <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
-                                  <div className="flex items-center gap-2">
-                                    <span>ΠΔΕ (Πρόγραμμα Δημοσίων Επενδύσεων)</span>
-                                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
-                                      {form.watch(`formulation_details.${index}.budget_versions.pde`)?.length || 0}
-                                    </span>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
+                            <Tabs defaultValue="pde" className="w-full">
+                              <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="pde" className="flex items-center gap-2">
+                                  <span>ΠΔΕ</span>
+                                  <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
+                                    {form.watch(`formulation_details.${index}.budget_versions.pde`)?.length || 0}
+                                  </span>
+                                </TabsTrigger>
+                                <TabsTrigger value="epa" className="flex items-center gap-2">
+                                  <span>ΕΠΑ</span>
+                                  <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
+                                    {form.watch(`formulation_details.${index}.budget_versions.epa`)?.length || 0}
+                                  </span>
+                                </TabsTrigger>
+                              </TabsList>
+
+                              {/* ΠΔΕ Tab */}
+                              <TabsContent value="pde">
                                 <Card>
                                   <CardHeader>
                                     <CardTitle className="flex items-center justify-between">
@@ -3234,16 +3239,19 @@ export default function ComprehensiveEditFixed() {
                                         <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΠΔΕ" για να προσθέσετε την πρώτη έκδοση</p>
                                       </div>
                                     ) : (
-                                      <div className="space-y-4">
+                                      <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.pde`)?.map((_, pdeIndex) => (
-                                          <div key={pdeIndex} className="border rounded-lg p-3 bg-gray-50">
-                                            <div className="flex justify-between items-center mb-3">
-                                              <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
+                                          <AccordionItem key={pdeIndex} value={`pde-${pdeIndex}`}>
+                                            <AccordionTrigger className="flex items-center justify-between hover:no-underline">
+                                              <div className="flex items-center gap-2">
+                                                <h5 className="font-medium">ΠΔΕ Έκδοση {pdeIndex + 1}</h5>
+                                              </div>
                                               <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
                                                   const formulations = form.getValues("formulation_details");
                                                   formulations[index].budget_versions.pde.splice(pdeIndex, 1);
                                                   form.setValue("formulation_details", formulations);
@@ -3251,7 +3259,8 @@ export default function ComprehensiveEditFixed() {
                                               >
                                                 <Trash2 className="h-4 w-4" />
                                               </Button>
-                                            </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-4">
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
@@ -3467,26 +3476,17 @@ export default function ComprehensiveEditFixed() {
                                                 </FormItem>
                                               )}
                                             />
-                                          </div>
+                                            </AccordionContent>
+                                          </AccordionItem>
                                         ))}
-                                      </div>
+                                      </Accordion>
                                     )}
                                   </CardContent>
                                 </Card>
-                                </AccordionContent>
-                              </AccordionItem>
+                              </TabsContent>
 
-                              {/* ΕΠΑ Accordion */}
-                              <AccordionItem value="epa">
-                                <AccordionTrigger className="flex items-center gap-2 hover:no-underline">
-                                  <div className="flex items-center gap-2">
-                                    <span>ΕΠΑ (Ευρωπαϊκά Προγράμματα)</span>
-                                    <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-xs">
-                                      {form.watch(`formulation_details.${index}.budget_versions.epa`)?.length || 0}
-                                    </span>
-                                  </div>
-                                </AccordionTrigger>
-                                <AccordionContent>
+                              {/* ΕΠΑ Tab */}
+                              <TabsContent value="epa">
                                 <Card>
                                   <CardHeader>
                                     <CardTitle className="flex items-center justify-between">
@@ -3524,16 +3524,19 @@ export default function ComprehensiveEditFixed() {
                                         <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Έκδοσης ΕΠΑ" για να προσθέσετε την πρώτη έκδοση</p>
                                       </div>
                                     ) : (
-                                      <div className="space-y-4">
+                                      <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((_, epaIndex) => (
-                                          <div key={epaIndex} className="border rounded-lg p-3 bg-gray-50">
-                                            <div className="flex justify-between items-center mb-3">
-                                              <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
+                                          <AccordionItem key={epaIndex} value={`epa-${epaIndex}`}>
+                                            <AccordionTrigger className="flex items-center justify-between hover:no-underline">
+                                              <div className="flex items-center gap-2">
+                                                <h5 className="font-medium">ΕΠΑ Έκδοση {epaIndex + 1}</h5>
+                                              </div>
                                               <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={() => {
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
                                                   const formulations = form.getValues("formulation_details");
                                                   formulations[index].budget_versions.epa.splice(epaIndex, 1);
                                                   form.setValue("formulation_details", formulations);
@@ -3541,7 +3544,8 @@ export default function ComprehensiveEditFixed() {
                                               >
                                                 <Trash2 className="h-4 w-4" />
                                               </Button>
-                                            </div>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="pt-4">
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                               <FormField
@@ -3745,15 +3749,15 @@ export default function ComprehensiveEditFixed() {
                                                 </FormItem>
                                               )}
                                             />
-                                          </div>
+                                            </AccordionContent>
+                                          </AccordionItem>
                                         ))}
-                                      </div>
+                                      </Accordion>
                                     )}
                                   </CardContent>
                                 </Card>
-                                </AccordionContent>
-                              </AccordionItem>
-                            </Accordion>
+                              </TabsContent>
+                            </Tabs>
                           </div>
 
 
