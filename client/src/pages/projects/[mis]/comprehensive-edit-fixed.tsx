@@ -556,10 +556,9 @@ export default function ComprehensiveEditFixed() {
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
   
-  // Extract reference data - prioritize the source with more data for kallikratis
+  // Extract reference data
   const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
   const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
-  const kallikratisData = (completeProjectData?.kallikratis?.length > (referenceData?.kallikratis?.length || 0) ? completeProjectData.kallikratis : referenceData?.kallikratis);
   const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
@@ -588,12 +587,12 @@ export default function ComprehensiveEditFixed() {
     referenceError: referenceDataError?.message || referenceDataError,
   });
 
-  // Debug logging for kallikratis data specifically  
-  console.log("DEBUG - Kallikratis Data:", {
-    referenceKallikratis: referenceData?.kallikratis?.length || 0,
-    completeKallikratis: completeProjectData?.kallikratis?.length || 0,
-    finalKallikratisLength: kallikratisData?.length || 0,
-    kallikratisSample: kallikratisData?.slice(0, 2) || [],
+  // Debug logging for geographic data status  
+  console.log("DEBUG - Geographic Data Status:", {
+    hasNormalizedGeographicData: !!geographicData,
+    normalizedRegions: geographicData?.regions?.length || 0,
+    normalizedRegionalUnits: geographicData?.regionalUnits?.length || 0,
+    normalizedMunicipalities: geographicData?.municipalities?.length || 0,
   });
 
   // Debug logging for ΣΑ types and enumeration codes
@@ -611,9 +610,6 @@ export default function ComprehensiveEditFixed() {
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
   const typedUnitsData = unitsData as UnitData[] | undefined;
-  const typedKallikratisData = kallikratisData as
-    | KallikratisEntry[]
-    | undefined;
   const typedEventTypesData = eventTypesData as EventTypeData[] | undefined;
   const typedExpenditureTypesData = expenditureTypesData as
     | ExpenditureTypeData[]
@@ -624,10 +620,8 @@ export default function ComprehensiveEditFixed() {
     if (geographicData?.regions) {
       return geographicData.regions.map(r => r.name).filter(Boolean);
     }
-    // Fallback to Kallikratis data if geographic data isn't loaded yet
-    return [
-      ...new Set(typedKallikratisData?.map((k) => k.perifereia) || []),
-    ].filter(Boolean);
+    // Return empty array if geographic data isn't available
+    return [];
   };
 
   const getRegionalUnitsForRegionNormalized = (region: string) => {
@@ -641,14 +635,8 @@ export default function ComprehensiveEditFixed() {
       }
     }
     
-    // Fallback to Kallikratis data
-    return [
-      ...new Set(
-        typedKallikratisData
-          ?.filter((k) => k.perifereia === region)
-          .map((k) => k.perifereiaki_enotita) || [],
-      ),
-    ].filter(Boolean);
+    // Return empty array if normalized geographic data isn't available
+    return [];
   };
 
   const getMunicipalitiesForRegionalUnitNormalized = (
@@ -670,27 +658,15 @@ export default function ComprehensiveEditFixed() {
       }
     }
     
-    // Fallback to Kallikratis data
-    return [
-      ...new Set(
-        typedKallikratisData
-          ?.filter(
-            (k) =>
-              k.perifereia === region &&
-              k.perifereiaki_enotita === regionalUnit,
-          )
-          .map((k) => k.onoma_neou_ota) || [],
-      ),
-    ].filter(Boolean);
+    // Return empty array if normalized geographic data isn't available
+    return [];
   };
 
   // Additional debug logging now that variables are properly initialized
   console.log("DEBUG - Geographic Data:", {
-    typedKallikratisLength: typedKallikratisData?.length || 0,
     uniqueRegionsCount: getUniqueRegions().length,
     uniqueRegions: getUniqueRegions().slice(0, 3),
-    sampleKallikratisEntry: typedKallikratisData?.[0],
-    // New normalized data info
+    // Normalized data info
     hasGeographicData: !!geographicData,
     regionsCount: geographicData?.regions?.length || 0,
     regionalUnitsCount: geographicData?.regionalUnits?.length || 0,
