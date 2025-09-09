@@ -143,17 +143,6 @@ function normalizeFekData(fekValue: any): {
 }
 
 // Interface definitions
-interface KallikratisEntry {
-  id: number;
-  kodikos_neou_ota: number;
-  eidos_neou_ota: string;
-  onoma_neou_ota: string;
-  kodikos_perifereiakis_enotitas: number;
-  perifereiaki_enotita: string;
-  kodikos_perifereias: number;
-  perifereia: string;
-}
-
 interface UnitData {
   id: number;
   name?: string;
@@ -1144,7 +1133,7 @@ export default function ComprehensiveEditFixed() {
                 continue;
               }
               
-              // Create a region object for compatibility with backend expectations (Kallikratis format)
+              // Create a region object for compatibility with backend expectations
               const regionObj = {
                 perifereia: region || null,           // Backend expects 'perifereia'
                 perifereiaki_enotita: regionalUnit || null,  // Backend expects 'perifereiaki_enotita'  
@@ -1908,7 +1897,6 @@ export default function ComprehensiveEditFixed() {
   }, [
     mis,
     typedProjectData,
-    typedKallikratisData,
     typedUnitsData,
     typedExpenditureTypesData,
   ]);
