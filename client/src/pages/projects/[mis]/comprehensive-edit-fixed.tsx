@@ -1432,7 +1432,7 @@ export default function ComprehensiveEditFixed() {
       // Always ensure geographic_areas are populated from project index data
       console.log('DEBUG: Converting project index data to geographic_areas format');
       
-      // NEW: Use normalized geographic data from projectGeographicData instead of old kallikratis approach
+      // Use normalized geographic data from projectGeographicData
       const projectGeographicData = completeProjectData?.projectGeographicData;
       if (projectGeographicData) {
         console.log('DEBUG: Using new normalized geographic data structure');
@@ -1482,41 +1482,6 @@ export default function ComprehensiveEditFixed() {
           if (locationDetail) {
             locationDetail.geographic_areas = [...(locationDetail.geographic_areas || []), ...geographicAreas];
             console.log(`DEBUG: Added geographic areas to location ${key}:`, geographicAreas);
-          }
-        });
-      } else {
-        console.log('DEBUG: No projectGeographicData available, falling back to old kallikratis approach');
-        
-        // FALLBACK: Old kallikratis-based approach for backward compatibility
-        projectIndexData.forEach((indexItem) => {
-          const kallikratis = typedKallikratisData?.find(
-            (k) => k.id === indexItem.kallikratis_id,
-          );
-          
-          const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
-          const locationDetail = locationDetailsMap.get(key);
-
-          if (kallikratis && locationDetail) {
-            // Create geographic area ID in format: "region|regional_unit|municipality"
-            // Use geographic_code to determine the appropriate level
-            const shouldIncludeMunicipality =
-              indexItem.geographic_code &&
-              parseInt(indexItem.geographic_code.toString()) >= 9000;
-            
-            let geographicAreaId: string;
-            if (shouldIncludeMunicipality) {
-              // Municipality level: include all three parts
-              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|${kallikratis.onoma_neou_ota}`;
-            } else {
-              // Regional unit level: only region and regional unit
-              geographicAreaId = `${kallikratis.perifereia}|${kallikratis.perifereiaki_enotita}|`;
-            }
-            
-            // Add to geographic_areas if not already present
-            if (!locationDetail.geographic_areas.includes(geographicAreaId)) {
-              locationDetail.geographic_areas.push(geographicAreaId);
-              console.log('DEBUG: Added geographic area to location detail:', geographicAreaId);
-            }
           }
         });
       }
