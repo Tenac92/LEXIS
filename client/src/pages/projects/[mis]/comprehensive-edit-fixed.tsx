@@ -1534,13 +1534,11 @@ export default function ComprehensiveEditFixed() {
   useEffect(() => {
     console.log("DEBUG - useEffect triggered with conditions:", {
       typedProjectData: !!typedProjectData,
-      typedKallikratisData: !!typedKallikratisData,
       typedUnitsData: !!typedUnitsData,
       typedExpenditureTypesData: !!typedExpenditureTypesData,
       hasInitialized: hasInitialized.current,
       willInitialize:
         typedProjectData &&
-        typedKallikratisData &&
         typedUnitsData &&
         typedExpenditureTypesData &&
         !hasInitialized.current,
@@ -1548,7 +1546,6 @@ export default function ComprehensiveEditFixed() {
 
     if (
       typedProjectData &&
-      typedKallikratisData &&
       typedUnitsData &&
       typedExpenditureTypesData &&
       !hasInitialized.current
@@ -1924,8 +1921,8 @@ export default function ComprehensiveEditFixed() {
     (typedUnitsData || referenceData?.units) &&
     (typedExpenditureTypesData || referenceData?.expenditureTypes);
   
-  // Kallikratis data can load progressively without blocking the form
-  const hasKallikratisData = typedKallikratisData || referenceData?.kallikratis;
+  // Data readiness check
+  const hasNormalizedGeographicData = !!geographicData;
 
   if (completeDataError) {
     return (
@@ -2701,7 +2698,6 @@ export default function ComprehensiveEditFixed() {
                                       <SmartGeographicMultiSelect
                                         value={field.value || []}
                                         onChange={field.onChange}
-                                        kallikratisData={typedKallikratisData}
                                         placeholder="Επιλέξτε γεωγραφικές περιοχές..."
                                       />
                                     </FormItem>
