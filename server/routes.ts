@@ -52,6 +52,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { default: projectResolverRouter } = await import('./controllers/projectResolverController');
   app.use('/api/projects', projectResolverRouter);
   
+  // Register subprojects controller for project subprojects
+  const { default: subprojectsRouter } = await import('./controllers/subprojectsController');
+  app.use('/api/projects', subprojectsRouter);
+  
   // Projects by unit endpoint for document creation
   app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
     try {
