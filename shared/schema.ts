@@ -874,43 +874,6 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   budgetTypeIndex: index("idx_budget_versions_budget_type").on(table.budget_type),
 }));
 
-/**
- * Project Subprojects Table
- * Stores subproject data for each main project
- * Each project can have multiple subprojects with different codes and statuses
- */
-export const projectSubprojects = pgTable("project_subprojects", {
-  id: serial("id").primaryKey(),
-  project_id: integer("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  
-  // Subproject identification
-  code: text("code").notNull(), // Unique code per project (e.g., "SP-001")
-  title: text("title").notNull(), // Human-readable title
-  type: text("type").notNull(), // Subproject type/category
-  
-  // Status management
-  status: text("status").notNull().default("Συνεχιζόμενο"), // Συνεχιζόμενο, Σε αναμονή, Ολοκληρωμένο
-  version: text("version"), // Version string (e.g., "Β/2025")
-  
-  // Financial data per year (stored as JSONB for flexibility)
-  yearly_budgets: jsonb("yearly_budgets").default({}), // { "2024": { "sdd": 1000, "edd": 2000 }, ... }
-  
-  // Metadata
-  description: text("description"),
-  
-  // Audit fields
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-  created_by: integer("created_by"),
-  updated_by: integer("updated_by"),
-}, (table) => ({
-  // Ensure unique code per project
-  uniqueProjectCode: unique().on(table.project_id, table.code),
-  // Index for performance
-  projectIdIndex: index("idx_subprojects_project_id").on(table.project_id),
-}));
 
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
