@@ -1940,67 +1940,55 @@ export default function NewProjectPage() {
                                                         <FormLabel>Έκδοση ΕΠΑ</FormLabel>
                                                         <FormControl>
                                                           <Input {...field} placeholder="π.χ. 2021-2027" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.amount`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Ποσό ΕΠΑ (€)</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. 800.000,00" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.protocol_number`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. 12345/2024" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.ada`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>ΑΔΑ</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. 6ΔΛ5465ΦΘΞ-ΨΩΣ" />
                                                   </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.total_public_expense`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. 800000" type="number" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.eligible_public_expense`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. 750000" type="number" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
-                                          
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.protocol_number`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. 12345/2024" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.ada`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>ΑΔΑ</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. 6ΔΛ5465ΦΘΞ-ΨΩΣ" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
-                                          
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_type`}
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_type`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Τύπος Απόφασης</FormLabel>
@@ -2099,22 +2087,25 @@ export default function NewProjectPage() {
                                               </FormItem>
                                             )}
                                           />
-                                          
-                                          <FormField
-                                            control={form.control}
-                                            name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.comments`}
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Σχόλια ΠΔΕ</FormLabel>
-                                                <FormControl>
-                                                  <Textarea {...field} placeholder="Σχόλια για αυτή την έκδοση ΠΔΕ..." />
-                                                </FormControl>
-                                              </FormItem>
-                                            )}
-                                          />
-                                        </div>
-                                      ))}
-                                    </div>
+                                                
+                                                <FormField
+                                                  control={form.control}
+                                                  name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.comments`}
+                                                  render={({ field }) => (
+                                                    <FormItem>
+                                                      <FormLabel>Σχόλια ΕΠΑ</FormLabel>
+                                                      <FormControl>
+                                                        <Textarea {...field} placeholder="Σχόλια για αυτή την έκδοση ΕΠΑ..." />
+                                                      </FormControl>
+                                                    </FormItem>
+                                                  )}
+                                                />
+                                              </div>
+                                            </AccordionContent>
+                                          </AccordionItem>
+                                        );
+                                      })}
+                                    </Accordion>
                                   )}
                                 </CardContent>
                               </Card>
