@@ -2007,9 +2007,9 @@ export default function NewProjectPage() {
                                                 </FormItem>
                                               )}
                                             />
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.status`}
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.status`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Κατάσταση</FormLabel>
@@ -2030,10 +2030,9 @@ export default function NewProjectPage() {
                                             />
                                           </div>
                                           
-                                          {/* Connected Decisions Multi-Select for PDE Version */}
-                                          <FormField
-                                            control={form.control}
-                                            name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.connected_decisions`}
+                                                <FormField
+                                                  control={form.control}
+                                                  name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.connected_decisions`}
                                             render={({ field }) => (
                                               <FormItem>
                                                 <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
