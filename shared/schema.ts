@@ -829,6 +829,9 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   status: text("status").default("Ενεργή"),
   comments: text("comments"),
   
+  // Subproject associations (for EPA budget versions)
+  subproject_ids: integer("subproject_ids").array().default([]),
+  
   // Audit fields
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
