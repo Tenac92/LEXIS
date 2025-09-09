@@ -8,10 +8,10 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+// Removed unused import: Button
+// Removed unused import: Card components
+// Removed unused import: Tabs components
+// Removed unused import: Accordion components
 import {
   Form,
   FormControl,
@@ -19,28 +19,13 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
-import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
-import {
-  Plus,
-  Trash2,
-  Save,
-  FileText,
-  Calendar,
-  CheckCircle,
-  Building2,
-  RefreshCw,
-} from "lucide-react";
+// Removed unused import: Input
+// Removed unused import: Textarea
+// Removed unused import: Select components
+// Removed unused import: Checkbox
+// Removed unused import: SmartGeographicMultiSelect
+// Removed unused import: SubprojectSelect
+// Removed unused import: Lucide icons
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -52,34 +37,9 @@ import {
 } from "@shared/utils/geographic-utils";
 
 
-// Helper function to generate enumeration code based on ΣΑ type
-function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
-  // If we have an existing enumeration code for this ΣΑ type, use it
-  if (existingCodes && existingCodes[saType]) {
-    return existingCodes[saType];
-  }
-
-  // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
-  if (currentCode) {
-    const patterns = {
-      ΝΑ853: /^\d{4}ΝΑ853\d{8}$/,
-      ΝΑ271: /^\d{4}ΝΑ271\d{8}$/,
-      E069: /^\d{4}E069\d{8}$/,
-    };
-
-    if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
-      return currentCode;
-    }
-  }
-
-  // Only generate new code if no existing data found (this should be rare in edit mode)
-  const currentYear = new Date().getFullYear();
-  const sequentialNumber = Math.floor(Math.random() * 99999999)
-    .toString()
-    .padStart(8, "0");
-
-  return `${currentYear}${saType}${sequentialNumber}`;
-}
+// REMOVED: generateEnumerationCode function - was unused
+// function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
+// REMOVED: function body was unused
 
 // Helper function to convert FEK data from old string format to new object format
 function normalizeFekData(fekValue: any): {
@@ -339,6 +299,28 @@ export default function ComprehensiveEditFixed() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Number formatting helper functions
+  const parseEuropeanNumber = (value: string): number | null => {
+    if (!value) return null;
+
+    // Replace thousand separators (periods) and convert comma to period for decimal
+    const cleaned = value.replace(/\./g, "").replace(/,/g, ".");
+    const parsed = parseFloat(cleaned);
+
+    return isNaN(parsed) ? null : parsed;
+  };
+
+  const formatNumberWhileTyping = (value: string, fieldName: string): string => {
+    console.log(`Formatting ${fieldName}: "${value}"`);
+
+    if (!value) return "";
+
+    // Handle numeric input formatting while typing
+    let numericValue = value.replace(/[^\d,.-]/g, ""); // Keep only digits, commas, periods, and minus
+    
+    return numericValue;
+  };
 
   // 🔗 Auto-inheritance logic για connected decisions
   const handleConnectedDecisionChange = (
