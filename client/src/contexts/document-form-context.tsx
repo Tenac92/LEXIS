@@ -25,6 +25,7 @@ const signatureSchema = z.object({
 export const documentFormSchema = z.object({
   unit: z.string().optional().default(""),
   project_id: z.string().optional().default(""),
+  subproject_id: z.string().optional().default(""),
   region: z.string().optional().default(""),
   expenditure_type: z.string().optional().default(""),
   recipients: z.array(recipientSchema).optional().default([]),
@@ -49,6 +50,7 @@ interface DocumentFormContextType {
 const defaultFormData: DocumentFormData = {
   unit: "",
   project_id: "",
+  subproject_id: "",
   region: "",
   expenditure_type: "",
   recipients: [],

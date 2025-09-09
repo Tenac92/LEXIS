@@ -91,6 +91,7 @@ import {
 import { useDebounce } from "./hooks/useDebounce";
 import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSuggestions";
 import { ProjectSelect } from "./components/ProjectSelect";
+import { SubprojectSelect } from "./components/SubprojectSelect";
 import { StepIndicator } from "./components/StepIndicator";
 
 // Main project interface - simplified as components are now extracted
@@ -193,6 +194,7 @@ const signatureSchema = z.object({
 const createDocumentSchema = z.object({
   unit: z.union([z.string(), z.number()]).transform(val => String(val)),
   project_id: z.union([z.string(), z.number()]).transform(val => String(val)).refine(val => val && val.trim().length > 0, "Το έργο είναι υποχρεωτικό"),
+  subproject_id: z.string().optional(),
   region: z.string().optional(),
   expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
   recipients: z.array(recipientSchema).optional().default([]),
@@ -255,6 +257,7 @@ export function CreateDocumentDialog({
           updateFormData({
             unit: formValues.unit,
             project_id: formValues.project_id,
+            subproject_id: formValues.subproject_id,
             region: formValues.region,
             expenditure_type: formValues.expenditure_type,
             recipients: formValues.recipients,
@@ -300,6 +303,7 @@ export function CreateDocumentDialog({
   const formDefaultValues = useMemo(() => ({
     unit: formData.unit || "", // Fix: unit should be string, not number
     project_id: formData.project_id ? String(formData.project_id) : "", // Ensure string conversion
+    subproject_id: formData.subproject_id || "",
     region: formData.region || "",
     expenditure_type: formData.expenditure_type || "",
     recipients: formData.recipients || [],
@@ -2566,6 +2570,38 @@ export function CreateDocumentDialog({
                       </FormItem>
                     )}
                   />
+
+                  {/* Subproject Selection */}
+                  <FormField
+                    control={form.control}
+                    name="subproject_id"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Υποέργο (Προαιρετικό)</FormLabel>
+                        <SubprojectSelect
+                          projectId={form.watch("project_id")}
+                          onSubprojectSelect={(subproject) => {
+                            if (subproject) {
+                              field.onChange(String(subproject.id));
+                              updateFormData({
+                                ...formData,
+                                subproject_id: String(subproject.id)
+                              });
+                            } else {
+                              field.onChange("");
+                              updateFormData({
+                                ...formData,
+                                subproject_id: ""
+                              });
+                            }
+                          }}
+                          selectedSubprojectId={field.value}
+                        />
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   {/* Smart Hierarchical Geographic Selection */}
                   {(availableRegions.length > 0 || availableUnits.length > 0 || availableMunicipalities.length > 0) && (
                     <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
