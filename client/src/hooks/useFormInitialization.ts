@@ -75,7 +75,7 @@ export function useFormInitialization({
         const locationDetail = locationDetailsMap.get(key);
 
         // Add expenditure type if it doesn't exist
-        if (expenditureType && !locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
+        if (expenditureType && expenditureType.expenditure_types && !locationDetail.expenditure_types.includes(expenditureType.expenditure_types)) {
           locationDetail.expenditure_types.push(expenditureType.expenditure_types);
         }
       });
@@ -103,7 +103,7 @@ export function useFormInitialization({
                 const regionalUnitName = unitData.regional_units?.name;
                 
                 const unitMunicipalities = relatedMunicipalities.filter((muniData: any) => 
-                  muniData.municipalities?.unit_code === (unitData as any).regional_units?.code
+                  muniData.municipalities?.unit_code === unitData.regional_units?.code
                 );
 
                 if (unitMunicipalities.length > 0) {
