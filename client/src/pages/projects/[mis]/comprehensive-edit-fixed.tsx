@@ -8,9 +8,9 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-// Removed unused import: Button
-// Removed unused import: Card components
-// Removed unused import: Tabs components
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // Removed unused import: Accordion components
 import {
   Form,
@@ -19,13 +19,25 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-// Removed unused import: Input
-// Removed unused import: Textarea
-// Removed unused import: Select components
-// Removed unused import: Checkbox
-// Removed unused import: SmartGeographicMultiSelect
-// Removed unused import: SubprojectSelect
-// Removed unused import: Lucide icons
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+// Note: Checkbox not currently used but kept for potential future use
+// Note: SmartGeographicMultiSelect not currently used but may be needed for geographic selection
+import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
+import {
+  Plus,
+  Trash2,
+  Save,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
