@@ -563,7 +563,7 @@ export default function ComprehensiveEditFixed() {
   const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
-  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean))] || [];
+  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean) || [])];
   const existingEnumerationCodes = formulationsData?.reduce((acc, f) => {
     if (f.sa && f.enumeration_code) {
       acc[f.sa] = f.enumeration_code;
