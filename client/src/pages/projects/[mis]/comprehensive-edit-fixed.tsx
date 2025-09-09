@@ -772,10 +772,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "E069",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
               console.log(
-                `Budget E069: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget E069: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
@@ -785,10 +785,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ271",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
               console.log(
-                `Budget ΝΑ271: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget ΝΑ271: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
@@ -798,10 +798,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ853",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
               console.log(
-                `Budget ΝΑ853: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget ΝΑ853: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
