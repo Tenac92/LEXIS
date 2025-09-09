@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   useQuery,
-  useQueries,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -19,7 +18,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +35,6 @@ import {
   Plus,
   Trash2,
   Save,
-  X,
   FileText,
   Calendar,
   CheckCircle,
@@ -47,32 +44,13 @@ import {
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  formatEuropeanCurrency,
-  parseEuropeanNumber,
-  formatNumberWhileTyping,
   formatEuropeanNumber,
 } from "@/lib/number-format";
 import {
-  getGeographicInfo,
-  formatGeographicDisplay,
-  getGeographicCodeForSave,
   getRegionalUnitsForRegion,
   getMunicipalitiesForRegionalUnit,
-  buildNormalizedGeographicData,
-  getGeographicCodeForSaveNormalized,
 } from "@shared/utils/geographic-utils";
 
-// Helper function to safely convert array or object fields to text
-function safeText(value: any): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "Δεν υπάρχει";
-    if (value.length === 1) return String(value[0]);
-    return value.join(", ");
-  }
-  return "";
-}
 
 // Helper function to generate enumeration code based on ΣΑ type
 function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
