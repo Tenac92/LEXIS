@@ -699,11 +699,11 @@ export default function ComprehensiveEditFixed() {
     return isNaN(parsed) ? null : parsed;
   };
 
-  // Helper function to validate and limit numeric input to database constraints
-  const validateAndLimitNumericInput = (
-    value: string,
-    fieldName: string,
-  ): string => {
+  // REMOVED: validateAndLimitNumericInput function - was unused
+  // const validateAndLimitNumericInput = (
+  //   value: string,
+  //   fieldName: string,
+  // ): string => {
     const parsed = parseEuropeanNumber(value);
     if (parsed && parsed > 9999999999.99) {
       console.warn(
@@ -811,9 +811,7 @@ export default function ComprehensiveEditFixed() {
 
         console.log("1. Updating core project data:", projectUpdateData);
         console.log("🔍 Key fields being sent:", {
-          inclusion_year: projectUpdateData.inclusion_year,
-          na853: projectUpdateData.na853,
-          enumeration_code: projectUpdateData.enumeration_code,
+          inc_year: projectUpdateData.inc_year,
           project_title: projectUpdateData.project_title,
         });
         try {
@@ -823,10 +821,11 @@ export default function ComprehensiveEditFixed() {
           });
           completedOperations.projectUpdate = true;
           console.log("✓ Project update successful:", projectResponse);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("✗ Project update failed:", error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
           throw new Error(
-            `Failed to update project data: ${error.message || error}`,
+            `Failed to update project data: ${errorMessage}`,
           );
         }
 
@@ -840,7 +839,7 @@ export default function ComprehensiveEditFixed() {
             existingDecisions = (await apiRequest(
               `/api/projects/${mis}/decisions`,
             )) as any[];
-          } catch (error) {
+          } catch (error: unknown) {
             console.warn("Could not fetch existing decisions:", error);
             existingDecisions = [];
           }
@@ -902,7 +901,7 @@ export default function ComprehensiveEditFixed() {
                   body: JSON.stringify(decisionData),
                 });
               }
-            } catch (error) {
+            } catch (error: unknown) {
               console.error(`Error processing decision ${i}:`, error);
               throw error;
             }
@@ -925,7 +924,7 @@ export default function ComprehensiveEditFixed() {
                     method: "DELETE",
                   },
                 );
-              } catch (error) {
+              } catch (error: unknown) {
                 console.error(
                   `Error deleting decision ${existingDecisions[i].id}:`,
                   error,
@@ -950,7 +949,7 @@ export default function ComprehensiveEditFixed() {
             existingFormulations = await apiRequest(
               `/api/projects/${mis}/formulations`,
             );
-          } catch (error) {
+          } catch (error: unknown) {
             console.warn("Could not fetch existing formulations:", error);
             existingFormulations = [];
           }
