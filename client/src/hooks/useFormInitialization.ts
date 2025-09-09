@@ -96,7 +96,7 @@ export function useFormInitialization({
               ) || [];
               
               const relatedMunicipalities = municipalities?.filter((muniData: any) => 
-                relatedUnits.some(unitData => unitData.regional_units?.code === muniData.municipalities?.unit_code)
+                relatedUnits.some((unitData: any) => unitData.regional_units?.code === muniData.municipalities?.unit_code)
               ) || [];
 
               relatedUnits.forEach((unitData: any) => {
