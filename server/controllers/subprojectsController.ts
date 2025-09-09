@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../authentication';
 import { supabase } from '../config/db';
 import { log } from '../vite';
+import { resolveProject } from '../utils/projectResolver';
 
 const router = Router();
 
@@ -11,29 +12,27 @@ const router = Router();
  */
 router.get('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const projectId = parseInt(req.params.id);
+    const identifier = req.params.id;
     
-    if (isNaN(projectId)) {
+    if (!identifier) {
       return res.status(400).json({
-        error: 'Invalid project ID'
+        error: 'Invalid project identifier'
       });
     }
 
-    log(`[Subprojects] Fetching subprojects for project ID: ${projectId}`);
+    log(`[Subprojects] Fetching subprojects for project identifier: ${identifier}`);
 
-    // First check if project exists
-    const { data: project, error: projectError } = await supabase
-      .from('Projects')
-      .select('id, na853, project_title')
-      .eq('id', projectId)
-      .single();
+    // Resolve project using the project resolver (handles MIS, project ID, NA853)
+    const project = await resolveProject(identifier);
 
-    if (projectError || !project) {
-      log(`[Subprojects] Project not found: ${projectId}`);
+    if (!project) {
+      log(`[Subprojects] Project not found: ${identifier}`);
       return res.status(404).json({
         error: 'Project not found'
       });
     }
+
+    const projectId = project.id;
 
     // Get subprojects for this project
     const { data: subprojects, error: subprojectsError } = await supabase
@@ -49,12 +48,13 @@ router.get('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) 
       });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId}`);
+    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId} (${project.na853})`);
 
     res.json({
       success: true,
       project: {
         id: project.id,
+        mis: project.mis,
         na853: project.na853,
         title: project.project_title
       },
