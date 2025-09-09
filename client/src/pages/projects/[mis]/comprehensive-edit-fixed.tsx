@@ -444,13 +444,7 @@ export default function ComprehensiveEditFixed() {
           implementing_agency: "",
           event_type: "",
           expenditure_types: [],
-          regions: [
-            {
-              region: "",
-              regional_unit: "",
-              municipality: "",
-            },
-          ],
+          geographic_areas: [],
         },
       ],
       project_details: {
@@ -529,15 +523,15 @@ export default function ComprehensiveEditFixed() {
   });
 
   // Extract data from optimized API responses with proper typing
-  const projectData = completeProjectData?.project;
-  const projectIndexData = completeProjectData?.index;
-  const decisionsData = completeProjectData?.decisions;
-  const formulationsData = completeProjectData?.formulations;
+  const projectData = completeProjectData?.project || null;
+  const projectIndexData = completeProjectData?.index || null;
+  const decisionsData = completeProjectData?.decisions || [];
+  const formulationsData = completeProjectData?.formulations || [];
   
   // Extract reference data with proper type casting
-  const eventTypesData = (referenceData && 'eventTypes' in referenceData && Array.isArray(referenceData.eventTypes) && referenceData.eventTypes.length > 0) ? referenceData.eventTypes : (completeProjectData && 'eventTypes' in completeProjectData) ? completeProjectData.eventTypes : [];
-  const unitsData = (referenceData && 'units' in referenceData && Array.isArray(referenceData.units) && referenceData.units.length > 0) ? referenceData.units : (completeProjectData && 'units' in completeProjectData) ? completeProjectData.units : [];
-  const expenditureTypesData = (referenceData && 'expenditureTypes' in referenceData && Array.isArray(referenceData.expenditureTypes) && referenceData.expenditureTypes.length > 0) ? referenceData.expenditureTypes : (completeProjectData && 'expenditureTypes' in completeProjectData) ? completeProjectData.expenditureTypes : [];
+  const eventTypesData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'eventTypes' in referenceData && Array.isArray((referenceData as any).eventTypes)) ? (referenceData as any).eventTypes : [];
+  const unitsData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'units' in referenceData && Array.isArray((referenceData as any).units)) ? (referenceData as any).units : [];
+  const expenditureTypesData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'expenditureTypes' in referenceData && Array.isArray((referenceData as any).expenditureTypes)) ? (referenceData as any).expenditureTypes : [];
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
   const existingSATypes = [...new Set((formulationsData || []).map((f: any) => f.sa).filter(Boolean))];
@@ -567,9 +561,9 @@ export default function ComprehensiveEditFixed() {
   // Debug logging for geographic data status  
   console.log("DEBUG - Geographic Data Status:", {
     hasNormalizedGeographicData: !!geographicData,
-    normalizedRegions: geographicData?.regions?.length || 0,
-    normalizedRegionalUnits: geographicData?.regionalUnits?.length || 0,
-    normalizedMunicipalities: geographicData?.municipalities?.length || 0,
+    normalizedRegions: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regions' in geographicData && Array.isArray((geographicData as any).regions)) ? (geographicData as any).regions.length : 0,
+    normalizedRegionalUnits: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits)) ? (geographicData as any).regionalUnits.length : 0,
+    normalizedMunicipalities: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'municipalities' in geographicData && Array.isArray((geographicData as any).municipalities)) ? (geographicData as any).municipalities.length : 0,
   });
 
   // Debug logging for ΣΑ types and enumeration codes
@@ -594,8 +588,8 @@ export default function ComprehensiveEditFixed() {
 
   // Helper functions for geographic data - Updated for normalized structure
   const getUniqueRegions = () => {
-    if (geographicData?.regions) {
-      return geographicData.regions.map(r => r.name).filter(Boolean);
+    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regions' in geographicData && Array.isArray((geographicData as any).regions)) {
+      return (geographicData as any).regions.map((r: any) => r.name).filter(Boolean);
     }
     // Return empty array if geographic data isn't available
     return [];
@@ -604,11 +598,13 @@ export default function ComprehensiveEditFixed() {
   const getRegionalUnitsForRegionNormalized = (region: string) => {
     if (!region) return [];
     
-    if (geographicData?.regions && geographicData?.regionalUnits) {
-      const selectedRegion = geographicData.regions.find(r => r.name === region);
+    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 
+        'regions' in geographicData && Array.isArray((geographicData as any).regions) &&
+        'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits)) {
+      const selectedRegion = (geographicData as any).regions.find((r: any) => r.name === region);
       if (selectedRegion) {
-        return getRegionalUnitsForRegion(geographicData.regionalUnits, selectedRegion.code)
-          .map(ru => ru.name);
+        return getRegionalUnitsForRegion((geographicData as any).regionalUnits, selectedRegion.code)
+          .map((ru: any) => ru.name);
       }
     }
     
@@ -622,15 +618,18 @@ export default function ComprehensiveEditFixed() {
   ) => {
     if (!region || !regionalUnit) return [];
     
-    if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
-      const selectedRegion = geographicData.regions.find(r => r.name === region);
+    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 
+        'regions' in geographicData && Array.isArray((geographicData as any).regions) &&
+        'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits) &&
+        'municipalities' in geographicData && Array.isArray((geographicData as any).municipalities)) {
+      const selectedRegion = (geographicData as any).regions.find((r: any) => r.name === region);
       if (selectedRegion) {
-        const selectedRegionalUnit = geographicData.regionalUnits.find(
-          ru => ru.name === regionalUnit && ru.region_code === selectedRegion.code
+        const selectedRegionalUnit = (geographicData as any).regionalUnits.find(
+          (ru: any) => ru.name === regionalUnit && ru.region_code === selectedRegion.code
         );
         if (selectedRegionalUnit) {
-          return getMunicipalitiesForRegionalUnit(geographicData.municipalities, selectedRegionalUnit.code)
-            .map(m => m.name);
+          return getMunicipalitiesForRegionalUnit((geographicData as any).municipalities, selectedRegionalUnit.code)
+            .map((m: any) => m.name);
         }
       }
     }
