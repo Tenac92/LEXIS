@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
+import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
 import {
   Plus,
   Trash2,
@@ -3685,6 +3686,55 @@ export default function ComprehensiveEditFixed() {
                                                       })}
                                                     </div>
                                                   )}
+                                                </FormItem>
+                                              )}
+                                            />
+                                            
+                                            {/* Subprojects Selection for EPA Version */}
+                                            <FormField
+                                              control={form.control}
+                                              name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.subproject_ids`}
+                                              render={({ field }) => (
+                                                <FormItem>
+                                                  <FormLabel>Συνδεδεμένα Υποέργα</FormLabel>
+                                                  <FormControl>
+                                                    <div className="border rounded-md p-3 bg-gray-50">
+                                                      <SubprojectSelect
+                                                        projectId={mis || null}
+                                                        onSubprojectSelect={(subproject) => {
+                                                          if (subproject) {
+                                                            const currentIds = field.value || [];
+                                                            if (!currentIds.includes(subproject.id)) {
+                                                              field.onChange([...currentIds, subproject.id]);
+                                                            }
+                                                          }
+                                                        }}
+                                                        selectedSubprojectId={null}
+                                                      />
+                                                      {field.value && field.value.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                          {field.value.map((subprojectId: number) => (
+                                                            <span
+                                                              key={subprojectId}
+                                                              className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
+                                                            >
+                                                              Υποέργο {subprojectId}
+                                                              <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                  const newIds = field.value.filter((id: number) => id !== subprojectId);
+                                                                  field.onChange(newIds);
+                                                                }}
+                                                                className="hover:text-purple-600"
+                                                              >
+                                                                ×
+                                                              </button>
+                                                            </span>
+                                                          ))}
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  </FormControl>
                                                 </FormItem>
                                               )}
                                             />
