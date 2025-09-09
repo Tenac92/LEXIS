@@ -160,6 +160,20 @@ interface ProjectData {
   enhanced_unit?: {
     name: string;
   };
+  enhanced_event_type?: {
+    name: string;
+  };
+  inc_year?: number;
+  inclusion_year?: number;
+  enumeration_code?: string;
+  updates?: Array<{
+    change_type: string;
+    timestamp: string;
+    user_name: string;
+    description: string;
+    notes: string;
+  }>;
+  project_lines?: any[];
 }
 
 // Form schema
@@ -325,7 +339,6 @@ export default function ComprehensiveEditFixed() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
 
   // 🔗 Auto-inheritance logic για connected decisions
   const handleConnectedDecisionChange = (
@@ -399,11 +412,7 @@ export default function ComprehensiveEditFixed() {
     
     return { isInherited: false, inheritedFromVersion: null };
   };
-  const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(
-    new Set(),
-  );
   const hasInitialized = useRef(false);
-  const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
@@ -525,23 +534,22 @@ export default function ComprehensiveEditFixed() {
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
   
-  // Extract reference data
-  const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
-  const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
-  const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
+  // Extract reference data with proper type casting
+  const eventTypesData = (referenceData && 'eventTypes' in referenceData && Array.isArray(referenceData.eventTypes) && referenceData.eventTypes.length > 0) ? referenceData.eventTypes : (completeProjectData && 'eventTypes' in completeProjectData) ? completeProjectData.eventTypes : [];
+  const unitsData = (referenceData && 'units' in referenceData && Array.isArray(referenceData.units) && referenceData.units.length > 0) ? referenceData.units : (completeProjectData && 'units' in completeProjectData) ? completeProjectData.units : [];
+  const expenditureTypesData = (referenceData && 'expenditureTypes' in referenceData && Array.isArray(referenceData.expenditureTypes) && referenceData.expenditureTypes.length > 0) ? referenceData.expenditureTypes : (completeProjectData && 'expenditureTypes' in completeProjectData) ? completeProjectData.expenditureTypes : [];
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
-  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean) || [])];
-  const existingEnumerationCodes = formulationsData?.reduce((acc, f) => {
+  const existingSATypes = [...new Set((formulationsData || []).map((f: any) => f.sa).filter(Boolean))];
+  const existingEnumerationCodes = (formulationsData || []).reduce((acc: Record<string, string>, f: any) => {
     if (f.sa && f.enumeration_code) {
       acc[f.sa] = f.enumeration_code;
     }
     return acc;
-  }, {} as Record<string, string>) || {};
+  }, {} as Record<string, string>);
 
   // Check if all essential data is loading
   const isEssentialDataLoading = isCompleteDataLoading;
-  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
   console.log("DEBUG - Project Data:", {
