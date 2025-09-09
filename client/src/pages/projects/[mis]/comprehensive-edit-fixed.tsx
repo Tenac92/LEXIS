@@ -620,6 +620,22 @@ export default function ComprehensiveEditFixed() {
     return [];
   };
 
+  // Helper functions for geographic data processing
+  const buildNormalizedGeographicData = () => {
+    if (!geographicData || typeof geographicData !== 'object' || geographicData === null) {
+      return null;
+    }
+    return geographicData;
+  };
+
+  const getGeographicCodeForSaveNormalized = (locationDetail: any) => {
+    if (!locationDetail || !locationDetail.geographic_areas || locationDetail.geographic_areas.length === 0) {
+      return null;
+    }
+    // Return the first geographic area code
+    return locationDetail.geographic_areas[0];
+  };
+
   // Additional debug logging now that variables are properly initialized
   console.log("DEBUG - Geographic Data:", {
     uniqueRegionsCount: getUniqueRegions().length,
@@ -633,73 +649,9 @@ export default function ComprehensiveEditFixed() {
     geographicDataError: geographicDataError?.message,
   });
 
-  // Number formatting helper functions
-  const formatNumberWhileTyping = (value: string): string => {
-    // Remove all non-numeric characters except comma and period
-    let cleanValue = value.replace(/[^0-9,.]/g, "");
-
-    // If empty, return empty
-    if (!cleanValue) return "";
-
-    // Handle European format (comma as decimal separator)
-    if (cleanValue.includes(",")) {
-      const parts = cleanValue.split(",");
-      if (parts.length === 2) {
-        // Clean integer part and add thousand separators
-        const integerPart = parts[0].replace(/\./g, ""); // Remove existing dots first
-        const formattedInteger = integerPart.replace(
-          /\B(?=(\d{3})+(?!\d))/g,
-          ".",
-        );
-        // Limit decimal part to 2 digits
-        const decimalPart = parts[1].slice(0, 2);
-        return `${formattedInteger},${decimalPart}`;
-      } else if (parts.length > 2) {
-        // If multiple commas, take only the first two parts
-        const integerPart = parts[0].replace(/\./g, "");
-        const formattedInteger = integerPart.replace(
-          /\B(?=(\d{3})+(?!\d))/g,
-          ".",
-        );
-        const decimalPart = parts[1].slice(0, 2);
-        return `${formattedInteger},${decimalPart}`;
-      }
-    }
-
-    // For integers only, remove existing dots and add proper thousand separators
-    const integerValue = cleanValue.replace(/[,.]/g, "");
-    return integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
-
-  const parseEuropeanNumber = (value: string): number | null => {
-    if (!value) return null;
-
-    // Replace thousand separators (periods) and convert comma to period for decimal
-    const cleaned = value.replace(/\./g, "").replace(/,/g, ".");
-    const parsed = parseFloat(cleaned);
-
-    return isNaN(parsed) ? null : parsed;
-  };
+  // REMOVED: Duplicate function declarations - already defined above
 
   // REMOVED: validateAndLimitNumericInput function - was unused
-  // const validateAndLimitNumericInput = (
-  //   value: string,
-  //   fieldName: string,
-  // ): string => {
-    const parsed = parseEuropeanNumber(value);
-    if (parsed && parsed > 9999999999.99) {
-      console.warn(
-        `${fieldName} value ${parsed} exceeds database limit, limiting input`,
-      );
-      toast({
-        title: "Προσοχή",
-        description: `${fieldName}: Το ποσό περιορίστηκε στο μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`,
-        variant: "destructive",
-      });
-      return formatEuropeanNumber(9999999999.99);
-    }
-    return value;
-  };
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
