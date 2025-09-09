@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, Loader2, FileText, Calendar, Euro } from "lucide-react";
+import { CheckCircle, Circle, Loader2, FileText, Calendar, Euro, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectSubproject } from "@shared/schema";
+import { AddSubprojectDialog } from "@/components/projects/AddSubprojectDialog";
 
 interface SubprojectSelectProps {
   projectId: string | null;
@@ -43,6 +44,7 @@ export function SubprojectSelect({
   disabled = false
 }: SubprojectSelectProps) {
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(selectedSubprojectId || null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Update local state when external selection changes
   useEffect(() => {
@@ -125,6 +127,22 @@ export function SubprojectSelect({
         <div className="text-sm text-muted-foreground">
           Δεν υπάρχουν διαθέσιμα υποέργα για το επιλεγμένο έργο
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAddDialog(true)}
+          disabled={disabled}
+          className="w-full"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Προσθήκη Πρώτου Υποέργου
+        </Button>
+        <AddSubprojectDialog
+          projectId={projectId}
+          projectTitle={subprojectsData?.project?.title}
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+        />
       </div>
     );
   }
@@ -211,8 +229,18 @@ export function SubprojectSelect({
         })}
       </div>
       
-      {localSelectedId && (
-        <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowAddDialog(true)}
+          disabled={disabled}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Προσθήκη Υποέργου
+        </Button>
+        
+        {localSelectedId && (
           <Button
             variant="outline"
             size="sm"
@@ -224,8 +252,15 @@ export function SubprojectSelect({
           >
             Καθαρισμός επιλογής
           </Button>
-        </div>
-      )}
+        )}
+      </div>
+
+      <AddSubprojectDialog
+        projectId={projectId}
+        projectTitle={subprojectsData?.project?.title}
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+      />
     </div>
   );
 }
