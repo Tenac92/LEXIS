@@ -36,15 +36,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Link, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { subprojectFormSchema, type Subproject, type SubprojectFormData } from "@shared/schema";
 
-const newSubprojectSchema = z.object({
-  subproject_code: z.string().min(1, "Ο κωδικός είναι υποχρεωτικός"),
-  title: z.string().min(1, "Ο τίτλος είναι υποχρεωτικός"),
-  description: z.string().optional(),
-  status: z.string().default("Συνεχιζόμενο"),
-});
-
-type NewSubprojectFormData = z.infer<typeof newSubprojectSchema>;
+// Use the schema from shared/schema.ts for consistency
+type NewSubprojectFormData = SubprojectFormData;
 
 interface SubprojectSelectionDialogProps {
   projectId: string | number;
@@ -53,16 +48,8 @@ interface SubprojectSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface AvailableSubproject {
-  id: number;
-  title: string;
-  description?: string;
-  code: string;
-  status: string;
-  yearly_budgets?: any;
-  created_at: string;
-  updated_at: string;
-}
+// Use the Subproject type from schema instead of custom interface
+interface AvailableSubproject extends Subproject {}
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -90,7 +77,7 @@ export function SubprojectSelectionDialog({
 
   // Form for creating new subproject
   const form = useForm<NewSubprojectFormData>({
-    resolver: zodResolver(newSubprojectSchema),
+    resolver: zodResolver(subprojectFormSchema),
     defaultValues: {
       subproject_code: "",
       title: "",
@@ -263,7 +250,7 @@ export function SubprojectSelectionDialog({
     createSubprojectMutation.mutate(data);
   };
 
-  const linkedSubprojectIds = linkedSubprojects?.map((sp: any) => sp.id) || [];
+  const linkedSubprojectIds = linkedSubprojects?.subprojects?.map((sp: any) => sp.id) || [];
   const availableSubprojects = allSubprojects?.filter(sp => !linkedSubprojectIds.includes(sp.id)) || [];
 
   return (
@@ -328,10 +315,10 @@ export function SubprojectSelectionDialog({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-2">
                                   <Badge variant="outline" className="font-mono text-xs">
-                                    {subproject.code}
+                                    {subproject.subproject_code || 'N/A'}
                                   </Badge>
-                                  <Badge className={cn("text-xs", getStatusColor(subproject.status))}>
-                                    {subproject.status}
+                                  <Badge className={cn("text-xs", getStatusColor(subproject.status || 'Συνεχιζόμενο'))}>
+                                    {subproject.status || 'Συνεχιζόμενο'}
                                   </Badge>
                                 </div>
                                 
