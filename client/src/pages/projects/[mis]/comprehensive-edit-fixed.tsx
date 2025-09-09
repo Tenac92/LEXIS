@@ -1987,14 +1987,6 @@ export default function ComprehensiveEditFixed() {
   }
 
   // Debug all fetched data
-  console.log(
-    "DEBUG - Kallikratis data sample:",
-    typedKallikratisData?.slice(0, 3),
-  );
-  console.log(
-    "DEBUG - Total kallikratis entries:",
-    typedKallikratisData?.length,
-  );
   console.log("DEBUG - Units data:", typedUnitsData?.length, "units total");
   console.log("DEBUG - Raw unitsData:", unitsData);
   console.log("DEBUG - referenceData?.units:", referenceData?.units?.length);
