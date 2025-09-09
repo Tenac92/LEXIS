@@ -254,6 +254,7 @@ const comprehensiveProjectSchema = z.object({
     budget_versions: z.object({
       pde: z.array(z.object({
         version_name: z.string().default(""),
+        version_number: z.string().default("1.0"), // Added for sorting and active version logic
         project_budget: z.string().default(""), // Moved from main level
         total_public_expense: z.string().default(""), // Moved from main level  
         eligible_public_expense: z.string().default(""), // Moved from main level
@@ -267,6 +268,7 @@ const comprehensiveProjectSchema = z.object({
       })).default([]),
       epa: z.array(z.object({
         version_name: z.string().default(""),
+        version_number: z.string().default("1.0"), // Added for sorting and active version logic
         epa_version: z.string().default(""), // Moved from main level
         amount: z.string().default(""),
         protocol_number: z.string().default(""),
