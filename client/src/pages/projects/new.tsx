@@ -1812,56 +1812,134 @@ export default function NewProjectPage() {
                                 <CardHeader>
                                   <CardTitle className="text-base flex justify-between items-center">
                                     <span>Ευρωπαϊκό Πρόγραμμα Ανάπτυξης (ΕΠΑ)</span>
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                const formulations = form.getValues("formulation_details");
-                                                formulations[index].budget_versions.pde.splice(pdeIndex, 1);
-                                                form.setValue("formulation_details", formulations);
-                                              }}
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                  {(!form.watch(`formulation_details.${index}.budget_versions.epa`) || 
+                                    form.watch(`formulation_details.${index}.budget_versions.epa`)?.length === 0) ? (
+                                    <div className="text-center py-8">
+                                      <p className="text-gray-500 mb-4">Δεν υπάρχουν εκδόσεις ΕΠΑ</p>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const formulations = form.getValues("formulation_details");
+                                          const currentFormulation = formulations[index];
                                           
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.version_name`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Όνομα Έκδοσης</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.decision_date`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Ημερομηνία Απόφασης</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} type="date" />
-                                                  </FormControl>
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
+                                          const newEpaVersion = {
+                                            version_name: "ΕΠΑ 1.0",
+                                            version_number: "1.0",
+                                            epa_version: "",
+                                            amount: "",
+                                            protocol_number: "",
+                                            ada: "",
+                                            decision_date: "",
+                                            decision_type: "Έγκριση" as const,
+                                            status: "Ενεργή" as const,
+                                            connected_decisions: [],
+                                            comments: ""
+                                          };
                                           
-                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.project_budget`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Προϋπολογισμός Έργου (€)</FormLabel>
-                                                  <FormControl>
-                                                    <Input {...field} placeholder="π.χ. 1000000" type="number" />
+                                          if (!currentFormulation.budget_versions.epa) {
+                                            currentFormulation.budget_versions.epa = [];
+                                          }
+                                          currentFormulation.budget_versions.epa.push(newEpaVersion);
+                                          form.setValue("formulation_details", formulations);
+                                        }}
+                                      >
+                                        <Plus className="h-4 w-4 mr-2" />
+                                        Προσθήκη Πρώτης Έκδοσης ΕΠΑ
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <Accordion type="single" collapsible className="space-y-4">
+                                      {form.watch(`formulation_details.${index}.budget_versions.epa`)?.map((versionData: any, epaIndex: number) => {
+                                        const isActiveVersion = form.watch(`formulation_details.${index}.budget_versions.epa`)
+                                          ?.reduce((max, current) => 
+                                            parseFloat(current.version_number || "1.0") > parseFloat(max.version_number || "1.0") 
+                                              ? current : max, versionData
+                                          ) === versionData;
+                                        return (
+                                          <AccordionItem key={epaIndex} value={`epa-${epaIndex}`}>
+                                            <div className="flex items-center justify-between pr-4">
+                                              <AccordionTrigger className="flex-1 hover:no-underline">
+                                                <div className="flex items-center gap-2">
+                                                  <h5 className="font-medium">ΕΠΑ v{versionData.version_number || "1.0"}</h5>
+                                                  {isActiveVersion && (
+                                                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
+                                                      ΕΝΕΡΓΟ
+                                                    </span>
+                                                  )}
+                                                  <span className="text-sm text-gray-500">
+                                                    {versionData.version_name && `- ${versionData.version_name}`}
+                                                  </span>
+                                                </div>
+                                              </AccordionTrigger>
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const formulations = form.getValues("formulation_details");
+                                                  formulations[index].budget_versions.epa.splice(epaIndex, 1);
+                                                  form.setValue("formulation_details", formulations);
+                                                }}
+                                              >
+                                                <Trash2 className="h-4 w-4" />
+                                              </Button>
+                                            </div>
+                                            <AccordionContent>
+                                              <div className="space-y-4 pt-4">
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.version_number`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Αριθμός Έκδοσης</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. 1.0" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.version_name`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Όνομα Έκδοσης</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Ημερομηνία Απόφασης</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} type="date" />
+                                                        </FormControl>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                  <FormField
+                                                    control={form.control}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.epa_version`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Έκδοση ΕΠΑ</FormLabel>
+                                                        <FormControl>
+                                                          <Input {...field} placeholder="π.χ. 2021-2027" />
                                                   </FormControl>
                                                 </FormItem>
                                               )}
