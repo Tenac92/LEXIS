@@ -1152,11 +1152,10 @@ export default function ComprehensiveEditFixed() {
                 dimotiki_enotita: null               // Optional municipal community
               };
 
-              // Find kallikratis_id and geographic_code using normalized data or fallback
-              let kallikratisId = null;
+              // Find geographic_code using normalized data
               let geographicCode = null;
 
-              // Try normalized approach first, fallback to Kallikratis
+              // Use normalized geographic data approach
               if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities && regionObj.perifereia) {
                 try {
                   // Convert to normalized format for the calculation function
@@ -1192,60 +1191,10 @@ export default function ComprehensiveEditFixed() {
                     usingNormalizedData: true,
                   });
                 } catch (error) {
-                  console.warn("Failed to use normalized geographic data, falling back to Kallikratis:", error);
+                  console.warn("Failed to use normalized geographic data:", error);
+                  // If normalized data fails, set geographic code to null
+                  geographicCode = null;
                 }
-              }
-              
-              // Fallback to Kallikratis data if normalized approach failed or data not available
-              if (!geographicCode && typedKallikratisData && regionObj.perifereia) {
-                const kallikratis = typedKallikratisData.find(
-                  (k) =>
-                    k.perifereia === regionObj.perifereia &&
-                    (!regionObj.perifereiaki_enotita ||
-                      k.perifereiaki_enotita === regionObj.perifereiaki_enotita) &&
-                    (!regionObj.dimos ||
-                      k.onoma_neou_ota === regionObj.dimos),
-                );
-
-                if (kallikratis) {
-                  kallikratisId = kallikratis.id;
-
-                  // Determine the appropriate level based on what data is actually populated
-                  const forceLevel =
-                    !regionObj.dimos ||
-                    regionObj.dimos.trim() === "" ||
-                    regionObj.dimos === "__clear__"
-                      ? "regional_unit"
-                      : "municipality";
-
-                  // Calculate geographic code based on what data is selected
-                  geographicCode = getGeographicCodeForSave(
-                    regionObj,
-                    kallikratis,
-                    forceLevel,
-                  );
-
-                  console.log("Fallback Kallikratis Geographic Code Calculation:", {
-                    perifereia: regionObj.perifereia,
-                    perifereiaki_enotita: regionObj.perifereiaki_enotita,
-                    dimos: regionObj.dimos,
-                    calculated_code: geographicCode,
-                    forceLevel,
-                    available_codes: {
-                      municipality_code: kallikratis.kodikos_neou_ota,
-                      regional_unit_code:
-                        kallikratis.kodikos_perifereiakis_enotitas,
-                      region_code: kallikratis.kodikos_perifereias,
-                    },
-                    usingFallback: true,
-                  });
-                }
-                console.log("Kallikratis lookup:", {
-                  regionObj,
-                  found: kallikratis,
-                  kallikratisId,
-                  geographicCode,
-                });
               }
 
               // Create project line for this region
@@ -1260,7 +1209,7 @@ export default function ComprehensiveEditFixed() {
                   perifereiaki_enotita: regionObj.perifereiaki_enotita,
                   dimos: regionObj.dimos,
                   dimotiki_enotita: regionObj.dimotiki_enotita,
-                  kallikratis_id: kallikratisId,
+                  kallikratis_id: null,
                   geographic_code: geographicCode,
                 },
               });
