@@ -1530,8 +1530,8 @@ export default function NewProjectPage() {
                                         // Smart version numbering logic
                                         const existingPdeVersions = currentFormulation.budget_versions.pde || [];
                                         const nextVersionNumber = existingPdeVersions.length > 0 
-                                          ? (Math.max(...existingPdeVersions.map(v => parseFloat(v.version_number || "1.0"))) + 0.1).toFixed(1)
-                                          : "1.0";
+                                          ? String(Math.max(...existingPdeVersions.map(v => parseInt(v.version_number || "1"))) + 1)
+                                          : "1";
                                         
                                         const newPdeVersion = {
                                           version_name: `Έκδοση ${nextVersionNumber}`,
@@ -1826,9 +1826,15 @@ export default function NewProjectPage() {
                                           const formulations = form.getValues("formulation_details");
                                           const currentFormulation = formulations[index];
                                           
+                                          // Smart version numbering logic for EPA
+                                          const existingEpaVersions = currentFormulation.budget_versions.epa || [];
+                                          const nextVersionNumber = existingEpaVersions.length > 0 
+                                            ? String(Math.max(...existingEpaVersions.map(v => parseInt(v.version_number || "1"))) + 1)
+                                            : "1";
+                                          
                                           const newEpaVersion = {
-                                            version_name: "ΕΠΑ 1.0",
-                                            version_number: "1.0",
+                                            version_name: `ΕΠΑ ${nextVersionNumber}`,
+                                            version_number: nextVersionNumber,
                                             epa_version: "",
                                             amount: "",
                                             protocol_number: "",
@@ -1951,7 +1957,14 @@ export default function NewProjectPage() {
                                                       <FormItem>
                                                         <FormLabel>Ποσό ΕΠΑ (€)</FormLabel>
                                                         <FormControl>
-                                                          <Input {...field} placeholder="π.χ. 800.000,00" />
+                                                          <Input 
+                                                            {...field} 
+                                                            placeholder="π.χ. 800.000,00" 
+                                                            onChange={(e) => {
+                                                              const formatted = formatNumberWhileTyping(e.target.value);
+                                                              field.onChange(formatted);
+                                                            }}
+                                                          />
                                                         </FormControl>
                                                       </FormItem>
                                                     )}
