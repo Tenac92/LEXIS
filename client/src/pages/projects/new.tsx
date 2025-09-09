@@ -1584,7 +1584,7 @@ export default function NewProjectPage() {
                                           <div className="flex items-center justify-between pr-4">
                                             <AccordionTrigger className="flex-1 hover:no-underline">
                                               <div className="flex items-center gap-2">
-                                                <h5 className="font-medium">ΠΔΕ v{versionData.version_number || "1.0"}</h5>
+                                                <h5 className="font-medium">ΠΔΕ v{versionData.version_number || "1"}</h5>
                                                 {isActiveVersion && (
                                                   <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
                                                     ΕΝΕΡΓΟ
@@ -1870,7 +1870,7 @@ export default function NewProjectPage() {
                                             <div className="flex items-center justify-between pr-4">
                                               <AccordionTrigger className="flex-1 hover:no-underline">
                                                 <div className="flex items-center gap-2">
-                                                  <h5 className="font-medium">ΕΠΑ v{versionData.version_number || "1.0"}</h5>
+                                                  <h5 className="font-medium">ΕΠΑ v{versionData.version_number || "1"}</h5>
                                                   {isActiveVersion && (
                                                     <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium">
                                                       ΕΝΕΡΓΟ
