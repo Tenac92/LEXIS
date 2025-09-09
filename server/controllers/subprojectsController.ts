@@ -39,7 +39,7 @@ router.get('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) 
       .from('project_subprojects')
       .select('*')
       .eq('project_id', projectId)
-      .order('code');
+      .order('id');
 
     if (subprojectsError) {
       log(`[Subprojects] Database error:`, subprojectsError.message);
