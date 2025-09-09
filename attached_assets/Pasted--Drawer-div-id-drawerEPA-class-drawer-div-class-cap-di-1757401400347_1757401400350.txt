@@ -1,0 +1,34 @@
+<!-- Drawer: ΕΠΑ -->
+  <div id="drawerEPA" class="drawer">
+    <div class="cap">Καταχώρηση ΕΠΑ</div>
+    <div class="static-row">
+      <div class="static"><div class="k">Τίτλος έργου</div><div class="v" id="refTitleEPA">—</div></div>
+      <div class="static"><div class="k">Κατάσταση</div><div class="v" id="refStatusEPA">—</div></div>
+      <div class="static"><div class="k">Ενάριθμος</div><div class="v" id="refEnarEPA">—</div></div>
+    </div>
+    <div class="grid-auto">
+      <div><label>ΣΑ</label><select id="epaSa"></select></div>
+      <div><label>Είδος πράξης</label><select id="epaType"><option>Έγκριση</option><option>Τροποποίηση</option><option>Ολοκλήρωση</option></select></div>
+      <div><label>Ημερομηνία</label><input id="epaDate" type="date"></div>
+      <div><label>Αρ. Πρωτ.</label><input id="epaProto" placeholder="π.χ. ΑΠ321/2025"></div>
+      <div><label>ΑΔΑ</label><input id="epaAda" placeholder="π.χ. ΩΩ999-XYZ"></div>
+      <div><label>Έκδοση</label><input id="epaVersion" placeholder="π.χ. Β/2025"></div>
+    </div>
+
+    <div class="cap">Οικονομικά έργου</div>
+    <table class="mini" id="tbl-epa-main"><thead><tr><th>Έτος</th><th>ΣΔΔ</th><th>ΕΔΔ</th><th></th></tr></thead><tbody></tbody><tfoot><tr><td>Σύνολο</td><td data-sum="pt">—</td><td data-sum="pe">—</td><td></td></tr></tfoot></table>
+    <div class="mini-actions"><button class="btn" onclick="apAddYear('tbl-epa-main')">+ Προσθήκη έτους</button></div>
+
+    <div class="cap">Υποέργα (επιλέγονται από την καρτέλα "Στοιχεία έργου")</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <select id="spPicker"></select>
+      <button class="btn" onclick="apAddSubprojectFromPicker()">+ Προσθήκη υποέργου</button>
+      <span class="muted">Τροποποιούνται <strong>Έκδοση</strong> & <strong>Κατάσταση</strong> εδώ.</span>
+    </div>
+    <div id="subWrap"></div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn" onclick="closeDrawer('drawerEPA')">Ακύρωση</button>
+      <button class="btn primary" onclick="mockSave('EPA')">Καταχώρηση (mock)</button>
+    </div>
+  </div>

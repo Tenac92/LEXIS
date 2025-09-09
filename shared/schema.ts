@@ -841,6 +841,44 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   budgetTypeIndex: index("idx_budget_versions_budget_type").on(table.budget_type),
 }));
 
+/**
+ * Project Subprojects Table
+ * Stores subproject data for each main project
+ * Each project can have multiple subprojects with different codes and statuses
+ */
+export const projectSubprojects = pgTable("project_subprojects", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  
+  // Subproject identification
+  code: text("code").notNull(), // Unique code per project (e.g., "SP-001")
+  title: text("title").notNull(), // Human-readable title
+  type: text("type").notNull(), // Subproject type/category
+  
+  // Status management
+  status: text("status").notNull().default("Συνεχιζόμενο"), // Συνεχιζόμενο, Σε αναμονή, Ολοκληρωμένο
+  version: text("version"), // Version string (e.g., "Β/2025")
+  
+  // Financial data per year (stored as JSONB for flexibility)
+  yearly_budgets: jsonb("yearly_budgets").default({}), // { "2024": { "sdd": 1000, "edd": 2000 }, ... }
+  
+  // Metadata
+  description: text("description"),
+  
+  // Audit fields
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  created_by: integer("created_by"),
+  updated_by: integer("updated_by"),
+}, (table) => ({
+  // Ensure unique code per project
+  uniqueProjectCode: unique().on(table.project_id, table.code),
+  // Index for performance
+  projectIdIndex: index("idx_subprojects_project_id").on(table.project_id),
+}));
+
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
 // ==============================================================
@@ -958,6 +996,17 @@ export const insertEventTypeSchema = createInsertSchema(eventTypes);
 export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
 export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
+// Subprojects schema
+export const insertProjectSubprojectSchema = createInsertSchema(projectSubprojects);
+
+// Enhanced subprojects schema with validation
+export const subprojectSchema = insertProjectSubprojectSchema.extend({
+  code: z.string().min(1, "Ο κωδικός υποέργου είναι υποχρεωτικός"),
+  title: z.string().min(1, "Ο τίτλος υποέργου είναι υποχρεωτικός"),
+  type: z.string().min(1, "Ο τύπος υποέργου είναι υποχρεωτικός"),
+  status: z.enum(["Συνεχιζόμενο", "Σε αναμονή", "Ολοκληρωμένο"]).default("Συνεχιζόμενο"),
+});
+
 // New geographic table schemas
 export const insertRegionSchema = createInsertSchema(regions);
 export const insertRegionalUnitSchema = createInsertSchema(regionalUnits);
@@ -989,6 +1038,7 @@ export type EventType = typeof eventTypes.$inferSelect;
 export type ExpenditureType = typeof expenditureTypes.$inferSelect;
 export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type ProjectSubproject = typeof projectSubprojects.$inferSelect;
 
 // New geographic entity types
 export type Region = typeof regions.$inferSelect;
@@ -1022,6 +1072,10 @@ export type InsertBeneficiaryPayment = z.infer<
 >;
 export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
+
+// Subprojects insert types
+export type InsertProjectSubproject = z.infer<typeof insertProjectSubprojectSchema>;
+export type Subproject = z.infer<typeof subprojectSchema>;
 
 // New geographic insert types
 export type InsertRegion = z.infer<typeof insertRegionSchema>;
