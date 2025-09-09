@@ -310,6 +310,7 @@ const comprehensiveProjectSchema = z.object({
             decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
             status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
             connected_decisions: z.array(z.number()).default([]), // Each EPA version can have different connected decisions
+            subproject_ids: z.array(z.number()).default([]), // Associated subprojects for this EPA version
             comments: z.string().default(""),
           })).default([]),
         }).default({ pde: [], epa: [] }),
@@ -3425,6 +3426,7 @@ export default function ComprehensiveEditFixed() {
                                             decision_type: "Έγκριση",
                                             status: "Ενεργή",
                                             connected_decisions: [],
+                                            subproject_ids: [],
                                             comments: ""
                                           });
                                           form.setValue("formulation_details", formulations);
