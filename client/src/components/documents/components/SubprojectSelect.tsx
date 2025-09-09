@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Circle, Loader2, FileText, Calendar, Euro, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProjectSubproject } from "@shared/schema";
-import { AddSubprojectDialog } from "@/components/projects/AddSubprojectDialog";
+import { SubprojectSelectionDialog } from "@/components/projects/SubprojectSelectionDialog";
 
 interface SubprojectSelectProps {
   projectId: string | null;
@@ -44,7 +44,7 @@ export function SubprojectSelect({
   disabled = false
 }: SubprojectSelectProps) {
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(selectedSubprojectId || null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showManageDialog, setShowManageDialog] = useState(false);
 
   // Update local state when external selection changes
   useEffect(() => {
@@ -130,18 +130,18 @@ export function SubprojectSelect({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowAddDialog(true)}
+          onClick={() => setShowManageDialog(true)}
           disabled={disabled}
           className="w-full"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Προσθήκη Πρώτου Υποέργου
+          Διαχείριση Υποέργων
         </Button>
-        <AddSubprojectDialog
+        <SubprojectSelectionDialog
           projectId={projectId}
           projectTitle={subprojectsData?.project?.title}
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
+          open={showManageDialog}
+          onOpenChange={setShowManageDialog}
         />
       </div>
     );
@@ -233,11 +233,11 @@ export function SubprojectSelect({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setShowAddDialog(true)}
+          onClick={() => setShowManageDialog(true)}
           disabled={disabled}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Προσθήκη Υποέργου
+          Διαχείριση Υποέργων
         </Button>
         
         {localSelectedId && (
@@ -255,11 +255,11 @@ export function SubprojectSelect({
         )}
       </div>
 
-      <AddSubprojectDialog
+      <SubprojectSelectionDialog
         projectId={projectId}
         projectTitle={subprojectsData?.project?.title}
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        open={showManageDialog}
+        onOpenChange={setShowManageDialog}
       />
     </div>
   );
