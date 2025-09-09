@@ -566,6 +566,36 @@ export const municipalities = pgTable("municipalities", {
 });
 
 /**
+ * Subprojects Table
+ * Contains subproject information that can be linked to projects
+ */
+export const subprojects = pgTable("Subprojects", {
+  id: serial("id").primaryKey(),
+  title: text("title"),
+  description: text("description"),
+  subproject_code: text("subproject_code"),
+  status: text("status"),
+  yearly_budgets: jsonb("yearly_budgets"),
+  created_at: timestamp("created_at", { withTimezone: true }),
+  updated_at: timestamp("updated_at", { withTimezone: true }),
+});
+
+/**
+ * Project Subprojects Junction Table
+ * Links projects to subprojects with additional metadata
+ */
+export const projectSubprojects = pgTable("project_subprojects", {
+  id: serial("id").primaryKey(),
+  project_id: integer("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  subproject_id: bigint("subproject_id", { mode: "number" })
+    .references(() => subprojects.id, { onUpdate: "cascade" }),
+  subproject_code: text("subproject_code"),
+  yearly_budgets: jsonb("yearly_budgets"),
+});
+
+/**
  * Project Index Geographic Junction Tables
  * Links project_index entries to specific geographic entities
  */
@@ -999,15 +1029,20 @@ export const insertEventTypeSchema = createInsertSchema(eventTypes);
 export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
 export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
-// Subprojects schema
+// Subprojects schemas
+export const insertSubprojectSchema = createInsertSchema(subprojects);
 export const insertProjectSubprojectSchema = createInsertSchema(projectSubprojects);
 
-// Enhanced subprojects schema with validation
-export const subprojectSchema = insertProjectSubprojectSchema.extend({
-  code: z.string().min(1, "Ο κωδικός υποέργου είναι υποχρεωτικός"),
+// Enhanced subprojects schema with validation for form handling
+export const subprojectFormSchema = insertSubprojectSchema.extend({
+  subproject_code: z.string().min(1, "Ο κωδικός υποέργου είναι υποχρεωτικός"),
   title: z.string().min(1, "Ο τίτλος υποέργου είναι υποχρεωτικός"),
-  type: z.string().min(1, "Ο τύπος υποέργου είναι υποχρεωτικός"),
   status: z.enum(["Συνεχιζόμενο", "Σε αναμονή", "Ολοκληρωμένο"]).default("Συνεχιζόμενο"),
+  description: z.string().optional(),
+}).omit({ 
+  id: true,
+  created_at: true, 
+  updated_at: true 
 });
 
 // New geographic table schemas
@@ -1041,6 +1076,7 @@ export type EventType = typeof eventTypes.$inferSelect;
 export type ExpenditureType = typeof expenditureTypes.$inferSelect;
 export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
+export type Subproject = typeof subprojects.$inferSelect;
 export type ProjectSubproject = typeof projectSubprojects.$inferSelect;
 
 // New geographic entity types
@@ -1077,8 +1113,9 @@ export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
 // Subprojects insert types
+export type InsertSubproject = z.infer<typeof insertSubprojectSchema>;
 export type InsertProjectSubproject = z.infer<typeof insertProjectSubprojectSchema>;
-export type Subproject = z.infer<typeof subprojectSchema>;
+export type SubprojectFormData = z.infer<typeof subprojectFormSchema>;
 
 // New geographic insert types
 export type InsertRegion = z.infer<typeof insertRegionSchema>;
