@@ -1960,6 +1960,147 @@ export default function NewProjectPage() {
                                                   )}
                                                 />
                                                 
+                                                {/* Οικονομικά Section - Financial records for EPA Version */}
+                                                <div className="mt-6">
+                                                  <div className="flex items-center justify-between mb-4">
+                                                    <h4 className="font-medium text-green-900">Οικονομικά</h4>
+                                                    <Button
+                                                      type="button"
+                                                      variant="outline"
+                                                      size="sm"
+                                                      onClick={() => {
+                                                        const formulations = form.getValues("formulation_details");
+                                                        const currentFinancials = formulations[index].budget_versions.epa[epaIndex].financials || [];
+                                                        const currentYear = new Date().getFullYear();
+                                                        const newFinancial = {
+                                                          year: currentYear,
+                                                          total_public_expense: "0",
+                                                          eligible_public_expense: "0"
+                                                        };
+                                                        
+                                                        formulations[index].budget_versions.epa[epaIndex].financials = [
+                                                          ...currentFinancials,
+                                                          newFinancial
+                                                        ];
+                                                        form.setValue("formulation_details", formulations);
+                                                      }}
+                                                    >
+                                                      <Plus className="h-4 w-4 mr-2" />
+                                                      Προσθήκη Έτους
+                                                    </Button>
+                                                  </div>
+                                                  
+                                                  {form.watch(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials`)?.map((financial: any, financialIndex: number) => (
+                                                    <div key={financialIndex} className="border rounded-lg p-4 bg-green-50 mb-3">
+                                                      <div className="flex items-center justify-between mb-3">
+                                                        <h5 className="font-medium text-green-800">Οικονομικά Στοιχεία {financialIndex + 1}</h5>
+                                                        <Button
+                                                          type="button"
+                                                          variant="ghost"
+                                                          size="sm"
+                                                          onClick={() => {
+                                                            const formulations = form.getValues("formulation_details");
+                                                            formulations[index].budget_versions.epa[epaIndex].financials.splice(financialIndex, 1);
+                                                            form.setValue("formulation_details", formulations);
+                                                          }}
+                                                        >
+                                                          <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                      </div>
+                                                      
+                                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                        <FormField
+                                                          control={form.control}
+                                                          name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.year`}
+                                                          render={({ field }) => (
+                                                            <FormItem>
+                                                              <FormLabel>Έτος</FormLabel>
+                                                              <FormControl>
+                                                                <Input 
+                                                                  {...field} 
+                                                                  type="number" 
+                                                                  min="2020" 
+                                                                  max="2050"
+                                                                  placeholder="π.χ. 2024"
+                                                                  onChange={(e) => field.onChange(parseInt(e.target.value) || new Date().getFullYear())}
+                                                                />
+                                                              </FormControl>
+                                                            </FormItem>
+                                                          )}
+                                                        />
+                                                        <FormField
+                                                          control={form.control}
+                                                          name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.total_public_expense`}
+                                                          render={({ field }) => (
+                                                            <FormItem>
+                                                              <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
+                                                              <FormControl>
+                                                                <Input 
+                                                                  {...field} 
+                                                                  placeholder="π.χ. 100000"
+                                                                  onChange={(e) => {
+                                                                    const formatted = formatNumberWhileTyping(e.target.value);
+                                                                    field.onChange(formatted);
+                                                                    
+                                                                    // Auto-validate that eligible <= total
+                                                                    const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.eligible_public_expense`);
+                                                                    const totalValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                                                                    const eligibleNumeric = parseFloat(eligibleValue?.replace(/,/g, '') || '0');
+                                                                    
+                                                                    if (eligibleNumeric > totalValue && totalValue > 0) {
+                                                                      form.setValue(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.eligible_public_expense`, formatted);
+                                                                    }
+                                                                  }}
+                                                                />
+                                                              </FormControl>
+                                                            </FormItem>
+                                                          )}
+                                                        />
+                                                        <FormField
+                                                          control={form.control}
+                                                          name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.eligible_public_expense`}
+                                                          render={({ field }) => (
+                                                            <FormItem>
+                                                              <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
+                                                              <FormControl>
+                                                                <Input 
+                                                                  {...field} 
+                                                                  placeholder="π.χ. 80000"
+                                                                  onChange={(e) => {
+                                                                    const formatted = formatNumberWhileTyping(e.target.value);
+                                                                    field.onChange(formatted);
+                                                                    
+                                                                    // Validate that eligible <= total
+                                                                    const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials.${financialIndex}.total_public_expense`);
+                                                                    const eligibleNumeric = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                                                                    const totalNumeric = parseFloat(totalValue?.replace(/,/g, '') || '0');
+                                                                    
+                                                                    if (eligibleNumeric > totalNumeric && totalNumeric > 0) {
+                                                                      toast({
+                                                                        title: "Προσοχή",
+                                                                        description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
+                                                                        variant: "destructive"
+                                                                      });
+                                                                    }
+                                                                  }}
+                                                                />
+                                                              </FormControl>
+                                                            </FormItem>
+                                                          )}
+                                                        />
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                  
+                                                  {(!form.watch(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials`) || 
+                                                    form.watch(`formulation_details.${index}.budget_versions.epa.${epaIndex}.financials`).length === 0) && (
+                                                    <div className="text-center py-4 text-gray-500 bg-gray-50 rounded-lg border-2 border-dashed">
+                                                      <p>Δεν υπάρχουν οικονομικά στοιχεία</p>
+                                                      <p className="text-sm">Κάντε κλικ στο "Προσθήκη Έτους" για να προσθέσετε</p>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                                
                                                 <FormField
                                                   control={form.control}
                                                   name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.comments`}
