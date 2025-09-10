@@ -17,6 +17,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { SmartRegionalUnitSelect } from "@/components/forms/SmartRegionalUnitSelect";
 import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
+import { SubprojectsIntegrationCard } from "@/components/subprojects/SubprojectsIntegrationCard";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
@@ -301,6 +302,7 @@ export default function NewProjectPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
+  const [savedProjectId, setSavedProjectId] = useState<number | null>(null);
   const { validateSA, getValidationState } = useSAValidation();
 
   // Form initialization matching edit form
@@ -525,6 +527,9 @@ export default function NewProjectPage() {
       }
     },
     onSuccess: (createdProject) => {
+      // Set the saved project ID so subprojects can be managed
+      setSavedProjectId(createdProject.mis);
+      
       toast({
         title: "Επιτυχία",
         description: "Το έργο δημιουργήθηκε επιτυχώς",
@@ -607,7 +612,7 @@ export default function NewProjectPage() {
 
         <Form {...form}>
           <Tabs defaultValue="project" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="project" className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
                 Στοιχεία Έργου
@@ -619,6 +624,10 @@ export default function NewProjectPage() {
               <TabsTrigger value="formulation" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Διατύπωση
+              </TabsTrigger>
+              <TabsTrigger value="subprojects" className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Υποέργα
               </TabsTrigger>
               <TabsTrigger value="decisions" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -2127,7 +2136,45 @@ export default function NewProjectPage() {
               </Card>
             </TabsContent>
 
-            {/* Tab 5: Changes */}
+            {/* Tab 5: Subprojects */}
+            <TabsContent value="subprojects">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" />
+                    Διαχείριση Υποέργων EPA
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {savedProjectId ? (
+                    <SubprojectsIntegrationCard
+                      projectId={savedProjectId}
+                      formulationDetails={form.watch("formulation_details") || []}
+                      onFormulationChange={(financials) => {
+                        // Handle formulation changes if needed
+                        console.log('Formulation change from subprojects:', financials);
+                      }}
+                      isEditing={false}
+                    />
+                  ) : (
+                    <div className="text-center py-12">
+                      <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        Αποθήκευση Έργου Απαιτείται
+                      </h3>
+                      <p className="text-gray-500 mb-4">
+                        Για να διαχειριστείτε υποέργα EPA, πρέπει πρώτα να αποθηκεύσετε το έργο.
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Συμπληρώστε τα απαραίτητα στοιχεία στις άλλες καρτέλες και κάντε κλικ στο "Δημιουργία Έργου".
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tab 6: Changes */}
             <TabsContent value="changes">
               <Card>
                 <CardHeader>
