@@ -252,35 +252,36 @@ const comprehensiveProjectSchema = z.object({
     change_type: z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
     comments: z.string().default(""),
     
-    // RESTRUCTURED: Multiple budget versions for ΠΔΕ and ΕΠΑ
+    // RESTRUCTURED: Multiple budget versions for ΠΔΕ and ΕΠΑ with new normalized structure
     budget_versions: z.object({
       pde: z.array(z.object({
-        version_name: z.string().default(""),
-        version_number: z.string().default("1.0"), // Added for sorting and active version logic
-        project_budget: z.string().default(""), // Moved from main level
-        total_public_expense: z.string().default(""), // Moved from main level  
-        eligible_public_expense: z.string().default(""), // Moved from main level
+        // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
+        // Added boundary_budget; renamed decision_type to action_type
+        version_number: z.string().default("1.0"),
+        boundary_budget: z.string().default(""), // Προϋπολογισμός Οριοθέτησης
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
         decision_date: z.string().default(""),
-        decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
-        status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
-        connected_decisions: z.array(z.number()).default([]), // Each PDE version can have different connected decisions
+        action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
         comments: z.string().default(""),
       })).default([]),
       epa: z.array(z.object({
-        version_name: z.string().default(""),
-        version_number: z.string().default("1.0"), // Added for sorting and active version logic
-        epa_version: z.string().default(""), // Moved from main level
-        amount: z.string().default(""),
+        // ΕΠΑ fields: removed version_name, amount, status, connected_decisions
+        // Renamed decision_type to action_type; added normalized financials section
+        version_number: z.string().default("1.0"),
+        epa_version: z.string().default(""),
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
         decision_date: z.string().default(""),
-        decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
-        status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
-        connected_decisions: z.array(z.number()).default([]), // Each EPA version can have different connected decisions
+        action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
         subproject_ids: z.array(z.number()).default([]), // Associated subprojects for this EPA version
         comments: z.string().default(""),
+        // New normalized "Οικονομικά" section for EPA with year-based financial records
+        financials: z.array(z.object({
+          year: z.number().min(2020).max(2050), // Έτος
+          total_public_expense: z.string().default("0"), // Συνολική Δημόσια Δαπάνη
+          eligible_public_expense: z.string().default("0"), // Επιλέξιμη Δημόσια Δαπάνη
+        })).default([]),
       })).default([]),
     }).default({
       pde: [],
