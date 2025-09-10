@@ -615,4 +615,201 @@ router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRe
 });
 
 export { router as subprojectsRouter };
+/**
+ * PROJECT-LEVEL SUBPROJECT ROUTES
+ * These routes handle subprojects that are linked to projects directly
+ */
+
+/**
+ * GET /api/projects/:projectId/subprojects
+ * Get all subprojects for a specific project
+ */
+router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectId = parseInt(req.params.projectId);
+    
+    if (!projectId || isNaN(projectId)) {
+      return res.status(400).json({
+        error: 'Invalid project ID'
+      });
+    }
+
+    log(`[Subprojects] Fetching subprojects for project ID: ${projectId}`);
+
+    // Get subprojects for this project through EPA versions
+    const { data: subprojects, error } = await supabase
+      .from('Subprojects')
+      .select(`
+        id,
+        epa_version_id,
+        title,
+        description,
+        status,
+        created_at,
+        updated_at,
+        subproject_financials (
+          id,
+          year,
+          total_public,
+          eligible_public,
+          created_at,
+          updated_at
+        ),
+        project_budget_versions!inner (
+          id,
+          project_id,
+          budget_type
+        )
+      `)
+      .eq('project_budget_versions.project_id', projectId)
+      .eq('project_budget_versions.budget_type', 'ΕΠΑ')
+      .order('title');
+
+    if (error) {
+      log(`[Subprojects] Error fetching project subprojects:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch subprojects'
+      });
+    }
+
+    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId}`);
+
+    res.json({
+      success: true,
+      subprojects: subprojects || []
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/projects/:projectId/subprojects
+ * Create a new subproject for a project
+ */
+router.post('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectId = parseInt(req.params.projectId);
+    const { title, description, status = 'active', code } = req.body;
+    
+    if (!projectId || isNaN(projectId)) {
+      return res.status(400).json({
+        error: 'Invalid project ID'
+      });
+    }
+
+    if (!title) {
+      return res.status(400).json({
+        error: 'Title is required'
+      });
+    }
+
+    log(`[Subprojects] Creating new subproject for project ID: ${projectId}`);
+
+    // Find the latest EPA version for this project
+    const { data: epaVersion, error: epaError } = await supabase
+      .from('project_budget_versions')
+      .select('id, epa_version')
+      .eq('project_id', projectId)
+      .eq('budget_type', 'ΕΠΑ')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (epaError || !epaVersion) {
+      return res.status(404).json({
+        error: 'No EPA version found for this project. Please create an EPA version first.'
+      });
+    }
+
+    // Create the subproject
+    const { data: subproject, error: subprojectError } = await supabase
+      .from('Subprojects')
+      .insert({
+        epa_version_id: epaVersion.id,
+        title,
+        description,
+        status
+      })
+      .select()
+      .single();
+
+    if (subprojectError) {
+      log(`[Subprojects] Project subproject creation error:`, subprojectError.message);
+      return res.status(500).json({
+        error: 'Failed to create subproject'
+      });
+    }
+
+    log(`[Subprojects] Successfully created subproject: ${subproject.title} for project ${projectId}`);
+
+    res.status(201).json({
+      success: true,
+      subproject
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/subprojects/all
+ * Get all subprojects across all projects
+ */
+router.get('/all', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    log(`[Subprojects] Fetching all subprojects`);
+
+    const { data: subprojects, error } = await supabase
+      .from('Subprojects')
+      .select(`
+        id,
+        epa_version_id,
+        title,
+        description,
+        status,
+        created_at,
+        updated_at,
+        project_budget_versions!inner (
+          id,
+          project_id,
+          epa_version,
+          Projects!inner (
+            id,
+            title
+          )
+        )
+      `)
+      .order('title');
+
+    if (error) {
+      log(`[Subprojects] Error fetching all subprojects:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch subprojects'
+      });
+    }
+
+    log(`[Subprojects] Found ${subprojects?.length || 0} total subprojects`);
+
+    res.json({
+      success: true,
+      subprojects: subprojects || []
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
 export default router;
