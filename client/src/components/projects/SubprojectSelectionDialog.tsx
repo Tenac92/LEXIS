@@ -79,7 +79,6 @@ export function SubprojectSelectionDialog({
   const form = useForm<NewSubprojectFormData>({
     resolver: zodResolver(subprojectFormSchema),
     defaultValues: {
-      subproject_code: "",
       title: "",
       description: "",
       status: "Συνεχιζόμενο",
@@ -315,7 +314,7 @@ export function SubprojectSelectionDialog({
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-2">
                                   <Badge variant="outline" className="font-mono text-xs">
-                                    {subproject.subproject_code || 'N/A'}
+                                    ID: {subproject.id}
                                   </Badge>
                                   <Badge className={cn("text-xs", getStatusColor(subproject.status || 'Συνεχιζόμενο'))}>
                                     {subproject.status || 'Συνεχιζόμενο'}
@@ -350,21 +349,7 @@ export function SubprojectSelectionDialog({
           <TabsContent value="create" className="flex-1 overflow-auto">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmitNew)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="subproject_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Κωδικός Υποέργου</FormLabel>
-                        <FormControl>
-                          <Input placeholder="π.χ. SP-001" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
+                <div className="grid grid-cols-1 gap-4">
                   <FormField
                     control={form.control}
                     name="status"
