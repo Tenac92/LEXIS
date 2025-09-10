@@ -521,5 +521,51 @@ router.get('/epa-versions/:epaVersionId/financial-validation', async (req: Authe
   }
 });
 
+/**
+ * GET /api/projects/:projectId/epa-versions
+ * Get all EPA versions for a specific project
+ */
+router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectId = parseInt(req.params.projectId);
+    
+    if (!projectId || isNaN(projectId)) {
+      return res.status(400).json({
+        error: 'Invalid project ID'
+      });
+    }
+
+    log(`[Subprojects] Fetching EPA versions for project ID: ${projectId}`);
+
+    // Fetch EPA versions from epa_versions table
+    const { data: epaVersions, error } = await supabase
+      .from('epa_versions')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('formulation_index', { ascending: true });
+
+    if (error) {
+      log(`[Subprojects] Database error fetching EPA versions:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch EPA versions',
+        details: error.message
+      });
+    }
+
+    log(`[Subprojects] Found ${epaVersions?.length || 0} EPA versions for project ${projectId}`);
+
+    res.json({
+      success: true,
+      epa_versions: epaVersions || []
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
 export { router as subprojectsRouter };
 export default router;
