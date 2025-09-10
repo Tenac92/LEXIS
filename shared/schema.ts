@@ -567,31 +567,48 @@ export const municipalities = pgTable("municipalities", {
 
 /**
  * Subprojects Table
- * Contains subproject information that can be linked to projects
+ * Contains subproject information scoped to EPA versions only
  */
 export const subprojects = pgTable("Subprojects", {
   id: serial("id").primaryKey(),
-  title: text("title"),
+  epa_version_id: integer("epa_version_id")
+    .notNull()
+    .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
   description: text("description"),
   status: text("status"),
-  created_at: timestamp("created_at", { withTimezone: true }),
-  updated_at: timestamp("updated_at", { withTimezone: true }),
-});
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  epaVersionIndex: index("idx_subprojects_epa_version_id").on(table.epa_version_id),
+}));
 
 /**
- * Project Subprojects Junction Table
- * Links projects to subprojects with additional metadata
+ * Subproject Financials Table
+ * Stores per-year financial data for each subproject
  */
-export const projectSubprojects = pgTable("project_subprojects", {
+export const subprojectFinancials = pgTable("subproject_financials", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id")
+  subproject_id: integer("subproject_id")
     .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  subproject_id: bigint("subproject_id", { mode: "number" })
-    .references(() => subprojects.id, { onUpdate: "cascade" }),
-  subproject_code: text("subproject_code"),
-  yearly_budgets: jsonb("yearly_budgets"),
-});
+    .references(() => subprojects.id, { onDelete: "cascade" }),
+  year: integer("year").notNull(),
+  total_public: decimal("total_public", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  eligible_public: decimal("eligible_public", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  subprojectIdIndex: index("idx_subproject_financials_subproject_id").on(table.subproject_id),
+  yearIndex: index("idx_subproject_financials_year").on(table.year),
+  uniqueSubprojectYear: sql`UNIQUE(subproject_id, year)`,
+  totalPublicCheck: sql`CHECK (total_public >= 0)`,
+  eligiblePublicCheck: sql`CHECK (eligible_public >= 0)`,
+  eligibleLessThanTotalCheck: sql`CHECK (eligible_public <= total_public)`,
+}));
 
 /**
  * Project Index Geographic Junction Tables
@@ -851,8 +868,6 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   // Metadata
   comments: text("comments"),
   
-  // Subproject associations (for EPA budget versions)
-  subproject_ids: integer("subproject_ids").array().default([]),
   
   // Audit fields
   created_at: timestamp("created_at").defaultNow(),
@@ -1031,14 +1046,23 @@ export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
 // Subprojects schemas
 export const insertSubprojectSchema = createInsertSchema(subprojects);
-export const insertProjectSubprojectSchema = createInsertSchema(projectSubprojects);
+export const insertSubprojectFinancialsSchema = createInsertSchema(subprojectFinancials);
 
 // Enhanced subprojects schema with validation for form handling
 export const subprojectFormSchema = insertSubprojectSchema.extend({
-  subproject_code: z.string().min(1, "Ο κωδικός υποέργου είναι υποχρεωτικός"),
   title: z.string().min(1, "Ο τίτλος υποέργου είναι υποχρεωτικός"),
   status: z.enum(["Συνεχιζόμενο", "Σε αναμονή", "Ολοκληρωμένο"]).default("Συνεχιζόμενο"),
   description: z.string().optional(),
+}).omit({ 
+  id: true,
+  created_at: true, 
+  updated_at: true 
+});
+
+export const subprojectFinancialsFormSchema = insertSubprojectFinancialsSchema.extend({
+  year: z.number().int().min(2020, "Έτος πρέπει να είναι μετά το 2020"),
+  total_public: z.string().min(1, "Συνολική δημόσια δαπάνη είναι υποχρεωτική"),
+  eligible_public: z.string().min(1, "Επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
 }).omit({ 
   id: true,
   created_at: true, 
@@ -1077,7 +1101,7 @@ export type ExpenditureType = typeof expenditureTypes.$inferSelect;
 export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Subproject = typeof subprojects.$inferSelect;
-export type ProjectSubproject = typeof projectSubprojects.$inferSelect;
+export type SubprojectFinancials = typeof subprojectFinancials.$inferSelect;
 
 // New geographic entity types
 export type Region = typeof regions.$inferSelect;
@@ -1114,7 +1138,7 @@ export type Recipient = z.infer<typeof recipientSchema>;
 
 // Subprojects insert types
 export type InsertSubproject = z.infer<typeof insertSubprojectSchema>;
-export type InsertProjectSubproject = z.infer<typeof insertProjectSubprojectSchema>;
+export type InsertSubprojectFinancials = z.infer<typeof insertSubprojectFinancialsSchema>;
 export type SubprojectFormData = z.infer<typeof subprojectFormSchema>;
 
 // New geographic insert types
