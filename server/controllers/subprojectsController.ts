@@ -187,7 +187,7 @@ router.post('/:id/subprojects/link', async (req: AuthenticatedRequest, res: Resp
 router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const identifier = req.params.id;
-    const { subproject_code, title, description, status = 'Συνεχιζόμενο', yearly_budgets } = req.body;
+    const { code, title, description, status = 'active', yearly_budgets } = req.body;
     
     if (!identifier) {
       return res.status(400).json({
@@ -195,9 +195,9 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    if (!subproject_code || !title) {
+    if (!title) {
       return res.status(400).json({
-        error: 'Subproject code and title are required'
+        error: 'Title is required'
       });
     }
 
@@ -211,15 +211,13 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
 
     log(`[Subprojects] Creating new subproject for project ID: ${project.id}`);
 
-    // First, create the subproject in the Subprojects table
+    // First, create the subproject in the Subprojects table (without subproject_code)
     const { data: subproject, error: subprojectError } = await supabase
       .from('Subprojects')
       .insert({
-        subproject_code,
         title,
         description,
-        status,
-        yearly_budgets: yearly_budgets || {}
+        status
       })
       .select()
       .single();
@@ -231,12 +229,14 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // Then, link it to the project
+    // Then, link it to the project with subproject_code and yearly_budgets in junction table
     const { data: link, error: linkError } = await supabase
       .from('project_subprojects')
       .insert({
         project_id: project.id,
-        subproject_id: subproject.id
+        subproject_id: subproject.id,
+        subproject_code: code || null,
+        yearly_budgets: yearly_budgets || null
       })
       .select()
       .single();
@@ -250,7 +250,7 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    log(`[Subprojects] Successfully created and linked subproject: ${subproject.subproject_code}`);
+    log(`[Subprojects] Successfully created and linked subproject: ${subproject.title} (code: ${code})`);
 
     res.status(201).json({
       success: true,
@@ -258,9 +258,9 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
         id: subproject.id,
         title: subproject.title,
         description: subproject.description,
-        code: subproject.subproject_code,
+        code: code,
         status: subproject.status,
-        yearly_budgets: subproject.yearly_budgets,
+        yearly_budgets: yearly_budgets,
         created_at: subproject.created_at,
         updated_at: subproject.updated_at,
         junction_id: link.id

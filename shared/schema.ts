@@ -573,9 +573,7 @@ export const subprojects = pgTable("Subprojects", {
   id: serial("id").primaryKey(),
   title: text("title"),
   description: text("description"),
-  subproject_code: text("subproject_code"),
   status: text("status"),
-  yearly_budgets: jsonb("yearly_budgets"),
   created_at: timestamp("created_at", { withTimezone: true }),
   updated_at: timestamp("updated_at", { withTimezone: true }),
 });

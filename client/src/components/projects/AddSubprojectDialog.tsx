@@ -33,11 +33,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus } from "lucide-react";
 
 const subprojectSchema = z.object({
-  code: z.string().min(1, "Ο κωδικός είναι υποχρεωτικός"),
+  code: z.string().optional(),
   title: z.string().min(1, "Ο τίτλος είναι υποχρεωτικός"),
-  type: z.string().min(1, "Ο τύπος είναι υποχρεωτικός"),
-  status: z.string().default("Συνεχιζόμενο"),
-  version: z.string().optional(),
+  status: z.string().default("active"),
   description: z.string().optional(),
 });
 
@@ -64,9 +62,7 @@ export function AddSubprojectDialog({
     defaultValues: {
       code: "",
       title: "",
-      type: "",
-      status: "Συνεχιζόμενο",
-      version: "",
+      status: "active",
       description: "",
     },
   });
@@ -169,9 +165,11 @@ export function AddSubprojectDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Συνεχιζόμενο">Συνεχιζόμενο</SelectItem>
-                        <SelectItem value="Σε αναμονή">Σε αναμονή</SelectItem>
-                        <SelectItem value="Ολοκληρωμένο">Ολοκληρωμένο</SelectItem>
+                        <SelectItem value="active">Ενεργό</SelectItem>
+                        <SelectItem value="planning">Σχεδιασμός</SelectItem>
+                        <SelectItem value="completed">Ολοκληρωμένο</SelectItem>
+                        <SelectItem value="suspended">Αναστολή</SelectItem>
+                        <SelectItem value="cancelled">Ακυρωμένο</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -194,35 +192,6 @@ export function AddSubprojectDialog({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Τύπος Υποέργου</FormLabel>
-                    <FormControl>
-                      <Input placeholder="π.χ. Υποδομή, Εξοπλισμός" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="version"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Έκδοση (προαιρετικό)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="π.χ. Β/2025" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <FormField
               control={form.control}
