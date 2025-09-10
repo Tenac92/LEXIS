@@ -274,7 +274,6 @@ const comprehensiveProjectSchema = z.object({
         ada: z.string().default(""),
         decision_date: z.string().default(""),
         action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-        subproject_ids: z.array(z.number()).default([]), // Associated subprojects for this EPA version
         comments: z.string().default(""),
         // New normalized "Οικονομικά" section for EPA with year-based financial records
         financials: z.array(z.object({
@@ -1911,54 +1910,6 @@ export default function NewProjectPage() {
                                                 </div>
                                           
                                           
-                                                {/* Subprojects Selection for EPA Version */}
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.subproject_ids`}
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Συνδεδεμένα Υποέργα</FormLabel>
-                                                      <FormControl>
-                                                        <div className="border rounded-md p-3 bg-gray-50">
-                                                          <SubprojectSelect
-                                                            projectId={form.watch("project_details.mis") || null}
-                                                            onSubprojectSelect={(subproject) => {
-                                                              if (subproject) {
-                                                                const currentIds = field.value || [];
-                                                                if (!currentIds.includes(subproject.id)) {
-                                                                  field.onChange([...currentIds, subproject.id]);
-                                                                }
-                                                              }
-                                                            }}
-                                                            selectedSubprojectId={null}
-                                                          />
-                                                          {field.value && field.value.length > 0 && (
-                                                            <div className="flex flex-wrap gap-1 mt-2">
-                                                              {field.value.map((subprojectId: number) => (
-                                                                <span
-                                                                  key={subprojectId}
-                                                                  className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
-                                                                >
-                                                                  Υποέργο {subprojectId}
-                                                                  <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                      const newIds = field.value.filter((id: number) => id !== subprojectId);
-                                                                      field.onChange(newIds);
-                                                                    }}
-                                                                    className="hover:text-purple-600"
-                                                                  >
-                                                                    ×
-                                                                  </button>
-                                                                </span>
-                                                              ))}
-                                                            </div>
-                                                          )}
-                                                        </div>
-                                                      </FormControl>
-                                                    </FormItem>
-                                                  )}
-                                                />
                                                 
                                                 {/* Οικονομικά Section - Financial records for EPA Version */}
                                                 <div className="mt-6">

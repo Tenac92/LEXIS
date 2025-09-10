@@ -308,7 +308,6 @@ const comprehensiveProjectSchema = z.object({
             ada: z.string().default(""),
             decision_date: z.string().default(""),
             action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-            subproject_ids: z.array(z.number()).default([]), // Associated subprojects for this EPA version
             comments: z.string().default(""),
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
