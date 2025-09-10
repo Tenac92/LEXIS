@@ -2,96 +2,59 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest } from '../authentication';
 import { supabase } from '../config/db';
 import { log } from '../vite';
-import { resolveProject } from '../utils/projectResolver';
 
 const router = Router();
 
 /**
- * GET /api/projects/:id/subprojects
- * Get all subprojects for a specific project
+ * GET /api/epa-versions/:epaVersionId/subprojects
+ * Get all subprojects for a specific EPA version
  */
-router.get('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) => {
+router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const identifier = req.params.id;
+    const epaVersionId = parseInt(req.params.epaVersionId);
     
-    if (!identifier) {
+    if (!epaVersionId || isNaN(epaVersionId)) {
       return res.status(400).json({
-        error: 'Invalid project identifier'
+        error: 'Invalid EPA version ID'
       });
     }
 
-    log(`[Subprojects] Fetching subprojects for project identifier: ${identifier}`);
+    log(`[Subprojects] Fetching subprojects for EPA version ID: ${epaVersionId}`);
 
-    // Resolve project using the project resolver (handles MIS, project ID, NA853)
-    const project = await resolveProject(identifier);
-
-    if (!project) {
-      log(`[Subprojects] Project not found: ${identifier}`);
-      return res.status(404).json({
-        error: 'Project not found'
-      });
-    }
-
-    const projectId = project.id;
-
-    // Get linked subprojects for this project via junction table
-    let subprojects: any[] = [];
-    
-    try {
-      const { data, error } = await supabase
-        .from('project_subprojects')
-        .select(`
+    // Get subprojects for this EPA version with their financials
+    const { data: subprojects, error } = await supabase
+      .from('Subprojects')
+      .select(`
+        id,
+        epa_version_id,
+        title,
+        description,
+        status,
+        created_at,
+        updated_at,
+        subproject_financials (
           id,
-          subproject_id,
-          Subprojects!inner(
-            id,
-            title,
-            description,
-            subproject_code,
-            status,
-            yearly_budgets,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('project_id', projectId);
+          year,
+          total_public,
+          eligible_public,
+          created_at,
+          updated_at
+        )
+      `)
+      .eq('epa_version_id', epaVersionId)
+      .order('title');
 
-      if (error) {
-        if (error.message.includes('does not exist') || error.message.includes('column')) {
-          log(`[Subprojects] Table/column structure issue - returning empty list: ${error.message}`);
-          subprojects = [];
-        } else {
-          throw error;
-        }
-      } else {
-        // Flatten the data structure
-        subprojects = (data || []).map((item: any) => ({
-          id: item.Subprojects.id,
-          title: item.Subprojects.title,
-          description: item.Subprojects.description,
-          code: item.Subprojects.subproject_code,
-          status: item.Subprojects.status,
-          yearly_budgets: item.Subprojects.yearly_budgets,
-          created_at: item.Subprojects.created_at,
-          updated_at: item.Subprojects.updated_at,
-          junction_id: item.id
-        }));
-      }
-    } catch (tableError: any) {
-      log(`[Subprojects] Table structure error, returning empty list:`, tableError.message);
-      subprojects = [];
+    if (error) {
+      log(`[Subprojects] Error fetching subprojects:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch subprojects'
+      });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId} (${project.na853})`);
+    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for EPA version ${epaVersionId}`);
 
     res.json({
       success: true,
-      project: {
-        id: project.id,
-        mis: project.mis,
-        na853: project.na853,
-        title: project.project_title
-      },
       subprojects: subprojects || []
     });
 
@@ -104,94 +67,17 @@ router.get('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) 
 });
 
 /**
- * POST /api/projects/:id/subprojects
- * Link an existing subproject to a project
+ * POST /api/epa-versions/:epaVersionId/subprojects
+ * Create a new subproject for an EPA version
  */
-router.post('/:id/subprojects/link', async (req: AuthenticatedRequest, res: Response) => {
+router.post('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const identifier = req.params.id;
-    const { subproject_id } = req.body;
+    const epaVersionId = parseInt(req.params.epaVersionId);
+    const { title, description, status = 'Συνεχιζόμενο' } = req.body;
     
-    if (!identifier) {
+    if (!epaVersionId || isNaN(epaVersionId)) {
       return res.status(400).json({
-        error: 'Invalid project identifier'
-      });
-    }
-
-    if (!subproject_id) {
-      return res.status(400).json({
-        error: 'Subproject ID is required'
-      });
-    }
-
-    // Resolve project
-    const project = await resolveProject(identifier);
-    if (!project) {
-      return res.status(404).json({
-        error: 'Project not found'
-      });
-    }
-
-    log(`[Subprojects] Linking subproject ${subproject_id} to project ID: ${project.id}`);
-
-    // Check if link already exists
-    const { data: existingLink } = await supabase
-      .from('project_subprojects')
-      .select('id')
-      .eq('project_id', project.id)
-      .eq('subproject_id', subproject_id)
-      .single();
-
-    if (existingLink) {
-      return res.status(409).json({
-        error: 'Subproject is already linked to this project'
-      });
-    }
-
-    // Create the link
-    const { data: link, error } = await supabase
-      .from('project_subprojects')
-      .insert({
-        project_id: project.id,
-        subproject_id
-      })
-      .select()
-      .single();
-
-    if (error) {
-      log(`[Subprojects] Link creation error:`, error.message);
-      return res.status(500).json({
-        error: 'Failed to link subproject'
-      });
-    }
-
-    log(`[Subprojects] Successfully linked subproject ${subproject_id} to project ${project.id}`);
-
-    res.status(201).json({
-      success: true,
-      link
-    });
-
-  } catch (error) {
-    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
-    res.status(500).json({
-      error: 'Internal server error'
-    });
-  }
-});
-
-/**
- * POST /api/projects/:id/subprojects
- * Create a new subproject and link it to a project
- */
-router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const identifier = req.params.id;
-    const { code, title, description, status = 'active', yearly_budgets } = req.body;
-    
-    if (!identifier) {
-      return res.status(400).json({
-        error: 'Invalid project identifier'
+        error: 'Invalid EPA version ID'
       });
     }
 
@@ -201,20 +87,27 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // Resolve project
-    const project = await resolveProject(identifier);
-    if (!project) {
+    log(`[Subprojects] Creating new subproject for EPA version ID: ${epaVersionId}`);
+
+    // Verify EPA version exists
+    const { data: epaVersion, error: epaError } = await supabase
+      .from('project_budget_versions')
+      .select('id, budget_type')
+      .eq('id', epaVersionId)
+      .eq('budget_type', 'ΕΠΑ')
+      .single();
+
+    if (epaError || !epaVersion) {
       return res.status(404).json({
-        error: 'Project not found'
+        error: 'EPA version not found'
       });
     }
 
-    log(`[Subprojects] Creating new subproject for project ID: ${project.id}`);
-
-    // First, create the subproject in the Subprojects table (without subproject_code)
+    // Create the subproject
     const { data: subproject, error: subprojectError } = await supabase
       .from('Subprojects')
       .insert({
+        epa_version_id: epaVersionId,
         title,
         description,
         status
@@ -229,42 +122,11 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
       });
     }
 
-    // Then, link it to the project with subproject_code and yearly_budgets in junction table
-    const { data: link, error: linkError } = await supabase
-      .from('project_subprojects')
-      .insert({
-        project_id: project.id,
-        subproject_id: subproject.id,
-        subproject_code: code || null,
-        yearly_budgets: yearly_budgets || null
-      })
-      .select()
-      .single();
-
-    if (linkError) {
-      log(`[Subprojects] Link creation error:`, linkError.message);
-      // Try to cleanup the subproject we just created
-      await supabase.from('Subprojects').delete().eq('id', subproject.id);
-      return res.status(500).json({
-        error: 'Failed to link subproject to project'
-      });
-    }
-
-    log(`[Subprojects] Successfully created and linked subproject: ${subproject.title} (code: ${code})`);
+    log(`[Subprojects] Successfully created subproject: ${subproject.title}`);
 
     res.status(201).json({
       success: true,
-      subproject: {
-        id: subproject.id,
-        title: subproject.title,
-        description: subproject.description,
-        code: code,
-        status: subproject.status,
-        yearly_budgets: yearly_budgets,
-        created_at: subproject.created_at,
-        updated_at: subproject.updated_at,
-        junction_id: link.id
-      }
+      subproject
     });
 
   } catch (error) {
@@ -276,39 +138,379 @@ router.post('/:id/subprojects', async (req: AuthenticatedRequest, res: Response)
 });
 
 /**
- * GET /api/subprojects
- * Get all available subprojects for selection
+ * PUT /api/subprojects/:id
+ * Update a subproject
  */
-router.get('/all', async (req: AuthenticatedRequest, res: Response) => {
+router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    log(`[Subprojects] Fetching all available subprojects`);
-
-    const { data: subprojects, error } = await supabase
-      .from('Subprojects')
-      .select('*')
-      .order('title');
-
-    if (error) {
-      log(`[Subprojects] Error fetching all subprojects:`, error.message);
-      return res.status(500).json({
-        error: 'Failed to fetch subprojects'
+    const subprojectId = parseInt(req.params.id);
+    const { title, description, status } = req.body;
+    
+    if (!subprojectId || isNaN(subprojectId)) {
+      return res.status(400).json({
+        error: 'Invalid subproject ID'
       });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} available subprojects`);
+    log(`[Subprojects] Updating subproject ID: ${subprojectId}`);
+
+    const { data: subproject, error } = await supabase
+      .from('Subprojects')
+      .update({
+        title,
+        description,
+        status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', subprojectId)
+      .select()
+      .single();
+
+    if (error) {
+      log(`[Subprojects] Update error:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to update subproject'
+      });
+    }
+
+    log(`[Subprojects] Successfully updated subproject: ${subproject.title}`);
 
     res.json({
       success: true,
-      subprojects: (subprojects || []).map(sp => ({
-        id: sp.id,
-        title: sp.title,
-        description: sp.description,
-        code: sp.subproject_code,
-        status: sp.status,
-        yearly_budgets: sp.yearly_budgets,
-        created_at: sp.created_at,
-        updated_at: sp.updated_at
-      }))
+      subproject
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * DELETE /api/subprojects/:id
+ * Delete a subproject and all its financials
+ */
+router.delete('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const subprojectId = parseInt(req.params.id);
+    
+    if (!subprojectId || isNaN(subprojectId)) {
+      return res.status(400).json({
+        error: 'Invalid subproject ID'
+      });
+    }
+
+    log(`[Subprojects] Deleting subproject ID: ${subprojectId}`);
+
+    const { error } = await supabase
+      .from('Subprojects')
+      .delete()
+      .eq('id', subprojectId);
+
+    if (error) {
+      log(`[Subprojects] Delete error:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to delete subproject'
+      });
+    }
+
+    log(`[Subprojects] Successfully deleted subproject ID: ${subprojectId}`);
+
+    res.json({
+      success: true,
+      message: 'Subproject deleted successfully'
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/subprojects/:id/financials
+ * Add financial data for a subproject year
+ */
+router.post('/subprojects/:id/financials', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const subprojectId = parseInt(req.params.id);
+    const { year, total_public, eligible_public } = req.body;
+    
+    if (!subprojectId || isNaN(subprojectId)) {
+      return res.status(400).json({
+        error: 'Invalid subproject ID'
+      });
+    }
+
+    if (!year || !total_public || !eligible_public) {
+      return res.status(400).json({
+        error: 'Year, total_public, and eligible_public are required'
+      });
+    }
+
+    // Validate eligible <= total
+    const totalPublicNum = parseFloat(total_public.toString().replace(/,/g, ''));
+    const eligiblePublicNum = parseFloat(eligible_public.toString().replace(/,/g, ''));
+
+    if (eligiblePublicNum > totalPublicNum) {
+      return res.status(400).json({
+        error: 'Eligible public expense cannot exceed total public expense'
+      });
+    }
+
+    log(`[Subprojects] Adding financial data for subproject ${subprojectId}, year ${year}`);
+
+    // Check if financials for this year already exist
+    const { data: existing } = await supabase
+      .from('subproject_financials')
+      .select('id')
+      .eq('subproject_id', subprojectId)
+      .eq('year', year)
+      .single();
+
+    if (existing) {
+      return res.status(409).json({
+        error: 'Financial data for this year already exists'
+      });
+    }
+
+    const { data: financial, error } = await supabase
+      .from('subproject_financials')
+      .insert({
+        subproject_id: subprojectId,
+        year: parseInt(year),
+        total_public: totalPublicNum.toString(),
+        eligible_public: eligiblePublicNum.toString()
+      })
+      .select()
+      .single();
+
+    if (error) {
+      log(`[Subprojects] Financial creation error:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to create subproject financial data'
+      });
+    }
+
+    log(`[Subprojects] Successfully created financial data for subproject ${subprojectId}, year ${year}`);
+
+    res.status(201).json({
+      success: true,
+      financial
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * PUT /api/subprojects/financials/:id
+ * Update financial data for a subproject year
+ */
+router.put('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const financialId = parseInt(req.params.id);
+    const { year, total_public, eligible_public } = req.body;
+    
+    if (!financialId || isNaN(financialId)) {
+      return res.status(400).json({
+        error: 'Invalid financial ID'
+      });
+    }
+
+    // Validate eligible <= total
+    const totalPublicNum = parseFloat(total_public.toString().replace(/,/g, ''));
+    const eligiblePublicNum = parseFloat(eligible_public.toString().replace(/,/g, ''));
+
+    if (eligiblePublicNum > totalPublicNum) {
+      return res.status(400).json({
+        error: 'Eligible public expense cannot exceed total public expense'
+      });
+    }
+
+    log(`[Subprojects] Updating financial data ID: ${financialId}`);
+
+    const { data: financial, error } = await supabase
+      .from('subproject_financials')
+      .update({
+        year: year ? parseInt(year) : undefined,
+        total_public: totalPublicNum.toString(),
+        eligible_public: eligiblePublicNum.toString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', financialId)
+      .select()
+      .single();
+
+    if (error) {
+      log(`[Subprojects] Financial update error:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to update subproject financial data'
+      });
+    }
+
+    log(`[Subprojects] Successfully updated financial data ID: ${financialId}`);
+
+    res.json({
+      success: true,
+      financial
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * DELETE /api/subprojects/financials/:id
+ * Delete financial data for a subproject year
+ */
+router.delete('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const financialId = parseInt(req.params.id);
+    
+    if (!financialId || isNaN(financialId)) {
+      return res.status(400).json({
+        error: 'Invalid financial ID'
+      });
+    }
+
+    log(`[Subprojects] Deleting financial data ID: ${financialId}`);
+
+    const { error } = await supabase
+      .from('subproject_financials')
+      .delete()
+      .eq('id', financialId);
+
+    if (error) {
+      log(`[Subprojects] Financial delete error:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to delete subproject financial data'
+      });
+    }
+
+    log(`[Subprojects] Successfully deleted financial data ID: ${financialId}`);
+
+    res.json({
+      success: true,
+      message: 'Financial data deleted successfully'
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * GET /api/epa-versions/:epaVersionId/financial-validation
+ * Validate EPA totals vs subproject totals and return mismatch info
+ */
+router.get('/epa-versions/:epaVersionId/financial-validation', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const epaVersionId = parseInt(req.params.epaVersionId);
+    
+    if (!epaVersionId || isNaN(epaVersionId)) {
+      return res.status(400).json({
+        error: 'Invalid EPA version ID'
+      });
+    }
+
+    log(`[Subprojects] Validating financials for EPA version ID: ${epaVersionId}`);
+
+    // Get EPA financials
+    const { data: epaFinancials, error: epaError } = await supabase
+      .from('epa_financials')
+      .select('year, total_public_expense, eligible_public_expense')
+      .eq('epa_version_id', epaVersionId);
+
+    if (epaError) {
+      log(`[Subprojects] Error fetching EPA financials:`, epaError.message);
+      return res.status(500).json({
+        error: 'Failed to fetch EPA financials'
+      });
+    }
+
+    // Get subproject financials totals per year
+    const { data: subprojectTotals, error: subprojectError } = await supabase
+      .from('subproject_financials')
+      .select(`
+        year,
+        total_public,
+        eligible_public,
+        Subprojects!inner (
+          epa_version_id
+        )
+      `)
+      .eq('Subprojects.epa_version_id', epaVersionId);
+
+    if (subprojectError) {
+      log(`[Subprojects] Error fetching subproject financials:`, subprojectError.message);
+      return res.status(500).json({
+        error: 'Failed to fetch subproject financials'
+      });
+    }
+
+    // Calculate totals by year
+    const subprojectSums: Record<number, { total_public: number; eligible_public: number }> = {};
+    
+    subprojectTotals?.forEach(item => {
+      if (!subprojectSums[item.year]) {
+        subprojectSums[item.year] = { total_public: 0, eligible_public: 0 };
+      }
+      subprojectSums[item.year].total_public += parseFloat(item.total_public || '0');
+      subprojectSums[item.year].eligible_public += parseFloat(item.eligible_public || '0');
+    });
+
+    // Compare EPA vs subproject totals
+    const validation: any[] = [];
+    
+    epaFinancials?.forEach(epa => {
+      const epaTotal = parseFloat(epa.total_public_expense || '0');
+      const epaEligible = parseFloat(epa.eligible_public_expense || '0');
+      
+      const subprojectSum = subprojectSums[epa.year] || { total_public: 0, eligible_public: 0 };
+      
+      const totalMismatch = Math.abs(epaTotal - subprojectSum.total_public) > 0.01;
+      const eligibleMismatch = Math.abs(epaEligible - subprojectSum.eligible_public) > 0.01;
+      
+      validation.push({
+        year: epa.year,
+        epa_totals: {
+          total_public: epaTotal,
+          eligible_public: epaEligible
+        },
+        subproject_totals: {
+          total_public: subprojectSum.total_public,
+          eligible_public: subprojectSum.eligible_public
+        },
+        mismatches: {
+          total_public: totalMismatch ? epaTotal - subprojectSum.total_public : 0,
+          eligible_public: eligibleMismatch ? epaEligible - subprojectSum.eligible_public : 0
+        },
+        has_mismatch: totalMismatch || eligibleMismatch
+      });
+    });
+
+    const overallMismatch = validation.some(v => v.has_mismatch);
+
+    res.json({
+      success: true,
+      validation,
+      has_overall_mismatch: overallMismatch
     });
 
   } catch (error) {
