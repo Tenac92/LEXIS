@@ -1,4 +1,4 @@
-import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type ProjectBudget, type InsertBudgetHistory, type Employee, type InsertEmployee, type Beneficiary, type InsertBeneficiary, type BeneficiaryPayment, type InsertBeneficiaryPayment } from "@shared/schema";
+import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type ProjectBudget, type InsertBudgetHistory, type Employee, type InsertEmployee, type Beneficiary, type InsertBeneficiary, type BeneficiaryPayment, type InsertBeneficiaryPayment, type ProjectBudgetVersion, type InsertProjectBudgetVersion, type EpaFinancials, type InsertEpaFinancials } from "@shared/schema";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
@@ -62,6 +62,19 @@ export interface IStorage {
   getUnitDetails(unit: string): Promise<any>;
   getStaffByUnit(unit: string): Promise<any[]>;
   getProjectDetails(mis: string): Promise<any | null>;
+  
+  // Project Budget Versions operations (PDE and EPA)
+  getBudgetVersionsByProject(projectId: number, formulationId?: number): Promise<ProjectBudgetVersion[]>;
+  getBudgetVersionById(id: number): Promise<ProjectBudgetVersion | null>;
+  createBudgetVersion(version: InsertProjectBudgetVersion): Promise<ProjectBudgetVersion>;
+  updateBudgetVersion(id: number, version: Partial<InsertProjectBudgetVersion>): Promise<ProjectBudgetVersion>;
+  deleteBudgetVersion(id: number): Promise<void>;
+  
+  // EPA Financials operations
+  getEPAFinancials(epaVersionId: number): Promise<EpaFinancials[]>;
+  createEPAFinancials(financial: InsertEpaFinancials): Promise<EpaFinancials>;
+  updateEPAFinancials(id: number, financial: Partial<InsertEpaFinancials>): Promise<EpaFinancials>;
+  deleteEPAFinancials(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1578,6 +1591,238 @@ export class DatabaseStorage implements IStorage {
       return data || [];
     } catch (error) {
       console.error('[Storage] Error in getProjectIndexMunicipalities:', error);
+      throw error;
+    }
+  }
+
+  // Project Budget Versions operations implementation
+  async getBudgetVersionsByProject(projectId: number, formulationId?: number): Promise<ProjectBudgetVersion[]> {
+    try {
+      console.log(`[Storage] Fetching budget versions for project ${projectId}${formulationId ? `, formulation ${formulationId}` : ''}`);
+      
+      let query = supabase
+        .from('project_budget_versions')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('budget_type')
+        .order('version_number');
+      
+      if (formulationId) {
+        query = query.eq('formulation_id', formulationId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        console.error('[Storage] Error fetching budget versions:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} budget versions for project ${projectId}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getBudgetVersionsByProject:', error);
+      throw error;
+    }
+  }
+
+  async getBudgetVersionById(id: number): Promise<ProjectBudgetVersion | null> {
+    try {
+      console.log(`[Storage] Fetching budget version by ID: ${id}`);
+      
+      const { data, error } = await supabase
+        .from('project_budget_versions')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log(`[Storage] Budget version with ID ${id} not found`);
+          return null;
+        }
+        console.error('[Storage] Error fetching budget version by ID:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully fetched budget version:`, data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in getBudgetVersionById:', error);
+      throw error;
+    }
+  }
+
+  async createBudgetVersion(version: InsertProjectBudgetVersion): Promise<ProjectBudgetVersion> {
+    try {
+      console.log('[Storage] Creating new budget version:', version);
+      
+      const { data, error } = await supabase
+        .from('project_budget_versions')
+        .insert({
+          ...version,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error creating budget version:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created budget version with ID:', data.id);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in createBudgetVersion:', error);
+      throw error;
+    }
+  }
+
+  async updateBudgetVersion(id: number, version: Partial<InsertProjectBudgetVersion>): Promise<ProjectBudgetVersion> {
+    try {
+      console.log(`[Storage] Updating budget version ${id}:`, version);
+      
+      const { data, error } = await supabase
+        .from('project_budget_versions')
+        .update({
+          ...version,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error updating budget version:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully updated budget version:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in updateBudgetVersion:', error);
+      throw error;
+    }
+  }
+
+  async deleteBudgetVersion(id: number): Promise<void> {
+    try {
+      console.log(`[Storage] Deleting budget version ${id}`);
+      
+      const { error } = await supabase
+        .from('project_budget_versions')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('[Storage] Error deleting budget version:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully deleted budget version ${id}`);
+    } catch (error) {
+      console.error('[Storage] Error in deleteBudgetVersion:', error);
+      throw error;
+    }
+  }
+
+  // EPA Financials operations implementation
+  async getEPAFinancials(epaVersionId: number): Promise<EpaFinancials[]> {
+    try {
+      console.log(`[Storage] Fetching EPA financials for version ${epaVersionId}`);
+      
+      const { data, error } = await supabase
+        .from('epa_financials')
+        .select('*')
+        .eq('epa_version_id', epaVersionId)
+        .order('year');
+        
+      if (error) {
+        console.error('[Storage] Error fetching EPA financials:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Found ${data?.length || 0} EPA financial records for version ${epaVersionId}`);
+      return data || [];
+    } catch (error) {
+      console.error('[Storage] Error in getEPAFinancials:', error);
+      throw error;
+    }
+  }
+
+  async createEPAFinancials(financial: InsertEpaFinancials): Promise<EpaFinancials> {
+    try {
+      console.log('[Storage] Creating new EPA financial record:', financial);
+      
+      const { data, error } = await supabase
+        .from('epa_financials')
+        .insert({
+          ...financial,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error creating EPA financial record:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully created EPA financial record with ID:', data.id);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in createEPAFinancials:', error);
+      throw error;
+    }
+  }
+
+  async updateEPAFinancials(id: number, financial: Partial<InsertEpaFinancials>): Promise<EpaFinancials> {
+    try {
+      console.log(`[Storage] Updating EPA financial record ${id}:`, financial);
+      
+      const { data, error } = await supabase
+        .from('epa_financials')
+        .update({
+          ...financial,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error('[Storage] Error updating EPA financial record:', error);
+        throw error;
+      }
+      
+      console.log('[Storage] Successfully updated EPA financial record:', data);
+      return data;
+    } catch (error) {
+      console.error('[Storage] Error in updateEPAFinancials:', error);
+      throw error;
+    }
+  }
+
+  async deleteEPAFinancials(id: number): Promise<void> {
+    try {
+      console.log(`[Storage] Deleting EPA financial record ${id}`);
+      
+      const { error } = await supabase
+        .from('epa_financials')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        console.error('[Storage] Error deleting EPA financial record:', error);
+        throw error;
+      }
+      
+      console.log(`[Storage] Successfully deleted EPA financial record ${id}`);
+    } catch (error) {
+      console.error('[Storage] Error in deleteEPAFinancials:', error);
       throw error;
     }
   }
