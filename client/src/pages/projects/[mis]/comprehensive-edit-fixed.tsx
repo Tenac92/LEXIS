@@ -33,6 +33,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
+import { SubprojectsIntegrationCard } from "@/components/subprojects/SubprojectsIntegrationCard";
 import {
   Plus,
   Trash2,
@@ -43,6 +44,7 @@ import {
   CheckCircle,
   Building2,
   RefreshCw,
+  FolderOpen,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -2048,7 +2050,7 @@ export default function ComprehensiveEditFixed() {
             className="space-y-6"
           >
             <Tabs defaultValue="project" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger
                   value="project"
                   className="flex items-center gap-2"
@@ -2076,6 +2078,13 @@ export default function ComprehensiveEditFixed() {
                 >
                   <FileText className="h-4 w-4" />
                   Αποφάσεις
+                </TabsTrigger>
+                <TabsTrigger
+                  value="subprojects"
+                  className="flex items-center gap-2"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  Υποέργα
                 </TabsTrigger>
                 <TabsTrigger
                   value="changes"
@@ -3781,7 +3790,20 @@ export default function ComprehensiveEditFixed() {
                 </Card>
               </TabsContent>
 
-              {/* Tab 5: Changes - Enhanced with comprehensive tracking */}
+              {/* Tab 5: Subprojects */}
+              <TabsContent value="subprojects">
+                <SubprojectsIntegrationCard
+                  projectId={completeProjectData?.id || 0}
+                  formulationDetails={form.watch("formulation_details") || []}
+                  onFormulationChange={(financials) => {
+                    // Handle formulation financial changes if needed
+                    console.log("[Subprojects] Formulation change:", financials);
+                  }}
+                  isEditing={true}
+                />
+              </TabsContent>
+
+              {/* Tab 6: Changes - Enhanced with comprehensive tracking */}
               <TabsContent value="changes">
                 <Card>
                   <CardHeader>
