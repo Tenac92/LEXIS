@@ -832,15 +832,10 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   budget_type: text("budget_type").notNull(), // "ΠΔΕ" | "ΕΠΑ"
   
   // Version identification
-  version_name: text("version_name"), // User-friendly name for the version
   version_number: decimal("version_number", { precision: 3, scale: 1 }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
   
-  // Financial data
-  amount: decimal("amount", { precision: 12, scale: 2 }),
-  
   // ΠΔΕ specific fields
-  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 }),
-  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 }),
+  boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Οριοθέτησης
   
   // ΕΠΑ specific fields
   epa_version: text("epa_version"),
@@ -850,11 +845,10 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   ada: text("ada"),
   decision_date: date("decision_date"),
   
-  // Decision details
-  decision_type: text("decision_type").default("Έγκριση"), // Έγκριση, Τροποποίηση, Κλείσιμο στο ύψος πληρωμών
+  // Action details (renamed from decision_type)
+  action_type: text("action_type").default("Έγκριση"), // Είδος Πράξης: Έγκριση, Τροποποίηση, Κλείσιμο στο ύψος πληρωμών
   
-  // Status and metadata
-  status: text("status").default("Ενεργή"),
+  // Metadata
   comments: text("comments"),
   
   // Subproject associations (for EPA budget versions)
@@ -870,6 +864,43 @@ export const projectBudgetVersions = pgTable("project_budget_versions", {
   projectIdIndex: index("idx_budget_versions_project_id").on(table.project_id),
   formulationIdIndex: index("idx_budget_versions_formulation_id").on(table.formulation_id),
   budgetTypeIndex: index("idx_budget_versions_budget_type").on(table.budget_type),
+  // Constraint for boundary_budget >= 0
+  boundaryBudgetCheck: sql`CHECK (boundary_budget >= 0 OR boundary_budget IS NULL)`,
+}));
+
+/**
+ * EPA Financials Table
+ * Stores financial data for EPA budget versions by year
+ * Each EPA version can have multiple financial entries (one per year)
+ */
+export const epaFinancials = pgTable("epa_financials", {
+  id: serial("id").primaryKey(),
+  epa_version_id: integer("epa_version_id")
+    .notNull()
+    .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
+  year: integer("year").notNull(), // Έτος - unique per EPA version
+  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"), // Συνολική Δημόσια Δαπάνη ≥ 0
+  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 })
+    .notNull()
+    .default("0"), // Επιλέξιμη Δημόσια Δαπάνη ≥ 0, ≤ Συνολική
+  
+  // Audit fields
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  // Unique constraint: one financial record per EPA version per year
+  uniqueEpaVersionYear: unique("unique_epa_version_year").on(table.epa_version_id, table.year),
+  
+  // Business constraints
+  totalExpenseCheck: sql`CHECK (total_public_expense >= 0)`,
+  eligibleExpenseCheck: sql`CHECK (eligible_public_expense >= 0)`,
+  eligibleLteTotalCheck: sql`CHECK (eligible_public_expense <= total_public_expense)`,
+  
+  // Indexes for performance
+  epaVersionIdIndex: index("idx_epa_financials_version_id").on(table.epa_version_id),
+  yearIndex: index("idx_epa_financials_year").on(table.year),
 }));
 
 
@@ -910,14 +941,22 @@ export const insertProjectFormulationSchema = createInsertSchema(projectFormulat
 
 export const insertProjectBudgetVersionSchema = createInsertSchema(projectBudgetVersions);
 
+export const insertEpaFinancialsSchema = createInsertSchema(epaFinancials);
+
 // Enhanced schema for budget versions with validation
 export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
   budget_type: z.enum(["ΠΔΕ", "ΕΠΑ"], {
     required_error: "Ο τύπος προϋπολογισμού είναι υποχρεωτικός",
   }),
-  amount: z.string().min(1, "Το ποσό είναι υποχρεωτικό"),
-  decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
-  status: z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+  boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Οριοθέτησης
+  action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Είδος Πράξης
+});
+
+// Schema for EPA financials with validation
+export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
+  year: z.number().int().min(2000).max(2100, "Το έτος πρέπει να είναι έγκυρο"),
+  total_public_expense: z.string().min(1, "Η συνολική δημόσια δαπάνη είναι υποχρεωτική"),
+  eligible_public_expense: z.string().min(1, "Η επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
 });
 
 // Schema for document recipients
@@ -1199,6 +1238,13 @@ export const budgetValidationResponseSchema = z.object({
 
 export type ProjectBudgetVersion = InferSelectModel<typeof projectBudgetVersions>;
 export type InsertProjectBudgetVersion = InferInsertModel<typeof projectBudgetVersions>;
+
+export type EpaFinancials = InferSelectModel<typeof epaFinancials>;
+export type InsertEpaFinancials = InferInsertModel<typeof epaFinancials>;
+
+// Enhanced types for forms
+export type BudgetVersionFormData = z.infer<typeof budgetVersionSchema>;
+export type EpaFinancialsFormData = z.infer<typeof epaFinancialsSchema>;
 
 // Budget validation type
 export type BudgetValidation = z.infer<typeof budgetValidationSchema>;
