@@ -3159,7 +3159,7 @@ export default function ComprehensiveEditFixed() {
                                             <AccordionContent className="pt-4">
                                             
                                             {/* Version Information */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4 p-3 bg-blue-50 rounded-lg">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4 p-3 bg-blue-50 rounded-lg">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.version_number`}
@@ -3179,18 +3179,6 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.version_name`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Όνομα Έκδοσης</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. Αρχική έγκριση, Τροποποίηση" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <FormField
-                                                control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_date`}
                                                 render={({ field }) => (
                                                   <FormItem>
@@ -3203,45 +3191,6 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            {/* Budget Information */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.project_budget`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Προϋπολογισμός Έργου (€)</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 1000000" type="number" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.total_public_expense`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 800000" type="number" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.eligible_public_expense`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 750000" type="number" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                            </div>
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
@@ -3270,44 +3219,23 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_type`}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.action_type`}
                                                 render={({ field }) => (
                                                   <FormItem>
-                                                    <FormLabel>Τύπος Απόφασης</FormLabel>
+                                                    <FormLabel>Είδος Πράξης</FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                       <FormControl>
                                                         <SelectTrigger>
-                                                          <SelectValue placeholder="Επιλέξτε τύπο" />
+                                                          <SelectValue placeholder="Επιλέξτε είδος πράξης" />
                                                         </SelectTrigger>
                                                       </FormControl>
                                                       <SelectContent>
                                                         <SelectItem value="Έγκριση">Έγκριση</SelectItem>
                                                         <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
                                                         <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
-                                                      </SelectContent>
-                                                    </Select>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.status`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Κατάσταση</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                      <FormControl>
-                                                        <SelectTrigger>
-                                                          <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                                        </SelectTrigger>
-                                                      </FormControl>
-                                                      <SelectContent>
-                                                        <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                                        <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                                        <SelectItem value="Αναστολή">Αναστολή</SelectItem>
                                                       </SelectContent>
                                                     </Select>
                                                   </FormItem>
@@ -3489,19 +3417,7 @@ export default function ComprehensiveEditFixed() {
                                             </div>
                                             <AccordionContent className="pt-4">
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.version_name`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Όνομα Έκδοσης</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.version_number`}
@@ -3521,19 +3437,7 @@ export default function ComprehensiveEditFixed() {
                                                   <FormItem>
                                                     <FormLabel>Έκδοση ΕΠΑ</FormLabel>
                                                     <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 1.0" />
-                                                    </FormControl>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.amount`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Ποσό (€)</FormLabel>
-                                                    <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 500000" type="number" />
+                                                      <Input {...field} placeholder="π.χ. 2021-2027" />
                                                     </FormControl>
                                                   </FormItem>
                                                 )}
@@ -3582,14 +3486,14 @@ export default function ComprehensiveEditFixed() {
                                               />
                                               <FormField
                                                 control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.decision_type`}
+                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.action_type`}
                                                 render={({ field }) => (
                                                   <FormItem>
-                                                    <FormLabel>Τύπος Απόφασης</FormLabel>
+                                                    <FormLabel>Είδος Πράξης</FormLabel>
                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                       <FormControl>
                                                         <SelectTrigger>
-                                                          <SelectValue placeholder="Επιλέξτε τύπο" />
+                                                          <SelectValue placeholder="Επιλέξτε είδος πράξης" />
                                                         </SelectTrigger>
                                                       </FormControl>
                                                       <SelectContent>
@@ -3603,93 +3507,6 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mb-4">
-                                              <FormField
-                                                control={form.control}
-                                                name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.status`}
-                                                render={({ field }) => (
-                                                  <FormItem>
-                                                    <FormLabel>Κατάσταση</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                      <FormControl>
-                                                        <SelectTrigger>
-                                                          <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                                        </SelectTrigger>
-                                                      </FormControl>
-                                                      <SelectContent>
-                                                        <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                                        <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                                        <SelectItem value="Αναστολή">Αναστολή</SelectItem>
-                                                      </SelectContent>
-                                                    </Select>
-                                                  </FormItem>
-                                                )}
-                                              />
-                                            </div>
-                                            
-                                            {/* Connected Decisions Multi-Select for EPA Version */}
-                                            <FormField
-                                              control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.connected_decisions`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
-                                                  <FormControl>
-                                                    <Select
-                                                      onValueChange={(value) => {
-                                                        const decisionId = parseInt(value);
-                                                        // 🚀 Auto-inheritance logic για EPA
-                                                        handleConnectedDecisionChange(index, 'epa', originalIndex, decisionId, true);
-                                                      }}
-                                                    >
-                                                      <SelectTrigger>
-                                                        <SelectValue placeholder="Επιλέξτε αποφάσεις..." />
-                                                      </SelectTrigger>
-                                                      <SelectContent>
-                                                        {form.watch("decisions")?.map((decision, decIndex) => (
-                                                          <SelectItem key={decIndex} value={decIndex.toString()}>
-                                                            {decision.protocol_number || `Απόφαση ${decIndex + 1}`}
-                                                          </SelectItem>
-                                                        ))}
-                                                      </SelectContent>
-                                                    </Select>
-                                                  </FormControl>
-                                                  {field.value && field.value.length > 0 && (
-                                                    <div className="flex flex-wrap gap-1 mt-2">
-                                                      {field.value.map((decisionId: number) => {
-                                                        const decision = form.watch("decisions")?.[decisionId];
-                                                        const { isInherited, inheritedFromVersion } = getDecisionOrigin(index, 'epa', originalIndex, decisionId);
-                                                        
-                                                        return (
-                                                          <span
-                                                            key={decisionId}
-                                                            className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 ${
-                                                              isInherited 
-                                                                ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' 
-                                                                : 'bg-green-100 text-green-800 border border-green-300'
-                                                            }`}
-                                                            title={isInherited ? `Κληρονομήθηκε από έκδοση ${inheritedFromVersion! + 1}` : 'Άμεσα προστεθειμένη απόφαση'}
-                                                          >
-                                                            {isInherited && <span className="mr-1">🔗</span>}
-                                                            {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
-                                                            <button
-                                                              type="button"
-                                                              onClick={() => {
-                                                                // 🗑️ EPA Removal με dedicated function
-                                                                handleConnectedDecisionRemoval(index, 'epa', originalIndex, decisionId);
-                                                              }}
-                                                              className={isInherited ? 'hover:text-yellow-600' : 'hover:text-green-600'}
-                                                            >
-                                                              ×
-                                                            </button>
-                                                          </span>
-                                                        );
-                                                      })}
-                                                    </div>
-                                                  )}
-                                                </FormItem>
-                                              )}
-                                            />
                                             
                                             {/* Subprojects Selection for EPA Version */}
                                             <FormField
