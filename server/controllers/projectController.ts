@@ -1258,12 +1258,34 @@ router.post('/:mis/formulations', authenticateSession, async (req: Authenticated
 
     console.log(`[ProjectFormulations] Successfully created formulation with ID: ${createdFormulation.id}`);
 
-    // Process budget_versions if provided
+    // Process budget_versions if provided OR auto-create EPA version from formulation data
     if (formulationData.budget_versions) {
       await processBudgetVersions(
         createdFormulation.id!, 
         project.id!, 
         formulationData.budget_versions, 
+        req.user?.id || 0
+      );
+    } else if (formulationData.epa_version || (formulationData.sa && formulationData.sa !== 'ΠΔΕ')) {
+      // Auto-create EPA budget version when EPA formulation data exists
+      console.log(`[ProjectFormulations] Auto-creating EPA budget version for new EPA formulation type: ${formulationData.sa}`);
+      
+      const autoEPAVersion = {
+        epa: [{
+          epa_version: formulationData.epa_version || 'Αυτόματη Έκδοση 1.0',
+          action_type: 'Έγκριση',
+          financials: formulationData.total_public_expense || formulationData.eligible_public_expense ? [{
+            year: new Date().getFullYear(),
+            total_public_expense: formulationData.total_public_expense || '0',
+            eligible_public_expense: formulationData.eligible_public_expense || '0'
+          }] : []
+        }]
+      };
+
+      await processBudgetVersions(
+        createdFormulation.id!, 
+        project.id!, 
+        autoEPAVersion, 
         req.user?.id || 0
       );
     }
@@ -1348,7 +1370,7 @@ router.patch('/:mis/formulations/:formulationId', authenticateSession, async (re
 
     console.log(`[ProjectFormulations] Successfully updated formulation ${formulationId}`);
 
-    // Process budget_versions if provided
+    // Process budget_versions if provided OR auto-create EPA version from formulation data
     if (updateData.budget_versions) {
       // First, delete existing budget versions for this formulation
       await supabase
@@ -1361,6 +1383,35 @@ router.patch('/:mis/formulations/:formulationId', authenticateSession, async (re
         parseInt(formulationId), 
         existingFormulation.project_id!, 
         updateData.budget_versions, 
+        req.user?.id || 0
+      );
+    } else if (updateData.epa_version || (updateData.sa && updateData.sa !== 'ΠΔΕ')) {
+      // Auto-create EPA budget version when EPA formulation data exists
+      console.log(`[ProjectFormulations] Auto-creating EPA budget version for EPA formulation type: ${updateData.sa || fieldsToUpdate.sa_type}`);
+      
+      const autoEPAVersion = {
+        epa: [{
+          epa_version: updateData.epa_version || fieldsToUpdate.epa_version || 'Αυτόματη Έκδοση 1.0',
+          action_type: 'Έγκριση',
+          financials: updateData.total_public_expense || updateData.eligible_public_expense ? [{
+            year: new Date().getFullYear(),
+            total_public_expense: updateData.total_public_expense || '0',
+            eligible_public_expense: updateData.eligible_public_expense || '0'
+          }] : []
+        }]
+      };
+
+      // Delete existing EPA budget versions for this formulation
+      await supabase
+        .from('project_budget_versions')
+        .delete()
+        .eq('formulation_id', formulationId)
+        .eq('budget_type', 'ΕΠΑ');
+
+      await processBudgetVersions(
+        parseInt(formulationId), 
+        existingFormulation.project_id!, 
+        autoEPAVersion, 
         req.user?.id || 0
       );
     }
