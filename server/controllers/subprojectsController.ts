@@ -568,5 +568,51 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
   }
 });
 
+// Create test EPA budget version for testing purposes
+router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const projectId = parseInt(req.params.projectId);
+    if (isNaN(projectId)) {
+      return res.status(400).json({
+        error: 'Invalid project ID'
+      });
+    }
+
+    log(`[Subprojects] Creating test EPA budget version for project ID: ${projectId}`);
+
+    // Create a test EPA budget version using basic columns only
+    const { data: newVersion, error } = await supabase
+      .from('project_budget_versions')
+      .insert({
+        project_id: projectId,
+        budget_type: 'ΕΠΑ',
+        epa_version: 'Έκδοση 1.0 - Αρχική Έγκριση (Test)'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      log(`[Subprojects] Database error creating test EPA version:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to create test EPA version',
+        details: error.message
+      });
+    }
+
+    log(`[Subprojects] Successfully created test EPA version with ID: ${newVersion.id}`);
+
+    res.json({
+      success: true,
+      epa_version: newVersion
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
 export { router as subprojectsRouter };
 export default router;
