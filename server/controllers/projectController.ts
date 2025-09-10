@@ -9,6 +9,121 @@ import { AuthenticatedRequest } from '../authentication';
 
 export const router = Router();
 
+/**
+ * Process budget versions and create records in project_budget_versions and epa_financials tables
+ */
+async function processBudgetVersions(
+  formulationId: number,
+  projectId: number,
+  budgetVersions: any,
+  userId: number
+) {
+  try {
+    console.log(`[ProcessBudgetVersions] Processing budget versions for formulation ${formulationId}`, budgetVersions);
+
+    // Process PDE versions
+    if (budgetVersions.pde && Array.isArray(budgetVersions.pde)) {
+      for (const pdeVersion of budgetVersions.pde) {
+        const budgetVersionData = {
+          project_id: projectId,
+          formulation_id: formulationId,
+          budget_type: 'ΠΔΕ',
+          action_type: pdeVersion.action_type || 'Έγκριση',
+          boundary_budget: pdeVersion.boundary_budget ? parseFloat(pdeVersion.boundary_budget.toString().replace(/,/g, '')) : null,
+          protocol_number: pdeVersion.protocol_number || null,
+          ada: pdeVersion.ada || null,
+          decision_date: pdeVersion.decision_date || null,
+          comments: pdeVersion.comments || null,
+          created_by: userId,
+          updated_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: createdPDE, error: pdeError } = await supabase
+          .from('project_budget_versions')
+          .insert(budgetVersionData)
+          .select()
+          .single();
+
+        if (pdeError) {
+          console.error('[ProcessBudgetVersions] Error creating PDE version:', pdeError);
+          throw pdeError;
+        }
+
+        console.log(`[ProcessBudgetVersions] Created PDE version with ID: ${createdPDE.id}`);
+      }
+    }
+
+    // Process EPA versions
+    if (budgetVersions.epa && Array.isArray(budgetVersions.epa)) {
+      for (const epaVersion of budgetVersions.epa) {
+        const budgetVersionData = {
+          project_id: projectId,
+          formulation_id: formulationId,
+          budget_type: 'ΕΠΑ',
+          action_type: epaVersion.action_type || 'Έγκριση',
+          epa_version: epaVersion.epa_version || null,
+          protocol_number: epaVersion.protocol_number || null,
+          ada: epaVersion.ada || null,
+          decision_date: epaVersion.decision_date || null,
+          comments: epaVersion.comments || null,
+          subproject_ids: epaVersion.subproject_ids || [],
+          created_by: userId,
+          updated_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { data: createdEPA, error: epaError } = await supabase
+          .from('project_budget_versions')
+          .insert(budgetVersionData)
+          .select()
+          .single();
+
+        if (epaError) {
+          console.error('[ProcessBudgetVersions] Error creating EPA version:', epaError);
+          throw epaError;
+        }
+
+        console.log(`[ProcessBudgetVersions] Created EPA version with ID: ${createdEPA.id}`);
+
+        // Process EPA financials if provided
+        if (epaVersion.financials && Array.isArray(epaVersion.financials)) {
+          for (const financial of epaVersion.financials) {
+            const financialData = {
+              epa_version_id: createdEPA.id,
+              year: parseInt(financial.year) || new Date().getFullYear(),
+              total_public_expense: parseFloat(financial.total_public_expense?.toString().replace(/,/g, '') || '0'),
+              eligible_public_expense: parseFloat(financial.eligible_public_expense?.toString().replace(/,/g, '') || '0'),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+
+            const { data: createdFinancial, error: financialError } = await supabase
+              .from('epa_financials')
+              .insert(financialData)
+              .select()
+              .single();
+
+            if (financialError) {
+              console.error('[ProcessBudgetVersions] Error creating EPA financial record:', financialError);
+              throw financialError;
+            }
+
+            console.log(`[ProcessBudgetVersions] Created EPA financial record with ID: ${createdFinancial.id} for year ${financialData.year}`);
+          }
+        }
+      }
+    }
+
+    console.log(`[ProcessBudgetVersions] Successfully processed all budget versions for formulation ${formulationId}`);
+  } catch (error) {
+    console.error('[ProcessBudgetVersions] Error processing budget versions:', error);
+    throw error;
+  }
+}
+
 export async function listProjects(req: Request, res: Response) {
   try {
     console.log('[Projects] Fetching all projects with optimized schema');
@@ -1143,6 +1258,17 @@ router.post('/:mis/formulations', authenticateSession, async (req: Authenticated
     }
 
     console.log(`[ProjectFormulations] Successfully created formulation with ID: ${createdFormulation.id}`);
+
+    // Process budget_versions if provided
+    if (formulationData.budget_versions) {
+      await processBudgetVersions(
+        createdFormulation.id!, 
+        project.id!, 
+        formulationData.budget_versions, 
+        req.user!.id
+      );
+    }
+
     res.status(201).json(createdFormulation);
   } catch (error) {
     console.error('[ProjectFormulations] Error creating formulation:', error);
@@ -1222,6 +1348,24 @@ router.patch('/:mis/formulations/:formulationId', authenticateSession, async (re
     }
 
     console.log(`[ProjectFormulations] Successfully updated formulation ${formulationId}`);
+
+    // Process budget_versions if provided
+    if (updateData.budget_versions) {
+      // First, delete existing budget versions for this formulation
+      await supabase
+        .from('project_budget_versions')
+        .delete()
+        .eq('formulation_id', formulationId);
+
+      // Then create new ones
+      await processBudgetVersions(
+        parseInt(formulationId), 
+        existingFormulation.project_id!, 
+        updateData.budget_versions, 
+        req.user!.id
+      );
+    }
+
     res.json(updatedFormulation);
   } catch (error) {
     console.error('[ProjectFormulations] Error updating formulation:', error);
