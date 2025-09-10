@@ -740,6 +740,19 @@ export default function ComprehensiveEditFixed() {
       console.log("=== COMPREHENSIVE FORM SUBMISSION ===");
       console.log("Form data:", data);
 
+      // 🔍 DEBUG: Check EPA data in submission
+      console.log(`[EPA SUBMIT DEBUG] Form submission data check:`, {
+        hasFormulationDetails: !!data.formulation_details,
+        formulationCount: data.formulation_details?.length || 0,
+        formulationDetails: data.formulation_details?.map((f, idx) => ({
+          index: idx,
+          sa: f.sa,
+          hasBudgetVersions: !!f.budget_versions,
+          epaVersionsCount: f.budget_versions?.epa?.length || 0,
+          epaVersionsData: f.budget_versions?.epa || []
+        })) || []
+      });
+
       // Track what operations have been completed for potential rollback
       const completedOperations = {
         projectUpdate: false,
@@ -975,6 +988,14 @@ export default function ComprehensiveEditFixed() {
           for (let i = 0; i < data.formulation_details.length; i++) {
             const formulation = data.formulation_details[i];
             const existingFormulation = existingFormulations[i];
+
+            // 🔍 DEBUG: Log EPA budget version data before processing
+            console.log(`[EPA DEBUG] Formulation ${i} budget_versions:`, {
+              budget_versions: formulation.budget_versions,
+              epa_versions: formulation.budget_versions?.epa || [],
+              epa_count: formulation.budget_versions?.epa?.length || 0,
+              epa_data_sample: formulation.budget_versions?.epa?.[0] || null
+            });
 
             const formulationData = {
               sa: formulation.sa,
