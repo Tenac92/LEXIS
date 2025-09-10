@@ -537,12 +537,13 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
 
     log(`[Subprojects] Fetching EPA versions for project ID: ${projectId}`);
 
-    // Fetch EPA versions from epa_versions table
+    // Fetch EPA versions from project_budget_versions table (filtered by EPA type)
     const { data: epaVersions, error } = await supabase
-      .from('epa_versions')
+      .from('project_budget_versions')
       .select('*')
       .eq('project_id', projectId)
-      .order('formulation_index', { ascending: true });
+      .eq('budget_type', 'ΕΠΑ')
+      .order('id', { ascending: true });
 
     if (error) {
       log(`[Subprojects] Database error fetching EPA versions:`, error.message);
