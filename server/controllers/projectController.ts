@@ -68,7 +68,6 @@ async function processBudgetVersions(
           ada: epaVersion.ada || null,
           decision_date: epaVersion.decision_date || null,
           comments: epaVersion.comments || null,
-          subproject_ids: epaVersion.subproject_ids || [],
           created_by: userId,
           updated_by: userId,
           created_at: new Date().toISOString(),
@@ -3355,7 +3354,6 @@ router.post('/:mis/budget-versions', authenticateSession, async (req: Authentica
       decision_date: budgetVersionData.decision_date || null,
       action_type: budgetVersionData.action_type || 'Έγκριση',
       comments: budgetVersionData.comments || null,
-      subproject_ids: budgetVersionData.subproject_ids || [],
       created_by: req.user.id
     };
 

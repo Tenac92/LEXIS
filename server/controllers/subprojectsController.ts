@@ -768,6 +768,7 @@ router.get('/all', async (req: AuthenticatedRequest, res: Response) => {
   try {
     log(`[Subprojects] Fetching all subprojects`);
 
+    // Get subprojects with their EPA versions and projects
     const { data: subprojects, error } = await supabase
       .from('Subprojects')
       .select(`
@@ -781,11 +782,7 @@ router.get('/all', async (req: AuthenticatedRequest, res: Response) => {
         project_budget_versions!inner (
           id,
           project_id,
-          epa_version,
-          Projects!inner (
-            id,
-            title
-          )
+          epa_version
         )
       `)
       .order('title');

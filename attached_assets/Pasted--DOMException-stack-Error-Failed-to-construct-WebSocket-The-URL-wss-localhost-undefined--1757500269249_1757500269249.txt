@@ -1,0 +1,53 @@
+
+DOMException {stack: "Error: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/' is invalid.↵    at…"}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Budget data not found", requestInfo: {…}, stack: "Error: Budget data not found↵    at apiRequest…"}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Budget data not found", requestInfo: {…}, stack: "Error: Budget data not found↵    at apiRequest…"}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Internal server error", requestInfo: {…}, stack: "Error: Internal server error↵    at apiRequest…"}
+
+Error processing formulation 0: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Error details: 
+Error {}
+
+Completed operations: 
+Object {projectUpdate: true, decisions: Array(0), formulations: Array(0), changes: false}
+
+[API] Request failed: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+[API] Error details: 
+Object {message: "Internal server error", requestInfo: {…}, stack: "Error: Internal server error↵    at apiRequest…"}
+
+Error processing formulation 0: 
+Error {requestInfo: {…}, originalError: Error, isApiError: true}
+
+=== COMPREHENSIVE FORM SUBMISSION ERROR ===
+Error details: 
+Error {}
+
+Completed operations: 
+Object {projectUpdate: true, decisions: Array(0), formulations: Array(0), changes: false}
+
+Form submission failed: 
+Error {originalError: Error, completedOperations: {…}}
