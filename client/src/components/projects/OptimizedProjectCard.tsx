@@ -44,6 +44,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
       try {
         const response = await apiRequest(`/api/budget/lookup/${encodeURIComponent(project.mis)}`);
         if (!response || (typeof response === 'object' && 'status' in response && response.status === 'error')) {
+          // Budget data not found - this is expected for some projects, so don't log as error
           return null;
         }
         
@@ -79,7 +80,10 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
              parseFloat(budgetData.user_view?.toString() || '0')).toString()
         };
       } catch (error) {
-        console.error('[Budget] Error fetching budget data:', error);
+        // Only log if it's not a "Budget data not found" error to reduce console noise
+        if (error instanceof Error && !error.message.includes('Budget data not found')) {
+          console.error('[Budget] Error fetching budget data:', error);
+        }
         return null;
       }
     },
@@ -93,7 +97,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     mutationFn: async () => {
       const response = await apiRequest(`/api/projects/${project.mis}`, {
         method: "DELETE",
-      });
+      }) as Response;
 
       if (!response.ok) {
         const error = await response.json();
