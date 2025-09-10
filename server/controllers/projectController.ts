@@ -3131,4 +3131,370 @@ router.put('/:mis/comprehensive', authenticateSession, async (req: Authenticated
   }
 });
 
+// ================================================================
+// PROJECT BUDGET VERSIONS ENDPOINTS
+// ================================================================
+
+// Get budget versions for a project
+router.get('/:mis/budget-versions', async (req: Request, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const { formulation_id } = req.query;
+    console.log(`[ProjectBudgetVersions] Fetching budget versions for MIS: ${mis}${formulation_id ? `, formulation: ${formulation_id}` : ''}`);
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Get budget versions using storage method
+    const budgetVersions = await storage.getBudgetVersionsByProject(
+      project.id, 
+      formulation_id ? parseInt(formulation_id as string) : undefined
+    );
+
+    console.log(`[ProjectBudgetVersions] Found ${budgetVersions.length} budget versions for project ${project.id}`);
+    res.json(budgetVersions);
+  } catch (error) {
+    console.error('[ProjectBudgetVersions] Error in budget versions endpoint:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Create budget version for a project
+router.post('/:mis/budget-versions', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis } = req.params;
+    const budgetVersionData = req.body;
+    console.log(`[ProjectBudgetVersions] Creating budget version for MIS: ${mis}`, budgetVersionData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // First get the project ID from MIS
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project) {
+      return res.status(404).json({ 
+        message: "Project not found",
+        error: projectError?.message || "Not found"
+      });
+    }
+
+    // Prepare budget version data
+    const newBudgetVersion = {
+      project_id: project.id,
+      formulation_id: budgetVersionData.formulation_id || null,
+      budget_type: budgetVersionData.budget_type,
+      version_number: budgetVersionData.version_number || "1.0",
+      boundary_budget: budgetVersionData.boundary_budget || null, // For PDE
+      epa_version: budgetVersionData.epa_version || null, // For EPA
+      protocol_number: budgetVersionData.protocol_number || null,
+      ada: budgetVersionData.ada || null,
+      decision_date: budgetVersionData.decision_date || null,
+      action_type: budgetVersionData.action_type || 'Έγκριση',
+      comments: budgetVersionData.comments || null,
+      subproject_ids: budgetVersionData.subproject_ids || [],
+      created_by: req.user.id
+    };
+
+    // Create budget version using storage method
+    const createdVersion = await storage.createBudgetVersion(newBudgetVersion);
+
+    console.log('[ProjectBudgetVersions] Budget version created successfully:', createdVersion.id);
+    res.status(201).json(createdVersion);
+  } catch (error) {
+    console.error('[ProjectBudgetVersions] Error creating budget version:', error);
+    res.status(500).json({ 
+      message: "Failed to create budget version",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Update budget version
+router.patch('/:mis/budget-versions/:versionId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, versionId } = req.params;
+    const updateData = req.body;
+    console.log(`[ProjectBudgetVersions] Updating budget version ${versionId} for MIS: ${mis}`, updateData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Prepare update data
+    const versionUpdateData = {
+      ...updateData,
+      updated_by: req.user.id
+    };
+
+    // Update budget version using storage method
+    const updatedVersion = await storage.updateBudgetVersion(parseInt(versionId), versionUpdateData);
+
+    console.log('[ProjectBudgetVersions] Budget version updated successfully:', updatedVersion.id);
+    res.json(updatedVersion);
+  } catch (error) {
+    console.error('[ProjectBudgetVersions] Error updating budget version:', error);
+    res.status(500).json({ 
+      message: "Failed to update budget version",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Delete budget version
+router.delete('/:mis/budget-versions/:versionId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, versionId } = req.params;
+    console.log(`[ProjectBudgetVersions] Deleting budget version ${versionId} for MIS: ${mis}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Delete budget version using storage method
+    await storage.deleteBudgetVersion(parseInt(versionId));
+
+    console.log('[ProjectBudgetVersions] Budget version deleted successfully:', versionId);
+    res.json({ message: "Budget version deleted successfully" });
+  } catch (error) {
+    console.error('[ProjectBudgetVersions] Error deleting budget version:', error);
+    res.status(500).json({ 
+      message: "Failed to delete budget version",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// ================================================================
+// EPA FINANCIALS ENDPOINTS
+// ================================================================
+
+// Get EPA financials for a budget version
+router.get('/:mis/budget-versions/:versionId/epa-financials', async (req: Request, res: Response) => {
+  try {
+    const { mis, versionId } = req.params;
+    console.log(`[EPAFinancials] Fetching EPA financials for MIS: ${mis}, version: ${versionId}`);
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Get EPA financials using storage method
+    const epaFinancials = await storage.getEPAFinancials(parseInt(versionId));
+
+    console.log(`[EPAFinancials] Found ${epaFinancials.length} EPA financial records for version ${versionId}`);
+    res.json(epaFinancials);
+  } catch (error) {
+    console.error('[EPAFinancials] Error in EPA financials endpoint:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Create EPA financial record
+router.post('/:mis/budget-versions/:versionId/epa-financials', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, versionId } = req.params;
+    const financialData = req.body;
+    console.log(`[EPAFinancials] Creating EPA financial for MIS: ${mis}, version: ${versionId}`, financialData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Verify this is an EPA budget version
+    if (existingVersion.budget_type !== 'ΕΠΑ') {
+      return res.status(400).json({ message: "Financial records can only be added to EPA budget versions" });
+    }
+
+    // Prepare EPA financial data
+    const newFinancial = {
+      epa_version_id: parseInt(versionId),
+      year: financialData.year,
+      total_public_expense: financialData.total_public_expense || "0",
+      eligible_public_expense: financialData.eligible_public_expense || "0"
+    };
+
+    // Create EPA financial using storage method
+    const createdFinancial = await storage.createEPAFinancials(newFinancial);
+
+    console.log('[EPAFinancials] EPA financial created successfully:', createdFinancial.id);
+    res.status(201).json(createdFinancial);
+  } catch (error) {
+    console.error('[EPAFinancials] Error creating EPA financial:', error);
+    res.status(500).json({ 
+      message: "Failed to create EPA financial record",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Update EPA financial record
+router.patch('/:mis/budget-versions/:versionId/epa-financials/:financialId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, versionId, financialId } = req.params;
+    const updateData = req.body;
+    console.log(`[EPAFinancials] Updating EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`, updateData);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Update EPA financial using storage method
+    const updatedFinancial = await storage.updateEPAFinancials(parseInt(financialId), updateData);
+
+    console.log('[EPAFinancials] EPA financial updated successfully:', updatedFinancial.id);
+    res.json(updatedFinancial);
+  } catch (error) {
+    console.error('[EPAFinancials] Error updating EPA financial:', error);
+    res.status(500).json({ 
+      message: "Failed to update EPA financial record",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
+// Delete EPA financial record
+router.delete('/:mis/budget-versions/:versionId/epa-financials/:financialId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mis, versionId, financialId } = req.params;
+    console.log(`[EPAFinancials] Deleting EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Verify the budget version exists and belongs to the project
+    const existingVersion = await storage.getBudgetVersionById(parseInt(versionId));
+    if (!existingVersion) {
+      return res.status(404).json({ message: "Budget version not found" });
+    }
+
+    // Verify project ownership
+    const { data: project, error: projectError } = await supabase
+      .from('Projects')
+      .select('id')
+      .eq('mis', mis)
+      .single();
+
+    if (projectError || !project || existingVersion.project_id !== project.id) {
+      return res.status(404).json({ message: "Project or budget version not found" });
+    }
+
+    // Delete EPA financial using storage method
+    await storage.deleteEPAFinancials(parseInt(financialId));
+
+    console.log('[EPAFinancials] EPA financial deleted successfully:', financialId);
+    res.json({ message: "EPA financial record deleted successfully" });
+  } catch (error) {
+    console.error('[EPAFinancials] Error deleting EPA financial:', error);
+    res.status(500).json({ 
+      message: "Failed to delete EPA financial record",
+      error: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+});
+
 export { router as projectsRouter };
