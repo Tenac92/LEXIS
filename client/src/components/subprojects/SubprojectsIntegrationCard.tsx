@@ -44,7 +44,7 @@ export function SubprojectsIntegrationCard({
   const { data: epaVersions, isLoading: isLoadingVersions, error } = useQuery({
     queryKey: ['project-epa-versions', projectId],
     queryFn: async () => {
-      const response = await apiRequest(`/api/subprojects/projects/${projectId}/epa-versions`) as {
+      const response = await apiRequest(`/api/projects/${projectId}/epa-versions`) as {
         epa_versions: EPAVersionInfo[];
       };
       return response.epa_versions;
