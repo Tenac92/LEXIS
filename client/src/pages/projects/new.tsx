@@ -432,24 +432,24 @@ export default function NewProjectPage() {
             return null;
           })(),
           
-          // Budget fields - get from latest active PDE version
+          // Budget fields - get from latest PDE version (boundary_budget field)
           budget_e069: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "E069");
             if (!formEntry?.budget_versions?.pde?.length) return null;
-            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
-            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
           })(),
           budget_na271: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
             if (!formEntry?.budget_versions?.pde?.length) return null;
-            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
-            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
           })(),
           budget_na853: (() => {
             const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
             if (!formEntry?.budget_versions?.pde?.length) return null;
-            const activePde = formEntry.budget_versions.pde.find(p => p.status === "Ενεργή") || formEntry.budget_versions.pde[0];
-            return activePde?.project_budget ? parseEuropeanNumber(activePde.project_budget) : null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
           })(),
         };
         
@@ -1537,17 +1537,12 @@ export default function NewProjectPage() {
                                           : "1";
                                         
                                         const newPdeVersion = {
-                                          version_name: `Έκδοση ${nextVersionNumber}`,
                                           version_number: nextVersionNumber,
-                                          project_budget: "",
-                                          total_public_expense: "",
-                                          eligible_public_expense: "",
+                                          boundary_budget: "", // New field for ΠΔΕ
                                           protocol_number: "",
                                           ada: "",
                                           decision_date: "",
-                                          decision_type: "Έγκριση" as const,
-                                          status: "Ενεργή" as const,
-                                          connected_decisions: [],
+                                          action_type: "Έγκριση" as const, // Renamed from decision_type
                                           comments: ""
                                         };
                                         
@@ -1594,7 +1589,7 @@ export default function NewProjectPage() {
                                                   </span>
                                                 )}
                                                 <span className="text-sm text-gray-500">
-                                                  {versionData.version_name && `- ${versionData.version_name}`}
+                                                  {versionData.action_type && `- ${versionData.action_type}`}
                                                 </span>
                                               </div>
                                             </AccordionTrigger>
@@ -1630,37 +1625,10 @@ export default function NewProjectPage() {
                                                 />
                                                 <FormField
                                                   control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.version_name`}
+                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.boundary_budget`}
                                                   render={({ field }) => (
                                                     <FormItem>
-                                                      <FormLabel>Όνομα Έκδοσης</FormLabel>
-                                                      <FormControl>
-                                                        <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
-                                                      </FormControl>
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_date`}
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Ημερομηνία Απόφασης</FormLabel>
-                                                      <FormControl>
-                                                        <Input {...field} type="date" />
-                                                      </FormControl>
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                              </div>
-                                              
-                                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.project_budget`}
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Προϋπολογισμός Έργου (€)</FormLabel>
+                                                      <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
                                                       <FormControl>
                                                         <Input 
                                                           {...field} 
@@ -1676,38 +1644,12 @@ export default function NewProjectPage() {
                                                 />
                                                 <FormField
                                                   control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.total_public_expense`}
+                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_date`}
                                                   render={({ field }) => (
                                                     <FormItem>
-                                                      <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
+                                                      <FormLabel>Ημερομηνία Απόφασης</FormLabel>
                                                       <FormControl>
-                                                        <Input 
-                                                          {...field} 
-                                                          placeholder="π.χ. 800.000,00" 
-                                                          onChange={(e) => {
-                                                            const formatted = formatNumberWhileTyping(e.target.value);
-                                                            field.onChange(formatted);
-                                                          }}
-                                                        />
-                                                      </FormControl>
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.eligible_public_expense`}
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
-                                                      <FormControl>
-                                                        <Input 
-                                                          {...field} 
-                                                          placeholder="π.χ. 600.000,00" 
-                                                          onChange={(e) => {
-                                                            const formatted = formatNumberWhileTyping(e.target.value);
-                                                            field.onChange(formatted);
-                                                          }}
-                                                        />
+                                                        <Input {...field} type="date" />
                                                       </FormControl>
                                                     </FormItem>
                                                   )}
@@ -1741,44 +1683,23 @@ export default function NewProjectPage() {
                                                 />
                                               </div>
 
-                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                                                 <FormField
                                                   control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.decision_type`}
+                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.action_type`}
                                                   render={({ field }) => (
                                                     <FormItem>
-                                                      <FormLabel>Τύπος Απόφασης</FormLabel>
+                                                      <FormLabel>Είδος Πράξης</FormLabel>
                                                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                                                         <FormControl>
                                                           <SelectTrigger>
-                                                            <SelectValue placeholder="Επιλέξτε τύπο" />
+                                                            <SelectValue placeholder="Επιλέξτε είδος πράξης" />
                                                           </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
                                                           <SelectItem value="Έγκριση">Έγκριση</SelectItem>
                                                           <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
                                                           <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
-                                                        </SelectContent>
-                                                      </Select>
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.status`}
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Κατάσταση</FormLabel>
-                                                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                          <SelectTrigger>
-                                                            <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                                          </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                          <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                                          <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                                          <SelectItem value="Αναστολή">Αναστολή</SelectItem>
                                                         </SelectContent>
                                                       </Select>
                                                     </FormItem>
@@ -1836,18 +1757,15 @@ export default function NewProjectPage() {
                                             : "1";
                                           
                                           const newEpaVersion = {
-                                            version_name: `ΕΠΑ ${nextVersionNumber}`,
                                             version_number: nextVersionNumber,
                                             epa_version: "",
-                                            amount: "",
                                             protocol_number: "",
                                             ada: "",
                                             decision_date: "",
-                                            decision_type: "Έγκριση" as const,
-                                            status: "Ενεργή" as const,
-                                            connected_decisions: [],
+                                            action_type: "Έγκριση" as const, // Renamed from decision_type
                                             subproject_ids: [],
-                                            comments: ""
+                                            comments: "",
+                                            financials: [] // New normalized financials section
                                           };
                                           
                                           if (!currentFormulation.budget_versions.epa) {
@@ -1917,33 +1835,6 @@ export default function NewProjectPage() {
                                                   />
                                                   <FormField
                                                     control={form.control}
-                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.version_name`}
-                                                    render={({ field }) => (
-                                                      <FormItem>
-                                                        <FormLabel>Όνομα Έκδοσης</FormLabel>
-                                                        <FormControl>
-                                                          <Input {...field} placeholder="π.χ. Αρχική έγκριση" />
-                                                        </FormControl>
-                                                      </FormItem>
-                                                    )}
-                                                  />
-                                                  <FormField
-                                                    control={form.control}
-                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
-                                                    render={({ field }) => (
-                                                      <FormItem>
-                                                        <FormLabel>Ημερομηνία Απόφασης</FormLabel>
-                                                        <FormControl>
-                                                          <Input {...field} type="date" />
-                                                        </FormControl>
-                                                      </FormItem>
-                                                    )}
-                                                  />
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                  <FormField
-                                                    control={form.control}
                                                     name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.epa_version`}
                                                     render={({ field }) => (
                                                       <FormItem>
@@ -1956,19 +1847,12 @@ export default function NewProjectPage() {
                                                   />
                                                   <FormField
                                                     control={form.control}
-                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.amount`}
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_date`}
                                                     render={({ field }) => (
                                                       <FormItem>
-                                                        <FormLabel>Ποσό ΕΠΑ (€)</FormLabel>
+                                                        <FormLabel>Ημερομηνία Απόφασης</FormLabel>
                                                         <FormControl>
-                                                          <Input 
-                                                            {...field} 
-                                                            placeholder="π.χ. 800.000,00" 
-                                                            onChange={(e) => {
-                                                              const formatted = formatNumberWhileTyping(e.target.value);
-                                                              field.onChange(formatted);
-                                                            }}
-                                                          />
+                                                          <Input {...field} type="date" />
                                                         </FormControl>
                                                       </FormItem>
                                                     )}
@@ -2002,107 +1886,30 @@ export default function NewProjectPage() {
                                                   />
                                                 </div>
 
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                                                   <FormField
                                                     control={form.control}
-                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.decision_type`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Τύπος Απόφασης</FormLabel>
-                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                      <SelectTrigger>
-                                                        <SelectValue placeholder="Επιλέξτε τύπο" />
-                                                      </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                      <SelectItem value="Έγκριση">Έγκριση</SelectItem>
-                                                      <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
-                                                      <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
-                                                    </SelectContent>
-                                                  </Select>
-                                                </FormItem>
-                                              )}
-                                            />
-                                                  <FormField
-                                                    control={form.control}
-                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.status`}
-                                              render={({ field }) => (
-                                                <FormItem>
-                                                  <FormLabel>Κατάσταση</FormLabel>
-                                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl>
-                                                      <SelectTrigger>
-                                                        <SelectValue placeholder="Επιλέξτε κατάσταση" />
-                                                      </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                      <SelectItem value="Ενεργή">Ενεργή</SelectItem>
-                                                      <SelectItem value="Ανενεργή">Ανενεργή</SelectItem>
-                                                      <SelectItem value="Αναστολή">Αναστολή</SelectItem>
-                                                    </SelectContent>
-                                                  </Select>
-                                                </FormItem>
-                                              )}
-                                            />
-                                          </div>
+                                                    name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.action_type`}
+                                                    render={({ field }) => (
+                                                      <FormItem>
+                                                        <FormLabel>Είδος Πράξης</FormLabel>
+                                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                          <FormControl>
+                                                            <SelectTrigger>
+                                                              <SelectValue placeholder="Επιλέξτε είδος πράξης" />
+                                                            </SelectTrigger>
+                                                          </FormControl>
+                                                          <SelectContent>
+                                                            <SelectItem value="Έγκριση">Έγκριση</SelectItem>
+                                                            <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
+                                                            <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
+                                                          </SelectContent>
+                                                        </Select>
+                                                      </FormItem>
+                                                    )}
+                                                  />
+                                                </div>
                                           
-                                                <FormField
-                                                  control={form.control}
-                                                  name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.connected_decisions`}
-                                            render={({ field }) => (
-                                              <FormItem>
-                                                <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
-                                                <FormControl>
-                                                  <Select
-                                                    onValueChange={(value) => {
-                                                      const currentDecisions = field.value || [];
-                                                      const decisionId = parseInt(value);
-                                                      if (!currentDecisions.includes(decisionId)) {
-                                                        field.onChange([...currentDecisions, decisionId]);
-                                                      }
-                                                    }}
-                                                  >
-                                                    <SelectTrigger>
-                                                      <SelectValue placeholder="Επιλέξτε αποφάσεις..." />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                      {form.watch("decisions")?.map((decision, decIndex) => (
-                                                        <SelectItem key={decIndex} value={decIndex.toString()}>
-                                                          {decision.protocol_number || `Απόφαση ${decIndex + 1}`}
-                                                        </SelectItem>
-                                                      ))}
-                                                    </SelectContent>
-                                                  </Select>
-                                                </FormControl>
-                                                {field.value && field.value.length > 0 && (
-                                                  <div className="flex flex-wrap gap-1 mt-2">
-                                                    {field.value.map((decisionId: number) => {
-                                                      const decision = form.watch("decisions")?.[decisionId];
-                                                      return (
-                                                        <span
-                                                          key={decisionId}
-                                                          className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs flex items-center gap-1"
-                                                        >
-                                                          {decision?.protocol_number || `Απόφαση ${decisionId + 1}`}
-                                                          <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                              const newDecisions = field.value.filter((id: number) => id !== decisionId);
-                                                              field.onChange(newDecisions);
-                                                            }}
-                                                            className="hover:text-blue-600"
-                                                          >
-                                                            ×
-                                                          </button>
-                                                        </span>
-                                                      );
-                                                    })}
-                                                  </div>
-                                                )}
-                                              </FormItem>
-                                            )}
-                                          />
                                           
                                                 {/* Subprojects Selection for EPA Version */}
                                                 <FormField
