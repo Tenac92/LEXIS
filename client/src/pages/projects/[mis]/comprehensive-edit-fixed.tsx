@@ -1,23 +1,25 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   useQuery,
+  useQueries,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// Removed unused import: Accordion components
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,30 +30,78 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Note: Checkbox not currently used but kept for potential future use
-// Note: SmartGeographicMultiSelect not currently used but may be needed for geographic selection
+import { Checkbox } from "@/components/ui/checkbox";
+import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import { SubprojectSelect } from "@/components/documents/components/SubprojectSelect";
 import {
   Plus,
   Trash2,
   Save,
+  X,
   FileText,
+  Calendar,
   CheckCircle,
+  Building2,
+  RefreshCw,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
+  formatEuropeanCurrency,
+  parseEuropeanNumber,
+  formatNumberWhileTyping,
   formatEuropeanNumber,
 } from "@/lib/number-format";
 import {
+  getGeographicInfo,
+  formatGeographicDisplay,
+  getGeographicCodeForSave,
   getRegionalUnitsForRegion,
   getMunicipalitiesForRegionalUnit,
+  buildNormalizedGeographicData,
+  getGeographicCodeForSaveNormalized,
 } from "@shared/utils/geographic-utils";
 
+// Helper function to safely convert array or object fields to text
+function safeText(value: any): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "Δεν υπάρχει";
+    if (value.length === 1) return String(value[0]);
+    return value.join(", ");
+  }
+  return "";
+}
 
-// REMOVED: generateEnumerationCode function - was unused
-// function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
-// REMOVED: function body was unused
+// Helper function to generate enumeration code based on ΣΑ type
+function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
+  // If we have an existing enumeration code for this ΣΑ type, use it
+  if (existingCodes && existingCodes[saType]) {
+    return existingCodes[saType];
+  }
+
+  // If there's already a code and it matches the pattern for the selected ΣΑ, keep it
+  if (currentCode) {
+    const patterns = {
+      ΝΑ853: /^\d{4}ΝΑ853\d{8}$/,
+      ΝΑ271: /^\d{4}ΝΑ271\d{8}$/,
+      E069: /^\d{4}E069\d{8}$/,
+    };
+
+    if (patterns[saType as keyof typeof patterns]?.test(currentCode)) {
+      return currentCode;
+    }
+  }
+
+  // Only generate new code if no existing data found (this should be rare in edit mode)
+  const currentYear = new Date().getFullYear();
+  const sequentialNumber = Math.floor(Math.random() * 99999999)
+    .toString()
+    .padStart(8, "0");
+
+  return `${currentYear}${saType}${sequentialNumber}`;
+}
 
 // Helper function to convert FEK data from old string format to new object format
 function normalizeFekData(fekValue: any): {
@@ -132,20 +182,6 @@ interface ProjectData {
   enhanced_unit?: {
     name: string;
   };
-  enhanced_event_type?: {
-    name: string;
-  };
-  inc_year?: number;
-  inclusion_year?: number;
-  enumeration_code?: string;
-  updates?: Array<{
-    change_type: string;
-    timestamp: string;
-    user_name: string;
-    description: string;
-    notes: string;
-  }>;
-  project_lines?: any[];
 }
 
 // Form schema
@@ -311,28 +347,7 @@ export default function ComprehensiveEditFixed() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Number formatting helper functions
-  const parseEuropeanNumber = (value: string): number | null => {
-    if (!value) return null;
-
-    // Replace thousand separators (periods) and convert comma to period for decimal
-    const cleaned = value.replace(/\./g, "").replace(/,/g, ".");
-    const parsed = parseFloat(cleaned);
-
-    return isNaN(parsed) ? null : parsed;
-  };
-
-  const formatNumberWhileTyping = (value: string, fieldName: string): string => {
-    console.log(`Formatting ${fieldName}: "${value}"`);
-
-    if (!value) return "";
-
-    // Handle numeric input formatting while typing
-    let numericValue = value.replace(/[^\d,.-]/g, ""); // Keep only digits, commas, periods, and minus
-    
-    return numericValue;
-  };
+  const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
 
   // 🔗 Auto-inheritance logic για connected decisions
   const handleConnectedDecisionChange = (
@@ -406,7 +421,11 @@ export default function ComprehensiveEditFixed() {
     
     return { isInherited: false, inheritedFromVersion: null };
   };
+  const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(
+    new Set(),
+  );
   const hasInitialized = useRef(false);
+  const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
 
@@ -438,7 +457,13 @@ export default function ComprehensiveEditFixed() {
           implementing_agency: "",
           event_type: "",
           expenditure_types: [],
-          geographic_areas: [],
+          regions: [
+            {
+              region: "",
+              regional_unit: "",
+              municipality: "",
+            },
+          ],
         },
       ],
       project_details: {
@@ -517,27 +542,28 @@ export default function ComprehensiveEditFixed() {
   });
 
   // Extract data from optimized API responses with proper typing
-  const projectData = completeProjectData?.project || null;
-  const projectIndexData = completeProjectData?.index || null;
-  const decisionsData = completeProjectData?.decisions || [];
-  const formulationsData = completeProjectData?.formulations || [];
+  const projectData = completeProjectData?.project;
+  const projectIndexData = completeProjectData?.index;
+  const decisionsData = completeProjectData?.decisions;
+  const formulationsData = completeProjectData?.formulations;
   
-  // Extract reference data with proper type casting
-  const eventTypesData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'eventTypes' in referenceData && Array.isArray((referenceData as any).eventTypes)) ? (referenceData as any).eventTypes : [];
-  const unitsData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'units' in referenceData && Array.isArray((referenceData as any).units)) ? (referenceData as any).units : [];
-  const expenditureTypesData = (referenceData && typeof referenceData === 'object' && referenceData !== null && 'expenditureTypes' in referenceData && Array.isArray((referenceData as any).expenditureTypes)) ? (referenceData as any).expenditureTypes : [];
+  // Extract reference data
+  const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
+  const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
+  const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
-  const existingSATypes = [...new Set((formulationsData || []).map((f: any) => f.sa).filter(Boolean))];
-  const existingEnumerationCodes = (formulationsData || []).reduce((acc: Record<string, string>, f: any) => {
+  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean) || [])];
+  const existingEnumerationCodes = formulationsData?.reduce((acc, f) => {
     if (f.sa && f.enumeration_code) {
       acc[f.sa] = f.enumeration_code;
     }
     return acc;
-  }, {} as Record<string, string>);
+  }, {} as Record<string, string>) || {};
 
   // Check if all essential data is loading
   const isEssentialDataLoading = isCompleteDataLoading;
+  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
   console.log("DEBUG - Project Data:", {
@@ -555,9 +581,9 @@ export default function ComprehensiveEditFixed() {
   // Debug logging for geographic data status  
   console.log("DEBUG - Geographic Data Status:", {
     hasNormalizedGeographicData: !!geographicData,
-    normalizedRegions: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regions' in geographicData && Array.isArray((geographicData as any).regions)) ? (geographicData as any).regions.length : 0,
-    normalizedRegionalUnits: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits)) ? (geographicData as any).regionalUnits.length : 0,
-    normalizedMunicipalities: (geographicData && typeof geographicData === 'object' && geographicData !== null && 'municipalities' in geographicData && Array.isArray((geographicData as any).municipalities)) ? (geographicData as any).municipalities.length : 0,
+    normalizedRegions: geographicData?.regions?.length || 0,
+    normalizedRegionalUnits: geographicData?.regionalUnits?.length || 0,
+    normalizedMunicipalities: geographicData?.municipalities?.length || 0,
   });
 
   // Debug logging for ΣΑ types and enumeration codes
@@ -582,8 +608,8 @@ export default function ComprehensiveEditFixed() {
 
   // Helper functions for geographic data - Updated for normalized structure
   const getUniqueRegions = () => {
-    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 'regions' in geographicData && Array.isArray((geographicData as any).regions)) {
-      return (geographicData as any).regions.map((r: any) => r.name).filter(Boolean);
+    if (geographicData?.regions) {
+      return geographicData.regions.map(r => r.name).filter(Boolean);
     }
     // Return empty array if geographic data isn't available
     return [];
@@ -592,13 +618,11 @@ export default function ComprehensiveEditFixed() {
   const getRegionalUnitsForRegionNormalized = (region: string) => {
     if (!region) return [];
     
-    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 
-        'regions' in geographicData && Array.isArray((geographicData as any).regions) &&
-        'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits)) {
-      const selectedRegion = (geographicData as any).regions.find((r: any) => r.name === region);
+    if (geographicData?.regions && geographicData?.regionalUnits) {
+      const selectedRegion = geographicData.regions.find(r => r.name === region);
       if (selectedRegion) {
-        return getRegionalUnitsForRegion((geographicData as any).regionalUnits, selectedRegion.code)
-          .map((ru: any) => ru.name);
+        return getRegionalUnitsForRegion(geographicData.regionalUnits, selectedRegion.code)
+          .map(ru => ru.name);
       }
     }
     
@@ -612,40 +636,21 @@ export default function ComprehensiveEditFixed() {
   ) => {
     if (!region || !regionalUnit) return [];
     
-    if (geographicData && typeof geographicData === 'object' && geographicData !== null && 
-        'regions' in geographicData && Array.isArray((geographicData as any).regions) &&
-        'regionalUnits' in geographicData && Array.isArray((geographicData as any).regionalUnits) &&
-        'municipalities' in geographicData && Array.isArray((geographicData as any).municipalities)) {
-      const selectedRegion = (geographicData as any).regions.find((r: any) => r.name === region);
+    if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
+      const selectedRegion = geographicData.regions.find(r => r.name === region);
       if (selectedRegion) {
-        const selectedRegionalUnit = (geographicData as any).regionalUnits.find(
-          (ru: any) => ru.name === regionalUnit && ru.region_code === selectedRegion.code
+        const selectedRegionalUnit = geographicData.regionalUnits.find(
+          ru => ru.name === regionalUnit && ru.region_code === selectedRegion.code
         );
         if (selectedRegionalUnit) {
-          return getMunicipalitiesForRegionalUnit((geographicData as any).municipalities, selectedRegionalUnit.code)
-            .map((m: any) => m.name);
+          return getMunicipalitiesForRegionalUnit(geographicData.municipalities, selectedRegionalUnit.code)
+            .map(m => m.name);
         }
       }
     }
     
     // Return empty array if normalized geographic data isn't available
     return [];
-  };
-
-  // Helper functions for geographic data processing
-  const buildNormalizedGeographicData = () => {
-    if (!geographicData || typeof geographicData !== 'object' || geographicData === null) {
-      return null;
-    }
-    return geographicData;
-  };
-
-  const getGeographicCodeForSaveNormalized = (locationDetail: any) => {
-    if (!locationDetail || !locationDetail.geographic_areas || locationDetail.geographic_areas.length === 0) {
-      return null;
-    }
-    // Return the first geographic area code
-    return locationDetail.geographic_areas[0];
   };
 
   // Additional debug logging now that variables are properly initialized
@@ -661,9 +666,73 @@ export default function ComprehensiveEditFixed() {
     geographicDataError: geographicDataError?.message,
   });
 
-  // REMOVED: Duplicate function declarations - already defined above
+  // Number formatting helper functions
+  const formatNumberWhileTyping = (value: string): string => {
+    // Remove all non-numeric characters except comma and period
+    let cleanValue = value.replace(/[^0-9,.]/g, "");
 
-  // REMOVED: validateAndLimitNumericInput function - was unused
+    // If empty, return empty
+    if (!cleanValue) return "";
+
+    // Handle European format (comma as decimal separator)
+    if (cleanValue.includes(",")) {
+      const parts = cleanValue.split(",");
+      if (parts.length === 2) {
+        // Clean integer part and add thousand separators
+        const integerPart = parts[0].replace(/\./g, ""); // Remove existing dots first
+        const formattedInteger = integerPart.replace(
+          /\B(?=(\d{3})+(?!\d))/g,
+          ".",
+        );
+        // Limit decimal part to 2 digits
+        const decimalPart = parts[1].slice(0, 2);
+        return `${formattedInteger},${decimalPart}`;
+      } else if (parts.length > 2) {
+        // If multiple commas, take only the first two parts
+        const integerPart = parts[0].replace(/\./g, "");
+        const formattedInteger = integerPart.replace(
+          /\B(?=(\d{3})+(?!\d))/g,
+          ".",
+        );
+        const decimalPart = parts[1].slice(0, 2);
+        return `${formattedInteger},${decimalPart}`;
+      }
+    }
+
+    // For integers only, remove existing dots and add proper thousand separators
+    const integerValue = cleanValue.replace(/[,.]/g, "");
+    return integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
+
+  const parseEuropeanNumber = (value: string): number | null => {
+    if (!value) return null;
+
+    // Replace thousand separators (periods) and convert comma to period for decimal
+    const cleaned = value.replace(/\./g, "").replace(/,/g, ".");
+    const parsed = parseFloat(cleaned);
+
+    return isNaN(parsed) ? null : parsed;
+  };
+
+  // Helper function to validate and limit numeric input to database constraints
+  const validateAndLimitNumericInput = (
+    value: string,
+    fieldName: string,
+  ): string => {
+    const parsed = parseEuropeanNumber(value);
+    if (parsed && parsed > 9999999999.99) {
+      console.warn(
+        `${fieldName} value ${parsed} exceeds database limit, limiting input`,
+      );
+      toast({
+        title: "Προσοχή",
+        description: `${fieldName}: Το ποσό περιορίστηκε στο μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`,
+        variant: "destructive",
+      });
+      return formatEuropeanNumber(9999999999.99);
+    }
+    return value;
+  };
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
@@ -718,10 +787,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "E069",
             );
-            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
               console.log(
-                `Budget E069: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
+                `Budget E069: "${formEntry.project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
@@ -731,10 +800,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ271",
             );
-            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
               console.log(
-                `Budget ΝΑ271: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
+                `Budget ΝΑ271: "${formEntry.project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
@@ -744,10 +813,10 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ853",
             );
-            if (formEntry && formEntry.budget_versions.pde && formEntry.budget_versions.pde.length > 0 && formEntry.budget_versions.pde[0].project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.budget_versions.pde[0].project_budget);
+            if (formEntry?.project_budget) {
+              const parsed = parseEuropeanNumber(formEntry.project_budget);
               console.log(
-                `Budget ΝΑ853: "${formEntry.budget_versions.pde[0].project_budget}" -> ${parsed}`,
+                `Budget ΝΑ853: "${formEntry.project_budget}" -> ${parsed}`,
               );
               return parsed;
             }
@@ -757,7 +826,9 @@ export default function ComprehensiveEditFixed() {
 
         console.log("1. Updating core project data:", projectUpdateData);
         console.log("🔍 Key fields being sent:", {
-          inc_year: projectUpdateData.inc_year,
+          inclusion_year: projectUpdateData.inclusion_year,
+          na853: projectUpdateData.na853,
+          enumeration_code: projectUpdateData.enumeration_code,
           project_title: projectUpdateData.project_title,
         });
         try {
@@ -767,11 +838,10 @@ export default function ComprehensiveEditFixed() {
           });
           completedOperations.projectUpdate = true;
           console.log("✓ Project update successful:", projectResponse);
-        } catch (error: unknown) {
+        } catch (error) {
           console.error("✗ Project update failed:", error);
-          const errorMessage = error instanceof Error ? error.message : String(error);
           throw new Error(
-            `Failed to update project data: ${errorMessage}`,
+            `Failed to update project data: ${error.message || error}`,
           );
         }
 
@@ -785,7 +855,7 @@ export default function ComprehensiveEditFixed() {
             existingDecisions = (await apiRequest(
               `/api/projects/${mis}/decisions`,
             )) as any[];
-          } catch (error: unknown) {
+          } catch (error) {
             console.warn("Could not fetch existing decisions:", error);
             existingDecisions = [];
           }
@@ -847,7 +917,7 @@ export default function ComprehensiveEditFixed() {
                   body: JSON.stringify(decisionData),
                 });
               }
-            } catch (error: unknown) {
+            } catch (error) {
               console.error(`Error processing decision ${i}:`, error);
               throw error;
             }
@@ -870,7 +940,7 @@ export default function ComprehensiveEditFixed() {
                     method: "DELETE",
                   },
                 );
-              } catch (error: unknown) {
+              } catch (error) {
                 console.error(
                   `Error deleting decision ${existingDecisions[i].id}:`,
                   error,
@@ -895,7 +965,7 @@ export default function ComprehensiveEditFixed() {
             existingFormulations = await apiRequest(
               `/api/projects/${mis}/formulations`,
             );
-          } catch (error: unknown) {
+          } catch (error) {
             console.warn("Could not fetch existing formulations:", error);
             existingFormulations = [];
           }
