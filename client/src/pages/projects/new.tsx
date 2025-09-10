@@ -2064,6 +2064,19 @@ export default function NewProjectPage() {
                                                     </FormItem>
                                                   )}
                                                 />
+                                                
+                                                {/* Subprojects Management Section */}
+                                                <div className="mt-6">
+                                                  <h4 className="font-medium text-purple-900 mb-4">Διαχείριση Υποέργων</h4>
+                                                  <div className="border rounded-lg p-4 bg-purple-50">
+                                                    <p className="text-sm text-purple-700 mb-2">
+                                                      Τα υποέργα θα διαχειρίζονται μετά την αποθήκευση της έκδοσης ΕΠΑ.
+                                                    </p>
+                                                    <p className="text-xs text-purple-600">
+                                                      Αποθηκεύστε το έργο και επιστρέψτε για να δημιουργήσετε υποέργα που συνδέονται με αυτή την έκδοση ΕΠΑ.
+                                                    </p>
+                                                  </div>
+                                                </div>
                                               </div>
                                             </AccordionContent>
                                           </AccordionItem>

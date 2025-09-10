@@ -1264,7 +1264,7 @@ router.post('/:mis/formulations', authenticateSession, async (req: Authenticated
         createdFormulation.id!, 
         project.id!, 
         formulationData.budget_versions, 
-        req.user!.id
+        req.user.id
       );
     }
 
@@ -1361,7 +1361,7 @@ router.patch('/:mis/formulations/:formulationId', authenticateSession, async (re
         parseInt(formulationId), 
         existingFormulation.project_id!, 
         updateData.budget_versions, 
-        req.user!.id
+        req.user.id
       );
     }
 
