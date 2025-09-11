@@ -455,17 +455,11 @@ export default function NewProjectPage() {
         };
         
         console.log("1. Creating core project data:", projectCreateData);
-        const projectResponse = await apiRequest("/api/projects", {
+        const createdProject = await apiRequest("/api/projects", {
           method: "POST",
           body: JSON.stringify(projectCreateData),
-        }) as Response;
+        });
         
-        if (!projectResponse.ok) {
-          const error = await projectResponse.json();
-          throw new Error(error.message || "Failed to create project");
-        }
-        
-        const createdProject = await projectResponse.json();
         const projectMis = createdProject.mis;
         console.log("✓ Project creation successful:", createdProject);
         
