@@ -503,11 +503,11 @@ export default function NewProjectPage() {
           // Transform formulation_details to new structure for backend
           const transformedFormulations = data.formulation_details.map(formulation => ({
             ...formulation,
-            // Remove old budget fields as they're now in budget_versions
+            // Remove old budget fields as they're now in budget_versions (but keep epa_version for backward compatibility)
             project_budget: undefined,
             total_public_expense: undefined,
             eligible_public_expense: undefined,
-            epa_version: undefined,
+            // Keep epa_version for backend processing
           }));
           
           await apiRequest(`/api/projects/${projectMis}/formulations`, {
