@@ -22,6 +22,7 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
     log(`[Subprojects] Fetching subprojects for EPA version ID: ${epaVersionId}`);
 
     // Get subprojects for this EPA version with their financials
+    // Handle cases where epa_version_id might be null by also checking for unlinked subprojects
     const { data: subprojects, error } = await supabase
       .from('Subprojects')
       .select(`
@@ -31,15 +32,7 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
         description,
         status,
         created_at,
-        updated_at,
-        subproject_financials (
-          id,
-          year,
-          total_public,
-          eligible_public,
-          created_at,
-          updated_at
-        )
+        updated_at
       `)
       .eq('epa_version_id', epaVersionId)
       .order('title');
@@ -51,11 +44,43 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
       });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for EPA version ${epaVersionId}`);
+    // If no linked subprojects found, also return unlinked ones that could be linked
+    let finalSubprojects = subprojects || [];
+    
+    if (!finalSubprojects.length) {
+      log(`[Subprojects] No linked subprojects found, checking for unlinked subprojects`);
+      const { data: unlinkedSubprojects, error: unlinkedError } = await supabase
+        .from('Subprojects')
+        .select(`
+          id,
+          epa_version_id,
+          title,
+          description,
+          status,
+          created_at,
+          updated_at
+        `)
+        .is('epa_version_id', null)
+        .order('title')
+        .limit(10); // Limit to prevent too many results
+
+      if (!unlinkedError && unlinkedSubprojects) {
+        finalSubprojects = unlinkedSubprojects;
+        log(`[Subprojects] Found ${unlinkedSubprojects.length} unlinked subprojects that could be linked`);
+      }
+    }
+
+    // Transform subprojects to include mock financials if needed (for compatibility)
+    const transformedSubprojects = finalSubprojects.map(subproject => ({
+      ...subproject,
+      subproject_financials: [] // Will be populated separately via financials API
+    }));
+
+    log(`[Subprojects] Found ${transformedSubprojects?.length || 0} subprojects for EPA version ${epaVersionId}`);
 
     res.json({
       success: true,
-      subprojects: subprojects || []
+      subprojects: transformedSubprojects
     });
 
   } catch (error) {
@@ -537,10 +562,24 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
 
     log(`[Subprojects] Fetching EPA versions for project ID: ${projectId}`);
 
-    // Fetch EPA versions from project_budget_versions table (filtered by EPA type)
+    // Fetch EPA versions from project_budget_versions table with formulation mapping
     const { data: epaVersions, error } = await supabase
       .from('project_budget_versions')
-      .select('*')
+      .select(`
+        id,
+        project_id,
+        formulation_id,
+        budget_type,
+        epa_version,
+        protocol_number,
+        ada,
+        decision_date,
+        comments,
+        created_at,
+        updated_at,
+        boundary_budget,
+        action_type
+      `)
       .eq('project_id', projectId)
       .eq('budget_type', 'ΕΠΑ')
       .order('id', { ascending: true });
@@ -553,11 +592,21 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
       });
     }
 
-    log(`[Subprojects] Found ${epaVersions?.length || 0} EPA versions for project ${projectId}`);
+    // Transform data to match frontend expectations
+    const transformedVersions = (epaVersions || []).map((version, index) => ({
+      id: version.id,
+      version_number: `${index + 1}`,
+      epa_version: version.epa_version || `Έκδοση ${index + 1}`,
+      project_id: version.project_id,
+      formulation_index: version.formulation_id ? parseInt(version.formulation_id.toString()) - 1 : index, // Map formulation_id to 0-based index
+      ...version // Include all other fields
+    }));
+
+    log(`[Subprojects] Found ${transformedVersions?.length || 0} EPA versions for project ${projectId}`);
 
     res.json({
       success: true,
-      epa_versions: epaVersions || []
+      epa_versions: transformedVersions
     });
 
   } catch (error) {
