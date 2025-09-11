@@ -458,7 +458,7 @@ export default function NewProjectPage() {
         const createdProject = await apiRequest("/api/projects", {
           method: "POST",
           body: JSON.stringify(projectCreateData),
-        });
+        }) as any;
         
         const projectMis = createdProject.mis;
         console.log("✓ Project creation successful:", createdProject);
@@ -514,7 +514,7 @@ export default function NewProjectPage() {
           console.log("✓ Formulations and budget versions creation successful");
         }
         
-        return createdProject;
+        return createdProject as any;
       } catch (error) {
         console.error("Error creating project:", error);
         throw error;
