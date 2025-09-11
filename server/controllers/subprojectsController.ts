@@ -663,6 +663,106 @@ router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRe
   }
 });
 
+/**
+ * GET /api/subprojects/diagnostic
+ * Diagnostic endpoint to check current subproject and EPA version state
+ */
+router.get('/diagnostic', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    log(`[Subprojects] Running diagnostic check`);
+
+    // Get all subprojects with their EPA version linkage
+    const { data: subprojects, error: subprojectsError } = await supabase
+      .from('Subprojects')
+      .select('id, title, epa_version_id, status, created_at');
+
+    if (subprojectsError) {
+      return res.status(500).json({ error: 'Failed to fetch subprojects', details: subprojectsError.message });
+    }
+
+    // Get all EPA versions
+    const { data: epaVersions, error: epaError } = await supabase
+      .from('project_budget_versions')
+      .select('id, project_id, budget_type, epa_version, formulation_id')
+      .eq('budget_type', 'ΕΠΑ');
+
+    if (epaError) {
+      return res.status(500).json({ error: 'Failed to fetch EPA versions', details: epaError.message });
+    }
+
+    // Analyze the data
+    const unlinkedSubprojects = subprojects?.filter(s => s.epa_version_id === null) || [];
+    const linkedSubprojects = subprojects?.filter(s => s.epa_version_id !== null) || [];
+
+    res.json({
+      success: true,
+      diagnostic: {
+        total_subprojects: subprojects?.length || 0,
+        unlinked_subprojects: unlinkedSubprojects.length,
+        linked_subprojects: linkedSubprojects.length,
+        total_epa_versions: epaVersions?.length || 0,
+        epa_versions: epaVersions || [],
+        unlinked_list: unlinkedSubprojects,
+        linked_list: linkedSubprojects
+      }
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Diagnostic error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
+/**
+ * POST /api/subprojects/link-to-epa/:subprojectId/:epaVersionId
+ * Link an existing subproject to an EPA version
+ */
+router.post('/link-to-epa/:subprojectId/:epaVersionId', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const subprojectId = parseInt(req.params.subprojectId);
+    const epaVersionId = parseInt(req.params.epaVersionId);
+
+    if (isNaN(subprojectId) || isNaN(epaVersionId)) {
+      return res.status(400).json({
+        error: 'Invalid subproject ID or EPA version ID'
+      });
+    }
+
+    log(`[Subprojects] Linking subproject ${subprojectId} to EPA version ${epaVersionId}`);
+
+    // Update the subproject to link it to the EPA version
+    const { data: updatedSubproject, error } = await supabase
+      .from('Subprojects')
+      .update({ epa_version_id: epaVersionId })
+      .eq('id', subprojectId)
+      .select()
+      .single();
+
+    if (error) {
+      log(`[Subprojects] Error linking subproject:`, error.message);
+      return res.status(500).json({
+        error: 'Failed to link subproject to EPA version',
+        details: error.message
+      });
+    }
+
+    log(`[Subprojects] Successfully linked subproject ${subprojectId} to EPA version ${epaVersionId}`);
+
+    res.json({
+      success: true,
+      subproject: updatedSubproject
+    });
+
+  } catch (error) {
+    log(`[Subprojects] Unexpected error:`, error instanceof Error ? error.message : String(error));
+    res.status(500).json({
+      error: 'Internal server error'
+    });
+  }
+});
+
 export { router as subprojectsRouter };
 /**
  * PROJECT-LEVEL SUBPROJECT ROUTES
