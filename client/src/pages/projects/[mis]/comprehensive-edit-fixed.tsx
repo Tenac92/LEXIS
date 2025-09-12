@@ -86,9 +86,14 @@ function useSAValidation() {
     try {
       const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
       
-      // Exclude current project from validation to prevent self-collision
-      const isSelfProject = currentMis && response.existingProject && 
-        (response.existingProject.mis.toString() === currentMis.toString());
+      // Prevent self-collision: exclude current project from validation
+      let isSelfProject = false;
+      if (currentMis && response.existingProject?.mis) {
+        // Convert both to strings for reliable comparison
+        const currentMisStr = currentMis.toString().trim();
+        const existingMisStr = response.existingProject.mis.toString().trim();
+        isSelfProject = currentMisStr === existingMisStr;
+      }
       
       setValidationStates(prev => ({ 
         ...prev, 
