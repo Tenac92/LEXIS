@@ -642,6 +642,14 @@ export default function ComprehensiveEditFixed() {
     hasInitialized.current = false;
   }, []);
 
+  // Validate initial SA value on mount (after form is declared)
+  useEffect(() => {
+    const currentSA = form.getValues('project_details.sa');
+    if (currentSA?.trim()) {
+      validateSA(currentSA, 'project_details.sa', mis);
+    }
+  }, [validateSA, mis]);
+
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
   const typedUnitsData = unitsData as UnitData[] | undefined;
@@ -2833,7 +2841,7 @@ export default function ComprehensiveEditFixed() {
                                   value={field.value || ""}
                                 >
                                   <FormControl>
-                                    <SelectTrigger>
+                                    <SelectTrigger data-testid="input-sa">
                                       <SelectValue placeholder="Επιλέξτε ΣΑ" />
                                     </SelectTrigger>
                                   </FormControl>
@@ -2856,15 +2864,21 @@ export default function ComprehensiveEditFixed() {
                                 
                                 {/* Validation feedback */}
                                 {validationState.isChecking && (
-                                  <p className="text-sm text-blue-600 flex items-center gap-1">
+                                  <p className="text-sm text-blue-600 flex items-center gap-1" data-testid="status-sa">
                                     <RefreshCw className="h-3 w-3 animate-spin" />
                                     Έλεγχος ΣΑ...
                                   </p>
                                 )}
                                 {validationState.exists && validationState.existingProject && (
-                                  <p className="text-sm text-red-600 flex items-center gap-1">
+                                  <p className="text-sm text-red-600 flex items-center gap-1" data-testid="text-sa-conflict">
                                     <X className="h-3 w-3" />
                                     ΣΑ υπάρχει ήδη στο έργο: {validationState.existingProject.project_title} (MIS: {validationState.existingProject.mis})
+                                  </p>
+                                )}
+                                {!validationState.isChecking && !validationState.exists && field.value?.trim() && (
+                                  <p className="text-sm text-green-600 flex items-center gap-1" data-testid="text-sa-ok">
+                                    <CheckCircle className="h-3 w-3" />
+                                    ΣΑ διαθέσιμο
                                   </p>
                                 )}
                               </FormItem>
