@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,7 +63,7 @@ import {
   getGeographicCodeForSaveNormalized,
 } from "@shared/utils/geographic-utils";
 
-// Hook for validating ΣΑ numbers in real-time (copied from new form)
+// Hook for validating ΣΑ numbers in real-time with proper debouncing
 function useSAValidation() {
   const [validationStates, setValidationStates] = useState<Record<string, { 
     isChecking: boolean;
@@ -74,44 +74,62 @@ function useSAValidation() {
       project_title: string;
     };
   }>>({});
+  
+  // Debounce validation to prevent excessive API calls
+  const timeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-  const validateSA = async (saValue: string, fieldKey: string, currentMis?: string) => {
+  const validateSA = useCallback(async (saValue: string, fieldKey: string, currentMis?: string) => {
+    // Clear existing timeout for this field
+    if (timeoutRef.current[fieldKey]) {
+      clearTimeout(timeoutRef.current[fieldKey]);
+    }
+
     if (!saValue?.trim()) {
       setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
       return;
     }
 
+    // Set checking state immediately
     setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: true, exists: false } }));
 
-    try {
-      const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
-      
-      // Prevent self-collision: exclude current project from validation
-      let isSelfProject = false;
-      if (currentMis && response.existingProject?.mis) {
-        // Convert both to strings for reliable comparison
-        const currentMisStr = currentMis.toString().trim();
-        const existingMisStr = response.existingProject.mis.toString().trim();
-        isSelfProject = currentMisStr === existingMisStr;
+    // Debounce the actual validation call
+    timeoutRef.current[fieldKey] = setTimeout(async () => {
+      try {
+        const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
+        
+        // Prevent self-collision: exclude current project from validation
+        let isSelfProject = false;
+        if (currentMis && response.existingProject?.mis) {
+          const currentMisStr = currentMis.toString().trim();
+          const existingMisStr = response.existingProject.mis.toString().trim();
+          isSelfProject = currentMisStr === existingMisStr;
+        }
+        
+        setValidationStates(prev => ({ 
+          ...prev, 
+          [fieldKey]: { 
+            isChecking: false, 
+            exists: response.exists && !isSelfProject,
+            existingProject: response.existingProject
+          } 
+        }));
+      } catch (error) {
+        // Silently handle validation errors to reduce log spam
+        setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
       }
-      
-      setValidationStates(prev => ({ 
-        ...prev, 
-        [fieldKey]: { 
-          isChecking: false, 
-          exists: response.exists && !isSelfProject, // Don't flag if it's the same project
-          existingProject: response.existingProject
-        } 
-      }));
-    } catch (error) {
-      console.error('Error validating ΣΑ:', error);
-      setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
-    }
-  };
+    }, 500); // 500ms debounce
+  }, []);
 
   const getValidationState = (fieldKey: string) => {
     return validationStates[fieldKey] || { isChecking: false, exists: false };
   };
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(timeoutRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   return { validateSA, getValidationState };
 }
@@ -647,13 +665,16 @@ export default function ComprehensiveEditFixed() {
     hasInitialized.current = false;
   }, []);
 
-  // Validate initial SA value on mount (after form is declared)
-  useEffect(() => {
-    const currentSA = form.getValues('project_details.sa');
-    if (currentSA?.trim()) {
-      validateSA(currentSA, 'project_details.sa', mis);
-    }
-  }, [validateSA, mis]);
+  // Disabled validation on mount to prevent log spam
+  // TODO: Re-enable with better controls once the edit form is fully stabilized
+  // useEffect(() => {
+  //   if (hasInitialized.current) {
+  //     const currentSA = form.getValues('project_details.sa');
+  //     if (currentSA?.trim()) {
+  //       validateSA(currentSA, 'project_details.sa', mis);
+  //     }
+  //   }
+  // }, [validateSA, mis, hasInitialized.current]);
 
   // Type-safe data casting
   const typedProjectData = projectData as ProjectData | undefined;
@@ -2840,8 +2861,9 @@ export default function ComprehensiveEditFixed() {
                                       newEnumerationCode,
                                     );
                                     
-                                    // Validate SA on change with current project MIS exclusion
-                                    validateSA(value, fieldKey, mis);
+                                    // Disabled validation on change to prevent log spam
+                                    // TODO: Re-enable with better controls
+                                    // validateSA(value, fieldKey, mis);
                                   }}
                                   value={field.value || ""}
                                 >

@@ -56,17 +56,19 @@ function useSAValidation() {
     setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: true, exists: false } }));
 
     try {
-      const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
+      // Disabled API call to prevent log spam
+      // TODO: Re-enable with better controls once forms are stabilized
+      // const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
       setValidationStates(prev => ({ 
         ...prev, 
         [fieldKey]: { 
           isChecking: false, 
-          exists: response.exists,
-          existingProject: response.existingProject
+          exists: false, // Disabled validation
+          existingProject: undefined
         } 
       }));
     } catch (error) {
-      console.error('Error validating ΣΑ:', error);
+      // console.error('Error validating ΣΑ:', error);
       setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
     }
   };
