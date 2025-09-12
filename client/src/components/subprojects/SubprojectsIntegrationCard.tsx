@@ -11,9 +11,33 @@ import { SubprojectManager } from './SubprojectManager';
 import { EPAFinancialsWithValidation } from './EPAFinancialsWithValidation';
 
 interface FormulationDetail {
-  epa_version: string;
-  total_public_expense: string;
-  eligible_public_expense: string;
+  sa: "ΝΑ853" | "ΝΑ271" | "E069";
+  enumeration_code: string;
+  decision_year: string;
+  decision_status: "Ενεργή" | "Ανενεργή" | "Αναστολή";
+  change_type: "Τροποποίηση" | "Παράταση" | "Έγκριση";
+  comments: string;
+  budget_versions: {
+    pde: Array<{
+      version?: string;
+      version_number?: string;
+      boundary_budget?: string;
+      connected_decisions?: number[];
+      [key: string]: any;
+    }>;
+    epa: Array<{
+      version?: string;
+      version_number?: string;
+      total_public_expense?: string;
+      eligible_public_expense?: string;
+      connected_decisions?: number[];
+      [key: string]: any;
+    }>;
+  };
+  // Legacy fields for backward compatibility
+  epa_version?: string;
+  total_public_expense?: string;
+  eligible_public_expense?: string;
   [key: string]: any;
 }
 
@@ -60,10 +84,18 @@ export function SubprojectsIntegrationCard({
     // Map formulation details to EPA versions, using database versions where available
     return formulationDetails.map((formulation, index) => {
       const existingVersion = epaVersions.find(v => v.formulation_index === index);
+      
+      // Extract epa_version from budget_versions structure if needed
+      let epaVersion = formulation.epa_version;
+      if (!epaVersion && formulation.budget_versions?.epa?.length > 0) {
+        const latestEpaVersion = formulation.budget_versions.epa[formulation.budget_versions.epa.length - 1];
+        epaVersion = latestEpaVersion.version || latestEpaVersion.version_number || `Έκδοση ${index + 1}`;
+      }
+      
       return existingVersion || {
         id: -1, // Temporary ID for unsaved versions
         version_number: `${index + 1}`,
-        epa_version: formulation.epa_version || `Έκδοση ${index + 1}`,
+        epa_version: epaVersion || `Έκδοση ${index + 1}`,
         project_id: projectId,
         formulation_index: index
       };

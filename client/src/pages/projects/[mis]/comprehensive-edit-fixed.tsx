@@ -63,6 +63,49 @@ import {
   getGeographicCodeForSaveNormalized,
 } from "@shared/utils/geographic-utils";
 
+// Hook for validating ΣΑ numbers in real-time (copied from new form)
+function useSAValidation() {
+  const [validationStates, setValidationStates] = useState<Record<string, { 
+    isChecking: boolean;
+    exists: boolean;
+    existingProject?: {
+      id: number;
+      mis: number;
+      project_title: string;
+    };
+  }>>({});
+
+  const validateSA = async (saValue: string, fieldKey: string) => {
+    if (!saValue?.trim()) {
+      setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
+      return;
+    }
+
+    setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: true, exists: false } }));
+
+    try {
+      const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
+      setValidationStates(prev => ({ 
+        ...prev, 
+        [fieldKey]: { 
+          isChecking: false, 
+          exists: response.exists,
+          existingProject: response.existingProject
+        } 
+      }));
+    } catch (error) {
+      console.error('Error validating ΣΑ:', error);
+      setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
+    }
+  };
+
+  const getValidationState = (fieldKey: string) => {
+    return validationStates[fieldKey] || { isChecking: false, exists: false };
+  };
+
+  return { validateSA, getValidationState };
+}
+
 // Helper function to safely convert array or object fields to text
 function safeText(value: any): string {
   if (value === null || value === undefined) return "";
@@ -429,6 +472,7 @@ export default function ComprehensiveEditFixed() {
   const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
   const isInitializingRef = useRef(false);
+  const { validateSA, getValidationState } = useSAValidation();
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
@@ -458,13 +502,7 @@ export default function ComprehensiveEditFixed() {
           implementing_agency: "",
           event_type: "",
           expenditure_types: [],
-          regions: [
-            {
-              region: "",
-              regional_unit: "",
-              municipality: "",
-            },
-          ],
+          geographic_areas: [],
         },
       ],
       project_details: {
