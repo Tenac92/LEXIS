@@ -75,7 +75,7 @@ function useSAValidation() {
     };
   }>>({});
 
-  const validateSA = async (saValue: string, fieldKey: string) => {
+  const validateSA = async (saValue: string, fieldKey: string, currentMis?: string) => {
     if (!saValue?.trim()) {
       setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
       return;
@@ -85,11 +85,16 @@ function useSAValidation() {
 
     try {
       const response = await apiRequest(`/api/projects/check-sa/${encodeURIComponent(saValue)}`) as any;
+      
+      // Exclude current project from validation to prevent self-collision
+      const isSelfProject = currentMis && response.existingProject && 
+        (response.existingProject.mis.toString() === currentMis.toString());
+      
       setValidationStates(prev => ({ 
         ...prev, 
         [fieldKey]: { 
           isChecking: false, 
-          exists: response.exists,
+          exists: response.exists && !isSelfProject, // Don't flag if it's the same project
           existingProject: response.existingProject
         } 
       }));
@@ -2797,52 +2802,74 @@ export default function ComprehensiveEditFixed() {
                         <FormField
                           control={form.control}
                           name="project_details.sa"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>ΣΑ</FormLabel>
-                              <Select
-                                onValueChange={(value) => {
-                                  field.onChange(value);
-                                  // Auto-populate enumeration code based on selected ΣΑ using existing data
-                                  const currentEnumerationCode = form.getValues(
-                                    "project_details.enumeration_code",
-                                  );
-                                  const newEnumerationCode =
-                                    generateEnumerationCode(
-                                      value,
-                                      currentEnumerationCode,
-                                      existingEnumerationCodes,
+                          render={({ field }) => {
+                            const fieldKey = 'project_details.sa';
+                            const validationState = getValidationState(fieldKey);
+                            
+                            return (
+                              <FormItem>
+                                <FormLabel>ΣΑ</FormLabel>
+                                <Select
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    // Auto-populate enumeration code based on selected ΣΑ using existing data
+                                    const currentEnumerationCode = form.getValues(
+                                      "project_details.enumeration_code",
                                     );
-                                  form.setValue(
-                                    "project_details.enumeration_code",
-                                    newEnumerationCode,
-                                  );
-                                }}
-                                value={field.value || ""}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Επιλέξτε ΣΑ" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {existingSATypes.length > 0 ? (
-                                    existingSATypes.map((saType) => (
-                                      <SelectItem key={saType} value={saType}>
-                                        {saType}
-                                      </SelectItem>
-                                    ))
-                                  ) : (
-                                    <>
-                                      <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
-                                      <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
-                                      <SelectItem value="E069">E069</SelectItem>
-                                    </>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </FormItem>
-                          )}
+                                    const newEnumerationCode =
+                                      generateEnumerationCode(
+                                        value,
+                                        currentEnumerationCode,
+                                        existingEnumerationCodes,
+                                      );
+                                    form.setValue(
+                                      "project_details.enumeration_code",
+                                      newEnumerationCode,
+                                    );
+                                    
+                                    // Validate SA on change with current project MIS exclusion
+                                    validateSA(value, fieldKey, mis);
+                                  }}
+                                  value={field.value || ""}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Επιλέξτε ΣΑ" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {existingSATypes.length > 0 ? (
+                                      existingSATypes.map((saType) => (
+                                        <SelectItem key={saType} value={saType}>
+                                          {saType}
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      <>
+                                        <SelectItem value="ΝΑ853">ΝΑ853</SelectItem>
+                                        <SelectItem value="ΝΑ271">ΝΑ271</SelectItem>
+                                        <SelectItem value="E069">E069</SelectItem>
+                                      </>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                                
+                                {/* Validation feedback */}
+                                {validationState.isChecking && (
+                                  <p className="text-sm text-blue-600 flex items-center gap-1">
+                                    <RefreshCw className="h-3 w-3 animate-spin" />
+                                    Έλεγχος ΣΑ...
+                                  </p>
+                                )}
+                                {validationState.exists && validationState.existingProject && (
+                                  <p className="text-sm text-red-600 flex items-center gap-1">
+                                    <X className="h-3 w-3" />
+                                    ΣΑ υπάρχει ήδη στο έργο: {validationState.existingProject.project_title} (MIS: {validationState.existingProject.mis})
+                                  </p>
+                                )}
+                              </FormItem>
+                            );
+                          }}
                         />
 
                         <FormField
