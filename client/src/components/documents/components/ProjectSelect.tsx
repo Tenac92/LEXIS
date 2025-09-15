@@ -111,10 +111,14 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
 
           const name = item.project_title || item.event_description || `Project ${item.mis}`;
 
+          // Extract NA853 info from project name if database field is empty
+          const extractedNA853 = extractNA853Info(name);
+          const na853Code = item.na853 || extractedNA853.na853 || '';
+
           return {
             id: item.id, // Use the numeric project_id from database
             mis: String(item.mis),
-            na853: String(item.na853 || ''), // Include NA853 enumeration code
+            na853: na853Code, // Use extracted or database NA853 code
             name,
             expenditure_types: expenditureTypes || [],
           };
@@ -252,7 +256,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
                   {selectedProject.name}
                 </div>
                 <div className="text-sm text-blue-600 mt-1">
-                  ΝΑ853: {selectedProject.na853 || selectedProject.mis || 'N/A'} | ID: {selectedProject.id}
+                  ΝΑ853: {selectedProject.na853 || 'N/A'} | ID: {selectedProject.id}
                 </div>
                 {selectedProject.expenditure_types?.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -313,7 +317,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
                                 {project.name}
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
-                                ΝΑ853: {project.na853 || project.mis || 'N/A'} | ID: {project.id}
+                                ΝΑ853: {project.na853 || 'N/A'} | ID: {project.id}
                               </div>
                               {project.expenditure_types?.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-1">
