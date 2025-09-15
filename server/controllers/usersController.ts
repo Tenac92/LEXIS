@@ -80,7 +80,7 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
   }
 });
 
-// Get parts for selected units
+// Get parts for selected units (by numeric IDs)
 router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { units } = req.query;
@@ -89,26 +89,26 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
       return res.status(400).json({ message: 'Units parameter is required' });
     }
 
-    const unitsList = Array.isArray(units) ? units : [units];
-    console.log('[Units] Fetching parts for units:', unitsList);
+    // Parse numeric unit IDs from query parameter
+    const unitIdStrings = Array.isArray(units) ? units : [units];
+    const unitIds = unitIdStrings.flatMap(v => String(v).split(',')).map(Number).filter(Number.isFinite);
+    console.log('[Units] Fetching parts for unit IDs:', unitIds);
     
-    // Get all units first and filter manually to avoid JSON path issues with Greek characters
-    const { data: allUnits, error } = await supabase
+    if (unitIds.length === 0) {
+      console.log('[Units] No valid unit IDs provided');
+      return res.json([]);
+    }
+    
+    // Get units by numeric IDs
+    const { data: selectedUnits, error } = await supabase
       .from('Monada')
-      .select('unit_name, parts');
+      .select('id, parts')
+      .in('id', unitIds);
     
     if (error) {
       console.error('[Units] Error fetching units:', error);
       throw error;
     }
-    
-    // Filter to get only the selected units
-    const selectedUnits = allUnits?.filter(unit => 
-      unit.unit_name && 
-      typeof unit.unit_name === 'object' && 
-      unit.unit_name.name && 
-      unitsList.includes(unit.unit_name.name)
-    );
     
     console.log('[Units] Found matching units:', selectedUnits?.length || 0);
     
@@ -236,13 +236,23 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    // Verify units exist
-    console.log('[Users] Verifying units:', unitsToValidate);
+    // Verify units exist - Parse numeric unit IDs
+    const unitIds = unitsToValidate.map(Number).filter(Number.isFinite);
+    console.log('[Users] Verifying unit IDs:', unitIds);
     
-    // Get all units first
+    if (unitIds.length !== unitsToValidate.length) {
+      console.error('[Users] Invalid unit IDs (non-numeric):', unitsToValidate);
+      return res.status(400).json({
+        message: 'Unit IDs must be numeric',
+        error: 'Invalid unit ID format'
+      });
+    }
+    
+    // Get units by numeric IDs
     const { data: allUnits, error: fetchError } = await supabase
       .from('Monada')
-      .select('unit, unit_name, parts');
+      .select('id, parts')
+      .in('id', unitIds);
       
     if (fetchError) {
       console.error('[Users] Error fetching units:', fetchError);
@@ -252,30 +262,22 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
     
-    // Filter units manually instead of using JSON path operations
-    const validUnits = allUnits?.filter(unit => {
-      // Check if this unit's name is in the requested units array
-      return unit.unit_name && 
-             typeof unit.unit_name === 'object' &&
-             unit.unit_name.name && 
-             unitsToValidate.includes(unit.unit_name.name);
-    });
-    
     // Check if all requested units were found
-    if (!validUnits || validUnits.length !== unitsToValidate.length) {
-      console.error('[Users] Invalid units:', unitsToValidate, 'Found:', validUnits?.length || 0);
+    if (!allUnits || allUnits.length !== unitIds.length) {
+      console.error('[Users] Invalid unit IDs:', unitIds, 'Found:', allUnits?.length || 0);
       return res.status(400).json({
         message: 'One or more invalid units selected',
-        error: 'Not all requested units are valid'
+        error: 'Not all requested unit IDs are valid'
       });
     }
     
-    // Use validUnits instead of unitData for the next steps
-    const unitData = validUnits;
+    const unitData = allUnits;
 
     // Verify department exists in units' parts, if department is provided
     const allParts = Array.from(new Set(
-      unitData.flatMap(unit => Object.values(unit.parts || {}))
+      unitData.flatMap(unit => 
+        Object.values(unit.parts || {}).filter(v => typeof v === 'string')
+      )
     ));
 
     // Only validate department if it's provided and there are parts available
@@ -302,19 +304,18 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Convert full unit names to abbreviated codes for storage
-    const unitCodes = validUnits.map(unit => unit.unit);
-    console.log('[Users] Converting unit names to codes:', { originalUnits: unitsToValidate, unitCodes });
+    // Store numeric unit IDs directly
+    console.log('[Users] Storing unit IDs:', { originalUnits: unitsToValidate, unitIds });
     
     // Create user - department is optional
-    console.log('[Users] Creating new user:', { email, name, role, units: unitCodes, department });
+    console.log('[Users] Creating new user:', { email, name, role, unit_ids: unitIds, department });
     
     const userData = {
       email,
       name,
       role,
       password: hashedPassword,
-      unit_id: unitCodes, // Store abbreviated codes instead of full names
+      unit_id: unitIds, // Store numeric IDs
       telephone: telephone || null
     };
     
