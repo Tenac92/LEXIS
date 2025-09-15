@@ -153,6 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: project.id,
           mis: project.mis,
+          na853: project.na853, // Include NA853 field from database
           project_title: project.project_title || project.event_description,
           event_description: project.event_description,
           expenditure_types: uniqueExpenditureTypes,

@@ -111,14 +111,10 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
 
           const name = item.project_title || item.event_description || `Project ${item.mis}`;
 
-          // Extract NA853 info from project name if database field is empty
-          const extractedNA853 = extractNA853Info(name);
-          const na853Code = item.na853 || extractedNA853.na853 || '';
-
           return {
             id: item.id, // Use the numeric project_id from database
             mis: String(item.mis),
-            na853: na853Code, // Use extracted or database NA853 code
+            na853: String(item.na853 || ''), // Use NA853 code directly from database
             name,
             expenditure_types: expenditureTypes || [],
           };
