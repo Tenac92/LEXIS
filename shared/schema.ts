@@ -53,7 +53,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   role: text("role").notNull().default("user"),
   unit_id: integer("unit_id").array(),
-  telephone: text("telephone"),
+  telephone: bigint("telephone", { mode: "number" }),
   department: text("department"),
   details: jsonb("details"),
   created_at: timestamp("created_at").defaultNow(),
@@ -945,7 +945,7 @@ export const extendedUserSchema = insertUserSchema.extend({
   role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
     message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
-  telephone: z.string().optional().nullable(), // Ensure telephone is validated as string
+  telephone: z.number().int().positive("Το τηλέφωνο πρέπει να είναι θετικός αριθμός").optional().nullable(), // Telephone as numeric field
   details: userDetailsSchema,
 });
 

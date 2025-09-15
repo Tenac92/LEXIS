@@ -53,7 +53,7 @@ interface User {
   role: string;
   unit_id?: number[];
   created_at: string;
-  telephone?: string;
+  telephone?: number;
   department?: string;
   details?: {
     gender?: "male" | "female";
@@ -100,7 +100,7 @@ export default function UsersPage() {
       password: "",
       role: "user",
       unit_id: [],
-      telephone: "",
+      telephone: undefined,
       department: ""
     },
     // This ensures the validation rules are updated when formMode changes
@@ -340,7 +340,7 @@ export default function UsersPage() {
               password: "",
               role: "user",
               unit_id: [],
-              telephone: "",
+              telephone: undefined,
               department: "",
               details: {
                 gender: undefined,
@@ -429,7 +429,7 @@ export default function UsersPage() {
                             password: "", // Don't pre-populate password for security
                             role: user.role as "admin" | "user" | "manager",
                             unit_id: userUnitIds,
-                            telephone: user.telephone || "",
+                            telephone: user.telephone || undefined,
                             department: user.department || "",
                             details: user.details || {
                               gender: undefined,
@@ -503,7 +503,7 @@ export default function UsersPage() {
               password: "",
               role: "user",
               unit_id: [],
-              telephone: "",
+              telephone: undefined,
               department: "",
               details: {
                 gender: undefined,
@@ -612,7 +612,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Telephone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} />
+                      <Input type="number" placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -843,7 +843,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Telephone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} />
+                      <Input type="number" placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
