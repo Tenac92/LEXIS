@@ -112,14 +112,17 @@ router.get('/units/parts', authenticateSession, async (req: AuthenticatedRequest
     
     console.log('[Units] Found matching units:', selectedUnits?.length || 0);
     
-    // Combine all parts from selected units
+    // Combine all parts from selected units - extract 'tmima' fields
     const allParts = selectedUnits?.reduce<string[]>((acc, unit) => {
       if (unit.parts && typeof unit.parts === 'object') {
-        // Extract values from the parts object and ensure they are strings
-        const partValues = Object.values(unit.parts).filter((value): value is string => 
-          typeof value === 'string'
-        );
-        return [...acc, ...partValues];
+        // Extract tmima values from each section (Α, Β, Γ, Δ, etc.)
+        const tmimaValues = Object.values(unit.parts)
+          .filter((section): section is Record<string, any> => 
+            section !== null && typeof section === 'object' && section !== undefined && 'tmima' in section
+          )
+          .map(section => section.tmima)
+          .filter((tmima): tmima is string => typeof tmima === 'string');
+        return [...acc, ...tmimaValues];
       }
       return acc;
     }, []) || [];
@@ -215,7 +218,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { email, name, password, role, unit_id, units, department, telephone } = req.body;
+    const { email, name, password, role, unit_id, units, department, telephone, details } = req.body;
 
     // Support both field names for compatibility - prefer unit_id from frontend
     const unitsToValidate = unit_id || units;
@@ -273,11 +276,18 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     
     const unitData = allUnits;
 
-    // Verify department exists in units' parts, if department is provided
+    // Verify department exists in units' parts - extract tmima fields
     const allParts = Array.from(new Set(
-      unitData.flatMap(unit => 
-        Object.values(unit.parts || {}).filter(v => typeof v === 'string')
-      )
+      unitData.flatMap(unit => {
+        if (!unit.parts || typeof unit.parts !== 'object') return [];
+        // Extract tmima values from each section
+        return Object.values(unit.parts)
+          .filter((section): section is Record<string, any> => 
+            section !== null && typeof section === 'object' && section !== undefined && 'tmima' in section
+          )
+          .map(section => section.tmima)
+          .filter((tmima): tmima is string => typeof tmima === 'string');
+      })
     ));
 
     // Only validate department if it's provided and there are parts available
@@ -322,6 +332,11 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Only add department if it's provided
     if (department) {
       Object.assign(userData, { department });
+    }
+    
+    // Only add details if it's provided
+    if (details && typeof details === 'object') {
+      Object.assign(userData, { details });
     }
     
     // Use supabaseAdmin with service role key to bypass RLS policies

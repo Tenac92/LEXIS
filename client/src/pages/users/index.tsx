@@ -628,14 +628,9 @@ export default function UsersPage() {
                     queryFn: async () => {
                       if (selectedUnitIds.length === 0) return [];
                       
-                      // Find the full unit objects from their IDs
-                      const selectedUnitNames = units
-                        .filter(unit => selectedUnitIds.includes(parseInt(unit.id)))
-                        .map(unit => unit.name);
-                        
-                      // Now use the unit names to fetch departments
+                      // Send numeric unit IDs directly to the backend
                       const params = new URLSearchParams();
-                      selectedUnitNames.forEach(unitName => params.append('units', unitName));
+                      selectedUnitIds.forEach(unitId => params.append('units', unitId.toString()));
                       const response = await fetch(`/api/users/units/parts?${params}`);
                       if (!response.ok) throw new Error('Failed to fetch departments');
                       return response.json();
@@ -864,14 +859,9 @@ export default function UsersPage() {
                     queryFn: async () => {
                       if (selectedUnitIds.length === 0) return [];
                       
-                      // Find the full unit objects from their IDs
-                      const selectedUnitNames = units
-                        .filter(unit => selectedUnitIds.includes(parseInt(unit.id)))
-                        .map(unit => unit.name);
-                        
-                      // Now use the unit names to fetch departments
+                      // Send numeric unit IDs directly to the backend
                       const params = new URLSearchParams();
-                      selectedUnitNames.forEach(unitName => params.append('units', unitName));
+                      selectedUnitIds.forEach(unitId => params.append('units', unitId.toString()));
                       const response = await fetch(`/api/users/units/parts?${params}`);
                       if (!response.ok) throw new Error('Failed to fetch departments');
                       return response.json();
