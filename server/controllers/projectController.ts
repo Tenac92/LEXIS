@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { authenticateSession } from '../authentication';
 import { storage } from '../storage';
 import { AuthenticatedRequest } from '../authentication';
+import { parseAndValidateBudgetAmount, parseEuropeanNumber } from '../utils/europeanNumberParser';
 
 export const router = Router();
 
@@ -29,7 +30,7 @@ async function processBudgetVersions(
           formulation_id: formulationId,
           budget_type: 'ΠΔΕ',
           action_type: pdeVersion.action_type || 'Έγκριση',
-          boundary_budget: pdeVersion.boundary_budget ? parseFloat(pdeVersion.boundary_budget.toString().replace(/,/g, '')) : null,
+          boundary_budget: pdeVersion.boundary_budget ? parseAndValidateBudgetAmount(pdeVersion.boundary_budget) : null,
           protocol_number: pdeVersion.protocol_number || null,
           ada: pdeVersion.ada || null,
           decision_date: pdeVersion.decision_date || null,
@@ -93,8 +94,8 @@ async function processBudgetVersions(
             const financialData = {
               epa_version_id: createdEPA.id,
               year: parseInt(financial.year) || new Date().getFullYear(),
-              total_public_expense: parseFloat(financial.total_public_expense?.toString().replace(/,/g, '') || '0'),
-              eligible_public_expense: parseFloat(financial.eligible_public_expense?.toString().replace(/,/g, '') || '0'),
+              total_public_expense: parseEuropeanNumber(financial.total_public_expense) || 0,
+              eligible_public_expense: parseEuropeanNumber(financial.eligible_public_expense) || 0,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             };

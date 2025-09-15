@@ -208,7 +208,11 @@ const comprehensiveProjectSchema = z.object({
     }).default({ year: "", issue: "", number: "" }),
     ada: z.string().default(""),
     implementing_agency: z.array(z.number()).default([]),
-    decision_budget: z.string().default(""),
+    decision_budget: z.string().default("").refine((val) => {
+      if (!val) return true;
+      const numericValue = parseEuropeanNumber(val);
+      return numericValue <= 9999999999.99;
+    }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"),
     expenses_covered: z.string().default(""),
     expenditure_type: z.array(z.number()).default([]),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
@@ -261,7 +265,11 @@ const comprehensiveProjectSchema = z.object({
         // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
         // Added boundary_budget; renamed decision_type to action_type
         version_number: z.string().default("1.0"),
-        boundary_budget: z.string().default(""), // Προϋπολογισμός Οριοθέτησης
+        boundary_budget: z.string().default("").refine((val) => {
+          if (!val) return true;
+          const numericValue = parseEuropeanNumber(val);
+          return numericValue <= 9999999999.99;
+        }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Προϋπολογισμός Οριοθέτησης
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
         decision_date: z.string().default(""),
@@ -281,8 +289,16 @@ const comprehensiveProjectSchema = z.object({
         // New normalized "Οικονομικά" section for EPA with year-based financial records
         financials: z.array(z.object({
           year: z.number().min(2020).max(2050), // Έτος
-          total_public_expense: z.string().default("0"), // Συνολική Δημόσια Δαπάνη
-          eligible_public_expense: z.string().default("0"), // Επιλέξιμη Δημόσια Δαπάνη
+          total_public_expense: z.string().default("0").refine((val) => {
+            if (!val) return true;
+            const numericValue = parseEuropeanNumber(val);
+            return numericValue <= 9999999999.99;
+          }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Συνολική Δημόσια Δαπάνη
+          eligible_public_expense: z.string().default("0").refine((val) => {
+            if (!val) return true;
+            const numericValue = parseEuropeanNumber(val);
+            return numericValue <= 9999999999.99;
+          }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Επιλέξιμη Δημόσια Δαπάνη
         })).default([]),
       })).default([]),
     }).default({
