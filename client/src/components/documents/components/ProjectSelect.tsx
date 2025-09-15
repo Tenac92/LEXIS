@@ -163,17 +163,21 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
           const normalizedName = normalizeText(project.name);
           const normalizedMis = normalizeText(String(project.mis) || "");
           const normalizedId = normalizeText(String(project.id));
+          const normalizedNA853 = normalizeText(String(project.na853) || "");
           
           // Also check raw values without normalization for exact number matches
           const rawMisMatch = String(project.mis).includes(debouncedSearchQuery);
           const rawIdMatch = String(project.id).includes(debouncedSearchQuery);
+          const rawNA853Match = String(project.na853 || "").includes(debouncedSearchQuery);
           
           const matches = (
             normalizedName.includes(normalizedQuery) ||
             normalizedMis.includes(normalizedQuery) ||
             normalizedId.includes(normalizedQuery) ||
+            normalizedNA853.includes(normalizedQuery) ||
             rawMisMatch ||
-            rawIdMatch
+            rawIdMatch ||
+            rawNA853Match
           );
           
           // Debug log for the specific project we're looking for
