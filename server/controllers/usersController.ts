@@ -396,9 +396,14 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       email: req.body.email?.trim() || null,
       role: req.body.role?.trim() || null,
       unit_id: Array.isArray(req.body.unit_id) ? req.body.unit_id : [],
-      telephone: req.body.telephone?.trim() || null,
+      telephone: req.body.telephone || null,
       department: req.body.department?.trim() || null
     };
+
+    // Add details if provided
+    if (req.body.details && typeof req.body.details === 'object') {
+      updateData.details = req.body.details;
+    }
 
     // Remove null values and empty strings to prevent database errors
     Object.keys(updateData).forEach(key => {
