@@ -1,0 +1,373 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.Employees (
+  id bigint NOT NULL,
+  surname text NOT NULL,
+  name text,
+  fathername text,
+  afm bigint GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  klados text,
+  attribute text,
+  workaf text,
+  monada text,
+  CONSTRAINT Employees_pkey PRIMARY KEY (id),
+  CONSTRAINT Employes_monada_fkey FOREIGN KEY (monada) REFERENCES public.Monada(unit)
+);
+CREATE TABLE public.Monada (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  unit text UNIQUE,
+  unit_name jsonb,
+  parts jsonb,
+  email text,
+  director jsonb,
+  address jsonb,
+  CONSTRAINT Monada_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.Projects (
+  mis integer NOT NULL UNIQUE,
+  e069 text,
+  na271 text,
+  na853 text NOT NULL UNIQUE,
+  event_description text UNIQUE,
+  project_title text,
+  event_year jsonb,
+  budget_e069 numeric,
+  budget_na271 numeric,
+  budget_na853 numeric,
+  status text,
+  created_at date,
+  updated_at date,
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  event_type_id integer,
+  inc_year integer,
+  updates jsonb,
+  CONSTRAINT Projects_pkey PRIMARY KEY (mis, id),
+  CONSTRAINT Projects_event_type_id_fkey FOREIGN KEY (event_type_id) REFERENCES public.event_types(id)
+);
+CREATE TABLE public.Subprojects (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  title text,
+  description text,
+  status text,
+  created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  epa_version_id integer,
+  CONSTRAINT Subprojects_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_subprojects_epa_version FOREIGN KEY (epa_version_id) REFERENCES public.project_budget_versions(id)
+);
+CREATE TABLE public.attachments (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  atachments text,
+  expenditure_type_id ARRAY,
+  CONSTRAINT attachments_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.audit_logs (
+  id integer NOT NULL DEFAULT nextval('audit_logs_id_seq'::regclass),
+  user_id bigint,
+  action_type character varying NOT NULL,
+  entity_type character varying NOT NULL,
+  entity_id character varying NOT NULL,
+  details jsonb,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.beneficiaries (
+  id integer NOT NULL DEFAULT nextval('beneficiaries_id_seq'::regclass),
+  afm numeric NOT NULL UNIQUE,
+  surname text NOT NULL,
+  name text NOT NULL,
+  fathername text,
+  region text,
+  cengsur1 text,
+  cengname1 text,
+  cengsur2 text,
+  cengname2 text,
+  freetext text,
+  date date DEFAULT CURRENT_DATE,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT beneficiaries_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.beneficiary_payments (
+  id integer NOT NULL DEFAULT nextval('beneficiary_payments_id_seq'::regclass) UNIQUE,
+  beneficiary_id integer,
+  installment text NOT NULL,
+  amount numeric,
+  status text DEFAULT 'pending'::text,
+  payment_date date,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  unit_id bigint,
+  document_id bigint,
+  project_index_id integer,
+  CONSTRAINT beneficiary_payments_pkey PRIMARY KEY (id),
+  CONSTRAINT beneficiary_payments_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.generated_documents(id),
+  CONSTRAINT beneficiary_payments_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES public.Monada(id),
+  CONSTRAINT beneficiary_payments_beneficiary_id_fkey FOREIGN KEY (beneficiary_id) REFERENCES public.beneficiaries(id),
+  CONSTRAINT beneficiary_payments_project_index_id_fkey FOREIGN KEY (project_index_id) REFERENCES public.project_index(id)
+);
+CREATE TABLE public.budget_history (
+  id integer NOT NULL DEFAULT nextval('budget_history_id_seq'::regclass),
+  previous_amount numeric NOT NULL,
+  new_amount numeric NOT NULL,
+  change_type text NOT NULL,
+  change_reason text,
+  document_id bigint,
+  created_by bigint,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  project_id integer,
+  CONSTRAINT budget_history_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_history_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT budget_history_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.generated_documents(id),
+  CONSTRAINT budget_history_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id)
+);
+CREATE TABLE public.budget_notifications (
+  id integer NOT NULL DEFAULT nextval('budget_notifications_id_seq'::regclass),
+  project_id integer NOT NULL,
+  type character varying NOT NULL,
+  amount numeric NOT NULL,
+  current_budget numeric NOT NULL,
+  ethsia_pistosi numeric NOT NULL,
+  reason text,
+  status character varying DEFAULT 'pending'::character varying,
+  user_id integer,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT budget_notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT budget_notifications_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id)
+);
+CREATE TABLE public.epa_financials (
+  id integer NOT NULL DEFAULT nextval('epa_financials_id_seq'::regclass),
+  epa_version_id integer NOT NULL,
+  year integer NOT NULL,
+  total_public_expense numeric NOT NULL CHECK (total_public_expense >= 0::numeric),
+  eligible_public_expense numeric NOT NULL CHECK (eligible_public_expense >= 0::numeric),
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT epa_financials_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_epa_version FOREIGN KEY (epa_version_id) REFERENCES public.project_budget_versions(id)
+);
+CREATE TABLE public.event_types (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  name text NOT NULL UNIQUE,
+  CONSTRAINT event_types_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.expenditure_types (
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+  expenditure_types text,
+  expenditure_types_minor text,
+  CONSTRAINT expenditure_types_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.generated_documents (
+  id bigint NOT NULL DEFAULT nextval('generated_documents_id_seq'::regclass),
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  generated_by bigint,
+  protocol_date date,
+  total_amount numeric,
+  status character varying DEFAULT 'pending'::character varying,
+  protocol_number_input text UNIQUE,
+  original_protocol_number character varying,
+  original_protocol_date date,
+  is_correction boolean DEFAULT false,
+  comments text,
+  updated_by text,
+  updated_at timestamp with time zone,
+  esdian ARRAY,
+  director_signature jsonb,
+  beneficiary_payments_id ARRAY,
+  project_index_id integer,
+  unit_id bigint,
+  attachment_id ARRAY,
+  CONSTRAINT generated_documents_pkey PRIMARY KEY (id),
+  CONSTRAINT generated_documents_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.users(id),
+  CONSTRAINT generated_documents_project_index_id_fkey FOREIGN KEY (project_index_id) REFERENCES public.project_index(id),
+  CONSTRAINT generated_documents_unit_id_fkey FOREIGN KEY (unit_id) REFERENCES public.Monada(id)
+);
+CREATE TABLE public.municipalities (
+  code bigint NOT NULL,
+  name text NOT NULL,
+  unit_code bigint NOT NULL,
+  CONSTRAINT municipalities_pkey PRIMARY KEY (code),
+  CONSTRAINT municipalities_unit_code_fkey FOREIGN KEY (unit_code) REFERENCES public.regional_units(code)
+);
+CREATE TABLE public.project_actions (
+  id integer NOT NULL DEFAULT nextval('project_actions_id_seq'::regclass),
+  project_id integer NOT NULL,
+  action_type character varying NOT NULL CHECK (action_type::text = ANY (ARRAY['approve'::character varying::text, 'reject'::character varying::text, 'review'::character varying::text])),
+  action_date timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  notes text,
+  user_id bigint,
+  CONSTRAINT project_actions_pkey PRIMARY KEY (id),
+  CONSTRAINT project_actions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT project_actions_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id)
+);
+CREATE TABLE public.project_budget (
+  id integer NOT NULL DEFAULT nextval('budget_na853_split_id_seq'::regclass),
+  na853 text NOT NULL UNIQUE,
+  mis integer GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  proip numeric DEFAULT 0,
+  ethsia_pistosi numeric DEFAULT 0,
+  q1 numeric DEFAULT 0,
+  q2 numeric DEFAULT 0,
+  q3 numeric DEFAULT 0,
+  q4 numeric DEFAULT 0,
+  katanomes_etous numeric DEFAULT 0,
+  user_view numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+  last_quarter_check text DEFAULT 'q1'::text,
+  sum jsonb,
+  project_id integer,
+  CONSTRAINT project_budget_pkey PRIMARY KEY (id),
+  CONSTRAINT budget_na853_split_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id),
+  CONSTRAINT budget_na853_split_mis_fkey FOREIGN KEY (mis) REFERENCES public.Projects(mis)
+);
+CREATE TABLE public.project_budget_versions (
+  id integer NOT NULL DEFAULT nextval('project_budget_versions_id_seq'::regclass),
+  project_id integer NOT NULL,
+  formulation_id bigint,
+  budget_type text NOT NULL,
+  epa_version text,
+  protocol_number text,
+  ada text,
+  decision_date date,
+  comments text,
+  created_at timestamp without time zone DEFAULT now(),
+  updated_at timestamp without time zone DEFAULT now(),
+  created_by integer,
+  updated_by integer,
+  boundary_budget numeric CHECK (boundary_budget >= 0::numeric),
+  action_type text DEFAULT 'Έγκριση'::text,
+  CONSTRAINT project_budget_versions_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_budget_versions_project FOREIGN KEY (project_id) REFERENCES public.Projects(id),
+  CONSTRAINT fk_budget_versions_formulation FOREIGN KEY (formulation_id) REFERENCES public.project_formulations(id)
+);
+CREATE TABLE public.project_decisions (
+  id bigint NOT NULL DEFAULT nextval('project_decisions_id_seq'::regclass),
+  project_id integer NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  decision_sequence integer NOT NULL DEFAULT 1,
+  decision_type text NOT NULL DEFAULT 'Έγκριση'::text,
+  protocol_number text,
+  fek jsonb,
+  ada text,
+  decision_budget numeric,
+  expenses_covered numeric,
+  decision_date date,
+  included boolean DEFAULT true,
+  is_active boolean DEFAULT true,
+  comments text,
+  budget_decision text,
+  funding_decision text,
+  allocation_decision text,
+  created_by bigint,
+  updated_by bigint,
+  expenditure_type ARRAY,
+  implementing_agency ARRAY,
+  CONSTRAINT project_decisions_pkey PRIMARY KEY (id),
+  CONSTRAINT project_decisions_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id),
+  CONSTRAINT project_decisions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT project_decisions_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id)
+);
+CREATE TABLE public.project_formulations (
+  id bigint NOT NULL DEFAULT nextval('project_formulations_id_seq'::regclass),
+  project_id integer NOT NULL,
+  decision_id bigint,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  formulation_sequence integer NOT NULL DEFAULT 1,
+  sa_type text NOT NULL CHECK (sa_type = ANY (ARRAY['ΝΑ853'::text, 'ΝΑ271'::text, 'E069'::text])),
+  enumeration_code text,
+  protocol_number text,
+  ada text,
+  decision_year integer,
+  project_budget numeric NOT NULL DEFAULT 0,
+  total_public_expense numeric,
+  eligible_public_expense numeric,
+  epa_version text,
+  decision_status text DEFAULT 'Ενεργή'::text,
+  change_type text DEFAULT 'Έγκριση'::text,
+  connected_decision_ids ARRAY,
+  comments text,
+  is_active boolean DEFAULT true,
+  created_by bigint,
+  updated_by bigint,
+  CONSTRAINT project_formulations_pkey PRIMARY KEY (id),
+  CONSTRAINT project_formulations_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id),
+  CONSTRAINT project_formulations_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES public.users(id),
+  CONSTRAINT project_formulations_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id),
+  CONSTRAINT project_formulations_decision_id_fkey FOREIGN KEY (decision_id) REFERENCES public.project_decisions(id)
+);
+CREATE TABLE public.project_index (
+  project_id integer NOT NULL,
+  monada_id integer NOT NULL,
+  event_types_id integer NOT NULL,
+  expenditure_type_id integer NOT NULL,
+  id integer GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+  CONSTRAINT project_index_pkey PRIMARY KEY (id),
+  CONSTRAINT project_monada_kallikratis_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.Projects(id),
+  CONSTRAINT project_monada_kallikratis_monada_id_fkey FOREIGN KEY (monada_id) REFERENCES public.Monada(id),
+  CONSTRAINT project_monada_kallikratis_event_types_id_fkey FOREIGN KEY (event_types_id) REFERENCES public.event_types(id),
+  CONSTRAINT project_index_expenditure_type_id_fkey FOREIGN KEY (expenditure_type_id) REFERENCES public.expenditure_types(id)
+);
+CREATE TABLE public.project_index_munis (
+  project_index_id integer NOT NULL,
+  muni_code bigint NOT NULL,
+  CONSTRAINT project_index_munis_pkey PRIMARY KEY (project_index_id, muni_code),
+  CONSTRAINT project_index_munis_project_index_id_fkey FOREIGN KEY (project_index_id) REFERENCES public.project_index(id),
+  CONSTRAINT project_index_munis_muni_code_fkey FOREIGN KEY (muni_code) REFERENCES public.municipalities(code)
+);
+CREATE TABLE public.project_index_regions (
+  project_index_id integer NOT NULL,
+  region_code bigint NOT NULL,
+  CONSTRAINT project_index_regions_pkey PRIMARY KEY (project_index_id, region_code),
+  CONSTRAINT project_index_regions_region_code_fkey FOREIGN KEY (region_code) REFERENCES public.regions(code),
+  CONSTRAINT project_index_regions_project_index_id_fkey FOREIGN KEY (project_index_id) REFERENCES public.project_index(id)
+);
+CREATE TABLE public.project_index_units (
+  project_index_id integer NOT NULL,
+  unit_code bigint NOT NULL,
+  CONSTRAINT project_index_units_pkey PRIMARY KEY (project_index_id, unit_code),
+  CONSTRAINT project_index_units_unit_code_fkey FOREIGN KEY (unit_code) REFERENCES public.regional_units(code),
+  CONSTRAINT project_index_units_project_index_id_fkey FOREIGN KEY (project_index_id) REFERENCES public.project_index(id)
+);
+CREATE TABLE public.regional_units (
+  code bigint NOT NULL,
+  name text NOT NULL,
+  region_code bigint NOT NULL,
+  CONSTRAINT regional_units_pkey PRIMARY KEY (code),
+  CONSTRAINT regional_units_region_code_fkey FOREIGN KEY (region_code) REFERENCES public.regions(code)
+);
+CREATE TABLE public.regions (
+  code bigint NOT NULL,
+  name text NOT NULL,
+  CONSTRAINT regions_pkey PRIMARY KEY (code)
+);
+CREATE TABLE public.subproject_financials (
+  id integer NOT NULL DEFAULT nextval('subproject_financials_id_seq'::regclass),
+  subproject_id integer NOT NULL,
+  year integer NOT NULL,
+  total_public numeric NOT NULL DEFAULT 0 CHECK (total_public >= 0::numeric),
+  eligible_public numeric NOT NULL DEFAULT 0 CHECK (eligible_public >= 0::numeric),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT subproject_financials_pkey PRIMARY KEY (id),
+  CONSTRAINT fk_subproject_financials_subproject FOREIGN KEY (subproject_id) REFERENCES public.Subprojects(id)
+);
+CREATE TABLE public.users (
+  id bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  name text,
+  email text UNIQUE,
+  role text,
+  password text NOT NULL,
+  telephone numeric,
+  department text,
+  details jsonb,
+  unit_id ARRAY,
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);
