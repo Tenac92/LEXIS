@@ -945,6 +945,7 @@ export const extendedUserSchema = insertUserSchema.extend({
   role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
     message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
+  telephone: z.string().optional().nullable(), // Ensure telephone is validated as string
   details: userDetailsSchema,
 });
 
