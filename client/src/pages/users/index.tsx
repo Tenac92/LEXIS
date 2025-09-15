@@ -34,6 +34,7 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
+import { extendedUserSchema } from "@shared/schema";
 import {
   Form,
   FormControl,
@@ -54,27 +55,17 @@ interface User {
   created_at: string;
   telephone?: string;
   department?: string;
+  details?: {
+    gender?: "male" | "female";
+    specialty?: string;
+  };
 }
 
-// Base schema for user data validation
-const baseUserSchema = {
-  email: z.string().email("Invalid email address"),
-  name: z.string().min(1, "Name is required"),
-  role: z.string().min(1, "Role is required"),
-  unit_id: z.array(z.number()).optional(),
-  telephone: z.string().optional().or(z.coerce.string()),
-  department: z.string().optional(),
-};
-
 // Schema for creating a new user (password required)
-const createUserSchema = z.object({
-  ...baseUserSchema,
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+const createUserSchema = extendedUserSchema;
 
 // Schema for editing an existing user (password optional)
-const editUserSchema = z.object({
-  ...baseUserSchema,
+const editUserSchema = extendedUserSchema.extend({
   password: z.string().refine(val => val === '' || val.length >= 6, {
     message: "Password must be at least 6 characters or empty to keep current"
   })
@@ -350,7 +341,11 @@ export default function UsersPage() {
               role: "user",
               unit_id: [],
               telephone: "",
-              department: ""
+              department: "",
+              details: {
+                gender: undefined,
+                specialty: ""
+              }
             });
             setNewUserDialogOpen(true);
           }}
@@ -435,7 +430,11 @@ export default function UsersPage() {
                             role: user.role as "admin" | "user" | "manager",
                             unit_id: userUnitIds,
                             telephone: user.telephone || "",
-                            department: user.department || ""
+                            department: user.department || "",
+                            details: user.details || {
+                              gender: undefined,
+                              specialty: ""
+                            }
                           });
                         }}
                       >
@@ -505,7 +504,11 @@ export default function UsersPage() {
               role: "user",
               unit_id: [],
               telephone: "",
-              department: ""
+              department: "",
+              details: {
+                gender: undefined,
+                specialty: ""
+              }
             });
           }
         }}
@@ -609,7 +612,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Telephone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} />
+                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -647,7 +650,7 @@ export default function UsersPage() {
                         <>
                           <Select
                             onValueChange={field.onChange}
-                            value={field.value}
+                            value={field.value || ""}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -672,6 +675,43 @@ export default function UsersPage() {
                     </FormItem>
                   );
                 }}
+              />
+              <FormField
+                control={form.control}
+                name="details.gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="details.specialty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Specialty (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter specialty" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
               <DialogFooter>
                 <Button
@@ -765,7 +805,7 @@ export default function UsersPage() {
                     <FormLabel>Role</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ""}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -808,7 +848,7 @@ export default function UsersPage() {
                   <FormItem>
                     <FormLabel>Telephone</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} />
+                      <Input placeholder="Enter telephone number" autoComplete="off" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -846,7 +886,7 @@ export default function UsersPage() {
                         <>
                           <Select
                             onValueChange={field.onChange}
-                            value={field.value}
+                            value={field.value || ""}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -871,6 +911,43 @@ export default function UsersPage() {
                     </FormItem>
                   );
                 }}
+              />
+              <FormField
+                control={form.control}
+                name="details.gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Gender (Optional)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="details.specialty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Specialty (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter specialty" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
               <DialogFooter>
                 <Button
