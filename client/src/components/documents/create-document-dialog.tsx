@@ -551,7 +551,7 @@ export function CreateDocumentDialog({
 
   const handleDialogOpen = useCallback(async () => {
     // CRITICAL: Block dialog reinitialization during autocomplete operations
-    if (isAutocompletingRef.current) {
+    if (isDialogInitializing) {
 
       return;
     }
@@ -629,7 +629,7 @@ export function CreateDocumentDialog({
     };
     
     // Prevent form-context sync during initialization
-    isUpdatingFromContext.current = true;
+    setIsFormSyncing(true);
     setFormReset(true);
     
     try {
@@ -701,7 +701,7 @@ export function CreateDocumentDialog({
         
         // Then after a small delay, re-enable context updates
         const updateTimeout = setTimeout(() => {
-          isUpdatingFromContext.current = false;
+          setIsFormSyncing(false);
           dialogInitializationRef.current.isInitializing = false;
         }, 200);
         
@@ -837,57 +837,36 @@ export function CreateDocumentDialog({
   const esdianField1 = form.watch("esdian_field1") || "";
   const esdianField2 = form.watch("esdian_field2") || "";
 
-  // Use a reference to store the timeout ID for debouncing
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Flag to prevent circular updates
-  const isUpdatingFromContext = useRef(false);
-  
-  // Flag to completely prevent dialog resets during autocomplete
-  const isAutocompletingRef = useRef(false);
-  
-  // REMOVED: Memoized form state that was causing infinite loops
-  // Form state is now accessed directly from form.getValues() when needed
-  
-  // MAJOR OPTIMIZATION: State caching and deep comparison optimization 
-  // This will dramatically reduce flicker by preventing needless updates
-  const stateCache = useRef<{
-    lastSyncedState?: any; // Last form state that was synced to context
-    logCounter: number;  // Counter for reducing log frequency
-    lastSyncTime: number;  // Timestamp of last sync
-    pendingUpdates: number; // Track number of pending updates
-  }>({
-    logCounter: 0,
-    lastSyncTime: 0,
-    pendingUpdates: 0
-  });
+  // Simplified state management - replace complex ref-based blocking
+  const [isDialogInitializing, setIsDialogInitializing] = useState(false);
+  const [isFormSyncing, setIsFormSyncing] = useState(false);
 
-  // COMPLETELY REWORKED: Simple sync function without dependencies to prevent infinite loops
+  // Simplified form-to-context sync without complex ref blocking
   const syncFormToContext = useCallback(() => {
-    // Skip updates when we're loading from context to prevent circular updates
-    if (isUpdatingFromContext.current) {
-      return;
+    if (isFormSyncing) return; // Simple state-based blocking instead of ref
+    
+    setIsFormSyncing(true);
+    
+    try {
+      const formValues = form.getValues();
+      
+      const newState = {
+        unit: formValues.unit || "",
+        project_id: formValues.project_id || "",
+        region: formValues.region || "",
+        expenditure_type: formValues.expenditure_type || "",
+        recipients: formValues.recipients || [],
+        status: "draft",
+        selectedAttachments: formValues.selectedAttachments || [],
+        esdian_field1: formValues.esdian_field1 || "",
+        esdian_field2: formValues.esdian_field2 || "",
+      };
+      
+      updateFormData(newState);
+    } finally {
+      setIsFormSyncing(false);
     }
-    
-    // Get current form values directly from form instance
-    const formValues = form.getValues();
-    
-    // Create state object
-    const newState = {
-      unit: formValues.unit || "",
-      project_id: formValues.project_id || "",
-      region: formValues.region || "",
-      expenditure_type: formValues.expenditure_type || "",
-      recipients: formValues.recipients || [],
-      status: "draft",
-      selectedAttachments: formValues.selectedAttachments || [],
-      esdian_field1: formValues.esdian_field1 || "",
-      esdian_field2: formValues.esdian_field2 || "",
-    };
-    
-    // Update context with new state
-    updateFormData(newState);
-  }, [form, updateFormData]);
+  }, [form, updateFormData, isFormSyncing]);
   
   // Effect to trigger form sync when state changes - COMPLETELY DISABLED TO PREVENT INFINITE LOOP
   // The form state will only sync when explicitly called by user actions (form submission, step changes)
@@ -1098,7 +1077,7 @@ export function CreateDocumentDialog({
       }
       
       // Block context updates during this operation
-      isUpdatingFromContext.current = true;
+      setIsFormSyncing(true);
       
       try {
         // Create a new payment amounts object
@@ -1154,7 +1133,7 @@ export function CreateDocumentDialog({
       } finally {
         // Reset update flag with delay to prevent race conditions
         setTimeout(() => {
-          isUpdatingFromContext.current = false;
+          setIsFormSyncing(false);
         }, 150);
       }
     };
@@ -1167,7 +1146,7 @@ export function CreateDocumentDialog({
       // Updating installment amount
       
       // Set a flag to temporarily prevent context updates from reflecting back
-      isUpdatingFromContext.current = true;
+      setIsFormSyncing(true);
       
       try {
         // CRITICAL FIX: Guard against extremely large numbers that cause display issues
@@ -1245,7 +1224,7 @@ export function CreateDocumentDialog({
       } finally {
         // Reset flag after a longer delay to ensure all React updates complete
         setTimeout(() => {
-          isUpdatingFromContext.current = false;
+          setIsFormSyncing(false);
         }, 150);
       }
     };
@@ -2888,9 +2867,9 @@ export function CreateDocumentDialog({
                                   console.log("[AFMAutocomplete] Selection made for index:", index, "personData:", personData);
                                   
                                   // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
-                                  isAutocompletingRef.current = true;
+                                  setIsDialogInitializing(true);
                                   dialogInitializationRef.current.isInitializing = false;
-                                  isUpdatingFromContext.current = true;
+                                  setIsFormSyncing(true);
                                   
                                   // Use smart autocomplete data if available from enhanced AFM component
                                   const enhancedData = personData as any;
@@ -2994,8 +2973,8 @@ export function CreateDocumentDialog({
                                   setTimeout(async () => {
                                     await form.trigger(`recipients.${index}`);
                                     await form.trigger("recipients");
-                                    isUpdatingFromContext.current = false;
-                                    isAutocompletingRef.current = false;
+                                    setIsFormSyncing(false);
+                                    setIsDialogInitializing(false);
                                   }, 200);
                                   
                                   console.log("[AFMAutocomplete] Successfully updated all fields for recipient", index, "with data:", {
