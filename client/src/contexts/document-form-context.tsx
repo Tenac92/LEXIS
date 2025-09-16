@@ -31,6 +31,8 @@ export const documentFormSchema = z.object({
   recipients: z.array(recipientSchema).optional().default([]),
   status: z.string().optional().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([]),
+  esdian_fields: z.array(z.string()).optional().default([""]),
+  // Keep old fields for backward compatibility during transition
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
@@ -56,6 +58,7 @@ const defaultFormData: DocumentFormData = {
   recipients: [],
   status: "draft",
   selectedAttachments: [],
+  esdian_fields: [""],
   esdian_field1: "",
   esdian_field2: "",
   director_signature: undefined,

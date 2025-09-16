@@ -201,6 +201,8 @@ const createDocumentSchema = z.object({
   total_amount: z.number().optional(),
   status: z.string().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([]),
+  esdian_fields: z.array(z.string()).optional().default([""]),
+  // Keep old fields for backward compatibility during transition
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
@@ -263,6 +265,8 @@ export function CreateDocumentDialog({
             recipients: formValues.recipients,
             status: formValues.status || "draft",
             selectedAttachments: formValues.selectedAttachments,
+            esdian_fields: formValues.esdian_fields || [""],
+            // Keep old fields for backward compatibility during transition
             esdian_field1: formValues.esdian_field1 || "",
             esdian_field2: formValues.esdian_field2 || ""
           });
@@ -309,6 +313,9 @@ export function CreateDocumentDialog({
     recipients: formData.recipients || [],
     status: formData.status || "draft",
     selectedAttachments: formData.selectedAttachments || [],
+    esdian_fields: formData.esdian_fields || (formData.esdian_field1 || formData.esdian_field2 ? 
+      [formData.esdian_field1 || "", formData.esdian_field2 || ""].filter(Boolean) : [""]),
+    // Keep old fields for backward compatibility during transition
     esdian_field1: formData.esdian_field1 || "",
     esdian_field2: formData.esdian_field2 || "",
     director_signature: formData.director_signature || undefined,
@@ -1928,7 +1935,9 @@ export function CreateDocumentDialog({
         total_amount: totalAmount,
         status: "draft",
         attachments: data.selectedAttachments || [],
-        esdian: [data.esdian_field1 || "", data.esdian_field2 || ""].filter(field => field.trim() !== ""),
+        esdian: (data.esdian_fields && data.esdian_fields.length > 0) ? 
+          data.esdian_fields.filter(field => field && field.trim() !== "") :
+          [data.esdian_field1 || "", data.esdian_field2 || ""].filter(field => field.trim() !== ""),
         director_signature: data.director_signature || null,
       };
 
@@ -1999,6 +2008,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
+          esdian_fields: [""],
           esdian_field1: "",
           esdian_field2: ""
         });
@@ -2012,6 +2022,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
+          esdian_fields: [""],
           esdian_field1: "",
           esdian_field2: ""
         });
