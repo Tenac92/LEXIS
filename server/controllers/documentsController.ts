@@ -219,7 +219,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
     
-    const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2 } = req.body;
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2, director_signature } = req.body;
     
     console.log('[DocumentsController] V2 Raw request data:', {
       unit, project_id, expenditure_type, 
@@ -337,21 +337,27 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     const now = new Date().toISOString();
     
-    // Get director signature from Monada table
-    let directorSignature = null;
-    try {
-      const { data: monadaData } = await supabase
-        .from('Monada')
-        .select('director')
-        .eq('id', numericUnitId) // Use resolved numeric unit ID
-        .single();
-      
-      if (monadaData && monadaData.director) {
-        directorSignature = monadaData.director;
-        console.log('[DocumentsController] V2 Found director signature:', directorSignature);
+    // Use director signature from request body if provided, otherwise get from Monada table
+    let directorSignature = director_signature || null;
+    
+    // If no director signature was provided in the request, fallback to fetching from Monada table
+    if (!directorSignature) {
+      try {
+        const { data: monadaData } = await supabase
+          .from('Monada')
+          .select('director')
+          .eq('id', numericUnitId) // Use resolved numeric unit ID
+          .single();
+        
+        if (monadaData && monadaData.director) {
+          directorSignature = monadaData.director;
+          console.log('[DocumentsController] V2 Fallback director signature from Monada:', directorSignature);
+        }
+      } catch (error) {
+        console.log('[DocumentsController] V2 Could not fetch fallback director signature:', error);
       }
-    } catch (error) {
-      console.log('[DocumentsController] V2 Could not fetch director signature:', error);
+    } else {
+      console.log('[DocumentsController] V2 Using director signature from request:', directorSignature);
     }
 
     // Resolve project_index_id before creating document
