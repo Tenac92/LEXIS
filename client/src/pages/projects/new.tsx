@@ -532,11 +532,10 @@ export default function NewProjectPage() {
           console.log("✓ Formulations and budget versions creation successful");
         }
         
-        // 4. Process location details and create project_lines if provided
+        // 4. Process location details and include in comprehensive project update
+        let projectLines: any[] = [];
         if (data.location_details && data.location_details.length > 0) {
           console.log("4. Processing location details with geographic data:", data.location_details);
-          
-          const projectLines: any[] = [];
           
           for (const location of data.location_details) {
             // Skip incomplete locations
@@ -659,17 +658,23 @@ export default function NewProjectPage() {
               });
             }
           }
+        }
 
-          if (projectLines.length > 0) {
-            console.log("Creating project_lines for new project:", projectLines);
-            
-            // Update the project with project_lines
-            await apiRequest(`/api/projects/${projectMis}`, {
-              method: "PATCH",
-              body: JSON.stringify({ project_lines: projectLines }),
-            });
-            console.log("✓ Project lines creation successful");
-          }
+        // 5. Comprehensive project update with all data including project_lines (like edit form)
+        if (projectLines.length > 0) {
+          console.log("5. Comprehensive project update with project_lines:", projectLines);
+          
+          const projectUpdateData: any = {};
+          
+          // Include project_lines in the main project update (matching edit form approach)
+          projectUpdateData.project_lines = projectLines;
+          
+          // Update the project with all data including project_lines in a single call
+          await apiRequest(`/api/projects/${projectMis}`, {
+            method: "PATCH",
+            body: JSON.stringify(projectUpdateData),
+          });
+          console.log("✓ Comprehensive project update with location details successful");
         }
         
         return createdProject as any;
