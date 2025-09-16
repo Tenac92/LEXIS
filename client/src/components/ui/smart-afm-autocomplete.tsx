@@ -64,13 +64,13 @@ export function SmartAFMAutocomplete({
   }, [value]);
 
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
-  const { data: employees } = useQuery({
+  const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ['/api/employees'],
     enabled: useEmployeeData && searchTerm.length >= 2,
   });
 
   // Fetch beneficiaries for other expenditure types
-  const { data: beneficiaries } = useQuery({
+  const { data: beneficiaries = [] } = useQuery<Beneficiary[]>({
     queryKey: ['/api/beneficiaries'],
     enabled: !useEmployeeData && searchTerm.length >= 2,
   });
@@ -88,19 +88,19 @@ export function SmartAFMAutocomplete({
       let results: (Employee | Beneficiary)[] = [];
 
       if (useEmployeeData) {
-        // Search in employees
-        if (employees) {
+        // Search in employees (AFM is numeric - serial type)
+        if (employees && Array.isArray(employees)) {
           results = employees.filter((emp: Employee) => 
-            emp.afm?.includes(term) || 
+            (emp.afm && emp.afm.toString().includes(term)) || 
             emp.name?.toLowerCase().includes(term.toLowerCase()) ||
             emp.surname?.toLowerCase().includes(term.toLowerCase())
           ).slice(0, 10);
         }
       } else {
-        // Search in beneficiaries
-        if (beneficiaries) {
+        // Search in beneficiaries (AFM is numeric - decimal type)
+        if (beneficiaries && Array.isArray(beneficiaries)) {
           results = beneficiaries.filter((ben: Beneficiary) => 
-            ben.afm?.includes(term) || 
+            (ben.afm && ben.afm.toString().includes(term)) || 
             ben.name?.toLowerCase().includes(term.toLowerCase()) ||
             ben.surname?.toLowerCase().includes(term.toLowerCase())
           ).slice(0, 10);
