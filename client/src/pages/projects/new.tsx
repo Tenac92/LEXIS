@@ -21,7 +21,7 @@ import { SubprojectsIntegrationCard } from "@/components/subprojects/Subprojects
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatEuropeanCurrency, parseEuropeanNumber, formatNumberWhileTyping, formatEuropeanNumber } from "@/lib/number-format";
-import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave, convertGeographicDataToKallikratis } from "@shared/utils/geographic-utils";
+import { getGeographicInfo, formatGeographicDisplay, getGeographicCodeForSave, convertGeographicDataToKallikratis, buildNormalizedGeographicData, getGeographicCodeForSaveNormalized } from "@shared/utils/geographic-utils";
 
 // Helper function to safely convert array or object fields to text
 function safeText(value: any): string {
@@ -530,6 +530,146 @@ export default function NewProjectPage() {
             }),
           });
           console.log("✓ Formulations and budget versions creation successful");
+        }
+        
+        // 4. Process location details and create project_lines if provided
+        if (data.location_details && data.location_details.length > 0) {
+          console.log("4. Processing location details with geographic data:", data.location_details);
+          
+          const projectLines: any[] = [];
+          
+          for (const location of data.location_details) {
+            // Skip incomplete locations
+            if (
+              !location.geographic_areas ||
+              location.geographic_areas.length === 0 ||
+              !location.implementing_agency
+            ) {
+              continue;
+            }
+
+            // Find implementing agency (monada_id)
+            let monadaId = null;
+            if (typedUnitsData && location.implementing_agency) {
+              const unit = typedUnitsData.find(
+                (u) =>
+                  u.name === location.implementing_agency ||
+                  u.unit_name?.name === location.implementing_agency ||
+                  u.unit === location.implementing_agency,
+              );
+              if (unit) {
+                monadaId = unit.id;
+              }
+            }
+
+            // Find event type ID
+            let eventTypeId = null;
+            if (typedEventTypesData && location.event_type) {
+              const eventType = typedEventTypesData.find(
+                (et) => et.name === location.event_type,
+              );
+              if (eventType) {
+                eventTypeId = eventType.id;
+              }
+            }
+
+            // Create entries for each geographic area
+            for (const geographicAreaId of location.geographic_areas) {
+              // Parse the geographic area ID (format: "region|regional_unit|municipality")
+              const [region, regionalUnit, municipality] = geographicAreaId.split('|');
+              
+              // Skip empty geographic areas
+              if (!region && !regionalUnit && !municipality) {
+                continue;
+              }
+              
+              // Create a region object for compatibility with backend expectations
+              const regionObj = {
+                perifereia: region || null,           // Backend expects 'perifereia'
+                perifereiaki_enotita: regionalUnit || null,  // Backend expects 'perifereiaki_enotita'  
+                dimos: municipality || null,          // Backend expects 'dimos'
+                dimotiki_enotita: null               // Optional municipal community
+              };
+
+              // Find geographic_code using normalized data
+              let geographicCode = null;
+
+              // Use normalized geographic data approach
+              if ((geographicData as any)?.regions && (geographicData as any)?.regionalUnits && (geographicData as any)?.municipalities && regionObj.perifereia) {
+                try {
+                  // Convert to normalized format for the calculation function
+                  const normalizedRegionObj = {
+                    region: regionObj.perifereia || undefined,
+                    regional_unit: regionObj.perifereiaki_enotita || undefined, 
+                    municipality: regionObj.dimos || undefined
+                  };
+                  
+                  // Use normalized geographic data for calculation
+                  const normalizedData = buildNormalizedGeographicData(
+                    normalizedRegionObj,
+                    (geographicData as any).regions,
+                    (geographicData as any).regionalUnits, 
+                    (geographicData as any).municipalities
+                  );
+                  
+                  // Determine the appropriate level based on what data is actually populated
+                  const forceLevel =
+                    !normalizedRegionObj.municipality ||
+                    normalizedRegionObj.municipality.trim() === "" ||
+                    normalizedRegionObj.municipality === "__clear__"
+                      ? "regional_unit"
+                      : "municipality";
+                  
+                  geographicCode = getGeographicCodeForSaveNormalized(
+                    normalizedRegionObj,
+                    normalizedData,
+                    forceLevel,
+                  );
+
+                  console.log("New Project - Geographic Code Calculation:", {
+                    perifereia: regionObj.perifereia,
+                    perifereiaki_enotita: regionObj.perifereiaki_enotita,
+                    dimos: regionObj.dimos,
+                    calculated_code: geographicCode,
+                    forceLevel,
+                    usingNormalizedData: true,
+                  });
+                } catch (error) {
+                  console.warn("Failed to use normalized geographic data:", error);
+                  // If normalized data fails, set geographic code to null
+                  geographicCode = null;
+                }
+              }
+
+              // Create project line for this region
+              projectLines.push({
+                implementing_agency: location.implementing_agency,
+                implementing_agency_id: monadaId,
+                event_type: location.event_type,
+                event_type_id: eventTypeId,
+                expenditure_types: location.expenditure_types || [],
+                region: {
+                  perifereia: regionObj.perifereia,
+                  perifereiaki_enotita: regionObj.perifereiaki_enotita,
+                  dimos: regionObj.dimos,
+                  dimotiki_enotita: regionObj.dimotiki_enotita,
+                  kallikratis_id: null,
+                  geographic_code: geographicCode,
+                },
+              });
+            }
+          }
+
+          if (projectLines.length > 0) {
+            console.log("Creating project_lines for new project:", projectLines);
+            
+            // Update the project with project_lines
+            await apiRequest(`/api/projects/${projectMis}`, {
+              method: "PATCH",
+              body: JSON.stringify({ project_lines: projectLines }),
+            });
+            console.log("✓ Project lines creation successful");
+          }
         }
         
         return createdProject as any;
