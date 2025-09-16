@@ -1517,7 +1517,7 @@ export default function ComprehensiveEditFixed() {
         // Create a map to collect geographic areas by location key
         const geographicAreasByLocation = new Map();
         
-        // Process municipalities (highest level of detail)
+        // Process municipalities and map to specific locations via project index
         if (projectGeographicData.municipalities) {
           projectGeographicData.municipalities.forEach((muniData) => {
             if (muniData.municipalities?.name) {
@@ -1534,26 +1534,43 @@ export default function ComprehensiveEditFixed() {
               if (regionData?.regions?.name && unitData?.regional_units?.name) {
                 const geographicAreaId = `${regionData.regions.name}|${unitData.regional_units.name}|${muniData.municipalities.name}`;
                 
-                // Add to all location details (since we don't have specific mapping from new structure)
-                locationDetailsMap.forEach((locationDetail, key) => {
-                  if (!geographicAreasByLocation.has(key)) {
-                    geographicAreasByLocation.set(key, []);
-                  }
-                  if (!geographicAreasByLocation.get(key).includes(geographicAreaId)) {
-                    geographicAreasByLocation.get(key).push(geographicAreaId);
+                // Find project index entries that match this municipality's muni_code
+                const matchingIndexEntries = projectIndexData?.filter(indexItem => 
+                  muniData.muni_code && indexItem.geographic_code && 
+                  indexItem.geographic_code.toString().startsWith(muniData.muni_code.toString())
+                ) || [];
+                
+                // Add geographic area to location details that correspond to these project index entries
+                matchingIndexEntries.forEach((indexItem) => {
+                  const key = `${indexItem.monada_id || "no-unit"}-${indexItem.event_types_id || "no-event"}`;
+                  if (locationDetailsMap.has(key)) {
+                    if (!geographicAreasByLocation.has(key)) {
+                      geographicAreasByLocation.set(key, new Set());
+                    }
+                    geographicAreasByLocation.get(key).add(geographicAreaId);
                   }
                 });
+                
+                // Fallback: if no specific mapping found, add to all locations (for backward compatibility)
+                if (matchingIndexEntries.length === 0) {
+                  locationDetailsMap.forEach((locationDetail, key) => {
+                    if (!geographicAreasByLocation.has(key)) {
+                      geographicAreasByLocation.set(key, new Set());
+                    }
+                    geographicAreasByLocation.get(key).add(geographicAreaId);
+                  });
+                }
               }
             }
           });
         }
         
-        // Apply collected geographic areas to location details
-        geographicAreasByLocation.forEach((geographicAreas, key) => {
+        // Apply collected geographic areas to location details (convert Set to Array and replace)
+        geographicAreasByLocation.forEach((geographicAreasSet, key) => {
           const locationDetail = locationDetailsMap.get(key);
           if (locationDetail) {
-            locationDetail.geographic_areas = [...(locationDetail.geographic_areas || []), ...geographicAreas];
-            console.log(`DEBUG: Added geographic areas to location ${key}:`, geographicAreas);
+            locationDetail.geographic_areas = Array.from(geographicAreasSet);
+            console.log(`DEBUG: Set geographic areas for location ${key}:`, Array.from(geographicAreasSet));
           }
         });
       }
