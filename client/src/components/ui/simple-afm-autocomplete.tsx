@@ -4,6 +4,40 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { type Employee, type Beneficiary } from "@shared/schema";
 
+// Data validation utilities
+const isValidPayment = (payment: any): boolean => {
+  return payment && typeof payment === 'object' && payment !== null;
+};
+
+const isValidString = (value: any): value is string => {
+  return typeof value === 'string' && value.trim().length > 0;
+};
+
+const safeParseAmount = (value: any, defaultValue: number = 0): number => {
+  if (typeof value === 'number' && !isNaN(value)) {
+    return Math.max(0, Number(value.toFixed(2))); // Ensure non-negative and 2 decimal places
+  }
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = parseFloat(value.trim());
+    if (!isNaN(parsed) && isFinite(parsed)) {
+      return Math.max(0, Number(parsed.toFixed(2)));
+    }
+  }
+  return defaultValue;
+};
+
+const validateInstallments = (installments: any): string[] => {
+  if (!installments) return [];
+  
+  const installmentArray = Array.isArray(installments) 
+    ? installments 
+    : [installments];
+    
+  return installmentArray
+    .filter(inst => isValidString(inst) && inst.trim() !== '')
+    .map(inst => inst.trim());
+};
+
 interface SimpleAFMAutocompleteProps {
   expenditureType: string;
   onSelectPerson: (person: Employee | Beneficiary) => void;
@@ -88,26 +122,31 @@ export function SimpleAFMAutocomplete({
 
     // Filter payments that match expenditure_type, unit_code, and na853_code
     const matchingPayments = expenditureData.filter((payment: any) => {
-      if (!payment || typeof payment !== 'object') return false;
+      if (!isValidPayment(payment)) return false;
       
-      // Cross-check criteria as requested
-      const matchesExpenditure = payment.expenditure_type === expenditureType || !payment.expenditure_type;
-      const matchesUnit = payment.unit_code === userUnit || !payment.unit_code;
+      // Cross-check criteria with safe string comparison
+      const paymentExpenditureType = isValidString(payment.expenditure_type) ? payment.expenditure_type.trim() : '';
+      const paymentUnitCode = isValidString(payment.unit_code) ? payment.unit_code.trim() : '';
+      const paymentNa853Code = isValidString(payment.na853_code) ? payment.na853_code.trim() : '';
       
-      // For NA853 matching, be more flexible - check if projectNa853 is contained in payment na853 or vice versa
+      const matchesExpenditure = !paymentExpenditureType || paymentExpenditureType === expenditureType;
+      const matchesUnit = !paymentUnitCode || paymentUnitCode === userUnit;
+      
+      // For NA853 matching, be more flexible with proper validation
       let matchesNa853 = true;
-      if (projectNa853 && payment.na853_code) {
+      if (isValidString(projectNa853) && paymentNa853Code) {
+        const cleanProjectNa853 = projectNa853.trim();
         // Try exact match first
-        matchesNa853 = payment.na853_code === projectNa853;
+        matchesNa853 = paymentNa853Code === cleanProjectNa853;
         
         // If no exact match, try partial matching (project code might be shorter)
         if (!matchesNa853) {
-          matchesNa853 = payment.na853_code.includes(projectNa853) || projectNa853.includes(payment.na853_code);
+          matchesNa853 = paymentNa853Code.includes(cleanProjectNa853) || cleanProjectNa853.includes(paymentNa853Code);
         }
       }
       
       const matches = matchesExpenditure && matchesUnit && matchesNa853;
-      console.log(`[SmartAutocomplete] Payment ${payment.na853_code} vs project ${projectNa853}: expenditure=${matchesExpenditure}, unit=${matchesUnit}, na853=${matchesNa853}, overall=${matches}`);
+      console.log(`[SmartAutocomplete] Payment ${paymentNa853Code || 'N/A'} vs project ${projectNa853 || 'N/A'}: expenditure=${matchesExpenditure}, unit=${matchesUnit}, na853=${matchesNa853}, overall=${matches}`);
       
       return matches;
     });
@@ -117,9 +156,13 @@ export function SimpleAFMAutocomplete({
       
       // Fallback: Find payments for same expenditure type and unit, ignore project code
       const fallbackPayments = expenditureData.filter((payment: any) => {
-        if (!payment || typeof payment !== 'object') return false;
-        const matchesExpenditure = payment.expenditure_type === expenditureType || !payment.expenditure_type;
-        const matchesUnit = payment.unit_code === userUnit || !payment.unit_code;
+        if (!isValidPayment(payment)) return false;
+        
+        const paymentExpenditureType = isValidString(payment.expenditure_type) ? payment.expenditure_type.trim() : '';
+        const paymentUnitCode = isValidString(payment.unit_code) ? payment.unit_code.trim() : '';
+        
+        const matchesExpenditure = !paymentExpenditureType || paymentExpenditureType === expenditureType;
+        const matchesUnit = !paymentUnitCode || paymentUnitCode === userUnit;
         return matchesExpenditure && matchesUnit;
       });
       
@@ -137,8 +180,10 @@ export function SimpleAFMAutocomplete({
       };
 
       fallbackPayments.forEach(payment => {
-        const installments = Array.isArray(payment.installment) ? payment.installment : [payment.installment].filter(Boolean);
-        const hasStatus = payment.status && payment.status !== '';
+        if (!isValidPayment(payment)) return;
+        
+        const installments = validateInstallments(payment.installment);
+        const hasStatus = isValidString(payment.status);
         
         installments.forEach((inst: string) => {
           if (installmentSequence.includes(inst)) {
@@ -163,7 +208,7 @@ export function SimpleAFMAutocomplete({
         });
         
         selectedInstallment = earliestNoStatus.currentInstallment;
-        selectedAmount = parseFloat(earliestNoStatus.amount || "0") || 0;
+        selectedAmount = safeParseAmount(earliestNoStatus.amount);
       } else if (fallbackInstallmentsByStatus.withStatus.length > 0) {
         const lastInstallmentWithStatus = fallbackInstallmentsByStatus.withStatus.reduce((latest, current) => {
           const latestIndex = installmentSequence.indexOf(latest.currentInstallment);
@@ -176,10 +221,10 @@ export function SimpleAFMAutocomplete({
         
         if (nextIndex < installmentSequence.length) {
           selectedInstallment = installmentSequence[nextIndex];
-          selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+          selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
         } else {
           selectedInstallment = lastInstallmentWithStatus.currentInstallment;
-          selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+          selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
         }
       }
 
@@ -202,8 +247,10 @@ export function SimpleAFMAutocomplete({
     };
 
     matchingPayments.forEach(payment => {
-      const installments = Array.isArray(payment.installment) ? payment.installment : [payment.installment].filter(Boolean);
-      const hasStatus = payment.status && payment.status !== '';
+      if (!isValidPayment(payment)) return;
+      
+      const installments = validateInstallments(payment.installment);
+      const hasStatus = isValidString(payment.status);
       
       installments.forEach((inst: string) => {
         if (installmentSequence.includes(inst)) {
@@ -233,7 +280,7 @@ export function SimpleAFMAutocomplete({
       });
       
       selectedInstallment = earliestNoStatus.currentInstallment;
-      selectedAmount = parseFloat(earliestNoStatus.amount || "0") || 0;
+      selectedAmount = safeParseAmount(earliestNoStatus.amount);
       
       console.log('[SmartAutocomplete] Selected installment with no status:', selectedInstallment, selectedAmount);
     } else if (installmentsByStatus.withStatus.length > 0) {
@@ -250,11 +297,11 @@ export function SimpleAFMAutocomplete({
       if (nextIndex < installmentSequence.length) {
         selectedInstallment = installmentSequence[nextIndex];
         // Use amount from previous installment
-        selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+        selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
       } else {
         // If we're at the end, use the last installment data
         selectedInstallment = lastInstallmentWithStatus.currentInstallment;
-        selectedAmount = parseFloat(lastInstallmentWithStatus.amount || "0") || 0;
+        selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
       }
       
       console.log('[SmartAutocomplete] All have status, selected next:', selectedInstallment, selectedAmount);
