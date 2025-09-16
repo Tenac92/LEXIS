@@ -7,16 +7,48 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 
-// ESDIAN suggestion types
+// Enhanced ESDIAN suggestion types
 interface EsdianSuggestion {
   value: string;
-  count: number;
+  frequency: number;
+  lastUsed: string;
+  userFrequency: number;
+  teamFrequency: number;
   contextMatches: number;
+  source: 'user' | 'team';
+  score: number;
+}
+
+interface EsdianCompleteSet {
+  fields: string[];
+  frequency: number;
+  lastUsed: string;
+  documentId: number;
+  isUserOwned: boolean;
+  isContextMatch: boolean;
+  score: number;
+}
+
+interface EsdianAutoPopulate {
+  fields: string[];
+  confidence: 'high' | 'medium' | 'low';
+  reason: 'context_match' | 'user_pattern' | 'team_pattern';
+  documentId: number;
+}
+
+interface EsdianCategories {
+  recent: EsdianSuggestion[];
+  frequent: EsdianSuggestion[];
+  contextual: EsdianSuggestion[];
+  team: EsdianSuggestion[];
 }
 
 interface EsdianSuggestionsResponse {
   status: string;
   suggestions: EsdianSuggestion[];
+  completeSets: EsdianCompleteSet[];
+  autoPopulate: EsdianAutoPopulate | null;
+  categories: EsdianCategories;
   total: number;
   hasContext: boolean;
 }
@@ -43,7 +75,15 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
   const { data: esdianSuggestions } = useQuery<EsdianSuggestionsResponse>({
     queryKey: ['esdian-suggestions', user?.id, projectId, expenditureType],
     queryFn: async () => {
-      if (!user?.id) return { status: 'error', suggestions: [], total: 0, hasContext: false };
+      if (!user?.id) return { 
+        status: 'error', 
+        suggestions: [], 
+        completeSets: [],
+        autoPopulate: null,
+        categories: { recent: [], frequent: [], contextual: [], team: [] },
+        total: 0, 
+        hasContext: false 
+      };
       
       const params = new URLSearchParams();
       if (projectId) params.append('project_id', projectId);
@@ -59,6 +99,9 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
 
   const suggestions = esdianSuggestions?.suggestions || [];
   const hasContext = esdianSuggestions?.hasContext || false;
+  const completeSets = esdianSuggestions?.completeSets || [];
+  const autoPopulate = esdianSuggestions?.autoPopulate;
+  const categories = esdianSuggestions?.categories;
 
   const handleSuggestionClick = (value: string, fieldIndex: number) => {
     const currentFields = form.getValues("esdian_fields") || [];
@@ -75,17 +118,36 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
   const removeEsdianField = (index: number) => {
     const currentFields = form.getValues("esdian_fields") || [];
     if (currentFields.length > 1) {
-      const newFields = currentFields.filter((_, i) => i !== index);
+      const newFields = currentFields.filter((_: string, i: number) => i !== index);
       form.setValue("esdian_fields", newFields);
     }
   };
 
   const applyContextSuggestions = () => {
-    const contextSuggestions = suggestions.filter(s => s.contextMatches > 0);
+    const contextSuggestions = suggestions.filter((s: EsdianSuggestion) => s.contextMatches > 0);
     if (contextSuggestions.length > 0) {
-      const newFields = contextSuggestions.slice(0, Math.min(contextSuggestions.length, 5)).map(s => s.value);
+      const newFields = contextSuggestions.slice(0, Math.min(contextSuggestions.length, 5)).map((s: EsdianSuggestion) => s.value);
       form.setValue("esdian_fields", newFields);
     }
+  };
+
+  // Auto-population effect when suggestions load
+  useEffect(() => {
+    if (autoPopulate && autoPopulate.confidence === 'high') {
+      const currentFields = form.getValues("esdian_fields") || [""];
+      // Only auto-populate if fields are empty
+      const hasEmptyFields = currentFields.every((field: string) => !field || field.trim() === "");
+      
+      if (hasEmptyFields) {
+        form.setValue("esdian_fields", autoPopulate.fields);
+        console.log(`[EsdianFields] Auto-populated with ${autoPopulate.reason}: ${autoPopulate.fields.join(', ')}`);
+      }
+    }
+  }, [autoPopulate, form]);
+
+  // Apply complete set function
+  const applyCompleteSet = (set: EsdianCompleteSet) => {
+    form.setValue("esdian_fields", set.fields);
   };
 
   return (
@@ -103,8 +165,60 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
         )}
       </div>
 
+      {/* Auto-Population Indicator */}
+      {autoPopulate && autoPopulate.confidence === 'high' && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-3">
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-800">
+              Τα πεδία συμπληρώθηκαν αυτόματα βάσει {autoPopulate.reason === 'context_match' ? 'παρόμοιων εγγράφων για αυτό το έργο' : 'της συνήθους χρήσης σας'}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* One-Click Complete Sets */}
+      {completeSets.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded p-3">
+          <div className="flex items-center gap-2 mb-3">
+            <Star className="h-4 w-4 text-purple-600" />
+            <span className="text-sm font-medium text-purple-800">Γρήγορη επιλογή από προηγούμενα έγγραφα</span>
+          </div>
+          <div className="space-y-2">
+            {completeSets.slice(0, 3).map((set: EsdianCompleteSet, index: number) => (
+              <div key={index} className="flex items-center justify-between bg-white rounded p-3 text-sm border">
+                <div className="flex-1">
+                  <div className="flex flex-wrap gap-1 mb-1">
+                    {set.fields.map((field: string, fieldIndex: number) => (
+                      <Badge key={fieldIndex} variant="secondary" className="text-xs">
+                        {field}
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <span>{set.isUserOwned ? '👤 Δικό σας' : '👥 Ομάδας'}</span>
+                    {set.isContextMatch && <span>✨ Αυτό το έργο</span>}
+                    <span>📊 {set.frequency}x</span>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-purple-600 hover:bg-purple-50 border-purple-300"
+                  onClick={() => applyCompleteSet(set)}
+                  data-testid={`button-apply-complete-set-${index}`}
+                >
+                  Εφαρμογή
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Smart Suggestions */}
-      {suggestions.filter(s => s.contextMatches > 0).length > 0 && (
+      {suggestions.filter((s: EsdianSuggestion) => s.contextMatches > 0).length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded p-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1">
@@ -123,13 +237,20 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
           </div>
           <div className="space-y-1">
             {suggestions
-              .filter(s => s.contextMatches > 0)
+              .filter((s: EsdianSuggestion) => s.contextMatches > 0)
               .slice(0, 5)
-              .map((suggestion, index) => (
+              .map((suggestion: EsdianSuggestion, index: number) => (
                 <div key={index} className="flex items-center justify-between bg-white rounded p-2 text-xs">
-                  <span className="text-gray-700 truncate flex-1 mr-2">{suggestion.value}</span>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-gray-700 truncate">{suggestion.value}</span>
+                    <div className="flex gap-1">
+                      {suggestion.source === 'user' && <span className="text-blue-600">👤</span>}
+                      {suggestion.contextMatches > 0 && <span className="text-green-600">✨</span>}
+                      {suggestion.frequency > 2 && <span className="text-orange-600">⭐</span>}
+                    </div>
+                  </div>
                   <div className="flex gap-1">
-                    {esdianFields.map((_, fieldIndex) => (
+                    {esdianFields.map((_: string, fieldIndex: number) => (
                       <Button
                         key={fieldIndex}
                         type="button"
@@ -138,6 +259,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
                         className="h-5 w-5 p-0 text-green-600 hover:bg-green-100"
                         onClick={() => handleSuggestionClick(suggestion.value, fieldIndex)}
                         title={`Πεδίο ${fieldIndex + 1}`}
+                        data-testid={`button-suggestion-${index}-field-${fieldIndex + 1}`}
                       >
                         {fieldIndex + 1}
                       </Button>

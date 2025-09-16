@@ -534,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/budget', budgetRouter);
   app.use('/api/budget', budgetRouter);
   
-  // User preferences endpoints for ESDIAN suggestions
+  // User preferences endpoints for ESDIAN suggestions (Enhanced Smart Suggestions)
   app.get('/api/user-preferences/esdian', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const userId = req.user?.id;
@@ -550,52 +550,254 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's unit_id to get relevant suggestions
       const userUnitId = req.user?.unit_id?.[0];
       
-      let query = supabase
+      // Fetch comprehensive data for smart suggestions
+      let baseQuery = supabase
         .from('generated_documents')
-        .select('esdian')
+        .select(`
+          esdian, 
+          created_at, 
+          generated_by, 
+          project_index_id,
+          unit_id,
+          id
+        `)
         .not('esdian', 'is', null)
         .order('created_at', { ascending: false });
         
-      // Filter by unit if available
+      // Get wider dataset for better analysis (user + team + context)
       if (userUnitId) {
-        query = query.eq('unit_id', userUnitId);
+        baseQuery = baseQuery.eq('unit_id', userUnitId);
       }
       
-      // Add project context if available
-      if (projectId) {
-        // First find the project_index_id for the given project identifier
-        const { data: projectIndex } = await supabase
-          .from('project_index')
-          .select('id')
-          .eq('project_id', projectId)
-          .single();
-        
-        if (projectIndex) {
-          query = query.eq('project_index_id', projectIndex.id);
-        }
-      }
-      
-      const { data: documents, error } = await query.limit(10);
+      const { data: allDocuments, error } = await baseQuery.limit(100);
       
       if (error) {
         console.error('[UserPreferences] Error fetching ESDIAN suggestions:', error);
         return res.status(500).json({ message: 'Failed to fetch suggestions' });
       }
-      
-      // Extract unique ESDIAN values
-      const suggestions = new Set<string>();
-      documents?.forEach(doc => {
-        if (Array.isArray(doc.esdian)) {
-          doc.esdian.forEach(value => value && suggestions.add(value));
+
+      // Find project_index_id for current context
+      let currentProjectIndexId = null;
+      if (projectId) {
+        const { data: projectIndex } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('project_id', projectId)
+          .single();
+        currentProjectIndexId = projectIndex?.id;
+      }
+
+      // Analyze suggestions with metadata
+      const valueFrequency = new Map<string, {
+        count: number;
+        lastUsed: string;
+        userCount: number;
+        teamCount: number;
+        contextMatches: number;
+        sources: Set<number>;
+        recentDocuments: any[];
+      }>();
+
+      const completeSets = new Map<string, {
+        fields: string[];
+        count: number;
+        lastUsed: string;
+        documentId: number;
+        isUserOwned: boolean;
+        isContextMatch: boolean;
+      }>();
+
+      // Process all documents for analysis
+      allDocuments?.forEach(doc => {
+        if (Array.isArray(doc.esdian) && doc.esdian.length > 0) {
+          const isUserDocument = doc.generated_by === userId;
+          const isContextMatch = currentProjectIndexId && doc.project_index_id === currentProjectIndexId;
+          
+          // Track complete sets
+          const setKey = doc.esdian.filter(Boolean).sort().join('|');
+          if (setKey && doc.esdian.filter(Boolean).length > 0) {
+            if (!completeSets.has(setKey)) {
+              completeSets.set(setKey, {
+                fields: doc.esdian.filter(Boolean),
+                count: 0,
+                lastUsed: doc.created_at,
+                documentId: doc.id,
+                isUserOwned: isUserDocument,
+                isContextMatch: Boolean(isContextMatch)
+              });
+            }
+            const set = completeSets.get(setKey)!;
+            set.count++;
+            if (doc.created_at > set.lastUsed) {
+              set.lastUsed = doc.created_at;
+              set.documentId = doc.id;
+            }
+            if (isUserDocument) set.isUserOwned = true;
+            if (isContextMatch) set.isContextMatch = true;
+          }
+
+          // Track individual values
+          doc.esdian.forEach(value => {
+            if (value && value.trim()) {
+              const cleanValue = value.trim();
+              if (!valueFrequency.has(cleanValue)) {
+                valueFrequency.set(cleanValue, {
+                  count: 0,
+                  lastUsed: doc.created_at,
+                  userCount: 0,
+                  teamCount: 0,
+                  contextMatches: 0,
+                  sources: new Set(),
+                  recentDocuments: []
+                });
+              }
+              
+              const suggestion = valueFrequency.get(cleanValue)!;
+              suggestion.count++;
+              suggestion.sources.add(doc.generated_by);
+              suggestion.recentDocuments.push({
+                id: doc.id,
+                date: doc.created_at,
+                isUser: isUserDocument
+              });
+              
+              if (doc.created_at > suggestion.lastUsed) {
+                suggestion.lastUsed = doc.created_at;
+              }
+              
+              if (isUserDocument) {
+                suggestion.userCount++;
+              } else {
+                suggestion.teamCount++;
+              }
+              
+              if (isContextMatch) {
+                suggestion.contextMatches++;
+              }
+            }
+          });
         }
       });
-      
-      res.json(Array.from(suggestions));
+
+      // Convert to structured response
+      const suggestions = Array.from(valueFrequency.entries()).map(([value, data]) => ({
+        value,
+        frequency: data.count,
+        lastUsed: data.lastUsed,
+        userFrequency: data.userCount,
+        teamFrequency: data.teamCount,
+        contextMatches: data.contextMatches,
+        source: data.userCount > 0 ? 'user' as const : 'team' as const,
+        score: calculateSuggestionScore(data, Boolean(currentProjectIndexId))
+      }));
+
+      // Sort by relevance score
+      suggestions.sort((a, b) => b.score - a.score);
+
+      // Process complete sets for quick selection
+      const recentSets = Array.from(completeSets.entries())
+        .map(([key, data]) => ({
+          fields: data.fields,
+          frequency: data.count,
+          lastUsed: data.lastUsed,
+          documentId: data.documentId,
+          isUserOwned: data.isUserOwned,
+          isContextMatch: data.isContextMatch,
+          score: calculateSetScore(data, Boolean(currentProjectIndexId))
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+
+      // Find best auto-population candidate
+      const autoPopulate = findBestAutoPopulation(recentSets, suggestions, Boolean(currentProjectIndexId));
+
+      // Categorize suggestions for UI
+      const categorized = {
+        recent: suggestions.filter(s => s.userFrequency > 0).slice(0, 6),
+        frequent: suggestions.filter(s => s.frequency >= 2).slice(0, 6),
+        contextual: suggestions.filter(s => s.contextMatches > 0).slice(0, 8),
+        team: suggestions.filter(s => s.teamFrequency > 0 && s.userFrequency === 0).slice(0, 4)
+      };
+
+      console.log('[UserPreferences] Returning', suggestions.length, 'suggestions with', recentSets.length, 'complete sets');
+
+      res.json({
+        status: 'success',
+        suggestions: suggestions.slice(0, 20), // Top 20 individual suggestions
+        completeSets: recentSets,
+        autoPopulate,
+        categories: categorized,
+        total: suggestions.length,
+        hasContext: Boolean(currentProjectIndexId)
+      });
+
     } catch (error) {
       console.error('[UserPreferences] Error in ESDIAN endpoint:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   });
+
+  // Helper functions for scoring suggestions
+  function calculateSuggestionScore(data: any, hasContext: boolean): number {
+    let score = 0;
+    
+    // Base frequency score
+    score += Math.min(data.count * 10, 50);
+    
+    // User preference bonus
+    score += data.userCount * 20;
+    
+    // Context match bonus
+    if (hasContext && data.contextMatches > 0) {
+      score += data.contextMatches * 30;
+    }
+    
+    // Recency bonus (more recent = higher score)
+    const daysSinceUsed = (Date.now() - new Date(data.lastUsed).getTime()) / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 20 - daysSinceUsed);
+    
+    return score;
+  }
+
+  function calculateSetScore(data: any, hasContext: boolean): number {
+    let score = 0;
+    
+    // Base frequency
+    score += data.count * 15;
+    
+    // User ownership bonus
+    if (data.isUserOwned) score += 40;
+    
+    // Context match bonus  
+    if (hasContext && data.isContextMatch) score += 60;
+    
+    // Recency bonus
+    const daysSinceUsed = (Date.now() - new Date(data.lastUsed).getTime()) / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 30 - daysSinceUsed * 2);
+    
+    return score;
+  }
+
+  function findBestAutoPopulation(sets: any[], suggestions: any[], hasContext: boolean): any {
+    // Find the highest scoring complete set for auto-population
+    if (sets.length === 0) return null;
+    
+    const bestSet = sets[0];
+    
+    // Only auto-populate if confidence is high
+    const confidence = bestSet.score > 80 ? 'high' : 
+                     bestSet.score > 50 ? 'medium' : 'low';
+    
+    if (confidence === 'low') return null;
+    
+    return {
+      fields: bestSet.fields,
+      confidence,
+      reason: bestSet.isContextMatch ? 'context_match' : 
+              bestSet.isUserOwned ? 'user_pattern' : 'team_pattern',
+      documentId: bestSet.documentId
+    };
+  }
   
   // V2 Documents endpoint is handled by documentsController router
   // Basic expenditure types endpoint  
