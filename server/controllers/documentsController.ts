@@ -219,7 +219,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     
     console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
     
-    const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2, director_signature } = req.body;
+    const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2, esdian, director_signature } = req.body;
     
     console.log('[DocumentsController] V2 Raw request data:', {
       unit, project_id, expenditure_type, 
@@ -424,7 +424,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       protocol_number_input: null, // Will be set by user during document processing
       is_correction: false,
       comments: `Document created for project ${project_id}`,
-      esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
+      esdian: esdian && Array.isArray(esdian) ? esdian.filter(Boolean) : (esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : []),
       director_signature: directorSignature,
       beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
       created_at: now,
