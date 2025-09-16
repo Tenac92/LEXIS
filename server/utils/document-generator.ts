@@ -91,19 +91,37 @@ export class DocumentGenerator {
   ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData.id);
-      console.log('[PrimaryDocument] === DOCUMENT DATA RECEIVED ===');
-      console.log('[PrimaryDocument] Document ID:', documentData.id);
-      console.log('[PrimaryDocument] Expenditure type:', documentData.expenditure_type);
-      console.log('[PrimaryDocument] Project title:', documentData.project_title);
-      console.log('[PrimaryDocument] Project NA853:', documentData.project_na853);
-      console.log('[PrimaryDocument] Recipients count:', documentData.recipients?.length || 0);
-      console.log('[PrimaryDocument] Attachments count:', documentData.attachments?.length || 0);
-      console.log('[PrimaryDocument] Recipients details:', documentData.recipients?.map(r => ({ 
-        name: `${r.firstname} ${r.lastname}`, 
-        afm: r.afm, 
-        amount: r.amount,
-        installment: r.installment 
-      })) || []);
+      console.log("[PrimaryDocument] === DOCUMENT DATA RECEIVED ===");
+      console.log("[PrimaryDocument] Document ID:", documentData.id);
+      console.log(
+        "[PrimaryDocument] Expenditure type:",
+        documentData.expenditure_type,
+      );
+      console.log(
+        "[PrimaryDocument] Project title:",
+        documentData.project_title,
+      );
+      console.log(
+        "[PrimaryDocument] Project NA853:",
+        documentData.project_na853,
+      );
+      console.log(
+        "[PrimaryDocument] Recipients count:",
+        documentData.recipients?.length || 0,
+      );
+      console.log(
+        "[PrimaryDocument] Attachments count:",
+        documentData.attachments?.length || 0,
+      );
+      console.log(
+        "[PrimaryDocument] Recipients details:",
+        documentData.recipients?.map((r) => ({
+          name: `${r.firstname} ${r.lastname}`,
+          afm: r.afm,
+          amount: r.amount,
+          installment: r.installment,
+        })) || [],
+      );
 
       // Get unit details
       const unitDetails = await DocumentUtilities.getUnitDetails(
@@ -279,7 +297,7 @@ export class DocumentGenerator {
       {
         text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
         italics: true,
-        color: "666666",
+        color: "A9A9A9",
       },
     ];
     return new Table({
@@ -414,7 +432,7 @@ export class DocumentGenerator {
         afm_type: typeof afm,
         raw_afm: recipient.afm,
         raw_afm_type: typeof recipient.afm,
-        recipient_keys: Object.keys(recipient)
+        recipient_keys: Object.keys(recipient),
       });
       const rowNumber = (index + 1).toString() + ".";
       let installments: string[] = [];
@@ -670,9 +688,11 @@ export class DocumentGenerator {
           );
         } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
           // For housing allowance, add quarter cell for first row
-          const quarterNum = typeof firstInstallment === 'string' ? 
-            firstInstallment.replace("ΤΡΙΜΗΝΟ ", "") : firstInstallment;
-          
+          const quarterNum =
+            typeof firstInstallment === "string"
+              ? firstInstallment.replace("ΤΡΙΜΗΝΟ ", "")
+              : firstInstallment;
+
           firstRowCells.push(
             new TableCell({
               children: [
@@ -747,8 +767,10 @@ export class DocumentGenerator {
           let installmentDisplay = installment;
           if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
             // For housing allowance, show quarter number only
-            const quarterNum = typeof installment === 'string' ? 
-              installment.replace("ΤΡΙΜΗΝΟ ", "") : installment;
+            const quarterNum =
+              typeof installment === "string"
+                ? installment.replace("ΤΡΙΜΗΝΟ ", "")
+                : installment;
             installmentDisplay = quarterNum.toString();
           }
 
@@ -909,11 +931,11 @@ export class DocumentGenerator {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
-    
-    console.log('[PrimaryDocument] Footer attachments processing:', {
+
+    console.log("[PrimaryDocument] Footer attachments processing:", {
       rawAttachments: documentData.attachments,
       processedAttachments: attachments,
-      count: attachments.length
+      count: attachments.length,
     });
 
     for (let i = 0; i < attachments.length; i++) {
@@ -1005,14 +1027,29 @@ export class DocumentGenerator {
 
     // Add ESDIAN fields if they exist
     let esdianCounter = 2;
-    console.log('[DocumentGenerator] ESDIAN Debug - documentData.esdian:', documentData.esdian);
-    console.log('[DocumentGenerator] ESDIAN Debug - Array check:', Array.isArray(documentData.esdian));
+    console.log(
+      "[DocumentGenerator] ESDIAN Debug - documentData.esdian:",
+      documentData.esdian,
+    );
+    console.log(
+      "[DocumentGenerator] ESDIAN Debug - Array check:",
+      Array.isArray(documentData.esdian),
+    );
     if (documentData.esdian && Array.isArray(documentData.esdian)) {
-      console.log('[DocumentGenerator] ESDIAN Debug - Processing ESDIAN array with length:', documentData.esdian.length);
+      console.log(
+        "[DocumentGenerator] ESDIAN Debug - Processing ESDIAN array with length:",
+        documentData.esdian.length,
+      );
       for (const esdianItem of documentData.esdian) {
-        console.log('[DocumentGenerator] ESDIAN Debug - Processing item:', esdianItem);
+        console.log(
+          "[DocumentGenerator] ESDIAN Debug - Processing item:",
+          esdianItem,
+        );
         if (esdianItem && esdianItem.trim()) {
-          console.log('[DocumentGenerator] ESDIAN Debug - Adding paragraph for:', esdianItem.trim());
+          console.log(
+            "[DocumentGenerator] ESDIAN Debug - Adding paragraph for:",
+            esdianItem.trim(),
+          );
           leftColumnParagraphs.push(
             new Paragraph({
               children: [
@@ -1029,12 +1066,16 @@ export class DocumentGenerator {
         }
       }
     } else {
-      console.log('[DocumentGenerator] ESDIAN Debug - No ESDIAN data found or not an array');
+      console.log(
+        "[DocumentGenerator] ESDIAN Debug - No ESDIAN data found or not an array",
+      );
     }
 
     // Right column - use signature from director_signature field
     const rightColumnParagraphs =
-      DocumentUtilities.createManagerSignatureParagraphs(documentData.director_signature);
+      DocumentUtilities.createManagerSignatureParagraphs(
+        documentData.director_signature,
+      );
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -1222,7 +1263,7 @@ export class DocumentGenerator {
     return new Paragraph({
       children: [
         new TextRun({
-          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε  �την Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
           size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
@@ -1305,7 +1346,12 @@ export class DocumentGenerator {
                   children: [
                     new ImageRun({
                       data: fs.readFileSync(
-                        path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
+                        path.join(
+                          process.cwd(),
+                          "server",
+                          "utils",
+                          "ethnosimo22.png",
+                        ),
                       ),
                       transformation: {
                         width: 40,
