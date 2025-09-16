@@ -274,10 +274,12 @@ export class DocumentGenerator {
         text: "ΘΕΜΑ:",
         bold: true,
         italics: true,
+        color: "666666",
       },
       {
         text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
         italics: true,
+        color: "666666",
       },
     ];
     return new Table({
@@ -313,6 +315,7 @@ export class DocumentGenerator {
                         text: part.text,
                         bold: part.bold,
                         italics: part.italics,
+                        color: part.color,
                         size: DocumentUtilities.DEFAULT_FONT_SIZE,
                         font: DocumentUtilities.DEFAULT_FONT,
                       }),
