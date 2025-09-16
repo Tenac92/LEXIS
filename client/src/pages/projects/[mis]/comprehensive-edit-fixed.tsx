@@ -61,6 +61,7 @@ import {
   getMunicipalitiesForRegionalUnit,
   buildNormalizedGeographicData,
   getGeographicCodeForSaveNormalized,
+  convertGeographicDataToKallikratis,
 } from "@shared/utils/geographic-utils";
 
 // Hook for validating ΣΑ numbers in real-time with proper debouncing
@@ -1994,6 +1995,12 @@ export default function ComprehensiveEditFixed() {
   // Data readiness check
   const hasNormalizedGeographicData = !!geographicData;
 
+  // Convert geographic data to kallikratis format for SmartGeographicMultiSelect
+  const kallikratisData = useMemo(() => {
+    if (!geographicData) return [];
+    return convertGeographicDataToKallikratis(geographicData);
+  }, [geographicData]);
+
   if (completeDataError) {
     return (
       <div className="container mx-auto p-6">
@@ -2775,6 +2782,7 @@ export default function ComprehensiveEditFixed() {
                                       <SmartGeographicMultiSelect
                                         value={field.value || []}
                                         onChange={field.onChange}
+                                        kallikratisData={kallikratisData}
                                         placeholder="Επιλέξτε γεωγραφικές περιοχές..."
                                       />
                                     </FormItem>
