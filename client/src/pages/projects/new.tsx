@@ -664,17 +664,59 @@ export default function NewProjectPage() {
         if (projectLines.length > 0) {
           console.log("5. Comprehensive project update with project_lines:", projectLines);
           
-          const projectUpdateData: any = {};
+          // Include ALL project data plus project_lines in the comprehensive update
+          const projectUpdateData: any = {
+            project_title: data.project_details.project_title,
+            event_description: data.project_details.project_description,
+            event_year: data.event_details.event_year,
+            status: data.project_details.project_status || "Ενεργό",
+            na853: (() => {
+              const na853Formulation = data.formulation_details.find(f => f.sa === "ΝΑ853");
+              return na853Formulation?.enumeration_code || "";
+            })(),
+            // Convert event_name to event_type_id if needed
+            event_type: (() => {
+              if (!data.event_details.event_name) return null;
+              if (typedEventTypesData) {
+                const eventType = typedEventTypesData.find(et => 
+                  et.name === data.event_details.event_name || 
+                  et.id.toString() === data.event_details.event_name
+                );
+                return eventType ? eventType.id : null;
+              }
+              return null;
+            })(),
+            // Budget fields from PDE versions
+            budget_e069: (() => {
+              const formEntry = data.formulation_details.find(f => f.sa === "E069");
+              if (!formEntry?.budget_versions?.pde?.length) return null;
+              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+            })(),
+            budget_na271: (() => {
+              const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
+              if (!formEntry?.budget_versions?.pde?.length) return null;
+              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+            })(),
+            budget_na853: (() => {
+              const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
+              if (!formEntry?.budget_versions?.pde?.length) return null;
+              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+            })(),
+            // Include project_lines in the main project update (matching edit form approach)
+            project_lines: projectLines,
+          };
           
-          // Include project_lines in the main project update (matching edit form approach)
-          projectUpdateData.project_lines = projectLines;
+          console.log("🔍 Key fields being sent:", { na853: projectUpdateData.na853, project_title: projectUpdateData.project_title });
           
           // Update the project with all data including project_lines in a single call
-          await apiRequest(`/api/projects/${projectMis}`, {
+          const updateResult = await apiRequest(`/api/projects/${projectMis}`, {
             method: "PATCH",
             body: JSON.stringify(projectUpdateData),
           });
-          console.log("✓ Comprehensive project update with location details successful");
+          console.log("✓ Comprehensive project update with location details successful:", updateResult);
         }
         
         return createdProject as any;
