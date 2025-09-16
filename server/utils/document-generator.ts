@@ -326,7 +326,7 @@ export class DocumentGenerator {
                 right: 50,
               },
               shading: {
-                fill: "A9A9A9",
+                fill: "C0C0C0",
               },
               width: { size: 100, type: WidthType.PERCENTAGE },
               children: [
