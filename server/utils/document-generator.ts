@@ -1302,7 +1302,7 @@ export class DocumentGenerator {
                   children: [
                     new ImageRun({
                       data: fs.readFileSync(
-                        path.join(__dirname, "ethnosimo22.png"),
+                        path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
                       ),
                       transformation: {
                         width: 40,
