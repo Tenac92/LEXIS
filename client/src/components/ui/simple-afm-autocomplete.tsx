@@ -13,17 +13,58 @@ const isValidString = (value: any): value is string => {
   return typeof value === 'string' && value.trim().length > 0;
 };
 
+// European-aware number parsing utility
+const parseEuropeanNumber = (value: string): number => {
+  if (!value || typeof value !== 'string') return NaN;
+  
+  // Remove whitespace
+  const cleaned = value.trim();
+  
+  // Handle European format: "1.234,56" -> 1234.56
+  // Check if it contains both dots and commas (European format)
+  if (cleaned.includes('.') && cleaned.includes(',')) {
+    // Remove thousands separators (dots) and replace decimal comma with dot
+    return parseFloat(cleaned.replace(/\./g, '').replace(',', '.'));
+  }
+  
+  // Handle comma as decimal separator: "123,45" -> 123.45
+  if (cleaned.includes(',') && !cleaned.includes('.')) {
+    return parseFloat(cleaned.replace(',', '.'));
+  }
+  
+  // Handle standard format or dots as thousands separator: "1.234" or "1234.56"
+  return parseFloat(cleaned);
+};
+
 const safeParseAmount = (value: any, defaultValue: number = 0): number => {
   if (typeof value === 'number' && !isNaN(value)) {
     return Math.max(0, Number(value.toFixed(2))); // Ensure non-negative and 2 decimal places
   }
   if (typeof value === 'string' && value.trim() !== '') {
-    const parsed = parseFloat(value.trim());
+    const parsed = parseEuropeanNumber(value.trim());
     if (!isNaN(parsed) && isFinite(parsed)) {
       return Math.max(0, Number(parsed.toFixed(2)));
     }
   }
   return defaultValue;
+};
+
+// Currency formatting utilities
+const formatCurrency = (amount: number, locale: string = 'el-GR'): string => {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+};
+
+// Simple number formatting (without currency symbol)  
+const formatAmount = (amount: number, locale: string = 'el-GR'): string => {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
 };
 
 const validateInstallments = (installments: any): string[] => {
