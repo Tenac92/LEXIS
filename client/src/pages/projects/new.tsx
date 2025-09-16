@@ -660,64 +660,179 @@ export default function NewProjectPage() {
           }
         }
 
-        // 5. Comprehensive project update with all data including project_lines (like edit form)
-        if (projectLines.length > 0) {
-          console.log("5. Comprehensive project update with project_lines:", projectLines);
-          
-          // Include ALL project data plus project_lines in the comprehensive update
-          const projectUpdateData: any = {
-            project_title: data.project_details.project_title,
-            event_description: data.project_details.project_description,
-            event_year: data.event_details.event_year,
-            status: data.project_details.project_status || "Ενεργό",
-            na853: (() => {
-              const na853Formulation = data.formulation_details.find(f => f.sa === "ΝΑ853");
-              return na853Formulation?.enumeration_code || "";
-            })(),
-            // Convert event_name to event_type_id if needed
-            event_type: (() => {
-              if (!data.event_details.event_name) return null;
-              if (typedEventTypesData) {
-                const eventType = typedEventTypesData.find(et => 
-                  et.name === data.event_details.event_name || 
-                  et.id.toString() === data.event_details.event_name
-                );
-                return eventType ? eventType.id : null;
+        // 5. Comprehensive project update with ALL project data + normalized geographic arrays (like edit form)
+        console.log("5. Building comprehensive project update with normalized geographic data");
+        
+        // Build normalized geographic index arrays from location details
+        const allRegionIds = new Set<number>();
+        const allRegionalUnitIds = new Set<number>();
+        const allMunicipalityIds = new Set<number>();
+        
+        // Convert location details fields to numeric IDs and build geographic arrays
+        const convertedProjectLines = [];
+        
+        if (data.location_details && data.location_details.length > 0) {
+          for (const location of data.location_details) {
+            if (!location.geographic_areas || location.geographic_areas.length === 0 || !location.implementing_agency) {
+              continue;
+            }
+
+            // Convert implementing_agency string to numeric ID
+            let implementing_agency_id = null;
+            if (typedUnitsData && location.implementing_agency) {
+              const unit = typedUnitsData.find(u =>
+                u.name === location.implementing_agency ||
+                u.unit_name?.name === location.implementing_agency ||
+                u.unit === location.implementing_agency,
+              );
+              if (unit) {
+                implementing_agency_id = unit.id;
               }
-              return null;
-            })(),
-            // Budget fields from PDE versions
-            budget_e069: (() => {
-              const formEntry = data.formulation_details.find(f => f.sa === "E069");
-              if (!formEntry?.budget_versions?.pde?.length) return null;
-              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
-              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
-            })(),
-            budget_na271: (() => {
-              const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
-              if (!formEntry?.budget_versions?.pde?.length) return null;
-              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
-              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
-            })(),
-            budget_na853: (() => {
-              const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
-              if (!formEntry?.budget_versions?.pde?.length) return null;
-              const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
-              return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
-            })(),
-            // Include project_lines in the main project update (matching edit form approach)
-            project_lines: projectLines,
-          };
-          
-          console.log("🔍 Key fields being sent:", { na853: projectUpdateData.na853, project_title: projectUpdateData.project_title });
-          
-          // Update the project with all data including project_lines in a single call
-          const updateResult = await apiRequest(`/api/projects/${projectMis}`, {
-            method: "PATCH",
-            body: JSON.stringify(projectUpdateData),
-          });
-          console.log("✓ Comprehensive project update with location details successful:", updateResult);
+            }
+
+            // Convert event_type string to numeric ID
+            let event_type_id = null;
+            if (typedEventTypesData && location.event_type) {
+              const eventType = typedEventTypesData.find(et => et.name === location.event_type);
+              if (eventType) {
+                event_type_id = eventType.id;
+              }
+            }
+
+            // Convert expenditure_types strings to numeric IDs
+            const expenditure_type_ids: number[] = [];
+            if (location.expenditure_types && typedExpenditureTypesData) {
+              for (const expTypeString of location.expenditure_types) {
+                const expType = typedExpenditureTypesData.find(et => 
+                  et.expenditure_types === expTypeString || et.name === expTypeString
+                );
+                if (expType) {
+                  expenditure_type_ids.push(expType.id);
+                }
+              }
+            }
+
+            // Process geographic areas and collect region/unit/municipality IDs
+            for (const geographicAreaId of location.geographic_areas) {
+              const [region, regionalUnit, municipality] = geographicAreaId.split('|');
+              
+              if (!region && !regionalUnit && !municipality) continue;
+              
+              // Build geographic index arrays using normalized geographic data
+              if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
+                // Find region ID
+                if (region) {
+                  const regionEntry = geographicData.regions.find(r => r.regions?.name === region);
+                  if (regionEntry?.region_code) {
+                    allRegionIds.add(regionEntry.region_code);
+                  }
+                }
+                
+                // Find regional unit ID
+                if (regionalUnit) {
+                  const unitEntry = geographicData.regionalUnits.find(u => u.regional_units?.name === regionalUnit);
+                  if (unitEntry?.unit_code) {
+                    allRegionalUnitIds.add(unitEntry.unit_code);
+                  }
+                }
+                
+                // Find municipality ID
+                if (municipality) {
+                  const muniEntry = geographicData.municipalities.find(m => m.municipalities?.name === municipality);
+                  if (muniEntry?.muni_code) {
+                    allMunicipalityIds.add(muniEntry.muni_code);
+                  }
+                }
+              }
+
+              // Create region object for project_lines compatibility
+              const regionObj = {
+                perifereia: region || null,
+                perifereiaki_enotita: regionalUnit || null,
+                dimos: municipality || null,
+                dimotiki_enotita: null,
+                kallikratis_id: null,
+                geographic_code: null, // Will be calculated by backend
+              };
+
+              convertedProjectLines.push({
+                implementing_agency: location.implementing_agency,
+                implementing_agency_id: implementing_agency_id,
+                event_type: location.event_type,
+                event_type_id: event_type_id,
+                expenditure_types: expenditure_type_ids, // ✅ Now numeric IDs!
+                region: regionObj,
+              });
+            }
+          }
         }
+
+        // Include ALL project data plus normalized geographic arrays and project_lines 
+        const projectUpdateData: any = {
+          project_title: data.project_details.project_title,
+          event_description: data.project_details.project_description,
+          event_year: data.event_details.event_year,
+          status: data.project_details.project_status || "Ενεργό",
+          na853: (() => {
+            const na853Formulation = data.formulation_details.find(f => f.sa === "ΝΑ853");
+            return na853Formulation?.enumeration_code || "";
+          })(),
+          // Convert event_name to event_type_id
+          event_type: (() => {
+            if (!data.event_details.event_name) return null;
+            if (typedEventTypesData) {
+              const eventType = typedEventTypesData.find(et => 
+                et.name === data.event_details.event_name || 
+                et.id.toString() === data.event_details.event_name
+              );
+              return eventType ? eventType.id : null;
+            }
+            return null;
+          })(),
+          // Budget fields from PDE versions
+          budget_e069: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "E069");
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+          })(),
+          budget_na271: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ271");
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+          })(),
+          budget_na853: (() => {
+            const formEntry = data.formulation_details.find(f => f.sa === "ΝΑ853");
+            if (!formEntry?.budget_versions?.pde?.length) return null;
+            const latestPde = formEntry.budget_versions.pde[formEntry.budget_versions.pde.length - 1];
+            return latestPde?.boundary_budget ? parseEuropeanNumber(latestPde.boundary_budget) : null;
+          })(),
+          
+          // ✅ KEY FIX: Include normalized geographic index arrays that backend expects
+          project_index_regions: Array.from(allRegionIds).sort(),
+          project_index_units: Array.from(allRegionalUnitIds).sort(),
+          project_index_munis: Array.from(allMunicipalityIds).sort(),
+          
+          // Include project_lines with converted numeric IDs
+          project_lines: convertedProjectLines,
+        };
+        
+        console.log("🔍 Key fields being sent:", { 
+          na853: projectUpdateData.na853, 
+          project_title: projectUpdateData.project_title,
+          project_index_regions: projectUpdateData.project_index_regions,
+          project_index_units: projectUpdateData.project_index_units,
+          project_index_munis: projectUpdateData.project_index_munis,
+          project_lines_count: convertedProjectLines.length
+        });
+        
+        // Update the project with all data including normalized geographic arrays
+        const updateResult = await apiRequest(`/api/projects/${projectMis}`, {
+          method: "PATCH",
+          body: JSON.stringify(projectUpdateData),
+        });
+        console.log("✓ Comprehensive project update with all location details successful:", updateResult);
         
         return createdProject as any;
       } catch (error) {
