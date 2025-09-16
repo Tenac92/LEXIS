@@ -7,6 +7,17 @@ import { Separator } from '@/components/ui/separator';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, MapPin, Building2, Calendar, Euro, FileText, Users, Settings, AlertCircle } from 'lucide-react';
 import { formatEuropeanNumber } from '@/lib/number-format';
+import type { 
+  Project, 
+  ProjectBudget, 
+  ProjectIndex,
+  EventType,
+  ExpenditureType,
+  Kallikratis,
+  Monada,
+  ProjectDecision,
+  ProjectFormulation
+} from '@shared/schema';
 
 interface ProjectDetailsDialogProps {
   project: any;
@@ -14,24 +25,15 @@ interface ProjectDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Comprehensive interface definitions based on actual database schema
-interface BudgetData {
-  id?: number;
-  project_id?: number;
-  mis?: number;
-  na853?: string;
-  proip?: string | number;
-  ethsia_pistosi?: string | number;
-  q1?: string | number;
-  q2?: string | number;
-  q3?: string | number;
-  q4?: string | number;
-  katanomes_etous?: string | number;
-  user_view?: string | number;
-  created_at?: string;
-  updated_at?: string;
-  last_quarter_check?: string;
-  sum?: any;
+// Enhanced types for API responses with joins
+interface ProjectIndexWithJoins extends ProjectIndex {
+  monada?: Monada;
+  kallikratis?: Kallikratis;
+  event_types?: EventType;
+  expenditure_types?: ExpenditureType;
+}
+
+interface BudgetDataWithCalculated extends ProjectBudget {
   // Calculated fields from API
   current_quarter?: string;
   current_quarter_value?: string | number;
@@ -40,94 +42,12 @@ interface BudgetData {
   yearly_available?: string | number;
 }
 
-interface ProjectIndexEntry {
-  project_id?: number;
-  monada_id?: number;
-  kallikratis_id?: number;
-  event_types_id?: number;
-  expenditure_type_id?: number;
-  geographic_code?: number;
-  // Related data from joins
-  monada?: {
-    id?: string;
-    unit?: string;
-    unit_name?: any; // JSONB field
-    email?: string;
-    manager?: any; // JSONB field
-    address?: any; // JSONB field
-  };
-  kallikratis?: {
-    id?: number;
-    kodikos_neou_ota?: number;
-    eidos_neou_ota?: string;
-    onoma_neou_ota?: string;
-    kodikos_perifereiakis_enotitas?: number;
-    perifereiaki_enotita?: string;
-    kodikos_perifereias?: number;
-    perifereia?: string;
-  };
-  event_types?: {
-    id?: number;
-    name?: string;
-  };
-  expenditure_types?: {
-    id?: number;
-    expenditure_types?: string;
-    expenditure_types_minor?: string;
-  };
-}
-
-interface DecisionData {
-  id?: number;
-  project_id?: number;
-  decision_sequence?: number;
-  decision_type?: string;
-  protocol_number?: string;
-  fek?: string;
-  ada?: string;
-  implementing_agency?: number[];
-  decision_budget?: string | number;
-  expenditure_type?: number[];
-  decision_date?: string;
-  is_included?: boolean;
-  is_active?: boolean;
-  comments?: string;
-  budget_decision?: string;
-  funding_decision?: string;
-  allocation_decision?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface FormulationData {
-  id?: number;
-  project_id?: number;
-  decision_id?: number;
-  formulation_sequence?: number;
-  sa_type?: string;
-  enumeration_code?: string;
-  protocol_number?: string;
-  ada?: string;
-  decision_year?: number;
-  project_budget?: string | number;
-  total_public_expense?: string | number;
-  eligible_public_expense?: string | number;
-  epa_version?: string;
-  decision_status?: string;
-  change_type?: string;
-  connected_decision_ids?: number[];
-  comments?: string;
-  is_active?: boolean;
-  created_at?: string;
-  updated_at?: string;
-  // Related decision data from join
-  project_decisions?: {
-    id?: number;
-    decision_type?: string;
-    protocol_number?: string;
-    fek?: string;
-    ada?: string;
-  };
+// API response interface for complete project data
+interface CompleteProjectResponse {
+  project?: Project;
+  index?: ProjectIndexWithJoins | ProjectIndexWithJoins[];
+  decisions?: ProjectDecision | ProjectDecision[];
+  formulations?: ProjectFormulation | ProjectFormulation[];
 }
 
 export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
@@ -147,7 +67,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     data: completeProjectData, 
     isLoading: isCompleteDataLoading, 
     error: completeDataError 
-  } = useQuery({
+  } = useQuery<CompleteProjectResponse>({
     queryKey: [`/api/projects/${projectMis}/complete`],
     enabled: !!projectMis && open,
     retry: 1,
@@ -206,24 +126,24 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     
     // Handle both single object and array responses
     if (Array.isArray(actualBudgetData)) {
-      return actualBudgetData[0] as BudgetData || null;
+      return actualBudgetData[0] as BudgetDataWithCalculated || null;
     }
-    return actualBudgetData as BudgetData || null;
+    return actualBudgetData as BudgetDataWithCalculated || null;
   }, [budgetData]);
 
   const indexEntries = React.useMemo(() => {
     if (!projectIndexData) return [];
-    return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexEntry[];
+    return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexWithJoins[];
   }, [projectIndexData]);
 
   const decisions = React.useMemo(() => {
     if (!decisionsData) return [];
-    return (Array.isArray(decisionsData) ? decisionsData : [decisionsData]) as DecisionData[];
+    return (Array.isArray(decisionsData) ? decisionsData : [decisionsData]) as ProjectDecision[];
   }, [decisionsData]);
 
   const formulations = React.useMemo(() => {
     if (!formulationsData) return [];
-    return (Array.isArray(formulationsData) ? formulationsData : [formulationsData]) as FormulationData[];
+    return (Array.isArray(formulationsData) ? formulationsData : [formulationsData]) as ProjectFormulation[];
   }, [formulationsData]);
 
   // Enhanced helper functions with proper data type handling
@@ -277,6 +197,12 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
       return 'Δεν υπάρχει';
     }
   }, []);
+
+  // Helper function to find related decision for a formulation
+  const findRelatedDecision = React.useCallback((formulation: ProjectFormulation): ProjectDecision | null => {
+    if (!formulation.decision_id || !decisions) return null;
+    return decisions.find(decision => decision.id === formulation.decision_id) || null;
+  }, [decisions]);
 
   // Enhanced unit name extraction from JSONB
   const extractUnitName = React.useCallback((unitName: any): string => {
@@ -737,19 +663,22 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <p className="text-orange-900">{safeText(formulation.epa_version)}</p>
                                 </div>
                               </div>
-                              {formulation.project_decisions && (
-                                <div className="col-span-full">
-                                  <span className="font-medium text-orange-700 block text-sm mb-1">Συνδεδεμένη Απόφαση:</span>
-                                  <div className="bg-orange-50 p-2 rounded text-sm">
-                                    <p className="text-orange-900">
-                                      {formulation.project_decisions.decision_type} - {formulation.project_decisions.protocol_number}
-                                    </p>
-                                    {formulation.project_decisions.fek && (
-                                      <p className="text-orange-700">ΦΕΚ: {formulation.project_decisions.fek}</p>
-                                    )}
+                              {(() => {
+                                const relatedDecision = findRelatedDecision(formulation);
+                                return relatedDecision && (
+                                  <div className="col-span-full">
+                                    <span className="font-medium text-orange-700 block text-sm mb-1">Συνδεδεμένη Απόφαση:</span>
+                                    <div className="bg-orange-50 p-2 rounded text-sm">
+                                      <p className="text-orange-900">
+                                        {relatedDecision.decision_type} - {safeText(relatedDecision.protocol_number)}
+                                      </p>
+                                      {relatedDecision.fek && (
+                                        <p className="text-orange-700">ΦΕΚ: {safeText(relatedDecision.fek)}</p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                );
+                              })()}
                               {formulation.comments && (
                                 <div className="col-span-full">
                                   <span className="font-medium text-orange-700 block text-sm mb-1">Σχόλια:</span>

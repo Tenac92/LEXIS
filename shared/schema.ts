@@ -1103,6 +1103,8 @@ export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Subproject = typeof subprojects.$inferSelect;
 export type SubprojectFinancials = typeof subprojectFinancials.$inferSelect;
+export type ProjectDecision = typeof projectDecisions.$inferSelect;
+export type ProjectFormulation = typeof projectFormulations.$inferSelect;
 
 // New geographic entity types
 export type Region = typeof regions.$inferSelect;
