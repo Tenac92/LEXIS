@@ -1497,22 +1497,14 @@ export default function ComprehensiveEditFixed() {
             }
           });
 
-          console.log('DEBUG: Added geographic areas to location detail:', locationDetail.geographic_areas);
         });
       }
 
       // Always ensure geographic_areas are populated from project index data
-      console.log('DEBUG: Converting project index data to geographic_areas format');
       
       // Use normalized geographic data from projectGeographicData
       const projectGeographicData = completeProjectData?.projectGeographicData;
       if (projectGeographicData) {
-        console.log('DEBUG: Using new normalized geographic data structure');
-        console.log('DEBUG: Available geographic data:', {
-          regions: projectGeographicData.regions?.length || 0,
-          units: projectGeographicData.regionalUnits?.length || 0,
-          municipalities: projectGeographicData.municipalities?.length || 0
-        });
         
         // Create a map to collect geographic areas by location key
         const geographicAreasByLocation = new Map();
@@ -1570,13 +1562,11 @@ export default function ComprehensiveEditFixed() {
           const locationDetail = locationDetailsMap.get(key);
           if (locationDetail) {
             locationDetail.geographic_areas = Array.from(geographicAreasSet);
-            console.log(`DEBUG: Set geographic areas for location ${key}:`, Array.from(geographicAreasSet));
           }
         });
       }
 
       const locationDetailsArray = Array.from(locationDetailsMap.values());
-      console.log("DEBUG Final locationDetailsArray:", locationDetailsArray);
       return locationDetailsArray.length > 0
         ? locationDetailsArray
         : [
@@ -1621,17 +1611,6 @@ export default function ComprehensiveEditFixed() {
 
   // Data initialization effect
   useEffect(() => {
-    console.log("DEBUG - useEffect triggered with conditions:", {
-      typedProjectData: !!typedProjectData,
-      typedUnitsData: !!typedUnitsData,
-      typedExpenditureTypesData: !!typedExpenditureTypesData,
-      hasInitialized: hasInitialized.current,
-      willInitialize:
-        typedProjectData &&
-        typedUnitsData &&
-        typedExpenditureTypesData &&
-        !hasInitialized.current,
-    });
 
     if (
       typedProjectData &&
@@ -1646,11 +1625,6 @@ export default function ComprehensiveEditFixed() {
       isInitializingRef.current = true;
 
       // Populate decisions from database or create default
-      console.log("DEBUG - Decisions Data for initialization:", {
-        decisionsData,
-        hasDecisions: decisionsData && decisionsData.length > 0,
-        length: decisionsData?.length || 0,
-      });
 
       const decisions =
         decisionsData && decisionsData.length > 0
