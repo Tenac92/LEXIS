@@ -20,7 +20,7 @@ import type {
 } from '@shared/schema';
 
 interface ProjectDetailsDialogProps {
-  project: any;
+  project: Partial<Project>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -78,7 +78,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   });
 
   // Additional budget query for now (can be integrated into complete endpoint later)
-  const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery({
+  const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery<BudgetDataWithCalculated | BudgetDataWithCalculated[] | { status: string; data: BudgetDataWithCalculated | BudgetDataWithCalculated[] }>({
     queryKey: [`/api/budget/lookup/${projectMis}`],
     enabled: !!projectMis && open,
     retry: 1,
@@ -119,16 +119,22 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     if (!budgetData) return null;
     
     // Handle API response structure: {status: 'success', data: {...}}
-    let actualBudgetData = budgetData;
-    if (budgetData && typeof budgetData === 'object' && 'data' in budgetData) {
-      actualBudgetData = budgetData.data;
+    let actualBudgetData: unknown = budgetData;
+    if (budgetData && typeof budgetData === 'object' && budgetData !== null && 'data' in budgetData) {
+      actualBudgetData = (budgetData as any).data;
     }
     
     // Handle both single object and array responses
     if (Array.isArray(actualBudgetData)) {
-      return actualBudgetData[0] as BudgetDataWithCalculated || null;
+      return (actualBudgetData[0] as BudgetDataWithCalculated) || null;
     }
-    return actualBudgetData as BudgetDataWithCalculated || null;
+    
+    // Type guard to ensure we have a valid budget object
+    if (actualBudgetData && typeof actualBudgetData === 'object') {
+      return actualBudgetData as BudgetDataWithCalculated;
+    }
+    
+    return null;
   }, [budgetData]);
 
   const indexEntries = React.useMemo(() => {
@@ -670,9 +676,9 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                     <span className="font-medium text-orange-700 block text-sm mb-1">Συνδεδεμένη Απόφαση:</span>
                                     <div className="bg-orange-50 p-2 rounded text-sm">
                                       <p className="text-orange-900">
-                                        {relatedDecision.decision_type} - {safeText(relatedDecision.protocol_number)}
+                                        {safeText(relatedDecision.decision_type)} - {safeText(relatedDecision.protocol_number)}
                                       </p>
-                                      {relatedDecision.fek && (
+                                      {Boolean(relatedDecision.fek) && (
                                         <p className="text-orange-700">ΦΕΚ: {safeText(relatedDecision.fek)}</p>
                                       )}
                                     </div>
