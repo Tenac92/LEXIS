@@ -297,17 +297,17 @@ export class DocumentGenerator {
       {
         text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
         italics: true,
-         bold: true,
-        
+        bold: true,
+        color: "000000",
       },
     ];
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 4, color: "A9A9A9" },
-        bottom: { style: BorderStyle.SINGLE, size: 4, color: "A9A9A9" },
-        left: { style: BorderStyle.SINGLE, size: 4, color: "A9A9A9" },
-        right: { style: BorderStyle.SINGLE, size: 4, color: "A9A9A9" },
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
       },
       rows: [
         new TableRow({
