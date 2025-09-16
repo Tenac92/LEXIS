@@ -292,7 +292,7 @@ export class DocumentGenerator {
         text: "ΘΕΜΑ:",
         bold: true,
         italics: true,
-        color: "666666",
+        color: "000000",
       },
       {
         text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
@@ -324,6 +324,9 @@ export class DocumentGenerator {
                 bottom: 50,
                 left: 50,
                 right: 50,
+              },
+              shading: {
+                fill: "A9A9A9",
               },
               width: { size: 100, type: WidthType.PERCENTAGE },
               children: [
