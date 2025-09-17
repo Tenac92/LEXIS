@@ -459,10 +459,10 @@ export function CreateDocumentDialog({
             return true;
           }
           
-          // Check if the unit number matches any of the user's allowed units
-          // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
-          const unitNumber = item.unit;
-          return userAllowedUnits.includes(unitNumber);
+          // Check if the unit ID matches any of the user's allowed units
+          // user.unit_id contains numeric unit IDs that match the 'id' field in the API response
+          const unitId = String(item.id);
+          return userAllowedUnits.includes(unitId);
         });
         
         devLog("FilteredUnits", filteredUnits.length, "restrictions:", userAllowedUnits.length);
