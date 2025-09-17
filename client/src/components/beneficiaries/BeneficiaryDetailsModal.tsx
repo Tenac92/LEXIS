@@ -126,7 +126,6 @@ export function BeneficiaryDetailsModal({
       cengname1: "",
       cengsur2: "",
       cengname2: "",
-      onlinefoldernumber: "",
       freetext: "",
     },
   });
@@ -145,7 +144,6 @@ export function BeneficiaryDetailsModal({
         cengname1: beneficiary.cengname1 || "",
         cengsur2: beneficiary.cengsur2 || "",
         cengname2: beneficiary.cengname2 || "",
-        onlinefoldernumber: beneficiary.onlinefoldernumber || "",
         freetext: beneficiary.freetext || "",
       });
       setIsEditing(false);

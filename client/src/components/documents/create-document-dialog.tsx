@@ -2828,28 +2828,67 @@ export function CreateDocumentDialog({
                       <Card key={index} className="p-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
-                          <Input
-                            {...form.register(`recipients.${index}.firstname`)}
-                            placeholder="Όνομα"
-                            className="md:col-span-2 md:row-span-1"
-                            autoComplete="off"
-                          />
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.firstname`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      placeholder="Όνομα"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-firstname`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           {/* Επώνυμο */}
-                          <Input
-                            {...form.register(`recipients.${index}.lastname`)}
-                            placeholder="Επώνυμο"
-                            className="md:col-span-2 md:row-span-1"
-                            autoComplete="off"
-                          />
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.lastname`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      placeholder="Επώνυμο"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-lastname`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           {/* Πατρώνυμο */}
-                          <Input
-                            {...form.register(`recipients.${index}.fathername`)}
-                            placeholder="Πατρώνυμο"
-                            className="md:col-span-2 md:row-span-1"
-                            autoComplete="off"
-                          />
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.fathername`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input 
+                                      {...field} 
+                                      placeholder="Πατρώνυμο"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-fathername`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
