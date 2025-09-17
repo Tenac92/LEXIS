@@ -7,6 +7,38 @@ import { supabase } from '../config/db';
 
 export const router = Router();
 
+// Helper function to map region name to region code
+async function getRegionCodeFromName(regionName: string): Promise<string | null> {
+  try {
+    if (!regionName || regionName.trim() === '') {
+      return null;
+    }
+    
+    console.log(`[Beneficiaries] Looking up region code for: "${regionName}"`);
+    
+    const { data: regionData, error } = await supabase
+      .from('regions')
+      .select('code, name')
+      .eq('name', regionName.trim())
+      .single();
+    
+    if (error) {
+      console.log(`[Beneficiaries] No region found with name "${regionName}":`, error);
+      return null;
+    }
+    
+    if (regionData && regionData.code) {
+      console.log(`[Beneficiaries] Mapped region "${regionName}" to code "${regionData.code}"`);
+      return regionData.code.toString();
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('[Beneficiaries] Error in getRegionCodeFromName:', error);
+    return null;
+  }
+}
+
 // Helper function to get unit abbreviation from full unit name
 async function getUnitAbbreviation(userUnitName: string): Promise<string> {
   try {
