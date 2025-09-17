@@ -110,9 +110,7 @@ export function BeneficiaryDetailsModal({
   const [editingPayment, setEditingPayment] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   
-  if (!beneficiary) return null;
-
-  // Initialize form with react-hook-form
+  // Initialize form with react-hook-form (MOVED BEFORE CONDITIONAL RETURN)
   const form = useForm<BeneficiaryEditForm>({
     resolver: zodResolver(beneficiaryEditSchema),
     mode: "onBlur", // Enable real-time validation on field blur
@@ -162,7 +160,7 @@ export function BeneficiaryDetailsModal({
   });
 
   // Filter payments for this specific beneficiary
-  const payments = Array.isArray(allPayments) ? 
+  const payments = Array.isArray(allPayments) && beneficiary ? 
     allPayments.filter((payment: any) => payment.beneficiary_id === beneficiary.id) : [];
 
   // Fetch geographic data for region selection
@@ -201,6 +199,7 @@ export function BeneficiaryDetailsModal({
   // Update beneficiary mutation with react-hook-form integration
   const updateBeneficiaryMutation = useMutation({
     mutationFn: async (formData: BeneficiaryEditForm) => {
+      if (!beneficiary?.id) throw new Error("No beneficiary ID available");
       const response = await fetch(`/api/beneficiaries/${beneficiary.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -299,6 +298,9 @@ export function BeneficiaryDetailsModal({
     },
   });
 
+  // CONDITIONAL RETURN AFTER ALL HOOKS
+  if (!beneficiary) return null;
+
   // Handler functions
   const handleCancelEdit = () => {
     form.reset();
@@ -311,6 +313,7 @@ export function BeneficiaryDetailsModal({
   };
 
   const handleAddNewPayment = () => {
+    if (!beneficiary?.id) return;
     const newPayment = {
       beneficiary_id: beneficiary.id,
       installment: "ΕΦΑΠΑΞ",
