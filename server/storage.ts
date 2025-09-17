@@ -1073,13 +1073,12 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      // Support prefix matching: use PostgreSQL to convert AFM to text and match prefixes
-      // This allows typing "1231231" to find AFM "123123123"
+      // Support prefix matching: convert AFM to text and use ILIKE for partial matches
+      // This allows typing "1231231" to find AFM "123123123" 
       const { data, error } = await supabase
         .from('beneficiaries')
         .select('*')
-        .filter('afm', 'gte', searchNum)
-        .filter('afm', 'lt', searchNum * 10 + 10)
+        .ilike('afm::text', `${afm}%`)
         .order('id', { ascending: false });
         
       if (error) {
