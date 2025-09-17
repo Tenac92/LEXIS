@@ -106,7 +106,10 @@ const FormControl = React.forwardRef<
   React.ElementRef<typeof Slot>,
   React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
-  const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const { error, formItemId, formDescriptionId, formMessageId, invalid, isDirty, isTouched } = useFormField()
+  
+  // Consider field successful if it's been interacted with, is not invalid, and has no errors
+  const isSuccess = (isDirty || isTouched) && !invalid && !error
 
   return (
     <Slot
@@ -119,6 +122,7 @@ const FormControl = React.forwardRef<
       }
       aria-invalid={!!error}
       data-error={!!error}
+      data-success={isSuccess}
       {...props}
     />
   )

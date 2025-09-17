@@ -1537,6 +1537,14 @@ export default function NewProjectPage() {
                               <Input {...field} placeholder="π.χ. 2024" data-testid="input-inc-year" />
                             </FormControl>
                             <FormMessage />
+                            {field.value && 
+                             field.value.length === 4 && 
+                             /^(19|20)\d{2}$/.test(field.value) && 
+                             !form.formState.errors?.project_details?.inc_year && (
+                              <FormMessage variant="success" showIcon={true}>
+                                Έγκυρο έτος ένταξης
+                              </FormMessage>
+                            )}
                           </FormItem>
                         )}
                       />
