@@ -584,15 +584,15 @@ export function BeneficiaryDetailsModal({
                           <FormItem>
                             <FormControl>
                               <Select
-                                value={field.value || ''}
-                                onValueChange={field.onChange}
+                                value={field.value || 'none'}
+                                onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
                                 disabled={!availableRegions.length}
                               >
                                 <SelectTrigger className="mt-1" data-testid="select-region">
                                   <SelectValue placeholder={availableRegions.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">Καμία επιλογή</SelectItem>
+                                  <SelectItem value="none">Καμία επιλογή</SelectItem>
                                   {availableRegions.map((region) => (
                                     <SelectItem key={region.code} value={region.code}>
                                       {region.name}
