@@ -174,14 +174,20 @@ export function SimpleAFMAutocomplete({
         return { installment: '', amount: 0, suggestedInstallments: [], installmentAmounts: {} };
       }
       
-      // Fallback to UNKNOWN category only if no other specific expenditure types exist
-      expenditureData = beneficiary.oikonomika['UNKNOWN'];
-      if (!expenditureData || !Array.isArray(expenditureData)) {
-        return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
+      // Check if UNKNOWN payments exist (these could be from any expenditure type)
+      const hasUnknownPayments = beneficiary.oikonomika['UNKNOWN'] && 
+                               Array.isArray(beneficiary.oikonomika['UNKNOWN']) && 
+                               beneficiary.oikonomika['UNKNOWN'].length > 0;
+      
+      if (hasUnknownPayments) {
+        if (import.meta.env.NODE_ENV === 'development') {
+          console.log(`[SmartAutocomplete] Found UNKNOWN payments - not suggesting continuation to avoid cross-expenditure type contamination`);
+        }
+        return { installment: '', amount: 0, suggestedInstallments: [], installmentAmounts: {} };
       }
-      if (import.meta.env.NODE_ENV === 'development') {
-        console.log(`[SmartAutocomplete] Using UNKNOWN category as fallback`);
-      }
+      
+      // Only suggest 'Α' when there are truly NO payments at all
+      return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     } else {
       if (import.meta.env.NODE_ENV === 'development') {
         console.log(`[SmartAutocomplete] Found ${expenditureData.length} payments for expenditure type`);
