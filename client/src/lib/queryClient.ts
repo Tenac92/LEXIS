@@ -50,25 +50,63 @@ export async function apiRequest<T = unknown>(
           console.error('[API] Received HTML error response:', 
                        errorText.substring(0, 200) + (errorText.length > 200 ? '...' : ''));
           errorMessage = `Λάβαμε μη αναμενόμενη απόκριση από τον διακομιστή. Κωδικός: ${response.status}`;
+          // Create enriched error even for HTML responses
+          const enrichedError = new Error(errorMessage) as Error & {
+            status?: number;
+            code?: string;
+            details?: string;
+            constraint?: string;
+          };
+          enrichedError.status = response.status;
+          throw enrichedError;
         } else {
           // Try to parse as JSON
           try {
             const errorData = JSON.parse(errorText);
             errorMessage = errorData?.message || errorData?.error?.message || 
                          `Σφάλμα HTTP! κατάσταση: ${response.status}`;
+            
+            // Create enriched error with structured data
+            const enrichedError = new Error(errorMessage) as Error & {
+              status?: number;
+              code?: string;
+              details?: string;
+              constraint?: string;
+              raw?: any;
+            };
+            enrichedError.status = response.status;
+            enrichedError.code = errorData?.code;
+            enrichedError.details = errorData?.details || errorData?.detail;
+            enrichedError.constraint = errorData?.constraint;
+            enrichedError.raw = errorData;
+            throw enrichedError;
           } catch (parseError) {
-            // If not valid JSON, use the raw text (but limited length)
+            // If not valid JSON, use the raw text but still create enriched error with status
             errorMessage = errorText.length > 100 ? 
                          `${errorText.substring(0, 100)}...` : 
                          errorText || `Σφάλμα HTTP! κατάσταση: ${response.status}`;
+            const enrichedError = new Error(errorMessage) as Error & {
+              status?: number;
+              code?: string;
+              details?: string;
+              constraint?: string;
+            };
+            enrichedError.status = response.status;
+            throw enrichedError;
           }
         }
       } catch (textReadError) {
-        // If we can't read the text at all
+        // If we can't read the text at all, still create enriched error with status
         errorMessage = `Σφάλμα HTTP! κατάσταση: ${response.status}`;
+        const enrichedError = new Error(errorMessage) as Error & {
+          status?: number;
+          code?: string;
+          details?: string;
+          constraint?: string;
+        };
+        enrichedError.status = response.status;
+        throw enrichedError;
       }
-      
-      throw new Error(errorMessage);
     }
 
     // Check the content type for non-JSON responses
@@ -100,31 +138,63 @@ export async function apiRequest<T = unknown>(
       throw new Error("Λήφθηκε μη έγκυρο JSON από τον διακομιστή");
     }
   } catch (error) {
-    // Create a more detailed error object with better debugging info
-    const enhancedError = new Error(
-      error instanceof Error ? error.message : 'Unknown error during API request'
-    );
-    
-    // Add extra properties to provide context about the error
-    // Use variables from closure that are guaranteed to be defined
-    Object.assign(enhancedError, {
-      requestInfo: {
-        url: url, // Use the original url
-        method: options.method || 'GET',
-        timestamp: new Date().toISOString()
-      },
-      originalError: error,
-      isApiError: true
-    });
-    
-    console.error("[API] Request failed:", enhancedError);
-    console.error("[API] Error details:", {
-      message: enhancedError.message,
-      requestInfo: (enhancedError as any).requestInfo,
-      stack: enhancedError.stack
-    });
-    
-    throw enhancedError; // Throw the enhanced error for better debugging
+    // If error is already an enriched error with structured fields, preserve them
+    if (error instanceof Error && (error as any).status !== undefined) {
+      // Error already has structured fields, just add our debugging info
+      Object.assign(error, {
+        requestInfo: {
+          url: url,
+          method: options.method || 'GET',
+          timestamp: new Date().toISOString()
+        },
+        originalError: error, // Keep reference to self for compatibility
+        isApiError: true
+      });
+      
+      console.error("[API] Request failed:", error);
+      console.error("[API] Error details:", {
+        message: error.message,
+        requestInfo: (error as any).requestInfo,
+        stack: error.stack
+      });
+      
+      throw error; // Preserve the enriched error with structured fields
+    } else {
+      // Create a new error for unexpected errors
+      const enhancedError = new Error(
+        error instanceof Error ? error.message : 'Unknown error during API request'
+      );
+      
+      // Add extra properties and copy any structured fields from original error
+      Object.assign(enhancedError, {
+        requestInfo: {
+          url: url,
+          method: options.method || 'GET',
+          timestamp: new Date().toISOString()
+        },
+        originalError: error,
+        isApiError: true
+      });
+      
+      // Copy structured fields if they exist on the original error
+      if (error && typeof error === 'object') {
+        const originalTyped = error as any;
+        if (originalTyped.status !== undefined) (enhancedError as any).status = originalTyped.status;
+        if (originalTyped.code !== undefined) (enhancedError as any).code = originalTyped.code;
+        if (originalTyped.details !== undefined) (enhancedError as any).details = originalTyped.details;
+        if (originalTyped.constraint !== undefined) (enhancedError as any).constraint = originalTyped.constraint;
+        if (originalTyped.raw !== undefined) (enhancedError as any).raw = originalTyped.raw;
+      }
+      
+      console.error("[API] Request failed:", enhancedError);
+      console.error("[API] Error details:", {
+        message: enhancedError.message,
+        requestInfo: (enhancedError as any).requestInfo,
+        stack: enhancedError.stack
+      });
+      
+      throw enhancedError;
+    }
   }
 }
 

@@ -853,9 +853,60 @@ export default function NewProjectPage() {
     },
     onError: (error) => {
       console.error("Project creation failed:", error);
+      
+      // Parse specific error messages using structured data first, then fallback to text parsing
+      let errorMessage = "Αποτυχία δημιουργίας έργου";
+      
+      if (error instanceof Error) {
+        const enrichedError = error as Error & {
+          status?: number;
+          code?: string;
+          details?: string;
+          constraint?: string;
+          originalError?: any;
+        };
+        
+        // Check structured error fields first (more reliable)
+        // Try both direct access and originalError fallback
+        const errorCode = enrichedError.code || enrichedError.originalError?.code;
+        const errorConstraint = enrichedError.constraint || enrichedError.originalError?.constraint;
+        const errorStatus = enrichedError.status || enrichedError.originalError?.status;
+        
+        if (errorCode === '23505' && errorConstraint?.includes('mis')) {
+          errorMessage = "Το MIS που εισαγάγατε υπάρχει ήδη στη βάση δεδομένων. Παρακαλώ χρησιμοποιήστε διαφορετικό MIS.";
+        } else if (errorCode === '23505' && errorConstraint?.includes('na853')) {
+          errorMessage = "Ο κωδικός ΝΑ853 που εισαγάγατε υπάρχει ήδη. Παρακαλώ χρησιμοποιήστε διαφορετικό κωδικό.";
+        } else if (errorCode === '23505') {
+          // Generic duplicate key error
+          errorMessage = "Τα στοιχεία που εισαγάγατε υπάρχουν ήδη. Παρακαλώ ελέγξτε τα στοιχεία και δοκιμάστε ξανά.";
+        } else if (errorStatus === 409) {
+          // HTTP 409 Conflict
+          errorMessage = "Τα στοιχεία που εισαγάγατε συγκρούονται με υπάρχοντα δεδομένα. Παρακαλώ ελέγξτε και δοκιμάστε ξανά.";
+        } else if (errorStatus === 400) {
+          // HTTP 400 Bad Request (validation errors)
+          errorMessage = "Τα στοιχεία που εισαγάγατε δεν είναι έγκυρα. Παρακαλώ ελέγξτε όλα τα υποχρεωτικά πεδία.";
+        } else if (errorStatus === 403) {
+          errorMessage = "Δεν έχετε τα απαραίτητα δικαιώματα για τη δημιουργία έργου.";
+        } else {
+          // Fallback to text-based parsing for older errors or unexpected formats
+          const errorText = error.message.toLowerCase();
+          
+          if (errorText.includes('duplicate key') && errorText.includes('mis')) {
+            errorMessage = "Το MIS που εισαγάγατε υπάρχει ήδη στη βάση δεδομένων. Παρακαλώ χρησιμοποιήστε διαφορετικό MIS.";
+          } else if (errorText.includes('validation') || errorText.includes('invalid')) {
+            errorMessage = "Τα στοιχεία που εισαγάγατε δεν είναι έγκυρα. Παρακαλώ ελέγξτε όλα τα υποχρεωτικά πεδία.";
+          } else if (errorText.includes('network') || errorText.includes('timeout')) {
+            errorMessage = "Πρόβλημα σύνδεσης με τον διακομιστή. Παρακαλώ δοκιμάστε ξανά.";
+          } else {
+            // Show the original error message if we can't categorize it
+            errorMessage = `Σφάλμα: ${error.message}`;
+          }
+        }
+      }
+      
       toast({
-        title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία δημιουργίας έργου",
+        title: "Αποτυχία Δημιουργίας Έργου",
+        description: errorMessage,
         variant: "destructive",
       });
     },
