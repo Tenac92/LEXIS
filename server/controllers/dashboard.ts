@@ -105,12 +105,33 @@ export async function getDashboardStats(req: Request, res: Response) {
     });
 
     // Get recent budget history with limit and enhanced info using correct schema
-    const { data: historyData, error: historyError } = await supabase
+    // Filter by user's unit for non-admin users
+    let historyQuery = supabase
       .from('budget_history')
       .select(`
         id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
-        Projects!budget_history_project_id_fkey(mis, project_title)
-      `)
+        Projects!budget_history_project_id_fkey(mis, project_title, unit_id)
+      `);
+    
+    // For non-admin users, filter by unit_id through project relationship
+    const userRole = (req as any).user?.role;
+    if (userRole !== 'admin' && primaryUnitId) {
+      // Join with Projects table to filter by unit_id
+      const { data: projectsInUnit } = await supabase
+        .from('Projects')
+        .select('id')
+        .eq('unit_id', primaryUnitId);
+      
+      const projectIdsInUnit = projectsInUnit?.map(p => p.id) || [];
+      if (projectIdsInUnit.length > 0) {
+        historyQuery = historyQuery.in('project_id', projectIdsInUnit);
+      } else {
+        // If no projects in user's unit, return empty history
+        historyQuery = historyQuery.eq('project_id', -1); // This will return no results
+      }
+    }
+    
+    const { data: historyData, error: historyError } = await historyQuery
       .order('created_at', { ascending: false })
       .limit(5);
 

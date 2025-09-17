@@ -409,7 +409,7 @@ export function UserDashboard() {
                         <p className="font-medium text-sm">{getUnitName(unit)}</p>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        ID: {unit}
+                        {getUnitName(unit)}
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
