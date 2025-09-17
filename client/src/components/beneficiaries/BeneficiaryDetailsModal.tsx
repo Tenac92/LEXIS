@@ -45,7 +45,19 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import type { Beneficiary } from "@shared/schema";
+import { insertBeneficiarySchema } from "@shared/schema";
+import { z } from "zod";
 
 interface BeneficiaryDetailsModalProps {
   beneficiary: Beneficiary | null;
@@ -53,9 +65,24 @@ interface BeneficiaryDetailsModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-interface EditableBeneficiary extends Beneficiary {
-  // Additional fields that might be available in the full context
-}
+// Form schema for editing beneficiaries (omit auto-generated fields)
+const beneficiaryEditSchema = insertBeneficiarySchema.omit({ 
+  id: true, 
+  created_at: true, 
+  updated_at: true 
+}).extend({
+  region: z.string().optional(), // Allow optional region
+  fathername: z.string().optional(), // Allow optional fathername
+  adeia: z.number().optional(), // Allow optional adeia (license number)
+  cengsur1: z.string().optional(),
+  cengname1: z.string().optional(),
+  cengsur2: z.string().optional(),
+  cengname2: z.string().optional(),
+  onlinefoldernumber: z.string().optional(),
+  freetext: z.string().optional(),
+});
+
+type BeneficiaryEditForm = z.infer<typeof beneficiaryEditSchema>;
 
 interface PaymentRecord {
   id: number;
@@ -80,20 +107,51 @@ export function BeneficiaryDetailsModal({
   
   // Edit state management
   const [isEditing, setIsEditing] = useState(false);
-  const [editedBeneficiary, setEditedBeneficiary] = useState<EditableBeneficiary | null>(null);
   const [editingPayment, setEditingPayment] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   
   if (!beneficiary) return null;
 
-  // Initialize edited beneficiary when modal opens or beneficiary changes
+  // Initialize form with react-hook-form
+  const form = useForm<BeneficiaryEditForm>({
+    resolver: zodResolver(beneficiaryEditSchema),
+    defaultValues: {
+      afm: "",
+      surname: "",
+      name: "",
+      fathername: "",
+      region: "",
+      adeia: undefined,
+      cengsur1: "",
+      cengname1: "",
+      cengsur2: "",
+      cengname2: "",
+      onlinefoldernumber: "",
+      freetext: "",
+    },
+  });
+
+  // Initialize form values when modal opens or beneficiary changes
   useEffect(() => {
     if (beneficiary && open) {
-      setEditedBeneficiary({ ...beneficiary });
+      form.reset({
+        afm: beneficiary.afm || "",
+        surname: beneficiary.surname || "",
+        name: beneficiary.name || "",
+        fathername: beneficiary.fathername || "",
+        region: beneficiary.region || "",
+        adeia: beneficiary.adeia || undefined,
+        cengsur1: beneficiary.cengsur1 || "",
+        cengname1: beneficiary.cengname1 || "",
+        cengsur2: beneficiary.cengsur2 || "",
+        cengname2: beneficiary.cengname2 || "",
+        onlinefoldernumber: beneficiary.onlinefoldernumber || "",
+        freetext: beneficiary.freetext || "",
+      });
       setIsEditing(false);
       setEditingPayment(null);
     }
-  }, [beneficiary, open]);
+  }, [beneficiary, open, form]);
 
   // Fetch all payments for this specific beneficiary
   const { data: allPayments = [], isLoading: paymentsLoading } = useQuery({
@@ -131,13 +189,13 @@ export function BeneficiaryDetailsModal({
     return region?.name || regionCode;
   };
 
-  // Update beneficiary mutation
+  // Update beneficiary mutation with react-hook-form integration
   const updateBeneficiaryMutation = useMutation({
-    mutationFn: async (updatedData: Partial<Beneficiary>) => {
+    mutationFn: async (formData: BeneficiaryEditForm) => {
       const response = await fetch(`/api/beneficiaries/${beneficiary.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify(formData),
       });
       if (!response.ok) throw new Error("Failed to update beneficiary");
       return response.json();
@@ -150,7 +208,8 @@ export function BeneficiaryDetailsModal({
         description: "Τα στοιχεία του δικαιούχου ενημερώθηκαν επιτυχώς",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Update error:", error);
       toast({
         title: "Σφάλμα",
         description: "Αποτυχία ενημέρωσης στοιχείων δικαιούχου",
@@ -158,6 +217,12 @@ export function BeneficiaryDetailsModal({
       });
     },
   });
+
+  // Form submission handler
+  const onSubmit = (data: BeneficiaryEditForm) => {
+    console.log("Form submission data:", data);
+    updateBeneficiaryMutation.mutate(data);
+  };
 
   // Update payment mutation
   const updatePaymentMutation = useMutation({
@@ -215,13 +280,8 @@ export function BeneficiaryDetailsModal({
   });
 
   // Handler functions
-  const handleSaveBeneficiary = () => {
-    if (!editedBeneficiary) return;
-    updateBeneficiaryMutation.mutate(editedBeneficiary);
-  };
-
   const handleCancelEdit = () => {
-    setEditedBeneficiary({ ...beneficiary });
+    form.reset();
     setIsEditing(false);
     setEditingPayment(null);
   };
@@ -351,7 +411,7 @@ export function BeneficiaryDetailsModal({
                   </Button>
                   <Button
                     size="sm"
-                    onClick={handleSaveBeneficiary}
+                    onClick={form.handleSubmit(onSubmit)}
                     disabled={updateBeneficiaryMutation.isPending}
                   >
                     <Save className="w-3 h-3 mr-1" />
@@ -390,7 +450,8 @@ export function BeneficiaryDetailsModal({
           </TabsList>
 
           <TabsContent value="details" className="flex-1 overflow-y-auto">
-            <div className="space-y-6">
+            <Form {...form}>
+              <div className="space-y-6">
               {/* Personal Information */}
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
@@ -404,10 +465,17 @@ export function BeneficiaryDetailsModal({
                       Επώνυμο:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.surname || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, surname: e.target.value } : null)}
-                        className="mt-1"
+                      <FormField
+                        control={form.control}
+                        name="surname"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} className="mt-1" data-testid="input-surname" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary.surname}</p>
@@ -419,10 +487,17 @@ export function BeneficiaryDetailsModal({
                       Όνομα:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.name || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, name: e.target.value } : null)}
-                        className="mt-1"
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} className="mt-1" data-testid="input-name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary.name}</p>
@@ -434,11 +509,17 @@ export function BeneficiaryDetailsModal({
                       Πατρώνυμο:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.fathername || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, fathername: e.target.value } : null)}
-                        className="mt-1"
-                        placeholder="Προαιρετικό"
+                      <FormField
+                        control={form.control}
+                        name="fathername"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} className="mt-1" placeholder="Προαιρετικό" data-testid="input-fathername" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-blue-900 font-medium mt-1">{beneficiary.fathername || 'Δεν έχει καθοριστεί'}</p>
@@ -450,11 +531,17 @@ export function BeneficiaryDetailsModal({
                       ΑΦΜ:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.afm || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, afm: e.target.value } : null)}
-                        className="mt-1 font-mono"
-                        placeholder="9 ψηφία"
+                      <FormField
+                        control={form.control}
+                        name="afm"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} className="mt-1 font-mono" placeholder="9 ψηφία" data-testid="input-afm" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-blue-900 font-mono font-bold text-lg mt-1">{beneficiary.afm}</p>
@@ -466,23 +553,34 @@ export function BeneficiaryDetailsModal({
                       Περιφέρεια:
                     </label>
                     {isEditing ? (
-                      <Select
-                        value={editedBeneficiary?.region ?? ''}
-                        onValueChange={(value) => setEditedBeneficiary(prev => prev ? { ...prev, region: value } : null)}
-                        disabled={!availableRegions.length}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue placeholder={availableRegions.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">Καμία επιλογή</SelectItem>
-                          {availableRegions.map((region) => (
-                            <SelectItem key={region.code} value={region.code}>
-                              {region.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormField
+                        control={form.control}
+                        name="region"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Select
+                                value={field.value || ''}
+                                onValueChange={field.onChange}
+                                disabled={!availableRegions.length}
+                              >
+                                <SelectTrigger className="mt-1" data-testid="select-region">
+                                  <SelectValue placeholder={availableRegions.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="">Καμία επιλογή</SelectItem>
+                                  {availableRegions.map((region) => (
+                                    <SelectItem key={region.code} value={region.code}>
+                                      {region.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     ) : (
                       <p className="text-blue-900 font-medium mt-1">
                         {getRegionNameFromCode(beneficiary.region)}
@@ -514,12 +612,25 @@ export function BeneficiaryDetailsModal({
                       Αρ. Άδειας:
                     </label>
                     {isEditing ? (
-                      <Input
-                        type="number"
-                        value={editedBeneficiary?.adeia || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, adeia: parseInt(e.target.value) || null } : null)}
-                        className="mt-1"
-                        placeholder="Αριθμός άδειας"
+                      <FormField
+                        control={form.control}
+                        name="adeia"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                className="mt-1"
+                                placeholder="Αριθμός άδειας"
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                data-testid="input-adeia"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-gray-900 font-mono font-medium text-lg mt-1">
@@ -533,11 +644,17 @@ export function BeneficiaryDetailsModal({
                       Αρ. Διαδικτυακού Φακέλου:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.onlinefoldernumber || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, onlinefoldernumber: e.target.value } : null)}
-                        className="mt-1"
-                        placeholder="Αριθμός διαδικτυακού φακέλου"
+                      <FormField
+                        control={form.control}
+                        name="onlinefoldernumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input {...field} className="mt-1" placeholder="Αριθμός διαδικτυακού φακέλου" data-testid="input-onlinefoldernumber" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
                     ) : (
                       <p className="text-gray-900 font-mono font-medium text-lg mt-1">
@@ -564,15 +681,29 @@ export function BeneficiaryDetailsModal({
                         </label>
                         {isEditing ? (
                           <div className="space-y-2 mt-1">
-                            <Input
-                              value={editedBeneficiary?.cengsur1 || ''}
-                              onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, cengsur1: e.target.value } : null)}
-                              placeholder="Επώνυμο μηχανικού"
+                            <FormField
+                              control={form.control}
+                              name="cengsur1"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Επώνυμο μηχανικού" data-testid="input-cengsur1" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                            <Input
-                              value={editedBeneficiary?.cengname1 || ''}
-                              onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, cengname1: e.target.value } : null)}
-                              placeholder="Όνομα μηχανικού"
+                            <FormField
+                              control={form.control}
+                              name="cengname1"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Όνομα μηχανικού" data-testid="input-cengname1" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
                           </div>
                         ) : (
@@ -590,15 +721,29 @@ export function BeneficiaryDetailsModal({
                         </label>
                         {isEditing ? (
                           <div className="space-y-2 mt-1">
-                            <Input
-                              value={editedBeneficiary?.cengsur2 || ''}
-                              onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, cengsur2: e.target.value } : null)}
-                              placeholder="Επώνυμο μηχανικού"
+                            <FormField
+                              control={form.control}
+                              name="cengsur2"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Επώνυμο μηχανικού" data-testid="input-cengsur2" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
-                            <Input
-                              value={editedBeneficiary?.cengname2 || ''}
-                              onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, cengname2: e.target.value } : null)}
-                              placeholder="Όνομα μηχανικού"
+                            <FormField
+                              control={form.control}
+                              name="cengname2"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input {...field} placeholder="Όνομα μηχανικού" data-testid="input-cengname2" />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
                             />
                           </div>
                         ) : (
@@ -620,11 +765,22 @@ export function BeneficiaryDetailsModal({
                 </h3>
                 <div className="bg-white/70 p-4 rounded-lg border border-purple-200">
                   {isEditing ? (
-                    <Textarea
-                      value={editedBeneficiary?.freetext || ''}
-                      onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, freetext: e.target.value } : null)}
-                      placeholder="Προσθέστε σημειώσεις ή επιπλέον πληροφορίες..."
-                      className="min-h-[100px]"
+                    <FormField
+                      control={form.control}
+                      name="freetext"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Προσθέστε σημειώσεις ή επιπλέον πληροφορίες..."
+                              className="min-h-[100px]"
+                              data-testid="textarea-freetext"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   ) : (
                     <p className="text-purple-900 whitespace-pre-wrap min-h-[60px]">
@@ -633,7 +789,8 @@ export function BeneficiaryDetailsModal({
                   )}
                 </div>
               </div>
-            </div>
+              </div>
+            </Form>
           </TabsContent>
 
           <TabsContent value="payments" className="flex-1 overflow-y-auto">
