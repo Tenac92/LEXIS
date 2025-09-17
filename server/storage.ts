@@ -1073,22 +1073,49 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      // Support prefix matching: convert AFM to text and use ILIKE for partial matches
-      // This allows typing "1231231" to find AFM "123123123" 
-      const { data, error } = await supabase
-        .from('beneficiaries')
-        .select('*')
-        .ilike('afm::text', `${afm}%`)
-        .order('id', { ascending: false });
-        
-      if (error) {
-        console.error('[Storage] Error searching beneficiaries by AFM:', error);
-        throw error;
-      }
+      // For prefix matching, create a range where AFM starts with the given digits
+      // Example: "1231231" should match AFMs from 1231231000000000 to 1231231999999999
+      const minDigits = 9; // Greek AFM is always 9 digits
+      const currentDigits = afm.length;
       
-      // Return all beneficiaries - let the frontend determine available installments
-      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM prefix: ${afm}`);
-      return data || [];
+      if (currentDigits >= minDigits) {
+        // Exact match for full AFM
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('*')
+          .eq('afm', searchNum)
+          .order('id', { ascending: false });
+          
+        if (error) {
+          console.error('[Storage] Error searching beneficiaries by exact AFM:', error);
+          throw error;
+        }
+        
+        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with exact AFM: ${afm}`);
+        return data || [];
+      } else {
+        // Prefix matching using range
+        const multiplier = Math.pow(10, minDigits - currentDigits);
+        const minRange = searchNum * multiplier;
+        const maxRange = (searchNum + 1) * multiplier - 1;
+        
+        console.log(`[Storage] Prefix search: AFM >= ${minRange} AND AFM <= ${maxRange}`);
+        
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('*')
+          .gte('afm', minRange)
+          .lte('afm', maxRange)
+          .order('id', { ascending: false });
+          
+        if (error) {
+          console.error('[Storage] Error searching beneficiaries by AFM range:', error);
+          throw error;
+        }
+        
+        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM prefix: ${afm}`);
+        return data || [];
+      }
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
       throw error;

@@ -148,29 +148,49 @@ export function SimpleAFMAutocomplete({
   
   // Fixed installment logic based on user requirements
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
-    console.log('[SmartAutocomplete] Calculating next installment for:', { 
-      beneficiaryId: beneficiary.id, 
-      expenditureType, 
-      userUnit, 
-      projectNa853 
-    });
+    if (import.meta.env.NODE_ENV === 'development') {
+      console.log('[SmartAutocomplete] Calculating next installment for beneficiary:', beneficiary.id);
+    }
 
     if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
 
-    // Try specific expenditure type first, then fallback to UNKNOWN
+    // CRITICAL: Only use payments from the SAME expenditure type as the current document
     let expenditureData = beneficiary.oikonomika[expenditureType];
     if (!expenditureData || !Array.isArray(expenditureData)) {
-      // Fallback to UNKNOWN category
+      // Check if this beneficiary has payments for OTHER expenditure types
+      const hasOtherExpenditureTypes = Object.keys(beneficiary.oikonomika).some(key => {
+        return key !== expenditureType && 
+               key !== 'UNKNOWN' && 
+               Array.isArray(beneficiary.oikonomika[key]) && 
+               beneficiary.oikonomika[key].length > 0;
+      });
+      
+      if (hasOtherExpenditureTypes) {
+        if (import.meta.env.NODE_ENV === 'development') {
+        console.log(`[SmartAutocomplete] EXPENDITURE TYPE MISMATCH: No suggestions for different expenditure type`);
+      }
+        return { installment: '', amount: 0, suggestedInstallments: [], installmentAmounts: {} };
+      }
+      
+      // Fallback to UNKNOWN category only if no other specific expenditure types exist
       expenditureData = beneficiary.oikonomika['UNKNOWN'];
       if (!expenditureData || !Array.isArray(expenditureData)) {
         return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
       }
-      console.log('[SmartAutocomplete] Using UNKNOWN category as fallback for expenditure type:', expenditureType);
+      if (import.meta.env.NODE_ENV === 'development') {
+        console.log(`[SmartAutocomplete] Using UNKNOWN category as fallback`);
+      }
+    } else {
+      if (import.meta.env.NODE_ENV === 'development') {
+        console.log(`[SmartAutocomplete] Found ${expenditureData.length} payments for expenditure type`);
+      }
     }
 
-    console.log('[SmartAutocomplete] Processing beneficiary payments:', expenditureData);
+    if (import.meta.env.NODE_ENV === 'development') {
+      console.log(`[SmartAutocomplete] Processing ${expenditureData.length} payments`);
+    }
 
     // Extract all existing installments (ignore ΕΦΑΠΑΞ for sequence logic)
     const allInstallments: Array<{ installment: string, amount: number, created_at: string }> = [];
@@ -182,7 +202,9 @@ export function SimpleAFMAutocomplete({
       installments.forEach(installmentKey => {
         // Skip ΕΦΑΠΑΞ as it doesn't affect regular installment sequence
         if (installmentKey === 'ΕΦΑΠΑΞ') {
-          console.log('[SmartAutocomplete] Skipping ΕΦΑΠΑΞ installment (stands alone)');
+          if (import.meta.env.NODE_ENV === 'development') {
+        console.log('[SmartAutocomplete] Skipping ΕΦΑΠΑΞ installment');
+      }
           return;
         }
         
@@ -194,11 +216,15 @@ export function SimpleAFMAutocomplete({
       });
     });
 
-    console.log('[SmartAutocomplete] Non-ΕΦΑΠΑΞ installments found:', allInstallments);
+    if (import.meta.env.NODE_ENV === 'development') {
+      console.log(`[SmartAutocomplete] Found ${allInstallments.length} non-ΕΦΑΠΑΞ installments`);
+    }
 
     if (allInstallments.length === 0) {
       // No regular installments exist, start with Α
-      console.log('[SmartAutocomplete] No regular installments found, suggesting Α');
+      if (import.meta.env.NODE_ENV === 'development') {
+        console.log('[SmartAutocomplete] No regular installments found, suggesting Α');
+      }
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
 
