@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -719,7 +719,7 @@ export default function NewProjectPage() {
               if (!region && !regionalUnit && !municipality) continue;
               
               // Build geographic index arrays using normalized geographic data
-              if (geographicData && 'regions' in geographicData && 'regionalUnits' in geographicData && 'municipalities' in geographicData) {
+              if (geographicData && typeof geographicData === 'object' && 'regions' in geographicData && 'regionalUnits' in geographicData && 'municipalities' in geographicData) {
                 // Find region ID
                 if (region) {
                   const regionEntry = (geographicData as any).regions.find((r: any) => r.regions?.name === region);
@@ -992,8 +992,9 @@ export default function NewProjectPage() {
                               <FormItem>
                                 <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="π.χ. 12345/2024" />
+                                  <Input {...field} placeholder="π.χ. 12345/2024" data-testid={`input-protocol-${index}`} />
                                 </FormControl>
+                                <FormMessage />
                               </FormItem>
                             )}
                           />
@@ -1005,8 +1006,9 @@ export default function NewProjectPage() {
                               <FormItem>
                                 <FormLabel>ΑΔΑ</FormLabel>
                                 <FormControl>
-                                  <Input {...field} placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ" />
+                                  <Input {...field} placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ" data-testid={`input-ada-${index}`} />
                                 </FormControl>
+                                <FormMessage />
                               </FormItem>
                             )}
                           />
@@ -1532,8 +1534,9 @@ export default function NewProjectPage() {
                           <FormItem>
                             <FormLabel>Έτος Ένταξης</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="π.χ. 2024" />
+                              <Input {...field} placeholder="π.χ. 2024" data-testid="input-inc-year" />
                             </FormControl>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -1569,8 +1572,9 @@ export default function NewProjectPage() {
                         <FormItem>
                           <FormLabel>Τίτλος Έργου</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="Εισάγετε τον τίτλο του έργου..." rows={6} />
+                            <Textarea {...field} placeholder="Εισάγετε τον τίτλο του έργου..." rows={6} data-testid="textarea-project-title" />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -1582,8 +1586,9 @@ export default function NewProjectPage() {
                         <FormItem>
                           <FormLabel>Περιγραφή Έργου</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="Εισάγετε αναλυτική περιγραφή του έργου..." rows={2} />
+                            <Textarea {...field} placeholder="Εισάγετε αναλυτική περιγραφή του έργου..." rows={2} data-testid="textarea-project-description" />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
@@ -1595,8 +1600,9 @@ export default function NewProjectPage() {
                         <FormItem>
                           <FormLabel>Συνοπτική Περιγραφή</FormLabel>
                           <FormControl>
-                            <Textarea {...field} placeholder="Εισάγετε συνοπτική περιγραφή..." rows={2} />
+                            <Textarea {...field} placeholder="Εισάγετε συνοπτική περιγραφή..." rows={2} data-testid="textarea-summary-description" />
                           </FormControl>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />
