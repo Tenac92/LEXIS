@@ -719,10 +719,10 @@ export default function NewProjectPage() {
               if (!region && !regionalUnit && !municipality) continue;
               
               // Build geographic index arrays using normalized geographic data
-              if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
+              if (geographicData && 'regions' in geographicData && 'regionalUnits' in geographicData && 'municipalities' in geographicData) {
                 // Find region ID
                 if (region) {
-                  const regionEntry = geographicData.regions.find(r => r.regions?.name === region);
+                  const regionEntry = (geographicData as any).regions.find((r: any) => r.regions?.name === region);
                   if (regionEntry?.region_code) {
                     allRegionIds.add(regionEntry.region_code);
                   }
@@ -730,7 +730,7 @@ export default function NewProjectPage() {
                 
                 // Find regional unit ID
                 if (regionalUnit) {
-                  const unitEntry = geographicData.regionalUnits.find(u => u.regional_units?.name === regionalUnit);
+                  const unitEntry = (geographicData as any).regionalUnits.find((u: any) => u.regional_units?.name === regionalUnit);
                   if (unitEntry?.unit_code) {
                     allRegionalUnitIds.add(unitEntry.unit_code);
                   }
@@ -738,7 +738,7 @@ export default function NewProjectPage() {
                 
                 // Find municipality ID
                 if (municipality) {
-                  const muniEntry = geographicData.municipalities.find(m => m.municipalities?.name === municipality);
+                  const muniEntry = (geographicData as any).municipalities.find((m: any) => m.municipalities?.name === municipality);
                   if (muniEntry?.muni_code) {
                     allMunicipalityIds.add(muniEntry.muni_code);
                   }

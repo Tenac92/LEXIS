@@ -9,6 +9,7 @@ import {
   FormProvider,
   useFormContext,
 } from "react-hook-form"
+import { AlertCircle, CheckCircle2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
@@ -117,6 +118,7 @@ const FormControl = React.forwardRef<
           : `${formDescriptionId} ${formMessageId}`
       }
       aria-invalid={!!error}
+      data-error={!!error}
       {...props}
     />
   )
@@ -142,23 +144,43 @@ FormDescription.displayName = "FormDescription"
 
 const FormMessage = React.forwardRef<
   HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, children, ...props }, ref) => {
+  React.HTMLAttributes<HTMLParagraphElement> & {
+    showIcon?: boolean
+    variant?: "error" | "success"
+  }
+>(({ className, children, showIcon = true, variant = "error", ...props }, ref) => {
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message) : children
+  const isError = !!error
+  const messageVariant = isError ? "error" : variant
 
   if (!body) {
     return null
   }
 
+  const Icon = messageVariant === "error" ? AlertCircle : CheckCircle2
+  const iconColor = messageVariant === "error" ? "text-destructive" : "text-green-600"
+  const textColor = messageVariant === "error" ? "text-destructive" : "text-green-600"
+
   return (
     <p
       ref={ref}
       id={formMessageId}
-      className={cn("text-sm font-medium text-destructive", className)}
+      className={cn(
+        "text-sm font-medium flex items-center gap-2 mt-1.5 transition-all duration-200",
+        textColor,
+        isError && "animate-in slide-in-from-left-1 duration-300",
+        className
+      )}
       {...props}
     >
-      {body}
+      {showIcon && (
+        <Icon 
+          className={cn("h-4 w-4 flex-shrink-0", iconColor)}
+          data-testid={`icon-${messageVariant}`}
+        />
+      )}
+      <span className="leading-tight">{body}</span>
     </p>
   )
 })
