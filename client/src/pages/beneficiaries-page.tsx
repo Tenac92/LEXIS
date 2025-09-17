@@ -66,6 +66,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { resolveRegionName } from "@shared/utils/geographic-utils";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
@@ -1292,7 +1293,7 @@ function BeneficiaryForm({
       region: beneficiary?.region || "",
       monada: "", 
       adeia: beneficiary?.adeia?.toString() || "",
-      onlinefoldernumber: beneficiary?.onlinefoldernumber || "",
+      // onlinefoldernumber: removed due to database schema issues
       cengsur1: beneficiary?.cengsur1 || "",
       cengname1: beneficiary?.cengname1 || "",
       cengsur2: beneficiary?.cengsur2 || "",
@@ -1364,7 +1365,7 @@ function BeneficiaryForm({
       region: "",
       monada: "", 
       adeia: "",
-      onlinefoldernumber: "",
+      // onlinefoldernumber: removed due to database schema issues
       cengsur1: "",
       cengname1: "",
       cengsur2: "",
@@ -1515,6 +1516,14 @@ function BeneficiaryForm({
     queryKey: ["/api/projects"],
   });
 
+  // Fetch geographic data for region selection
+  const { data: geographicData } = useQuery({
+    queryKey: ["/api/geographic-data"],
+    staleTime: 30 * 60 * 1000, // 30 minutes
+    gcTime: 60 * 60 * 1000, // 1 hour
+    refetchOnWindowFocus: false,
+  });
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -1606,11 +1615,26 @@ function BeneficiaryForm({
                   Περιοχή
                 </FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="π.χ. Αθήνα, Θεσσαλονίκη" 
-                    {...field}
-                    className="capitalize"
-                  />
+                  <Select
+                    value={field.value || 'none'}
+                    onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
+                    disabled={!(geographicData as any)?.regions?.length}
+                  >
+                    <SelectTrigger data-testid="select-beneficiary-region">
+                      <SelectValue placeholder={(geographicData as any)?.regions?.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Καμία επιλογή</SelectItem>
+                      {((geographicData as any)?.regions || [])
+                        .map((r: any) => ({ code: String(r.code), name: r.name }))
+                        .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'))
+                        .map((region: any) => (
+                          <SelectItem key={region.code} value={region.code}>
+                            {region.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -1633,19 +1657,7 @@ function BeneficiaryForm({
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="onlinefoldernumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Αρ. Online Φακέλου</FormLabel>
-                <FormControl>
-                  <Input placeholder="Αριθμός online φακέλου" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Note: onlinefoldernumber field removed due to database schema compatibility issues */}
         </div>
 
         {/* Engineer Information */}
