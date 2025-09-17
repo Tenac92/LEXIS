@@ -1380,7 +1380,15 @@ export class DatabaseStorage implements IStorage {
       
       const { data, error } = await supabase
         .from('beneficiary_payments')
-        .select('*')
+        .select(`
+          *,
+          project_index!inner(
+            expenditure_type_id,
+            expenditure_types!inner(
+              expenditure_types
+            )
+          )
+        `)
         .eq('beneficiary_id', beneficiaryId)
         .order('created_at', { ascending: false });
         
@@ -1389,8 +1397,18 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Found ${data?.length || 0} payments for beneficiary ${beneficiaryId}`);
-      return data || [];
+      // Transform the data to include expenditure_type at the root level
+      const transformedData = data?.map(payment => ({
+        ...payment,
+        expenditure_type: payment.project_index?.expenditure_types?.expenditure_types || 'UNKNOWN'
+      })) || [];
+      
+      console.log(`[Storage] Found ${transformedData.length} payments for beneficiary ${beneficiaryId}`);
+      if (transformedData.length > 0) {
+        console.log(`[Storage] Sample expenditure types:`, transformedData.slice(0, 3).map(p => p.expenditure_type));
+      }
+      
+      return transformedData;
     } catch (error) {
       console.error('[Storage] Error in getBeneficiaryPayments:', error);
       throw error;
