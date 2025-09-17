@@ -249,8 +249,8 @@ async function startServer() {
         res.sendFile(join(__dirname, '../client/index.html'));
       });
 
-      // ALWAYS serve the app on port 5000
-      const PORT = 5000;
+      // Use environment PORT if available, otherwise default to 5000
+      const PORT = parseInt(process.env.PORT || '5000', 10);
       const HOST = '0.0.0.0'; // Bind to all network interfaces
 
       // Start the server with enhanced error handling
