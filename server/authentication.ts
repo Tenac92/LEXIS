@@ -392,8 +392,7 @@ export async function authenticateUser(email: string, password: string): Promise
       id: userData?.id,
       email: userData?.email,
       role: userData?.role,
-      unit_id: userData?.unit_id,
-      unit_id: userData?.unit_id // Use the new unit_id field
+      unit_id: userData?.unit_id
     });
 
     if (userError) {
