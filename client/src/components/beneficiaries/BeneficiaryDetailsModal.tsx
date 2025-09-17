@@ -115,6 +115,8 @@ export function BeneficiaryDetailsModal({
   // Initialize form with react-hook-form
   const form = useForm<BeneficiaryEditForm>({
     resolver: zodResolver(beneficiaryEditSchema),
+    mode: "onBlur", // Enable real-time validation on field blur
+    reValidateMode: "onChange", // Re-validate on change after first validation
     defaultValues: {
       afm: "",
       surname: "",
@@ -201,7 +203,9 @@ export function BeneficiaryDetailsModal({
       return response.json();
     },
     onSuccess: () => {
+      // More granular cache invalidation for immediate UI reflection
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", beneficiary.id] });
       setIsEditing(false);
       toast({
         title: "Επιτυχία",
@@ -218,10 +222,18 @@ export function BeneficiaryDetailsModal({
     },
   });
 
-  // Form submission handler
+  // Form submission handler with data normalization
   const onSubmit = (data: BeneficiaryEditForm) => {
-    console.log("Form submission data:", data);
-    updateBeneficiaryMutation.mutate(data);
+    console.log("Form submission data (before normalization):", data);
+    
+    // Normalize empty region to null for consistent backend handling
+    const normalizedData = {
+      ...data,
+      region: data.region === "" ? null : data.region,
+    };
+    
+    console.log("Form submission data (after normalization):", normalizedData);
+    updateBeneficiaryMutation.mutate(normalizedData as BeneficiaryEditForm);
   };
 
   // Update payment mutation
@@ -411,7 +423,8 @@ export function BeneficiaryDetailsModal({
                   </Button>
                   <Button
                     size="sm"
-                    onClick={form.handleSubmit(onSubmit)}
+                    type="submit"
+                    form="beneficiary-edit-form"
                     disabled={updateBeneficiaryMutation.isPending}
                   >
                     <Save className="w-3 h-3 mr-1" />
@@ -451,7 +464,7 @@ export function BeneficiaryDetailsModal({
 
           <TabsContent value="details" className="flex-1 overflow-y-auto">
             <Form {...form}>
-              <div className="space-y-6">
+              <form id="beneficiary-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Personal Information */}
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
@@ -790,6 +803,7 @@ export function BeneficiaryDetailsModal({
                 </div>
               </div>
               </div>
+              </form>
             </Form>
           </TabsContent>
 
