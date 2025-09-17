@@ -226,6 +226,9 @@ export function CreateDocumentDialog({
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
 
+  // Memoize user unit IDs to avoid duplicate key warnings and improve performance
+  const userUnitIds = useMemo(() => (user?.unit_id ?? []).map(String), [user?.unit_id]);
+
   // References
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
@@ -440,19 +443,19 @@ export function CreateDocumentDialog({
         
         // If the user only has access to one unit, track it for auto-selection
         let userSingleUnit = "";
-        if (user?.unit_id && user.unit_id.length === 1) {
+        if (userUnitIds.length === 1) {
           // Convert unit ID to unit name by finding matching unit
-          const userUnitData = data.find((item: any) => item.id === user.unit_id![0]);
+          const userUnitData = data.find((item: any) => item.id === userUnitIds[0]);
           userSingleUnit = userUnitData?.unit || "";
         }
         
         // Filter units based on user's assigned unit_id array
-        const userAllowedUnits = user?.unit_id || [];
+        const userAllowedUnits = userUnitIds;
         devLog("UserUnits", "Allowed:", userAllowedUnits.length, "Available:", data.length);
         
         const filteredUnits = data.filter((item: any) => {
           // If user has no unit restrictions, show all units (admin case)
-          if (!user?.unit_id || user.unit_id.length === 0) {
+          if (userUnitIds.length === 0) {
             return true;
           }
           
@@ -474,7 +477,7 @@ export function CreateDocumentDialog({
           let unitId = item.id || item.unit || '';
           
           // Ensure the unit ID matches the expected format if it's abbreviated
-          const userHasAccessToUnit = user?.unit_id && user.unit_id.includes(item.id);
+          const userHasAccessToUnit = userUnitIds.includes(item.id);
           if (userHasAccessToUnit || Object.keys(unitAbbreviations).includes(unitId)) {
             // Keep the unit ID as is - it's already in the correct format
           } else if (unitId.length > 20) {
@@ -576,15 +579,15 @@ export function CreateDocumentDialog({
       
       // Don't reset the unit if user has one assigned - preserve auto-selection
       let defaultUnit = "";
-      if (user?.unit_id && user.unit_id.length > 0) {
+      if (userUnitIds.length > 0) {
         // Convert user's unit ID to unit name for form
-        devLog("UserSetup", "unit_id:", user.unit_id, "available:", units.length);
-        const userUnitData = units.find((item: any) => item.unit === user.unit_id![0]);
+        devLog("UserSetup", "unit_id:", userUnitIds, "available:", units.length);
+        const userUnitData = units.find((item: any) => item.id === userUnitIds[0]);
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
-          devLog("AutoSelect", defaultUnit, "for ID:", user.unit_id[0]);
+          devLog("AutoSelect", defaultUnit, "for ID:", userUnitIds[0]);
         } else {
-          devLog("NoMatch", "No unit found for ID:", user.unit_id[0]);
+          devLog("NoMatch", "No unit found for ID:", userUnitIds[0]);
         }
       }
       
@@ -749,8 +752,8 @@ export function CreateDocumentDialog({
         devLog("AutoUnit", unitToSelect);
       }
       // Case 2: User has only one assigned unit - auto-select it
-      else if (user?.unit_id && user.unit_id.length === 1) {
-        const userUnitData = units.find((unit: any) => unit.unit === user.unit_id![0]);
+      else if (userUnitIds.length === 1) {
+        const userUnitData = units.find((unit: any) => unit.id === userUnitIds[0]);
         if (userUnitData) {
           unitToSelect = userUnitData.id;
           devLog("AssignedUnit", unitToSelect);
@@ -1974,8 +1977,8 @@ export function CreateDocumentDialog({
         // Reset entire form after successful document creation
         // Convert user's unit ID to unit name for form default
         let defaultUnit = "";
-        if (user?.unit_id && user.unit_id.length > 0 && units.length > 0) {
-          const userUnitData = units.find((unit: any) => unit.id === user.unit_id![0]);
+        if (userUnitIds.length > 0 && units.length > 0) {
+          const userUnitData = units.find((unit: any) => unit.id === userUnitIds[0]);
           defaultUnit = userUnitData?.name || "";
         }
         
@@ -2131,9 +2134,9 @@ export function CreateDocumentDialog({
     if (units?.length === 1) {
       // Auto-selected the only available unit
       form.setValue("unit", units[0].id);
-    } else if (user?.unit_id?.length === 1 && units?.length > 0) {
+    } else if (userUnitIds.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
-      const userUnitId = user?.unit_id?.[0] || "";
+      const userUnitId = userUnitIds[0] || "";
       const matchingUnit = units.find((unit) => unit.id === userUnitId);
       if (matchingUnit) {
         // Auto-selected user's unit
@@ -2498,10 +2501,10 @@ export function CreateDocumentDialog({
                       {field.value && <p className="text-xs text-muted-foreground mt-1 font-medium">
                         Επιλεγμένη μονάδα: {Array.isArray(units) && units.length > 0 
                           ? (units.find((u: any) => u.id === field.value)?.name || 
-                             (user?.unit_id && user.unit_id.length === 1 ? 
-                               (units.find(u => u.id === user.unit_id![0])?.name || field.value) : field.value))
-                          : (user?.unit_id && user.unit_id.length === 1 ? 
-                               (units.find(u => u.id === user.unit_id![0])?.name || field.value) : field.value)}
+                             (userUnitIds.length === 1 ? 
+                               (units.find(u => u.id === userUnitIds[0])?.name || field.value) : field.value))
+                          : (userUnitIds.length === 1 ? 
+                               (units.find(u => u.id === userUnitIds[0])?.name || field.value) : field.value)}
                       </p>}
                     </FormItem>
                   )}
@@ -3389,12 +3392,12 @@ export function CreateDocumentDialog({
   
   useEffect(() => {
     // Only run this once to avoid infinite loops
-    if (user?.unit_id?.length === 1 && !unitInitializedRef.current) {
+    if (userUnitIds.length === 1 && !unitInitializedRef.current) {
       unitInitializedRef.current = true;
       
       // Set the unit value immediately without delay
       // Convert user's unit ID to unit name for display
-      const userUnitData = units.find((u: any) => u.id === user.unit_id![0]);
+      const userUnitData = units.find((u: any) => u.id === userUnitIds[0]);
       const unitValue = userUnitData?.name || "";
       form.setValue("unit", unitValue, { 
         shouldDirty: false,
