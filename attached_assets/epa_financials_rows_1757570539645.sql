@@ -1,1 +1,0 @@
-INSERT INTO "public"."epa_financials" ("id", "epa_version_id", "year", "total_public_expense", "eligible_public_expense", "created_at", "updated_at") VALUES ('4', '31', '2025', '2.22', '2.00', '2025-09-10 11:29:44.205', '2025-09-10 11:29:44.205');
