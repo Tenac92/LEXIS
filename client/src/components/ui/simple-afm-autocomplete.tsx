@@ -231,11 +231,15 @@ export function SimpleAFMAutocomplete({
     return installmentsByStatus;
   };
   
-  // Enhanced helper function to determine next available installment and amount
+  // Fixed installment logic based on user requirements
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
-    // Define installment sequence at the very beginning to avoid hoisting issues
-    const installmentSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'ΣΤ', 'Ζ', 'Η', 'Θ', 'Ι'];
-    
+    console.log('[SmartAutocomplete] Calculating next installment for:', { 
+      beneficiaryId: beneficiary.id, 
+      expenditureType, 
+      userUnit, 
+      projectNa853 
+    });
+
     if (!beneficiary.oikonomika || typeof beneficiary.oikonomika !== 'object') {
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
@@ -252,71 +256,90 @@ export function SimpleAFMAutocomplete({
     }
 
     console.log('[SmartAutocomplete] Processing beneficiary payments:', expenditureData);
-    console.log('[SmartAutocomplete] Matching against:', { expenditureType, userUnit, projectNa853 });
 
-    // Use unified matching algorithm with prioritized criteria
-    const matchingPayments = findMatchingPayments(expenditureData, expenditureType, userUnit, projectNa853);
+    // Extract all existing installments (ignore ΕΦΑΠΑΞ for sequence logic)
+    const allInstallments: Array<{ installment: string, amount: number, created_at: string }> = [];
     
-    if (matchingPayments.length === 0) {
-      console.log('[SmartAutocomplete] No matching payments found, using defaults');
+    expenditureData.forEach(payment => {
+      // Use existing helper to properly handle arrays and validate installments
+      const installments = validateInstallments(payment.installment);
+      
+      installments.forEach(installmentKey => {
+        // Skip ΕΦΑΠΑΞ as it doesn't affect regular installment sequence
+        if (installmentKey === 'ΕΦΑΠΑΞ') {
+          console.log('[SmartAutocomplete] Skipping ΕΦΑΠΑΞ installment (stands alone)');
+          return;
+        }
+        
+        allInstallments.push({
+          installment: installmentKey,
+          amount: safeParseAmount(payment.amount),
+          created_at: payment.created_at || ''
+        });
+      });
+    });
+
+    console.log('[SmartAutocomplete] Non-ΕΦΑΠΑΞ installments found:', allInstallments);
+
+    if (allInstallments.length === 0) {
+      // No regular installments exist, start with Α
+      console.log('[SmartAutocomplete] No regular installments found, suggesting Α');
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
-    
-    // Process installments using unified logic
-    const installmentsByStatus = processInstallments(matchingPayments, installmentSequence);
-    console.log('[SmartAutocomplete] Processed installments by status:', installmentsByStatus);
 
-    // Find next available installment following your logic:
-    // 1. Next one with no status (if exists)
-    // 2. Next one in sequence if all have status
-    let selectedInstallment = 'Α';
-    let selectedAmount = 0;
+    // Find the highest installment in the Greek letter sequence
+    const greekSequence = ['Α', 'Β', 'Γ', 'Δ', 'Ε', 'ΣΤ', 'Ζ', 'Η', 'Θ', 'Ι', 'ΙΑ', 'ΙΒ', 'ΙΓ', 'ΙΔ', 'ΙΕ'];
+    const numericInstallments = allInstallments.filter(p => /^\d+$/.test(p.installment));
+    const greekInstallments = allInstallments.filter(p => greekSequence.includes(p.installment));
 
-    if (installmentsByStatus.withoutStatus.length > 0) {
-      // Find the earliest installment with no status
-      const earliestNoStatus = installmentsByStatus.withoutStatus.reduce((earliest, current) => {
-        const earliestIndex = installmentSequence.indexOf(earliest.currentInstallment);
-        const currentIndex = installmentSequence.indexOf(current.currentInstallment);
-        return currentIndex < earliestIndex ? current : earliest;
-      });
+    let nextInstallment: string;
+    let referenceAmount = 0;
+
+    if (greekInstallments.length > 0) {
+      // Handle Greek letter sequence
+      const maxGreekIndex = Math.max(...greekInstallments.map(p => greekSequence.indexOf(p.installment)));
+      const highestInstallment = greekSequence[maxGreekIndex];
       
-      selectedInstallment = earliestNoStatus.currentInstallment;
-      selectedAmount = safeParseAmount(earliestNoStatus.amount);
-      
-      console.log('[SmartAutocomplete] Selected installment with no status:', selectedInstallment, selectedAmount);
-    } else if (installmentsByStatus.withStatus.length > 0) {
-      // All installments have status, find the next one in sequence
-      const lastInstallmentWithStatus = installmentsByStatus.withStatus.reduce((latest, current) => {
-        const latestIndex = installmentSequence.indexOf(latest.currentInstallment);
-        const currentIndex = installmentSequence.indexOf(current.currentInstallment);
-        return currentIndex > latestIndex ? current : latest;
-      });
-      
-      const lastIndex = installmentSequence.indexOf(lastInstallmentWithStatus.currentInstallment);
-      const nextIndex = lastIndex + 1;
-      
-      if (nextIndex < installmentSequence.length) {
-        selectedInstallment = installmentSequence[nextIndex];
-        // Use amount from previous installment
-        selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
+      // Check if we can suggest the next installment in sequence
+      if (maxGreekIndex + 1 < greekSequence.length) {
+        nextInstallment = greekSequence[maxGreekIndex + 1];
       } else {
-        // If we're at the end, use the last installment data
-        selectedInstallment = lastInstallmentWithStatus.currentInstallment;
-        selectedAmount = safeParseAmount(lastInstallmentWithStatus.amount);
+        // At end of sequence, suggest extending it
+        nextInstallment = 'ΙΣΤ'; // Next logical installment after ΙΕ
       }
       
-      console.log('[SmartAutocomplete] All have status, selected next:', selectedInstallment, selectedAmount);
+      // Get amount from the most recent entry of the highest-used installment type
+      const highestInstallmentEntries = greekInstallments.filter(p => p.installment === highestInstallment);
+      const mostRecentHighest = highestInstallmentEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      referenceAmount = mostRecentHighest?.amount || 0;
+      
+      console.log('[SmartAutocomplete] Greek sequence detected. Highest:', highestInstallment, 'Next:', nextInstallment, 'Amount from most recent', highestInstallment, ':', referenceAmount);
+    } else if (numericInstallments.length > 0) {
+      // Handle numeric sequence
+      const maxNumeric = Math.max(...numericInstallments.map(p => parseInt(p.installment)));
+      const highestInstallment = maxNumeric.toString();
+      nextInstallment = (maxNumeric + 1).toString();
+      
+      // Get amount from the most recent entry of the highest-used installment type
+      const highestInstallmentEntries = numericInstallments.filter(p => p.installment === highestInstallment);
+      const mostRecentHighest = highestInstallmentEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+      referenceAmount = mostRecentHighest?.amount || 0;
+      
+      console.log('[SmartAutocomplete] Numeric sequence detected. Highest:', maxNumeric, 'Next:', nextInstallment, 'Amount from most recent', highestInstallment, ':', referenceAmount);
+    } else {
+      // Unknown installment format, default to Α
+      nextInstallment = 'Α';
+      referenceAmount = 0;
+      console.log('[SmartAutocomplete] Unknown installment format, defaulting to Α');
     }
 
-    // Create suggested installments and amounts
-    const suggestedInstallments = [selectedInstallment];
-    const installmentAmounts = { [selectedInstallment]: selectedAmount };
+    console.log('[SmartAutocomplete] Final suggestion:', { installment: nextInstallment, amount: referenceAmount });
 
     return {
-      installment: selectedInstallment,
-      amount: selectedAmount,
-      suggestedInstallments,
-      installmentAmounts
+      installment: nextInstallment,
+      amount: referenceAmount,
+      suggestedInstallments: [nextInstallment],
+      installmentAmounts: { [nextInstallment]: referenceAmount }
     };
   }, []);
 
