@@ -110,19 +110,19 @@ export async function getDashboardStats(req: Request, res: Response) {
       .from('budget_history')
       .select(`
         id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
-        Projects!budget_history_project_id_fkey(mis, project_title, unit_id)
+        Projects!budget_history_project_id_fkey(mis, project_title)
       `);
     
-    // For non-admin users, filter by unit_id through project relationship
+    // For non-admin users, filter by unit_id through project_index relationship
     const userRole = (req as any).user?.role;
     if (userRole !== 'admin' && primaryUnitId) {
-      // Join with Projects table to filter by unit_id
+      // Get projects that belong to the user's unit through project_index
       const { data: projectsInUnit } = await supabase
-        .from('Projects')
-        .select('id')
-        .eq('unit_id', primaryUnitId);
+        .from('project_index')
+        .select('project_id')
+        .eq('monada_id', primaryUnitId);
       
-      const projectIdsInUnit = projectsInUnit?.map(p => p.id) || [];
+      const projectIdsInUnit = projectsInUnit?.map(p => p.project_id) || [];
       if (projectIdsInUnit.length > 0) {
         historyQuery = historyQuery.in('project_id', projectIdsInUnit);
       } else {
