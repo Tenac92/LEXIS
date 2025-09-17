@@ -1073,11 +1073,13 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      // For exact AFM match first, then partial matches
+      // Support prefix matching: use PostgreSQL to convert AFM to text and match prefixes
+      // This allows typing "1231231" to find AFM "123123123"
       const { data, error } = await supabase
         .from('beneficiaries')
         .select('*')
-        .eq('afm', searchNum)
+        .filter('afm', 'gte', searchNum)
+        .filter('afm', 'lt', searchNum * 10 + 10)
         .order('id', { ascending: false });
         
       if (error) {
@@ -1086,7 +1088,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Return all beneficiaries - let the frontend determine available installments
-      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM: ${afm}`);
+      console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM prefix: ${afm}`);
       return data || [];
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);

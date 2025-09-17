@@ -119,26 +119,26 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length !== 7) return [];
+      if (!searchTerm || searchTerm.length < 7) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length === 7,
+    enabled: useEmployeeData && searchTerm.length >= 7,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length !== 7) return [];
+      if (!searchTerm || searchTerm.length < 7) return [];
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length === 7,
+    enabled: !useEmployeeData && searchTerm.length >= 7,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
@@ -293,7 +293,7 @@ export function SimpleAFMAutocomplete({
     const numericValue = value.replace(/\D/g, '').slice(0, 9);
     
     setSearchTerm(numericValue);
-    setShowDropdown(numericValue.length === 7);
+    setShowDropdown(numericValue.length >= 7);
     
     // Notify parent component when user types
     onChange?.(numericValue);
@@ -308,12 +308,12 @@ export function SimpleAFMAutocomplete({
         onChange={handleInputChange}
         disabled={disabled}
         className="w-full"
-        onFocus={() => searchTerm.length === 7 && setShowDropdown(true)}
+        onFocus={() => searchTerm.length >= 7 && setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
       />
       
       {/* Simple dropdown results */}
-      {showDropdown && searchTerm.length === 7 && (
+      {showDropdown && searchTerm.length >= 7 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-3">
