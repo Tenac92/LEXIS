@@ -914,32 +914,74 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
       
-      // For bigint fields, use range search to find AFM numbers that start with the search term
-      const searchNum = parseInt(afm);
-      if (isNaN(searchNum)) {
+      // Validate that AFM contains only digits
+      if (!/^\d+$/.test(afm)) {
+        console.log(`[Storage] Invalid AFM format (contains non-digits): ${afm}`);
         return [];
       }
       
-      // Calculate range for numbers that start with the search term
-      const multiplier = Math.pow(10, (9 - afm.length)); // AFM is typically 9 digits
-      const rangeStart = searchNum * multiplier;
-      const rangeEnd = (searchNum + 1) * multiplier - 1;
+      const minDigits = 9; // Greek AFM is always 9 digits
+      const currentDigits = afm.length;
       
-      const { data, error } = await supabase
-        .from('Employees')
-        .select('*')
-        .gte('afm', rangeStart)
-        .lte('afm', rangeEnd)
-        .order('surname', { ascending: true })
-        .limit(20);
+      if (currentDigits >= minDigits) {
+        // Exact match for full AFM - search both as string and number to handle leading zeros
+        console.log(`[Storage] Exact AFM search for: ${afm}`);
         
-      if (error) {
-        console.error('[Storage] Error searching employees by AFM:', error);
-        throw error;
+        // Try searching as string first (preserves leading zeros)
+        let { data, error } = await supabase
+          .from('Employees')
+          .select('*')
+          .eq('afm', afm)
+          .order('surname', { ascending: true })
+          .limit(20);
+          
+        if (error) {
+          console.error('[Storage] Error searching employees by exact AFM (string):', error);
+          throw error;
+        }
+        
+        // If no results with string search and AFM has leading zeros, try numeric search
+        if ((!data || data.length === 0) && afm.startsWith('0')) {
+          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
+          const searchNum = parseInt(afm);
+          
+          const numericResult = await supabase
+            .from('Employees')
+            .select('*')
+            .eq('afm', searchNum)
+            .order('surname', { ascending: true })
+            .limit(20);
+            
+          if (numericResult.error) {
+            console.error('[Storage] Error searching employees by exact AFM (numeric):', numericResult.error);
+            throw numericResult.error;
+          }
+          
+          data = numericResult.data;
+        }
+        
+        console.log(`[Storage] Found ${data?.length || 0} employees with exact AFM: ${afm}`);
+        return data || [];
+      } else {
+        // Prefix matching using text-based pattern matching for partial AFM
+        console.log(`[Storage] Text-based prefix search for AFM: ${afm}`);
+        
+        // Use text pattern matching to handle leading zeros properly
+        const { data, error } = await supabase
+          .from('Employees')
+          .select('*')
+          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
+          .order('surname', { ascending: true })
+          .limit(20);
+          
+        if (error) {
+          console.error('[Storage] Error searching employees by AFM prefix:', error);
+          throw error;
+        }
+        
+        console.log(`[Storage] Found ${data?.length || 0} employees matching AFM prefix: ${afm}`);
+        return data || [];
       }
-      
-      console.log(`[Storage] Found ${data?.length || 0} employees matching AFM range ${rangeStart}-${rangeEnd}`);
-      return data || [];
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
       throw error;
@@ -1068,48 +1110,65 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Searching beneficiaries by AFM: ${afm}`);
       
-      const searchNum = parseInt(afm);
-      if (isNaN(searchNum)) {
+      // Validate that AFM contains only digits
+      if (!/^\d+$/.test(afm)) {
+        console.log(`[Storage] Invalid AFM format (contains non-digits): ${afm}`);
         return [];
       }
       
-      // For prefix matching, create a range where AFM starts with the given digits
-      // Example: "1231231" should match AFMs from 1231231000000000 to 1231231999999999
       const minDigits = 9; // Greek AFM is always 9 digits
       const currentDigits = afm.length;
       
       if (currentDigits >= minDigits) {
-        // Exact match for full AFM
-        const { data, error } = await supabase
+        // Exact match for full AFM - search both as string and number to handle leading zeros
+        console.log(`[Storage] Exact AFM search for: ${afm}`);
+        
+        // Try searching as string first (preserves leading zeros)
+        let { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .eq('afm', searchNum)
+          .eq('afm', afm)
           .order('id', { ascending: false });
           
         if (error) {
-          console.error('[Storage] Error searching beneficiaries by exact AFM:', error);
+          console.error('[Storage] Error searching beneficiaries by exact AFM (string):', error);
           throw error;
+        }
+        
+        // If no results with string search and AFM has leading zeros, try numeric search
+        if ((!data || data.length === 0) && afm.startsWith('0')) {
+          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
+          const searchNum = parseInt(afm);
+          
+          const numericResult = await supabase
+            .from('beneficiaries')
+            .select('*')
+            .eq('afm', searchNum)
+            .order('id', { ascending: false });
+            
+          if (numericResult.error) {
+            console.error('[Storage] Error searching beneficiaries by exact AFM (numeric):', numericResult.error);
+            throw numericResult.error;
+          }
+          
+          data = numericResult.data;
         }
         
         console.log(`[Storage] Found ${data?.length || 0} beneficiaries with exact AFM: ${afm}`);
         return data || [];
       } else {
-        // Prefix matching using range
-        const multiplier = Math.pow(10, minDigits - currentDigits);
-        const minRange = searchNum * multiplier;
-        const maxRange = (searchNum + 1) * multiplier - 1;
+        // Prefix matching using text-based pattern matching for partial AFM
+        console.log(`[Storage] Text-based prefix search for AFM: ${afm}`);
         
-        console.log(`[Storage] Prefix search: AFM >= ${minRange} AND AFM <= ${maxRange}`);
-        
+        // Use text pattern matching to handle leading zeros properly
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .gte('afm', minRange)
-          .lte('afm', maxRange)
+          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
           .order('id', { ascending: false });
           
         if (error) {
-          console.error('[Storage] Error searching beneficiaries by AFM range:', error);
+          console.error('[Storage] Error searching beneficiaries by AFM prefix:', error);
           throw error;
         }
         
