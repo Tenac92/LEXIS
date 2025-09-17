@@ -379,7 +379,7 @@ export const employees = pgTable(
  */
 export const beneficiaries = pgTable("beneficiaries", {
   id: serial("id").primaryKey(),
-  afm: decimal("afm", { precision: 12, scale: 0 }).notNull().unique(), // Tax ID (AFM) - numeric as per database
+  afm: text("afm").notNull().unique(), // Tax ID (AFM) - text as per database
   surname: text("surname").notNull(),
   name: text("name").notNull(),
   fathername: text("fathername"),

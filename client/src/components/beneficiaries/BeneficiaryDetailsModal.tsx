@@ -44,7 +44,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Beneficiary } from "@shared/schema";
 
 interface BeneficiaryDetailsModalProps {
@@ -104,6 +104,32 @@ export function BeneficiaryDetailsModal({
   // Filter payments for this specific beneficiary
   const payments = Array.isArray(allPayments) ? 
     allPayments.filter((payment: any) => payment.beneficiary_id === beneficiary.id) : [];
+
+  // Fetch geographic data for region selection
+  const { data: geographicData } = useQuery({
+    queryKey: ['/api/geographic-data'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache
+    gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
+    refetchOnWindowFocus: false,
+    enabled: open, // Only fetch when modal is open
+  });
+
+  // Get region data directly from geographic data for code/name mapping
+  const availableRegions = useMemo(() => {
+    if (!geographicData?.regions) return [];
+    return (geographicData.regions as Array<{code: number; name: string}>)
+      .map(r => ({ code: String(r.code), name: r.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'el'));
+  }, [geographicData]);
+
+  // Helper function to get region name from region code (for display)
+  const getRegionNameFromCode = (regionCode: string | null | undefined): string => {
+    if (!regionCode || !availableRegions.length) return regionCode || 'Δεν έχει καθοριστεί';
+    
+    // Look up region name by code
+    const region = availableRegions.find(r => r.code === regionCode);
+    return region?.name || regionCode;
+  };
 
   // Update beneficiary mutation
   const updateBeneficiaryMutation = useMutation({
@@ -440,14 +466,27 @@ export function BeneficiaryDetailsModal({
                       Περιφέρεια:
                     </label>
                     {isEditing ? (
-                      <Input
-                        value={editedBeneficiary?.region || ''}
-                        onChange={(e) => setEditedBeneficiary(prev => prev ? { ...prev, region: e.target.value } : null)}
-                        className="mt-1"
-                        placeholder="Περιφέρεια"
-                      />
+                      <Select
+                        value={editedBeneficiary?.region ?? ''}
+                        onValueChange={(value) => setEditedBeneficiary(prev => prev ? { ...prev, region: value } : null)}
+                        disabled={!availableRegions.length}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder={availableRegions.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Καμία επιλογή</SelectItem>
+                          {availableRegions.map((region) => (
+                            <SelectItem key={region.code} value={region.code}>
+                              {region.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
-                      <p className="text-blue-900 font-medium mt-1">{beneficiary.region || 'Δεν έχει καθοριστεί'}</p>
+                      <p className="text-blue-900 font-medium mt-1">
+                        {getRegionNameFromCode(beneficiary.region)}
+                      </p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
