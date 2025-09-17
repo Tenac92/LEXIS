@@ -95,9 +95,12 @@ export function parseDatabaseError(error: any): {
           type: ErrorType.CONFLICT,
           message: 'Duplicate entry detected',
           statusCode: 409,
+          code: error.code, // Preserve original PostgreSQL error code
+          constraint: error.constraint, // Add constraint at top level for client parsing
           details: {
             constraint: error.constraint,
-            detail: error.detail
+            detail: error.detail,
+            code: error.code // Also keep in details for compatibility
           }
         };
       case '23503': // foreign_key_violation
