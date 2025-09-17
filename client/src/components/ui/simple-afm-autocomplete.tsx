@@ -119,26 +119,26 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 7) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 2,
+    enabled: useEmployeeData && searchTerm.length >= 7,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 7) return [];
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 2,
+    enabled: !useEmployeeData && searchTerm.length >= 7,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
@@ -206,17 +206,20 @@ export function SimpleAFMAutocomplete({
   // Unified installment processing function
   const processInstallments = (payments: any[], installmentSequence: string[]) => {
     const installmentsByStatus: Record<string, any[]> = {
-      withStatus: [],
-      withoutStatus: []
+      withStatus: [],  // Paid installments
+      withoutStatus: [] // Unpaid installments
     };
     
     payments.forEach(payment => {
       const installments = validateInstallments(payment.installment);
-      const hasStatus = isValidString(payment.status);
+      // Fix status logic: "pending", "draft", "submitted", etc. = unpaid
+      // "paid", "completed", "processed" = paid
+      const isPaid = payment.status && 
+                     ['paid', 'completed', 'processed', 'finalized'].includes(payment.status.toLowerCase().trim());
       
       installments.forEach((inst: string) => {
         if (installmentSequence.includes(inst)) {
-          if (hasStatus) {
+          if (isPaid) {
             installmentsByStatus.withStatus.push({ ...payment, currentInstallment: inst });
           } else {
             installmentsByStatus.withoutStatus.push({ ...payment, currentInstallment: inst });
@@ -237,9 +240,15 @@ export function SimpleAFMAutocomplete({
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     }
 
-    const expenditureData = beneficiary.oikonomika[expenditureType];
+    // Try specific expenditure type first, then fallback to UNKNOWN
+    let expenditureData = beneficiary.oikonomika[expenditureType];
     if (!expenditureData || !Array.isArray(expenditureData)) {
-      return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
+      // Fallback to UNKNOWN category
+      expenditureData = beneficiary.oikonomika['UNKNOWN'];
+      if (!expenditureData || !Array.isArray(expenditureData)) {
+        return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
+      }
+      console.log('[SmartAutocomplete] Using UNKNOWN category as fallback for expenditure type:', expenditureType);
     }
 
     console.log('[SmartAutocomplete] Processing beneficiary payments:', expenditureData);
@@ -346,7 +355,7 @@ export function SimpleAFMAutocomplete({
     const numericValue = value.replace(/\D/g, '').slice(0, 9);
     
     setSearchTerm(numericValue);
-    setShowDropdown(numericValue.length >= 2);
+    setShowDropdown(numericValue.length >= 7);
     
     // Notify parent component when user types
     onChange?.(numericValue);
@@ -361,12 +370,12 @@ export function SimpleAFMAutocomplete({
         onChange={handleInputChange}
         disabled={disabled}
         className="w-full"
-        onFocus={() => searchTerm.length >= 2 && setShowDropdown(true)}
+        onFocus={() => searchTerm.length >= 7 && setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
       />
       
       {/* Simple dropdown results */}
-      {showDropdown && searchTerm.length >= 2 && (
+      {showDropdown && searchTerm.length >= 7 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-3">
