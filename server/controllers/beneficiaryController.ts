@@ -407,28 +407,37 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
 
     console.log(`[Beneficiaries] Updating beneficiary ${id}:`, req.body);
     
-    // Transform data for proper validation (same as create)
+    // Transform data for proper validation with type safety
     const transformedData = {
       ...req.body,
-      // Convert AFM from string to integer for database storage
-      afm: req.body.afm ? parseInt(req.body.afm) : undefined,
+      // Keep AFM as string for schema compatibility
+      afm: req.body.afm ? String(req.body.afm).trim() : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
       // Set unit from user's authenticated units (use unit ID)
       monada: req.user?.unit_id?.[0] || req.body.monada
     };
 
-    // Convert region name to region code if provided
+    // Handle region: detect if it's a numeric code vs name
     if (req.body.region && typeof req.body.region === 'string') {
-      console.log(`[Beneficiaries] Converting region name "${req.body.region}" to code for update`);
-      const regionCode = await getRegionCodeFromName(req.body.region);
-      if (regionCode) {
-        transformedData.region = regionCode;
-        console.log(`[Beneficiaries] Successfully converted region "${req.body.region}" to code "${regionCode}" for update`);
+      const regionString = String(req.body.region);
+      
+      // Check if it's already a numeric code (e.g., "1", "2", etc.)
+      if (/^\d+$/.test(regionString)) {
+        console.log(`[Beneficiaries] Region "${regionString}" detected as numeric code, using directly`);
+        transformedData.region = regionString;
       } else {
-        console.log(`[Beneficiaries] Could not find region code for "${req.body.region}" during update, keeping original value`);
-        // Keep the original value if no mapping is found
-        transformedData.region = req.body.region;
+        // It's a region name, do lookup
+        console.log(`[Beneficiaries] Converting region name "${req.body.region}" to code for update`);
+        const regionCode = await getRegionCodeFromName(req.body.region);
+        if (regionCode) {
+          transformedData.region = regionCode;
+          console.log(`[Beneficiaries] Successfully converted region "${req.body.region}" to code "${regionCode}" for update`);
+        } else {
+          console.log(`[Beneficiaries] Could not find region code for "${req.body.region}" during update, keeping original value`);
+          // Keep the original value if no mapping is found
+          transformedData.region = req.body.region;
+        }
       }
     }
 

@@ -176,10 +176,17 @@ export function BeneficiaryDetailsModal({
 
   // Get region data directly from geographic data for code/name mapping
   const availableRegions = useMemo(() => {
-    if (!geographicData?.regions) return [];
-    return (geographicData.regions as Array<{code: number; name: string}>)
-      .map(r => ({ code: String(r.code), name: r.name }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'el'));
+    if (!geographicData) return [];
+    
+    // Handle geographic data safely with type assertion
+    const data = geographicData as any;
+    const regions = data?.regions;
+    
+    if (!Array.isArray(regions)) return [];
+    
+    return regions
+      .map((r: any) => ({ code: String(r.code), name: r.name }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'));
   }, [geographicData]);
 
   // Helper function to get region name from region code (for display)
@@ -226,10 +233,11 @@ export function BeneficiaryDetailsModal({
   const onSubmit = (data: BeneficiaryEditForm) => {
     console.log("Form submission data (before normalization):", data);
     
-    // Normalize empty region to null for consistent backend handling
+    // Normalize data types and empty values for consistent backend handling
     const normalizedData = {
       ...data,
-      region: data.region === "" ? null : data.region,
+      afm: String(data.afm ?? "").trim(), // Ensure AFM is always string
+      region: data.region === "" ? null : (data.region ? String(data.region) : null), // Ensure region is string or null
     };
     
     console.log("Form submission data (after normalization):", normalizedData);
