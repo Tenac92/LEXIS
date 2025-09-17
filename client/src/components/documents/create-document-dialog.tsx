@@ -170,7 +170,6 @@ const recipientSchema = z.object({
     .min(2, "Το επώνυμο πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
   fathername: z.string().optional().default(""), // Made optional with empty string default
   afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
-  region: z.string().optional().default(""), // Added region field
   amount: z.number().min(0.01, "Το ποσό πρέπει να είναι μεγαλύτερο από 0"),
   // Νέο πεδίο για δευτερεύον κείμενο - default empty string
   secondary_text: z.string().default(""),
@@ -2891,40 +2890,7 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* Περιφέρεια */}
-                          <div className="md:col-span-2 md:row-span-1">
-                            <FormField
-                              control={form.control}
-                              name={`recipients.${index}.region`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Select
-                                      value={field.value || 'none'}
-                                      onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
-                                      disabled={!(geographicData as any)?.regions?.length}
-                                    >
-                                      <SelectTrigger data-testid={`select-recipient-${index}-region`}>
-                                        <SelectValue placeholder={geographicData?.regions?.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="none">Καμία επιλογή</SelectItem>
-                                        {(geographicData?.regions || [])
-                                          .map((r: any) => ({ code: String(r.code), name: r.name }))
-                                          .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'))
-                                          .map((region) => (
-                                            <SelectItem key={region.code} value={region.code}>
-                                              {region.name}
-                                            </SelectItem>
-                                          ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
