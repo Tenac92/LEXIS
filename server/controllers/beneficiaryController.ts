@@ -328,6 +328,20 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       monada: req.user?.unit_id?.[0] || req.body.monada
     };
 
+    // Convert region name to region code if provided
+    if (req.body.region && typeof req.body.region === 'string') {
+      console.log(`[Beneficiaries] Converting region name "${req.body.region}" to code`);
+      const regionCode = await getRegionCodeFromName(req.body.region);
+      if (regionCode) {
+        transformedData.region = regionCode;
+        console.log(`[Beneficiaries] Successfully converted region "${req.body.region}" to code "${regionCode}"`);
+      } else {
+        console.log(`[Beneficiaries] Could not find region code for "${req.body.region}", keeping original value`);
+        // Keep the original value if no mapping is found
+        transformedData.region = req.body.region;
+      }
+    }
+
     // If we have financial data, structure it properly for the oikonomika field
     if (req.body.paymentType && req.body.amount && req.body.installment) {
       // Parse European decimal format (e.g., "10.286,06" -> 10286.06)
