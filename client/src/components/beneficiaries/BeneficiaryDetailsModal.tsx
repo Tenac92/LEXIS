@@ -802,7 +802,6 @@ export function BeneficiaryDetailsModal({
                   )}
                 </div>
               </div>
-              </div>
               </form>
             </Form>
           </TabsContent>
