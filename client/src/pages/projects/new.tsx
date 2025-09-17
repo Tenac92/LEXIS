@@ -238,10 +238,10 @@ const comprehensiveProjectSchema = z.object({
   project_details: z.object({
     mis: z.string().default(""),
     sa: z.string().default(""),
-    inc_year: z.string().default(""),
-    project_title: z.string().default(""),
-    project_description: z.string().default(""),
-    summary_description: z.string().default(""),
+    inc_year: z.string().trim().nonempty("Το έτος ένταξης είναι υποχρεωτικό").length(4, "Το έτος πρέπει να έχει 4 ψηφία").regex(/^(19|20)\d{2}$/, "Παρακαλώ εισάγετε έγκυρο έτος (π.χ. 2024)").default(""),
+    project_title: z.string().trim().min(10, "Ο τίτλος του έργου πρέπει να έχει τουλάχιστον 10 χαρακτήρες").max(500, "Ο τίτλος του έργου δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες").default(""),
+    project_description: z.string().trim().min(20, "Η περιγραφή του έργου πρέπει να έχει τουλάχιστον 20 χαρακτήρες").max(2000, "Η περιγραφή του έργου δεν μπορεί να υπερβαίνει τους 2000 χαρακτήρες").default(""),
+    summary_description: z.string().trim().min(10, "Η συνοπτική περιγραφή πρέπει να έχει τουλάχιστον 10 χαρακτήρες").max(500, "Η συνοπτική περιγραφή δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες").default(""),
     expenses_executed: z.string().default(""),
     project_status: z.string().default("Ενεργό"),
   }).default({ 
