@@ -368,22 +368,81 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     actualProjectId = numericProjectId;
     console.log('[DocumentsController] V2 Using numeric project_id:', actualProjectId);
     
-    // Find existing project_index entry for this project and unit
+    // Find existing project_index entry for this project, unit, and expenditure type
     if (actualProjectId) {
       try {
-        const { data: projectIndexData } = await supabase
+        // STRICT VALIDATION: Look up expenditure_type_id from expenditure_types table
+        if (!expenditure_type) {
+          return res.status(400).json({
+            message: 'Expenditure type is required for document creation',
+            error: 'Missing expenditure_type field'
+          });
+        }
+        
+        console.log('[DocumentsController] V2 Looking up expenditure_type_id for:', expenditure_type);
+        const { data: expTypeData, error: expTypeError } = await supabase
+          .from('expenditure_types')
+          .select('id')
+          .eq('expenditure_types', expenditure_type)
+          .single();
+        
+        if (expTypeError || !expTypeData) {
+          console.error('[DocumentsController] V2 Expenditure type not found:', expenditure_type, 'Error:', expTypeError);
+          return res.status(400).json({
+            message: `Expenditure type "${expenditure_type}" not found in database`,
+            error: 'Invalid expenditure_type',
+            details: expTypeError?.message
+          });
+        }
+        
+        const expenditureTypeId = expTypeData.id;
+        console.log('[DocumentsController] V2 Found expenditure_type_id:', expenditureTypeId, 'for type:', expenditure_type);
+        
+        // STRICT VALIDATION: Find project_index entry matching ALL three criteria
+        console.log('[DocumentsController] V2 Looking up project_index with project_id:', actualProjectId, 'monada_id:', numericUnitId, 'expenditure_type_id:', expenditureTypeId);
+        const { data: projectIndexData, error: projectIndexError } = await supabase
           .from('project_index')
           .select('id')
           .eq('project_id', actualProjectId)
           .eq('monada_id', numericUnitId)
+          .eq('expenditure_type_id', expenditureTypeId)
           .limit(1);
         
-        if (projectIndexData && projectIndexData.length > 0) {
-          projectIndexId = projectIndexData[0].id;
-          console.log('[DocumentsController] V2 Found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', numericUnitId);
+        if (projectIndexError) {
+          console.error('[DocumentsController] V2 Error querying project_index:', projectIndexError);
+          return res.status(500).json({
+            message: 'Error looking up project configuration',
+            error: projectIndexError.message
+          });
         }
+        
+        if (!projectIndexData || projectIndexData.length === 0) {
+          console.error('[DocumentsController] V2 No project_index found for combination:', {
+            project_id: actualProjectId,
+            monada_id: numericUnitId,
+            expenditure_type_id: expenditureTypeId,
+            expenditure_type: expenditure_type
+          });
+          return res.status(400).json({
+            message: `No valid project configuration found for project ${actualProjectId}, unit ${unit}, and expenditure type "${expenditure_type}"`,
+            error: 'Invalid project/unit/expenditure_type combination',
+            details: {
+              project_id: actualProjectId,
+              unit: unit,
+              expenditure_type: expenditure_type,
+              resolved_expenditure_type_id: expenditureTypeId
+            }
+          });
+        }
+        
+        projectIndexId = projectIndexData[0].id;
+        console.log('[DocumentsController] V2 Successfully found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', unit, 'expenditure_type:', expenditure_type);
       } catch (indexError) {
-        console.log('[DocumentsController] V2 No project_index found for project_id:', actualProjectId, 'unit:', numericUnitId, 'Error:', indexError);
+        console.error('[DocumentsController] V2 Unexpected error during project_index lookup:', indexError);
+        return res.status(500).json({
+          message: 'Internal error during project configuration lookup',
+          error: indexError instanceof Error ? indexError.message : 'Unknown error'
+        });
       }
     }
 
