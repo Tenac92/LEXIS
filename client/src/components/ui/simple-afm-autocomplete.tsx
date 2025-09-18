@@ -16,22 +16,22 @@ const isValidString = (value: any): value is string => {
 // European-aware number parsing utility
 const parseEuropeanNumber = (value: string): number => {
   if (!value || typeof value !== 'string') return NaN;
-
+  
   // Remove whitespace
   const cleaned = value.trim();
-
+  
   // Handle European format: "1.234,56" -> 1234.56
   // Check if it contains both dots and commas (European format)
   if (cleaned.includes('.') && cleaned.includes(',')) {
     // Remove thousands separators (dots) and replace decimal comma with dot
     return parseFloat(cleaned.replace(/\./g, '').replace(',', '.'));
   }
-
+  
   // Handle comma as decimal separator: "123,45" -> 123.45
   if (cleaned.includes(',') && !cleaned.includes('.')) {
     return parseFloat(cleaned.replace(',', '.'));
   }
-
+  
   // Handle standard format or dots as thousands separator: "1.234" or "1234.56"
   return parseFloat(cleaned);
 };
@@ -69,11 +69,11 @@ const formatAmount = (amount: number, locale: string = 'el-GR'): string => {
 
 const validateInstallments = (installments: any): string[] => {
   if (!installments) return [];
-
+  
   const installmentArray = Array.isArray(installments) 
     ? installments 
     : [installments];
-
+    
   return installmentArray
     .filter(inst => isValidString(inst) && inst.trim() !== '')
     .map(inst => inst.trim());
@@ -104,17 +104,17 @@ export function SimpleAFMAutocomplete({
 }: SimpleAFMAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
-
+  
   // Update search term when value prop changes
   useEffect(() => {
     if (value !== searchTerm) {
       setSearchTerm(value);
     }
   }, [value]);
-
+  
   // Determine if we should use employee or beneficiary data
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
-
+  
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
@@ -145,7 +145,7 @@ export function SimpleAFMAutocomplete({
   const searchResults = useEmployeeData ? employees : beneficiaries;
 
   // OLD LOGIC REMOVED - Using new installment logic only
-
+  
   // Fixed installment logic based on user requirements
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
     if (import.meta.env.NODE_ENV === 'development') {
@@ -166,26 +166,26 @@ export function SimpleAFMAutocomplete({
                Array.isArray(beneficiary.oikonomika[key]) && 
                beneficiary.oikonomika[key].length > 0;
       });
-
+      
       if (hasOtherExpenditureTypes) {
         if (import.meta.env.NODE_ENV === 'development') {
         console.log(`[SmartAutocomplete] EXPENDITURE TYPE MISMATCH: No suggestions for different expenditure type`);
       }
         return { installment: '', amount: 0, suggestedInstallments: [], installmentAmounts: {} };
       }
-
+      
       // Check if UNKNOWN payments exist (these could be from any expenditure type)
       const hasUnknownPayments = beneficiary.oikonomika['UNKNOWN'] && 
                                Array.isArray(beneficiary.oikonomika['UNKNOWN']) && 
                                beneficiary.oikonomika['UNKNOWN'].length > 0;
-
+      
       if (hasUnknownPayments) {
         if (import.meta.env.NODE_ENV === 'development') {
           console.log(`[SmartAutocomplete] Found UNKNOWN payments - not suggesting continuation to avoid cross-expenditure type contamination`);
         }
         return { installment: '', amount: 0, suggestedInstallments: [], installmentAmounts: {} };
       }
-
+      
       // Only suggest 'Α' when there are truly NO payments at all
       return { installment: 'Α', amount: 0, suggestedInstallments: ['Α'], installmentAmounts: { 'Α': 0 } };
     } else {
@@ -200,11 +200,11 @@ export function SimpleAFMAutocomplete({
 
     // Extract all existing installments (ignore ΕΦΑΠΑΞ for sequence logic)
     const allInstallments: Array<{ installment: string, amount: number, created_at: string }> = [];
-
+    
     expenditureData.forEach(payment => {
       // Use existing helper to properly handle arrays and validate installments
       const installments = validateInstallments(payment.installment);
-
+      
       installments.forEach(installmentKey => {
         // Skip ΕΦΑΠΑΞ as it doesn't affect regular installment sequence
         if (installmentKey === 'ΕΦΑΠΑΞ') {
@@ -213,7 +213,7 @@ export function SimpleAFMAutocomplete({
       }
           return;
         }
-
+        
         allInstallments.push({
           installment: installmentKey,
           amount: safeParseAmount(payment.amount),
@@ -246,7 +246,7 @@ export function SimpleAFMAutocomplete({
       // Handle Greek letter sequence
       const maxGreekIndex = Math.max(...greekInstallments.map(p => greekSequence.indexOf(p.installment)));
       const highestInstallment = greekSequence[maxGreekIndex];
-
+      
       // Check if we can suggest the next installment in sequence
       if (maxGreekIndex + 1 < greekSequence.length) {
         nextInstallment = greekSequence[maxGreekIndex + 1];
@@ -254,24 +254,24 @@ export function SimpleAFMAutocomplete({
         // At end of sequence, suggest extending it
         nextInstallment = 'ΙΣΤ'; // Next logical installment after ΙΕ
       }
-
+      
       // Get amount from the most recent entry of the highest-used installment type
       const highestInstallmentEntries = greekInstallments.filter(p => p.installment === highestInstallment);
       const mostRecentHighest = highestInstallmentEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
       referenceAmount = mostRecentHighest?.amount || 0;
-
+      
       console.log('[SmartAutocomplete] Greek sequence detected. Highest:', highestInstallment, 'Next:', nextInstallment, 'Amount from most recent', highestInstallment, ':', referenceAmount);
     } else if (numericInstallments.length > 0) {
       // Handle numeric sequence
       const maxNumeric = Math.max(...numericInstallments.map(p => parseInt(p.installment)));
       const highestInstallment = maxNumeric.toString();
       nextInstallment = (maxNumeric + 1).toString();
-
+      
       // Get amount from the most recent entry of the highest-used installment type
       const highestInstallmentEntries = numericInstallments.filter(p => p.installment === highestInstallment);
       const mostRecentHighest = highestInstallmentEntries.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
       referenceAmount = mostRecentHighest?.amount || 0;
-
+      
       console.log('[SmartAutocomplete] Numeric sequence detected. Highest:', maxNumeric, 'Next:', nextInstallment, 'Amount from most recent', highestInstallment, ':', referenceAmount);
     } else {
       // Unknown installment format, default to Α
@@ -293,13 +293,13 @@ export function SimpleAFMAutocomplete({
   const handleSelect = useCallback((person: Employee | Beneficiary) => {
     console.log('[SmartAutocomplete] Person selected:', person);
     console.log('[SmartAutocomplete] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
-
+    
     // For beneficiaries, add smart installment selection
     if (!useEmployeeData && 'oikonomika' in person) {
       console.log('[SmartAutocomplete] Processing beneficiary with oikonomika:', person.oikonomika);
       const smartData = getSmartInstallmentData(person, expenditureType, userUnit, projectNa853);
       console.log('[SmartAutocomplete] Smart data result:', smartData);
-
+      
       const enhancedPerson = {
         ...person,
         suggestedInstallment: smartData.installment,
@@ -313,23 +313,21 @@ export function SimpleAFMAutocomplete({
       console.log('[SmartAutocomplete] No smart processing - using basic selection');
       onSelectPerson(person);
     }
-
+    
     setShowDropdown(false);
-    // CRITICAL FIX: Always ensure AFM is treated as string with leading zeros preserved
-    const afmString = person.afm ? String(person.afm).padStart(9, '0') : "";
-    setSearchTerm(afmString);
+    setSearchTerm(String(person.afm || ""));
   }, [onSelectPerson, useEmployeeData, expenditureType, userUnit, projectNa853, getSmartInstallmentData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
+    
     // Only allow numeric input and limit to 9 digits
     const numericValue = value.replace(/\D/g, '').slice(0, 9);
-
+    
     setSearchTerm(numericValue);
     setShowDropdown(numericValue.length >= 7);
-
-    // CRITICAL FIX: Always notify parent with properly formatted AFM string
+    
+    // Notify parent component when user types
     onChange?.(numericValue);
   };
 
@@ -345,7 +343,7 @@ export function SimpleAFMAutocomplete({
         onFocus={() => searchTerm.length >= 7 && setShowDropdown(true)}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
       />
-
+      
       {/* Simple dropdown results */}
       {showDropdown && searchTerm.length >= 7 && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">

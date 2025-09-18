@@ -19,21 +19,21 @@ export const router = Router();
 router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
   try {
     const docId = parseInt(req.params.docId);
-
+    
     // Get document with project_index_id
     const { data: doc, error: docError } = await supabase
       .from('generated_documents')
       .select('id, project_index_id')
       .eq('id', docId)
       .single();
-
+      
     if (docError || !doc) {
       return res.json({ error: 'Document not found', docError });
     }
-
+    
     let projectIndexData = null;
     let expenditureTypeData = null;
-
+    
     if (doc.project_index_id) {
       // Get project index data
       const { data: indexData, error: indexError } = await supabase
@@ -41,9 +41,9 @@ router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
         .select('id, project_id, expenditure_type_id')
         .eq('id', doc.project_index_id)
         .single();
-
+        
       projectIndexData = { indexData, indexError };
-
+      
       if (indexData && indexData.expenditure_type_id) {
         // Get expenditure type data
         const { data: expTypeData, error: expTypeError } = await supabase
@@ -51,11 +51,11 @@ router.get('/debug-expenditure/:docId', async (req: Request, res: Response) => {
           .select('id, expenditure_types')
           .eq('id', indexData.expenditure_type_id)
           .single();
-
+          
         expenditureTypeData = { expTypeData, expTypeError };
       }
     }
-
+    
     res.json({
       document: doc,
       projectIndex: projectIndexData,
@@ -121,7 +121,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       monadaData.find(m => m.id === projectIndexItems[0].monada_id) : null;
     const kallikratisItem = projectIndexItems.length > 0 ? 
       kallikratisData.find(k => k.id === projectIndexItems[0].kallikratis_id) : null;
-
+    
     // Project data logging removed for cleaner console output
 
     // Format recipients data
@@ -145,7 +145,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       esdian: esdian_field1 || esdian_field2 ? [esdian_field1, esdian_field2].filter(Boolean) : [],
       created_at: now,
       updated_at: now,
-
+      
       // Enhanced foreign key relationships
       generated_by: req.user.id,
       unit_id: parseInt(unit), // Foreign key to monada table
@@ -210,23 +210,23 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     console.log('[DocumentsController] V2 Request body:', req.body);
     console.log('[DocumentsController] V2 Request headers:', req.headers);
     console.log('[DocumentsController] V2 Request user session:', req.user);
-
+    
     // Proper authentication check
     if (!req.user?.id) {
       console.log('[DocumentsController] V2 Authentication failed - no user ID');
       return res.status(401).json({ message: 'Authentication required' });
     }
-
+    
     console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
-
+    
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2, esdian, director_signature } = req.body;
-
+    
     console.log('[DocumentsController] V2 Raw request data:', {
       unit, project_id, expenditure_type, 
       recipientsCount: recipients?.length,
       total_amount, attachments, esdian_field1, esdian_field2
     });
-
+    
     // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
     // Let's resolve this by looking up the unit from the Monada table
     let numericUnitId = null;
@@ -236,7 +236,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         .select('id')
         .eq('unit', unit)
         .single();
-
+      
       if (unitData) {
         numericUnitId = unitData.id;
         console.log('[DocumentsController] V2 Resolved unit string', unit, 'to numeric ID:', numericUnitId);
@@ -254,13 +254,13 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-
+    
     if (!recipients?.length || !project_id || !unit || !expenditure_type) {
       return res.status(400).json({
         message: 'Missing required fields: recipients, project_id, unit, and expenditure_type are required'
       });
     }
-
+    
     // Validate that project_id is numeric
     const numericProjectId = parseInt(project_id);
     if (isNaN(numericProjectId)) {
@@ -268,28 +268,28 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         message: 'project_id must be a valid numeric ID'
       });
     }
-
+    
     // Get project data using numeric project_id only
     let projectData = null;
     let project_na853 = null;
-
+    
     try {
       console.log('[DocumentsController] V2 Looking up project with numeric ID:', numericProjectId);
-
+      
       // First, let's check what projects exist in the database
       const allProjectsRes = await supabase
         .from('Projects')
         .select('id, mis, project_title')
         .limit(10);
-
+      
       console.log('[DocumentsController] V2 Sample projects in database:', allProjectsRes.data);
-
+      
       const projectRes = await supabase
         .from('Projects')
         .select('*')
         .eq('id', numericProjectId)
         .single();
-
+      
       if (projectRes.error || !projectRes.data) {
         console.error('[DocumentsController] V2 Project not found with ID:', numericProjectId);
         console.error('[DocumentsController] V2 Database error:', projectRes.error);
@@ -302,7 +302,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           }
         });
       }
-
+      
       projectData = projectRes.data;
       project_na853 = projectData.na853;
       console.log('[DocumentsController] V2 Found project:', projectData.mis, 'NA853:', project_na853);
@@ -313,7 +313,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-
+    
     // Format recipients data consistently
     const formattedRecipients = recipients.map((r: any) => ({
       firstname: String(r.firstname || '').trim(),
@@ -326,7 +326,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       installmentAmounts: r.installmentAmounts || {},
       secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
-
+    
     console.log('[DocumentsController] V2 Formatted recipients:', formattedRecipients.map((r: any) => ({
       name: `${r.firstname} ${r.lastname}`,
       afm: r.afm,
@@ -334,12 +334,12 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       installments: r.installments,
       installmentAmounts: r.installmentAmounts
     })));
-
+    
     const now = new Date().toISOString();
-
+    
     // Use director signature from request body if provided, otherwise get from Monada table
     let directorSignature = director_signature || null;
-
+    
     // If no director signature was provided in the request, fallback to fetching from Monada table
     if (!directorSignature) {
       try {
@@ -348,7 +348,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           .select('director')
           .eq('id', numericUnitId) // Use resolved numeric unit ID
           .single();
-
+        
         if (monadaData && monadaData.director) {
           directorSignature = monadaData.director;
           console.log('[DocumentsController] V2 Fallback director signature from Monada:', directorSignature);
@@ -363,11 +363,11 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     // Resolve project_index_id before creating document
     let projectIndexId = null;
     let actualProjectId = null;
-
+    
     // Use the numeric project_id directly (already validated above)
     actualProjectId = numericProjectId;
     console.log('[DocumentsController] V2 Using numeric project_id:', actualProjectId);
-
+    
     // Find existing project_index entry for this project and unit
     if (actualProjectId) {
       try {
@@ -377,7 +377,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           .eq('project_id', actualProjectId)
           .eq('monada_id', numericUnitId)
           .limit(1);
-
+        
         if (projectIndexData && projectIndexData.length > 0) {
           projectIndexId = projectIndexData[0].id;
           console.log('[DocumentsController] V2 Found project_index_id:', projectIndexId, 'for project:', actualProjectId, 'unit:', numericUnitId);
@@ -395,7 +395,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         const { data: allAttachments, error: attachmentError } = await supabase
           .from('attachments')
           .select('id, atachments');
-
+        
         if (attachmentError) {
           console.error('[DocumentsController] V2 Error fetching attachments:', attachmentError);
         } else {
@@ -403,7 +403,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           attachmentIds = allAttachments
             .filter(attachment => attachments.includes(attachment.atachments))
             .map(attachment => attachment.id);
-
+          
           console.log('[DocumentsController] V2 Selected attachments:', attachments);
           console.log('[DocumentsController] V2 Mapped to attachment IDs:', attachmentIds);
         }
@@ -430,16 +430,16 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       created_at: now,
       updated_at: now
     };
-
+    
     console.log('[DocumentsController] V2 Document payload prepared:', documentPayload);
-
+    
     // Insert into database
     const { data, error } = await supabase
       .from('generated_documents')
       .insert([documentPayload])
       .select('id')
       .single();
-
+    
     if (error) {
       console.error('[DocumentsController] V2 Error creating document:', error);
       return res.status(500).json({ 
@@ -448,37 +448,36 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         details: error.details
       });
     }
-
+    
     console.log('[DocumentsController] V2 Document created successfully:', data.id);
-
+    
     // Create beneficiary payments for each recipient using project_index_id
     const beneficiaryPaymentsIds = [];
     try {
       console.log('[DocumentsController] V2 Creating beneficiary payments for', formattedRecipients.length, 'recipients');
-
+      
       // Use the project_index_id already resolved for the document
       console.log('[DocumentsController] V2 Using project_index_id for payments:', projectIndexId);
-
+      
       for (const recipient of formattedRecipients) {
         // Step 1: Look up or create beneficiary
         let beneficiaryId = null;
         try {
-          // CRITICAL FIX: Search for beneficiary by AFM as string to preserve leading zeros
-          const afmString = String(recipient.afm).padStart(9, '0');
-
+          // Try to find existing beneficiary by AFM (convert string to numeric for database query)
+          const numericAfm = parseFloat(recipient.afm);
           const { data: existingBeneficiary, error: findError } = await supabase
             .from('beneficiaries')
             .select('id')
-            .or(`afm.eq.${afmString},afm::text.eq.${afmString}`)
+            .eq('afm', numericAfm)
             .single();
-
+          
           if (existingBeneficiary) {
             beneficiaryId = existingBeneficiary.id;
+            console.log('[DocumentsController] V2 Found existing beneficiary:', beneficiaryId, 'for AFM:', recipient.afm);
           } else if (findError && findError.code === 'PGRST116') {
             // Beneficiary not found, create new one
             const newBeneficiary = {
-              // CRITICAL FIX: Store AFM as string to preserve leading zeros
-              afm: afmString,
+              afm: numericAfm, // Use numeric AFM for database storage
               surname: recipient.lastname,
               name: recipient.firstname,
               fathername: recipient.fathername,
@@ -487,13 +486,13 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
               created_at: now,
               updated_at: now
             };
-
+            
             const { data: createdBeneficiary, error: createError } = await supabase
               .from('beneficiaries')
               .insert([newBeneficiary])
               .select('id')
               .single();
-
+            
             if (createError) {
               console.error('[DocumentsController] V2 Error creating beneficiary:', createError);
             } else {
@@ -506,17 +505,17 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         } catch (beneficiaryError) {
           console.error('[DocumentsController] V2 Error during beneficiary lookup/creation:', beneficiaryError);
         }
-
+        
         // Step 2: Create separate beneficiary payment records for each installment
         if (beneficiaryId) {
           // Check if recipient has installments array and amounts
           if (recipient.installments && recipient.installmentAmounts) {
             console.log('[DocumentsController] V2 Creating', recipient.installments.length, 'installment payments for', recipient.afm);
-
+            
             // Create one payment record per installment
             for (const installmentName of recipient.installments) {
               const installmentAmount = recipient.installmentAmounts[installmentName];
-
+              
               if (installmentAmount > 0) {
                 const beneficiaryPayment = {
                   document_id: data.id,
@@ -529,7 +528,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
                   created_at: now,
                   updated_at: now
                 };
-
+                
                 console.log('[DocumentsController] V2 Creating installment payment:', installmentName, 'Amount:', installmentAmount);
                 console.log('[DocumentsController] V2 Payment payload with IDs:', {
                   document_id: data.id,
@@ -539,13 +538,13 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
                   unit_raw: unit,
                   projectIndexId_raw: projectIndexId
                 });
-
+                
                 const { data: paymentData, error: paymentError } = await supabase
                   .from('beneficiary_payments')
                   .insert([beneficiaryPayment])
                   .select('id')
                   .single();
-
+                
                 if (paymentError) {
                   console.error('[DocumentsController] V2 Error creating installment payment:', paymentError);
                 } else {
@@ -567,7 +566,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
               created_at: now,
               updated_at: now
             };
-
+            
             console.log('[DocumentsController] V2 Creating single payment (fallback):', beneficiaryPayment);
             console.log('[DocumentsController] V2 Single payment IDs check:', {
               unit_id: numericUnitId,
@@ -575,13 +574,13 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
               unit_raw: unit,
               projectIndexId_null: projectIndexId === null
             });
-
+            
             const { data: paymentData, error: paymentError } = await supabase
               .from('beneficiary_payments')
               .insert([beneficiaryPayment])
               .select('id')
               .single();
-
+            
             if (paymentError) {
               console.error('[DocumentsController] V2 Error creating single payment:', paymentError);
             } else {
@@ -593,15 +592,15 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           console.error('[DocumentsController] V2 Cannot create payment: beneficiary_id is null for AFM:', recipient.afm);
         }
       }
-
+      
       // Always update document with beneficiary payments IDs, even if array is empty
       console.log('[DocumentsController] V2 Updating document with beneficiary payment IDs:', beneficiaryPaymentsIds);
-
+      
       const { error: updateError } = await supabase
         .from('generated_documents')
         .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
         .eq('id', data.id);
-
+      
       if (updateError) {
         console.error('[DocumentsController] V2 Error updating document with beneficiary payment IDs:', updateError);
         console.error('[DocumentsController] V2 Update error details:', updateError.details);
@@ -612,7 +611,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
     } catch (beneficiaryError) {
       console.error('[DocumentsController] V2 Error creating beneficiary payments:', beneficiaryError);
     }
-
+    
     // Update project budget with spending amount and create budget history
     try {
       console.log('[DocumentsController] V2 Updating budget for spending amount:', total_amount);
@@ -698,7 +697,7 @@ router.get('/', async (req: Request, res: Response) => {
     const enrichedDocuments = await Promise.all(
       (documents || []).map(async (doc) => {
         let recipients: any[] = [];
-
+        
         // Fetch beneficiary payments for this document
         if (doc.beneficiary_payments_id && Array.isArray(doc.beneficiary_payments_id) && doc.beneficiary_payments_id.length > 0) {
           try {
@@ -751,7 +750,7 @@ router.get('/', async (req: Request, res: Response) => {
               .select('unit, unit_name')
               .eq('id', doc.unit_id)
               .single();
-
+            
             if (!unitError && unitData) {
               unitInfo = unitData;
             }
@@ -785,7 +784,7 @@ router.get('/', async (req: Request, res: Response) => {
 
             if (!indexError && indexData && indexData.Projects) {
               projectInfo = indexData.Projects;
-
+              
               // Get expenditure type information
               if (indexData.expenditure_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
@@ -793,7 +792,7 @@ router.get('/', async (req: Request, res: Response) => {
                   .select('expenditure_types')
                   .eq('id', indexData.expenditure_type_id)
                   .single();
-
+                
                 if (!expTypeError && expTypeData) {
                   expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
@@ -812,19 +811,19 @@ router.get('/', async (req: Request, res: Response) => {
               .select('expenditure_type_id')
               .in('id', doc.attachment_id)
               .limit(1);
-
+              
             if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expenditure_type_id) {
               const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id) 
                 ? attachmentData[0].expenditure_type_id 
                 : [attachmentData[0].expenditure_type_id];
-
+                
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expenditure_types')
                   .select('expenditure_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
-
+                  
                 if (!expTypeError && expTypeData) {
                   expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
@@ -913,18 +912,18 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     console.log('[DocumentsController] ==> Session user ID:', req.session?.user?.id);
     console.log('[DocumentsController] ==> req.user:', req.user ? 'exists' : 'missing');
     console.log('[DocumentsController] ==> req.user.id:', req.user?.id);
-
+    
     // Check session first
     if (!req.session?.user?.id) {
       console.log('[DocumentsController] No authenticated session - returning empty array');
       return res.json([]);
     }
-
+    
     // Set user from session if not already set
     if (!req.user) {
       req.user = req.session.user;
     }
-
+    
     if (!req.user || !req.user.id) {
       console.log('[DocumentsController] No authenticated user - returning empty array');
       return res.json([]);
@@ -935,7 +934,7 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     // Ensure user ID is a valid number
     const userId = Number(req.user.id);
     console.log('[DocumentsController] Converted user ID:', userId, 'isNaN:', isNaN(userId));
-
+    
     if (isNaN(userId) || userId <= 0) {
       console.error('[DocumentsController] Invalid user ID:', req.user.id);
       return res.json([]);
@@ -961,7 +960,7 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
     const enrichedUserDocuments = await Promise.all(
       (documents || []).map(async (doc) => {
         let recipients: any[] = [];
-
+        
         // Fetch beneficiary payments for this document
         if (doc.beneficiary_payments_id && Array.isArray(doc.beneficiary_payments_id) && doc.beneficiary_payments_id.length > 0) {
           try {
@@ -1013,7 +1012,7 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
               .select('unit, unit_name')
               .eq('id', doc.unit_id)
               .single();
-
+            
             if (!unitError && unitData) {
               unitInfo = unitData;
             }
@@ -1046,14 +1045,14 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
 
             if (!indexError && indexData && indexData.Projects) {
               projectInfo = indexData.Projects;
-
+              
               if (indexData.expenditure_type_id) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expenditure_types')
                   .select('expenditure_types')
                   .eq('id', indexData.expenditure_type_id)
                   .single();
-
+                
                 if (!expTypeError && expTypeData) {
                   expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
@@ -1072,19 +1071,19 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
               .select('expenditure_type_id')
               .in('id', doc.attachment_id)
               .limit(1);
-
+              
             if (!attachmentError && attachmentData && attachmentData.length > 0 && attachmentData[0].expenditure_type_id) {
               const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id) 
                 ? attachmentData[0].expenditure_type_id 
                 : [attachmentData[0].expenditure_type_id];
-
+                
               if (expenditureTypeIds.length > 0) {
                 const { data: expTypeData, error: expTypeError } = await supabase
                   .from('expenditure_types')
                   .select('expenditure_types')
                   .eq('id', expenditureTypeIds[0])
                   .single();
-
+                  
                 if (!expTypeError && expTypeData) {
                   expenditureTypeInfo = { name: expTypeData.expenditure_types };
                 }
@@ -1125,7 +1124,7 @@ router.get('/user', async (req: AuthenticatedRequest, res: Response) => {
 router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const documentId = parseInt(req.params.id);
-
+    
     if (isNaN(documentId)) {
       return res.status(400).json({ message: 'Invalid document ID' });
     }
@@ -1390,20 +1389,20 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
         .select('budget_na853')
         .eq('id', project_id)
         .single();
-
+        
       projectData = result.data;
       projectError = result.error;
-
+      
       if (projectError || !projectData) {
         // If not found in project_catalog, try Projects table using numeric ID
         console.log('[DOCUMENT_CONTROLLER] Looking up project in Projects table using numeric ID:', project_id);
-
+        
         const projectResult = await supabase
           .from('Projects')
           .select('id, mis, na853, budget_na853')
           .eq('id', project_id)
           .single();
-
+          
         if (projectResult.data) {
           if (projectResult.data.na853) {
             // Found na853 in Projects table - use this as it matches the foreign key constraint
@@ -1427,7 +1426,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
       }
     } catch (error) {
       console.error('[DOCUMENT_CONTROLLER] Error during project lookup:', error);
-
+      
       // If error happens, use project_id as numeric fallback if available and valid
       if (project_id && !isNaN(Number(project_id))) {
         project_na853 = project_id;
@@ -1551,7 +1550,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     let beneficiaryData: any[] = [];
     let attachmentsData: any[] = [];
     let expenditureType = 'ΔΑΠΑΝΗ'; // Default fallback
-
+    
     // Fetch related project data if project_index_id exists
     if (document.project_index_id) {
       try {
@@ -1574,7 +1573,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           `)
           .eq('id', document.project_index_id)
           .single();
-
+          
         if (!projectIndexError && projectIndexData) {
           projectData = projectIndexData.Projects;
           const fetchedExpenditure = (projectIndexData.expenditure_types as any)?.expenditure_types;
@@ -1593,12 +1592,12 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     } else {
       console.log('[DocumentsController] No project_index_id found for document:', document.id);
       console.log('[DocumentsController] Document data keys:', Object.keys(document));
-
+      
       // Try alternative approaches to find expenditure type
       console.log('[DocumentsController] Looking for expenditure type in document fields...');
       console.log('[DocumentsController] Document total_amount:', document.total_amount);
       console.log('[DocumentsController] Document comments:', document.comments);
-
+      
       // If we have beneficiary payments, we might be able to infer the type
       if (beneficiaryData.length > 0) {
         const hasInstallments = beneficiaryData.some(b => b.installment && b.installment.includes('ΤΡΙΜΗΝΟ'));
@@ -1608,7 +1607,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
         }
       }
     }
-
+    
     // Fetch beneficiary payments data
     if (document.beneficiary_payments_id && document.beneficiary_payments_id.length > 0) {
       try {
@@ -1618,7 +1617,6 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
             id,
             amount,
             installment,
-            status,
             beneficiaries:beneficiary_id (
               id,
               afm,
@@ -1628,7 +1626,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
             )
           `)
           .in('id', document.beneficiary_payments_id);
-
+          
         if (!paymentsError && paymentsData) {
           beneficiaryData = paymentsData.map((payment: any) => ({
             id: payment.id,
@@ -1644,7 +1642,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
         logger.debug('Error fetching beneficiary data for document:', error);
       }
     }
-
+    
     // Fetch attachments data if attachment_id exists (corrected field name)
     if (document.attachment_id && document.attachment_id.length > 0) {
       try {
@@ -1652,7 +1650,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
           .from('attachments')
           .select('*')
           .in('id', document.attachment_id);
-
+          
         if (!attachmentsError && attachments) {
           // Transform attachments to the format expected by document generators
           // Use 'atachments' field as per database schema (note: typo in original schema)
@@ -1712,37 +1710,37 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
     // If generating a single document (old behavior)
     if (!generateBoth) {
       console.log('[DocumentsController] Generating single document for export');
-
+      
       // For regular documents, use the standard document generation
       const primaryBuffer = await DocumentGenerator.generatePrimaryDocument(documentData);
-
+      
       // Set response headers for DOCX file
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
       res.setHeader('Content-Disposition', `attachment; filename=document-${id}.docx`);
       res.send(primaryBuffer);
       return;
     }
-
+    
     // If we're here, the user wants both documents in a ZIP file
     console.log('[DocumentsController] Generating both documents for ZIP export');
-
+    
     // Generate primary document
     const primaryBuffer = await DocumentGenerator.generatePrimaryDocument(documentData);
-
+    
     // Generate secondary document
     const { SecondaryDocumentFormatter } = await import('../utils/secondary-document-formatter');
     const secondaryBuffer = await SecondaryDocumentFormatter.generateSecondDocument(documentData);
-
+    
     // Create a ZIP file containing both documents
     const zip = new JSZip();
-
+    
     // Add both documents to the ZIP
     zip.file(`document-primary-${document.id.toString().padStart(6, '0')}.docx`, primaryBuffer);
     zip.file(`document-supplementary-${document.id.toString().padStart(6, '0')}.docx`, secondaryBuffer);
-
+    
     // Generate the ZIP file
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-
+    
     // Set response headers for ZIP file
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename=documents-${id}.zip`);
@@ -1762,7 +1760,7 @@ router.get('/generated/:id/export', async (req: AuthenticatedRequest, res: Respo
 router.get('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const documentId = parseInt(req.params.id);
-
+    
     if (isNaN(documentId)) {
       return res.status(400).json({ message: 'Invalid document ID' });
     }
@@ -1811,7 +1809,7 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
   try {
     const documentId = parseInt(req.params.id);
     const { recipients } = req.body;
-
+    
     if (isNaN(documentId)) {
       return res.status(400).json({ message: 'Invalid document ID' });
     }
@@ -1822,7 +1820,7 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
 
     // Start a transaction-like operation by handling updates sequentially
     const updatedPayments = [];
-
+    
     for (const recipient of recipients) {
       if (recipient.id) {
         // First, get the existing payment to find beneficiary_id
@@ -1844,10 +1842,7 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
           if (recipient.firstname) beneficiaryUpdate.name = recipient.firstname;
           if (recipient.lastname) beneficiaryUpdate.surname = recipient.lastname;
           if (recipient.fathername) beneficiaryUpdate.fathername = recipient.fathername;
-          if (recipient.afm) {
-            // CRITICAL FIX: Store AFM as string to preserve leading zeros
-            beneficiaryUpdate.afm = String(recipient.afm).padStart(9, '0');
-          }
+          if (recipient.afm) beneficiaryUpdate.afm = recipient.afm;
 
           if (Object.keys(beneficiaryUpdate).length > 0) {
             const { error: beneficiaryError } = await supabase
@@ -1892,8 +1887,7 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
             name: recipient.firstname,
             surname: recipient.lastname,
             fathername: recipient.fathername || null,
-            // CRITICAL FIX: Store AFM as string to preserve leading zeros
-            afm: String(recipient.afm).padStart(9, '0'),
+            afm: recipient.afm,
           })
           .select()
           .single();
