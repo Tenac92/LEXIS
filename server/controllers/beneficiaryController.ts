@@ -39,6 +39,35 @@ async function getRegionCodeFromName(regionName: string): Promise<string | null>
   }
 }
 
+// Helper function to get unit code from numeric unit ID
+async function getUnitCodeById(unitId: number): Promise<string | null> {
+  try {
+    console.log(`[Beneficiaries] Looking up unit code for unit ID: ${unitId}`);
+    
+    const { data: monadaData, error: monadaError } = await supabase
+      .from('Monada')
+      .select('id, unit')
+      .eq('id', unitId)
+      .single();
+    
+    if (monadaError) {
+      console.error(`[Beneficiaries] Error fetching unit for ID ${unitId}:`, monadaError);
+      return null;
+    }
+    
+    if (monadaData && monadaData.unit) {
+      console.log(`[Beneficiaries] Mapped unit ID ${unitId} to unit code "${monadaData.unit}"`);
+      return monadaData.unit;
+    }
+    
+    console.log(`[Beneficiaries] No unit code found for unit ID: ${unitId}`);
+    return null;
+  } catch (error) {
+    console.error('[Beneficiaries] Error in getUnitCodeById:', error);
+    return null;
+  }
+}
+
 // Helper function to get unit abbreviation from full unit name
 async function getUnitAbbreviation(userUnitName: string): Promise<string> {
   try {
@@ -107,11 +136,15 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     
     // SECURITY: Get beneficiaries ONLY for user's assigned units
     const allBeneficiaries = [];
-    for (const fullUnitName of userUnits) {
-      const userUnit = await getUnitAbbreviation(fullUnitName);
-      console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ${userUnit} (mapped from: ${fullUnitName})`);
-      const unitBeneficiaries = await storage.getBeneficiariesByUnit(userUnit);
-      allBeneficiaries.push(...unitBeneficiaries);
+    for (const unitId of userUnits) {
+      const userUnit = await getUnitCodeById(unitId);
+      if (userUnit) {
+        console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ${userUnit} (mapped from unit ID: ${unitId})`);
+        const unitBeneficiaries = await storage.getBeneficiariesByUnit(userUnit);
+        allBeneficiaries.push(...unitBeneficiaries);
+      } else {
+        console.log(`[Beneficiaries] WARNING: Could not map unit ID ${unitId} to unit code, skipping`);
+      }
     }
     
     console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries from ${userUnits.length} authorized units only`);
@@ -131,12 +164,48 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
   }
 });
 
-// Get beneficiaries by unit
+// Get beneficiaries by unit - SECURITY: Only allow access to user's assigned units
 router.get('/by-unit/:unit', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { unit } = req.params;
-    console.log(`[Beneficiaries] Fetching beneficiaries for unit: ${unit}`);
     
+    // SECURITY CHECK: Verify user has access to the requested unit
+    if (!req.user) {
+      console.log('[Beneficiaries] SECURITY: Unauthorized access attempt to /by-unit');
+      return res.status(401).json({
+        message: 'Μη εξουσιοδοτημένη πρόσβαση'
+      });
+    }
+
+    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} requesting unit: ${unit}`);
+    
+    // SECURITY: Get user's authorized unit codes and verify access
+    const userUnits = req.user.unit_id || [];
+    if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking access');
+      return res.status(403).json({
+        message: 'Δεν έχετε εκχωρημένες μονάδες'
+      });
+    }
+    
+    // Map user's unit IDs to unit codes and check if requested unit is authorized
+    let hasAccess = false;
+    for (const unitId of userUnits) {
+      const userUnitCode = await getUnitCodeById(unitId);
+      if (userUnitCode === unit) {
+        hasAccess = true;
+        break;
+      }
+    }
+    
+    if (!hasAccess) {
+      console.log(`[Beneficiaries] SECURITY: User ${req.user.id} denied access to unit ${unit} - not in authorized units`);
+      return res.status(403).json({
+        message: 'Δεν έχετε πρόσβαση σε αυτή τη μονάδα'
+      });
+    }
+    
+    console.log(`[Beneficiaries] SECURITY: Access granted to unit ${unit} for user ${req.user.id}`);
     const beneficiaries = await storage.getBeneficiariesByUnit(unit);
     res.json(beneficiaries);
   } catch (error) {
@@ -160,7 +229,7 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
 
-    // Get user's unit for filtering
+    // Get user's unit for filtering - use proper unit ID to unit code mapping
     const userUnitId = req.user?.unit_id?.[0]; // Get first unit ID from user's unit_id array
     if (!userUnitId) {
       return res.status(403).json({
@@ -169,15 +238,11 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
       });
     }
     
-    // Get the abbreviated unit code using the helper function
-    // Get user's unit name from the user data
-    const userFullUnitName = req.user?.unit_id && req.user.unit_id.length > 0 ? 
-      `Unit ${req.user.unit_id[0]}` : 'Unknown Unit';
+    // Get the unit code from the numeric unit ID
+    const userUnit = await getUnitCodeById(userUnitId);
     
-    const userUnit = await getUnitAbbreviation(userFullUnitName);
-    
-    console.log(`[Beneficiaries] User full unit name: "${userFullUnitName}"`);
-    console.log(`[Beneficiaries] Mapped to abbreviated unit: "${userUnit}"`);
+    console.log(`[Beneficiaries] User unit ID: ${userUnitId}`);
+    console.log(`[Beneficiaries] Mapped to unit code: "${userUnit}"`);
     
     if (!userUnit) {
       return res.status(403).json({
@@ -192,7 +257,7 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
     console.log(`[Beneficiaries] Raw search returned ${beneficiaries.length} beneficiaries`);
-    console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: b.monada })));
+    console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: (b as any).monada || 'N/A' })));
     
     // Include financial data (oikonomika) if requested for smart autocomplete
     if (includeFinancial) {
@@ -205,24 +270,99 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
           const payments = await storage.getBeneficiaryPayments(beneficiary.id);
           console.log(`[Beneficiaries] Found ${payments.length} payments for beneficiary ${beneficiary.id}`);
           
-          // Group payments by expenditure_type to create oikonomika structure
+          // Group payments by expenditure_type to create oikonomika structure with proper JOINs
           const oikonomika: Record<string, any[]> = {};
-          payments.forEach(payment => {
-            const expType = payment.expenditure_type || 'UNKNOWN';
-            if (!oikonomika[expType]) {
-              oikonomika[expType] = [];
+          
+          for (const payment of payments) {
+            let expenditureTypeName = 'UNKNOWN';
+            let unitCode = '';
+            let na853Code = '';
+            let protocolNumber = '';
+            
+            try {
+              // Get document information for protocol_number
+              if (payment.document_id) {
+                const { data: docData } = await supabase
+                  .from('generated_documents')
+                  .select('id, project_index_id, unit_id')
+                  .eq('id', payment.document_id)
+                  .single();
+                
+                if (docData) {
+                  protocolNumber = docData.id.toString();
+                  
+                  // Get unit_code from Monada table
+                  if (docData.unit_id) {
+                    const { data: unitData } = await supabase
+                      .from('Monada')
+                      .select('unit')
+                      .eq('id', docData.unit_id)
+                      .single();
+                    
+                    if (unitData) {
+                      unitCode = unitData.unit;
+                    }
+                  }
+                  
+                  // Get expenditure_type and na853_code via project_index
+                  if (docData.project_index_id) {
+                    const { data: indexData } = await supabase
+                      .from('project_index')
+                      .select('expenditure_type_id, project_id')
+                      .eq('id', docData.project_index_id)
+                      .single();
+                    
+                    if (indexData) {
+                      // Get expenditure type name
+                      if (indexData.expenditure_type_id) {
+                        const { data: expTypeData } = await supabase
+                          .from('expenditure_types')
+                          .select('expenditure_types')
+                          .eq('id', indexData.expenditure_type_id)
+                          .single();
+                        
+                        if (expTypeData) {
+                          expenditureTypeName = expTypeData.expenditure_types;
+                        }
+                      }
+                      
+                      // Get NA853 code from Projects table
+                      if (indexData.project_id) {
+                        const { data: projectData } = await supabase
+                          .from('Projects')
+                          .select('na853')
+                          .eq('id', indexData.project_id)
+                          .single();
+                        
+                        if (projectData) {
+                          na853Code = projectData.na853 || '';
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (joinError) {
+              console.error(`[Beneficiaries] Error performing JOINs for payment ${payment.id}:`, joinError);
             }
-            oikonomika[expType].push({
+            
+            // Use expenditure type name as key
+            if (!oikonomika[expenditureTypeName]) {
+              oikonomika[expenditureTypeName] = [];
+            }
+            
+            oikonomika[expenditureTypeName].push({
               amount: payment.amount,
               installment: payment.installment ? [payment.installment] : ['ΕΦΑΠΑΞ'],
               status: payment.status,
-              expenditure_type: payment.expenditure_type,
-              unit_code: payment.unit_code,
-              na853_code: payment.na853_code,
-              protocol_number: payment.protocol_number,
-              created_at: payment.created_at
+              expenditure_type: expenditureTypeName,
+              unit_code: unitCode,
+              na853_code: na853Code,
+              protocol_number: protocolNumber,
+              created_at: payment.created_at,
+              payment_id: payment.id
             });
-          });
+          }
           
           beneficiary.oikonomika = oikonomika;
           console.log(`[Beneficiaries] Added oikonomika for beneficiary ${beneficiary.id}:`, Object.keys(oikonomika));
@@ -232,23 +372,18 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
         }
       }
       
-      // When including financial data (for document creation), allow cross-unit access
-      console.log(`[Beneficiaries] Cross-unit AFM search enabled - showing all matching beneficiaries`);
-      beneficiaries.forEach((beneficiary: any) => {
-        if (beneficiary.monada !== userUnit) {
-          console.log(`[Beneficiaries] Cross-unit access: beneficiary ${beneficiary.id} (${beneficiary.monada}) visible to user in ${userUnit}`);
-        }
-      });
-    } else {
-      // For regular searches, maintain unit filtering
-      beneficiaries = beneficiaries.filter((beneficiary: any) => {
-        const matches = beneficiary.monada === userUnit;
-        if (!matches) {
-          console.log(`[Beneficiaries] Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada}" != user unit "${userUnit}"`);
-        }
-        return matches;
-      });
+      // SECURITY FIX: Always apply unit filtering - no client-controlled bypass
+      console.log(`[Beneficiaries] Financial data requested - applying same unit filtering for security`);
     }
+    
+    // SECURITY: Always filter by user's unit - no exceptions
+    beneficiaries = beneficiaries.filter((beneficiary: any) => {
+      const matches = (beneficiary.monada || '') === userUnit;
+      if (!matches) {
+        console.log(`[Beneficiaries] SECURITY: Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada || 'N/A'}" != user unit "${userUnit}"`);
+      }
+      return matches;
+    });
     
     // Note: Removed expenditure type filtering to allow beneficiaries to be used across different expenditure types
     // The same beneficiary can now be selected for any expenditure type, regardless of their previous payment history
@@ -270,13 +405,51 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
   }
 });
 
-// Legacy endpoint for AFM search (backwards compatibility)
+// Legacy endpoint for AFM search (backwards compatibility) - SECURITY: Only show user's units
 router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { afm } = req.params;
-    console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}`);
     
-    const beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    // SECURITY CHECK: Verify user has assigned units
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking AFM search');
+      return res.status(403).json({
+        message: 'Δεν έχετε εκχωρημένες μονάδες'
+      });
+    }
+
+    // Map user unit IDs to unit codes for authorization
+    const authorizedUnitCodes = [];
+    for (const unitId of userUnits) {
+      const unitCode = await getUnitCodeById(unitId);
+      if (unitCode) {
+        authorizedUnitCodes.push(unitCode);
+      }
+    }
+
+    if (authorizedUnitCodes.length === 0) {
+      console.error(`[Beneficiaries] Could not map any user unit IDs to unit codes for AFM search`);
+      return res.status(500).json({
+        message: 'Σφάλμα αντιστοίχισης μονάδων χρήστη'
+      });
+    }
+
+    console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} searching AFM ${afm} - authorized for units: ${authorizedUnitCodes.join(', ')}`);
+    
+    // Get all beneficiaries with this AFM
+    let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    
+    // SECURITY: Filter results to only include user's authorized units
+    beneficiaries = beneficiaries.filter((beneficiary: any) => {
+      const matches = authorizedUnitCodes.includes(beneficiary.monada || '');
+      if (!matches) {
+        console.log(`[Beneficiaries] SECURITY: Filtering out beneficiary ${beneficiary.id}: unit "${beneficiary.monada || 'N/A'}" not in authorized units`);
+      }
+      return matches;
+    });
+    
+    console.log(`[Beneficiaries] SECURITY: AFM search returned ${beneficiaries.length} authorized results for user ${req.user?.id}`);
     res.json(beneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error searching beneficiaries by AFM:', error);
@@ -287,7 +460,7 @@ router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedReq
   }
 });
 
-// Get single beneficiary by ID
+// Get single beneficiary by ID - SECURITY: Only allow access to user's assigned units
 router.get('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = parseInt(req.params.id);
@@ -295,13 +468,48 @@ router.get('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       return res.status(400).json({ message: 'Invalid beneficiary ID' });
     }
 
-    console.log(`[Beneficiaries] Fetching beneficiary by ID: ${id}`);
+    // SECURITY CHECK: Verify user has assigned units
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking access');
+      return res.status(403).json({
+        message: 'Δεν έχετε εκχωρημένες μονάδες'
+      });
+    }
+
+    // Map user unit IDs to unit codes for authorization
+    const authorizedUnitCodes = [];
+    for (const unitId of userUnits) {
+      const unitCode = await getUnitCodeById(unitId);
+      if (unitCode) {
+        authorizedUnitCodes.push(unitCode);
+      }
+    }
+
+    if (authorizedUnitCodes.length === 0) {
+      console.error(`[Beneficiaries] Could not map any user unit IDs to unit codes`);
+      return res.status(500).json({
+        message: 'Σφάλμα αντιστοίχισης μονάδων χρήστη'
+      });
+    }
+
+    console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} fetching beneficiary ${id} - authorized for units: ${authorizedUnitCodes.join(', ')}`);
     const beneficiary = await storage.getBeneficiaryById(id);
     
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
+
+    // SECURITY: Verify user has access to this beneficiary's unit
+    const beneficiaryMonada = (beneficiary as any).monada;
+    if (!authorizedUnitCodes.includes(beneficiaryMonada)) {
+      console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} denied access to beneficiary ${id} - unit ${beneficiaryMonada} not in authorized units`);
+      return res.status(403).json({
+        message: 'Δεν έχετε πρόσβαση σε αυτόν τον δικαιούχο'
+      });
+    }
     
+    console.log(`[Beneficiaries] SECURITY: Access granted to beneficiary ${id} in unit ${beneficiaryMonada}`);
     res.json(beneficiary);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiary by ID:', error);
@@ -317,6 +525,49 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
   try {
     console.log('[Beneficiaries] Creating new beneficiary:', req.body);
     
+    // SECURITY: Get all authorized unit codes for the user
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking creation');
+      return res.status(403).json({
+        message: 'Δεν έχετε εκχωρημένες μονάδες για δημιουργία δικαιούχων'
+      });
+    }
+
+    // Map all user unit IDs to unit codes
+    const authorizedUnitCodes = [];
+    for (const unitId of userUnits) {
+      const unitCode = await getUnitCodeById(unitId);
+      if (unitCode) {
+        authorizedUnitCodes.push(unitCode);
+      }
+    }
+
+    if (authorizedUnitCodes.length === 0) {
+      console.error(`[Beneficiaries] Could not map any user unit IDs to unit codes`);
+      return res.status(500).json({
+        message: 'Σφάλμα αντιστοίχισης μονάδων χρήστη'
+      });
+    }
+
+    // SECURITY: Validate and authorize monada assignment
+    let assignedMonada = null;
+    if (req.body.monada) {
+      // Client provided a monada - verify it's in their authorized units
+      if (!authorizedUnitCodes.includes(req.body.monada)) {
+        console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to create beneficiary in unauthorized unit ${req.body.monada}`);
+        return res.status(403).json({
+          message: 'Δεν έχετε πρόσβαση στη συγκεκριμένη μονάδα'
+        });
+      }
+      assignedMonada = req.body.monada;
+    } else {
+      // No monada provided - use first authorized unit
+      assignedMonada = authorizedUnitCodes[0];
+    }
+
+    console.log(`[Beneficiaries] SECURITY: Creating beneficiary in authorized unit ${assignedMonada} for user ${req.user.id}`);
+
     // Transform data for proper validation
     const transformedData = {
       ...req.body,
@@ -324,8 +575,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       afm: req.body.afm ? String(req.body.afm).trim() : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
-      // Set unit from user's authenticated units (use unit ID)
-      monada: req.user?.unit_id?.[0] || req.body.monada
+      // SECURITY: Use authorized unit code only - no client fallback
+      monada: assignedMonada
     };
 
     // Convert region name to region code if provided
@@ -407,6 +658,61 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
 
     console.log(`[Beneficiaries] Updating beneficiary ${id}:`, req.body);
     
+    // SECURITY: Get existing beneficiary to verify user has access
+    const existingBeneficiary = await storage.getBeneficiaryById(id);
+    if (!existingBeneficiary) {
+      return res.status(404).json({ message: 'Beneficiary not found' });
+    }
+
+    // SECURITY: Get all authorized unit codes for the user
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      console.log('[Beneficiaries] SECURITY: User has no assigned units - blocking update');
+      return res.status(403).json({
+        message: 'Δεν έχετε εκχωρημένες μονάδες για επεξεργασία δικαιούχων'
+      });
+    }
+
+    // Map all user unit IDs to unit codes
+    const authorizedUnitCodes = [];
+    for (const unitId of userUnits) {
+      const unitCode = await getUnitCodeById(unitId);
+      if (unitCode) {
+        authorizedUnitCodes.push(unitCode);
+      }
+    }
+
+    if (authorizedUnitCodes.length === 0) {
+      console.error(`[Beneficiaries] Could not map any user unit IDs to unit codes during update`);
+      return res.status(500).json({
+        message: 'Σφάλμα αντιστοίχισης μονάδων χρήστη'
+      });
+    }
+
+    // SECURITY: Verify user can access the existing beneficiary's unit
+    const existingMonada = (existingBeneficiary as any).monada;
+    if (!authorizedUnitCodes.includes(existingMonada)) {
+      console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to update beneficiary in unauthorized unit ${existingMonada}`);
+      return res.status(403).json({
+        message: 'Δεν έχετε πρόσβαση σε αυτόν τον δικαιούχο'
+      });
+    }
+
+    // SECURITY: Validate and authorize monada changes (if provided)
+    let assignedMonada = existingMonada; // Keep existing by default
+    if (req.body.monada) {
+      // Client wants to change the monada - verify it's in their authorized units
+      if (!authorizedUnitCodes.includes(req.body.monada)) {
+        console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to move beneficiary to unauthorized unit ${req.body.monada}`);
+        return res.status(403).json({
+          message: 'Δεν έχετε πρόσβαση στη συγκεκριμένη μονάδα'
+        });
+      }
+      assignedMonada = req.body.monada;
+    }
+
+    console.log(`[Beneficiaries] SECURITY: Updating beneficiary in authorized unit ${assignedMonada} for user ${req.user.id}`);
+    
     // Transform data for proper validation with type safety
     const transformedData = {
       ...req.body,
@@ -414,8 +720,8 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       afm: req.body.afm ? String(req.body.afm).trim() : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
-      // Set unit from user's authenticated units (use unit ID)
-      monada: req.user?.unit_id?.[0] || req.body.monada
+      // SECURITY: Use authorized unit code only - no client fallback
+      monada: assignedMonada
     };
 
     // Handle region: detect if it's a numeric code vs name
@@ -459,11 +765,11 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       const existingBeneficiary = await storage.getBeneficiaryById(id);
       let existingOikonomika = {};
       
-      if (existingBeneficiary?.oikonomika) {
+      if ((existingBeneficiary as any)?.oikonomika) {
         try {
-          existingOikonomika = typeof existingBeneficiary.oikonomika === 'string'
-            ? JSON.parse(existingBeneficiary.oikonomika)
-            : existingBeneficiary.oikonomika;
+          existingOikonomika = typeof (existingBeneficiary as any).oikonomika === 'string'
+            ? JSON.parse((existingBeneficiary as any).oikonomika)
+            : (existingBeneficiary as any).oikonomika;
         } catch (e) {
           console.log('[Beneficiaries] Could not parse existing oikonomika:', e);
         }

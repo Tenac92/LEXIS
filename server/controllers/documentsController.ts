@@ -90,6 +90,43 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       });
     }
 
+    // SECURITY: Resolve unit string to numeric ID and verify authorization
+    let numericUnitId = null;
+    try {
+      const { data: unitData, error: unitError } = await supabase
+        .from('Monada')
+        .select('id')
+        .eq('unit', unit)
+        .single();
+      
+      if (unitData) {
+        numericUnitId = unitData.id;
+        console.log('[DocumentsController] V1 Resolved unit string', unit, 'to numeric ID:', numericUnitId);
+      } else {
+        console.error('[DocumentsController] V1 Could not resolve unit:', unit, 'Error:', unitError);
+        return res.status(400).json({ 
+          message: `Unit "${unit}" not found in database`, 
+          error: 'Invalid unit identifier' 
+        });
+      }
+    } catch (error) {
+      console.error('[DocumentsController] V1 Error resolving unit:', error);
+      return res.status(500).json({ 
+        message: 'Error resolving unit identifier', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    // SECURITY: Verify user is authorized to create documents for this unit
+    const userUnits = Array.isArray(req.user.unit_id) ? req.user.unit_id : [req.user.unit_id];
+    if (!userUnits.includes(numericUnitId)) {
+      console.error('[DocumentsController] V1 Authorization failed: user units', userUnits, 'do not include target unit', numericUnitId);
+      return res.status(403).json({ 
+        message: 'Δεν έχετε δικαίωμα να δημιουργήσετε έγγραφα για αυτήν την μονάδα', 
+        error: 'Unauthorized unit access' 
+      });
+    }
+
     // Get project data with enhanced information using optimized schema
     const [projectRes, eventTypesRes, expenditureTypesRes, monadaRes, kallikratisRes, indexRes] = await Promise.all([
       supabase.from('Projects').select('*').eq('id', project_id).single(),
@@ -148,7 +185,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       
       // Enhanced foreign key relationships
       generated_by: req.user.id,
-      unit_id: parseInt(unit), // Foreign key to monada table
+      unit_id: numericUnitId, // Properly resolved foreign key to monada table
       project_index_id: projectIndexItems.length > 0 ? projectIndexItems[0].id : null, // Foreign key to project_index table
       attachment_id: [], // Will be populated after attachment processing
       beneficiary_payments_id: [], // Will be populated after beneficiary processing
@@ -207,9 +244,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
 router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log('[DocumentsController] V2 Document creation request received!');
-    console.log('[DocumentsController] V2 Request body:', req.body);
-    console.log('[DocumentsController] V2 Request headers:', req.headers);
-    console.log('[DocumentsController] V2 Request user session:', req.user);
+    // Removed sensitive logging of req.body and req.headers to prevent PII/session leaks
     
     // Proper authentication check
     if (!req.user?.id) {
@@ -217,14 +252,14 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       return res.status(401).json({ message: 'Authentication required' });
     }
     
-    console.log('[DocumentsController] V2 Authenticated user:', req.user.id);
+    console.log('[DocumentsController] V2 Authenticated user ID:', req.user.id);
     
     const { unit, project_id, expenditure_type, recipients, total_amount, attachments = [], esdian_field1, esdian_field2, esdian, director_signature } = req.body;
     
-    console.log('[DocumentsController] V2 Raw request data:', {
+    console.log('[DocumentsController] V2 Request summary:', {
       unit, project_id, expenditure_type, 
       recipientsCount: recipients?.length,
-      total_amount, attachments, esdian_field1, esdian_field2
+      total_amount
     });
     
     // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
@@ -252,6 +287,16 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       return res.status(500).json({ 
         message: 'Error resolving unit identifier', 
         error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    // SECURITY: Verify user is authorized to create documents for this unit
+    const userUnits = Array.isArray(req.user.unit_id) ? req.user.unit_id : [req.user.unit_id];
+    if (!userUnits.includes(numericUnitId)) {
+      console.error('[DocumentsController] V2 Authorization failed: user units', userUnits, 'do not include target unit', numericUnitId);
+      return res.status(403).json({ 
+        message: 'Δεν έχετε δικαίωμα να δημιουργήσετε έγγραφα για αυτήν την μονάδα', 
+        error: 'Unauthorized unit access' 
       });
     }
     
@@ -282,7 +327,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         .select('id, mis, project_title')
         .limit(10);
       
-      console.log('[DocumentsController] V2 Sample projects in database:', allProjectsRes.data);
+      console.log('[DocumentsController] V2 Projects query completed - found', allProjectsRes.data?.length || 0, 'projects');
       
       const projectRes = await supabase
         .from('Projects')
@@ -327,13 +372,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
       secondary_text: r.secondary_text ? String(r.secondary_text).trim() : undefined
     }));
     
-    console.log('[DocumentsController] V2 Formatted recipients:', formattedRecipients.map((r: any) => ({
-      name: `${r.firstname} ${r.lastname}`,
-      afm: r.afm,
-      amount: r.amount,
-      installments: r.installments,
-      installmentAmounts: r.installmentAmounts
-    })));
+    console.log('[DocumentsController] V2 Formatted', formattedRecipients.length, 'recipients successfully');
     
     const now = new Date().toISOString();
     
@@ -351,13 +390,13 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         
         if (monadaData && monadaData.director) {
           directorSignature = monadaData.director;
-          console.log('[DocumentsController] V2 Fallback director signature from Monada:', directorSignature);
+          console.log('[DocumentsController] V2 Using fallback director signature from Monada');
         }
       } catch (error) {
         console.log('[DocumentsController] V2 Could not fetch fallback director signature:', error);
       }
     } else {
-      console.log('[DocumentsController] V2 Using director signature from request:', directorSignature);
+      console.log('[DocumentsController] V2 Using director signature from request');
     }
 
     // Resolve project_index_id before creating document
@@ -1986,6 +2025,74 @@ router.put('/:id/beneficiaries', authenticateSession, async (req: AuthenticatedR
     console.error('Error updating beneficiary payments:', error);
     res.status(500).json({
       message: 'Failed to update beneficiary payments',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * DELETE /api/documents/generated/:id
+ * Delete a generated document
+ */
+router.delete('/generated/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const documentId = parseInt(req.params.id);
+    
+    if (isNaN(documentId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Μη έγκυρο ID εγγράφου'
+      });
+    }
+
+    // Verify document exists before deletion
+    const { data: existingDocument, error: fetchError } = await supabase
+      .from('generated_documents')
+      .select('id, generated_by')
+      .eq('id', documentId)
+      .single();
+
+    if (fetchError || !existingDocument) {
+      return res.status(404).json({
+        success: false,
+        message: 'Το έγγραφο δεν βρέθηκε'
+      });
+    }
+
+    // Optional: Add authorization check - only allow user who created the document or admin to delete
+    if (req.user?.role !== 'admin' && existingDocument.generated_by !== req.user?.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Δεν έχετε άδεια να διαγράψετε αυτό το έγγραφο'
+      });
+    }
+
+    // Delete the document
+    const { error: deleteError } = await supabase
+      .from('generated_documents')
+      .delete()
+      .eq('id', documentId);
+
+    if (deleteError) {
+      console.error('Error deleting document:', deleteError);
+      return res.status(500).json({
+        success: false,
+        message: 'Σφάλμα κατά τη διαγραφή του εγγράφου',
+        error: deleteError.message
+      });
+    }
+
+    logger.info(`Document ${documentId} deleted successfully by user ${req.user?.id}`);
+    
+    res.json({
+      success: true,
+      message: 'Το έγγραφο διαγράφηκε επιτυχώς'
+    });
+  } catch (error) {
+    console.error('Error in document deletion endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Εσωτερικό σφάλμα διακομιστή',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

@@ -56,9 +56,8 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   
   // Special handling for sdegdaefk.gr domain and subdomains
   if (isAllowedDomain) {
-    // Log detailed information for debugging
+    // Log detailed information for debugging (headers removed for security)
     log(`[CORS] Request from allowed origin: ${origin}`, 'cors');
-    log(`[CORS] Headers: ${JSON.stringify(req.headers)}`, 'cors');
     log(`[CORS] Method: ${req.method}, Path: ${req.path}`, 'cors');
     
     // Allow the specific origin that made the request
