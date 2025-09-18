@@ -522,12 +522,11 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
         // Step 1: Look up or create beneficiary
         let beneficiaryId = null;
         try {
-          // Try to find existing beneficiary by AFM (convert string to numeric for database query)
-          const numericAfm = parseFloat(recipient.afm);
+          // Find existing beneficiary by AFM (keep as string to preserve leading zeros)
           const { data: existingBeneficiary, error: findError } = await supabase
             .from('beneficiaries')
             .select('id')
-            .eq('afm', numericAfm)
+            .eq('afm', recipient.afm)
             .single();
           
           if (existingBeneficiary) {
@@ -536,7 +535,7 @@ router.post('/v2', authenticateSession, async (req: AuthenticatedRequest, res: R
           } else if (findError && findError.code === 'PGRST116') {
             // Beneficiary not found, create new one
             const newBeneficiary = {
-              afm: numericAfm, // Use numeric AFM for database storage
+              afm: recipient.afm, // Keep AFM as string to preserve leading zeros
               surname: recipient.lastname,
               name: recipient.firstname,
               fathername: recipient.fathername,
