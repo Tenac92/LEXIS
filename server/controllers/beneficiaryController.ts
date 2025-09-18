@@ -320,8 +320,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Transform data for proper validation
     const transformedData = {
       ...req.body,
-      // Convert AFM from string to integer for database storage
-      afm: req.body.afm ? parseInt(req.body.afm) : undefined,
+      // Keep AFM as string to preserve leading zeros (fixes AFM data loss issue)
+      afm: req.body.afm ? String(req.body.afm).trim() : undefined,
       // Handle adeia field - convert to integer if provided
       adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
       // Set unit from user's authenticated units (use unit ID)
