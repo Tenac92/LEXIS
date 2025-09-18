@@ -924,43 +924,26 @@ export class DatabaseStorage implements IStorage {
       const currentDigits = afm.length;
       
       if (currentDigits >= minDigits) {
-        // Exact match for full AFM - search both as string and number to handle leading zeros
+        // CRITICAL FIX: Search for AFM as string only to preserve leading zeros
         console.log(`[Storage] Exact AFM search for: ${afm}`);
         
-        // Try searching as string first (preserves leading zeros)
-        let { data, error } = await supabase
+        // Ensure AFM is properly formatted as 9-digit string
+        const formattedAfm = afm.padStart(9, '0');
+        
+        // Search by AFM as string to preserve leading zeros
+        const { data, error } = await supabase
           .from('Employees')
           .select('*')
-          .eq('afm', afm)
+          .or(`afm.eq.${formattedAfm},afm::text.eq.${formattedAfm}`)
           .order('surname', { ascending: true })
           .limit(20);
           
         if (error) {
-          console.error('[Storage] Error searching employees by exact AFM (string):', error);
+          console.error('[Storage] Error searching employees by exact AFM:', error);
           throw error;
         }
         
-        // If no results with string search and AFM has leading zeros, try numeric search
-        if ((!data || data.length === 0) && afm.startsWith('0')) {
-          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
-          const searchNum = parseInt(afm);
-          
-          const numericResult = await supabase
-            .from('Employees')
-            .select('*')
-            .eq('afm', searchNum)
-            .order('surname', { ascending: true })
-            .limit(20);
-            
-          if (numericResult.error) {
-            console.error('[Storage] Error searching employees by exact AFM (numeric):', numericResult.error);
-            throw numericResult.error;
-          }
-          
-          data = numericResult.data;
-        }
-        
-        console.log(`[Storage] Found ${data?.length || 0} employees with exact AFM: ${afm}`);
+        console.log(`[Storage] Found ${data?.length || 0} employees with exact AFM: ${formattedAfm}`);
         return data || [];
       } else {
         // Prefix matching using text-based pattern matching for partial AFM
@@ -970,7 +953,7 @@ export class DatabaseStorage implements IStorage {
         const { data, error } = await supabase
           .from('Employees')
           .select('*')
-          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
+          .or(`afm::text.like.${afm}%`)
           .order('surname', { ascending: true })
           .limit(20);
           
@@ -1120,41 +1103,25 @@ export class DatabaseStorage implements IStorage {
       const currentDigits = afm.length;
       
       if (currentDigits >= minDigits) {
-        // Exact match for full AFM - search both as string and number to handle leading zeros
+        // CRITICAL FIX: Search for AFM as string only to preserve leading zeros
         console.log(`[Storage] Exact AFM search for: ${afm}`);
         
-        // Try searching as string first (preserves leading zeros)
-        let { data, error } = await supabase
+        // Ensure AFM is properly formatted as 9-digit string
+        const formattedAfm = afm.padStart(9, '0');
+        
+        // Search by AFM as string to preserve leading zeros
+        const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .eq('afm', afm)
+          .or(`afm.eq.${formattedAfm},afm::text.eq.${formattedAfm}`)
           .order('id', { ascending: false });
           
         if (error) {
-          console.error('[Storage] Error searching beneficiaries by exact AFM (string):', error);
+          console.error('[Storage] Error searching beneficiaries by exact AFM:', error);
           throw error;
         }
         
-        // If no results with string search and AFM has leading zeros, try numeric search
-        if ((!data || data.length === 0) && afm.startsWith('0')) {
-          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
-          const searchNum = parseInt(afm);
-          
-          const numericResult = await supabase
-            .from('beneficiaries')
-            .select('*')
-            .eq('afm', searchNum)
-            .order('id', { ascending: false });
-            
-          if (numericResult.error) {
-            console.error('[Storage] Error searching beneficiaries by exact AFM (numeric):', numericResult.error);
-            throw numericResult.error;
-          }
-          
-          data = numericResult.data;
-        }
-        
-        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with exact AFM: ${afm}`);
+        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with exact AFM: ${formattedAfm}`);
         return data || [];
       } else {
         // Prefix matching using text-based pattern matching for partial AFM
@@ -1164,7 +1131,7 @@ export class DatabaseStorage implements IStorage {
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
+          .or(`afm::text.like.${afm}%`)
           .order('id', { ascending: false });
           
         if (error) {
@@ -1288,11 +1255,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating beneficiary installment status for AFM: ${afm}, Type: ${paymentType}, Installment: ${installment}, Status: ${status}`);
       
+      // CRITICAL FIX: Search for beneficiary by AFM as string with leading zeros preserved
+      const formattedAfm = String(afm).padStart(9, '0');
+      
       // First, get the beneficiary by AFM
       const { data: beneficiary, error: fetchError } = await supabase
         .from('beneficiaries')
         .select('id')
-        .eq('afm', afm)
+        .or(`afm.eq.${formattedAfm},afm::text.eq.${formattedAfm}`)
         .single();
         
       if (fetchError || !beneficiary) {
