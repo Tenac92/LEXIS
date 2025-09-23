@@ -141,8 +141,9 @@ export const projectBudget = pgTable("project_budget", {
  */
 export const budgetHistory = pgTable("budget_history", {
   id: serial("id").primaryKey(),
-  project_id: integer("project_id")
-    .references(() => projects.id, { onDelete: "cascade" }),
+  project_id: integer("project_id").references(() => projects.id, {
+    onDelete: "cascade",
+  }),
   previous_amount: decimal("previous_amount", {
     precision: 12,
     scale: 2,
@@ -265,9 +266,7 @@ export const budgetNotifications = pgTable("budget_notifications", {
 export const generatedDocuments = pgTable("generated_documents", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  generated_by: integer("generated_by").references(
-    () => users.id,
-  ),
+  generated_by: integer("generated_by").references(() => users.id),
   protocol_date: date("protocol_date"),
   total_amount: decimal("total_amount", { precision: 10, scale: 2 }),
   status: varchar("status", { length: 50 }).default("pending"),
@@ -359,7 +358,7 @@ export const employees = pgTable(
     surname: text("surname"),
     name: text("name"),
     fathername: text("fathername"),
-    afm: serial("afm").unique(),
+    afm: text("afm"),
     klados: text("klados"),
     attribute: text("attribute"),
     workaf: text("workaf"),
@@ -466,13 +465,13 @@ export const projectIndex = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     monada_id: integer("monada_id")
       .notNull()
-      .references(() => monada.id),  // NOT NULL - matches actual database schema
+      .references(() => monada.id), // NOT NULL - matches actual database schema
     event_types_id: integer("event_types_id")
       .notNull()
-      .references(() => eventTypes.id),  // NOT NULL - matches actual database schema
+      .references(() => eventTypes.id), // NOT NULL - matches actual database schema
     expenditure_type_id: integer("expenditure_type_id")
       .notNull()
-      .references(() => expenditureTypes.id),  // NOT NULL - matches actual database schema
+      .references(() => expenditureTypes.id), // NOT NULL - matches actual database schema
     // NOTE: kallikratis_id and geographic_code columns don't exist in actual database
     // Geographic data should be stored in a separate table or handled differently
   },
@@ -498,7 +497,6 @@ export const projectIndex = pgTable(
   }),
 );
 
-
 /**
  * Event Types Table
  * Reference table for event types
@@ -519,24 +517,6 @@ export const expenditureTypes = pgTable("expenditure_types", {
 });
 
 /**
- * Kallikratis Table - Simplified 8-column structure
- * Reference table for Greek administrative divisions
- * Updated schema to match simplified table structure
- */
-export const kallikratis = pgTable("kallikratis", {
-  id: bigint("id", { mode: "number" }),
-  kodikos_neou_ota: bigint("kodikos_neou_ota", { mode: "number" }),
-  eidos_neou_ota: text("eidos_neou_ota"),
-  onoma_neou_ota: text("onoma_neou_ota"),
-  kodikos_perifereiakis_enotitas: bigint("kodikos_perifereiakis_enotitas", {
-    mode: "number",
-  }),
-  perifereiaki_enotita: text("perifereiaki_enotita"),
-  kodikos_perifereias: bigint("kodikos_perifereias", { mode: "number" }),
-  perifereia: text("perifereia"),
-});
-
-/**
  * Regions Table - New normalized geographic structure
  * Greek administrative regions (Περιφέρειες)
  */
@@ -546,13 +526,15 @@ export const regions = pgTable("regions", {
 });
 
 /**
- * Regional Units Table - New normalized geographic structure  
+ * Regional Units Table - New normalized geographic structure
  * Greek regional units (Περιφερειακές Ενότητες)
  */
 export const regionalUnits = pgTable("regional_units", {
   code: bigint("code", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
-  region_code: bigint("region_code", { mode: "number" }).notNull().references(() => regions.code),
+  region_code: bigint("region_code", { mode: "number" })
+    .notNull()
+    .references(() => regions.code),
 });
 
 /**
@@ -562,53 +544,67 @@ export const regionalUnits = pgTable("regional_units", {
 export const municipalities = pgTable("municipalities", {
   code: bigint("code", { mode: "number" }).primaryKey(),
   name: text("name").notNull(),
-  unit_code: bigint("unit_code", { mode: "number" }).notNull().references(() => regionalUnits.code),
+  unit_code: bigint("unit_code", { mode: "number" })
+    .notNull()
+    .references(() => regionalUnits.code),
 });
 
 /**
  * Subprojects Table
  * Contains subproject information scoped to EPA versions only
  */
-export const subprojects = pgTable("Subprojects", {
-  id: serial("id").primaryKey(),
-  epa_version_id: integer("epa_version_id")
-    .notNull()
-    .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  description: text("description"),
-  status: text("status"),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  epaVersionIndex: index("idx_subprojects_epa_version_id").on(table.epa_version_id),
-}));
+export const subprojects = pgTable(
+  "Subprojects",
+  {
+    id: serial("id").primaryKey(),
+    epa_version_id: integer("epa_version_id")
+      .notNull()
+      .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    status: text("status"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    epaVersionIndex: index("idx_subprojects_epa_version_id").on(
+      table.epa_version_id,
+    ),
+  }),
+);
 
 /**
  * Subproject Financials Table
  * Stores per-year financial data for each subproject
  */
-export const subprojectFinancials = pgTable("subproject_financials", {
-  id: serial("id").primaryKey(),
-  subproject_id: integer("subproject_id")
-    .notNull()
-    .references(() => subprojects.id, { onDelete: "cascade" }),
-  year: integer("year").notNull(),
-  total_public: decimal("total_public", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  eligible_public: decimal("eligible_public", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-}, (table) => ({
-  subprojectIdIndex: index("idx_subproject_financials_subproject_id").on(table.subproject_id),
-  yearIndex: index("idx_subproject_financials_year").on(table.year),
-  uniqueSubprojectYear: sql`UNIQUE(subproject_id, year)`,
-  totalPublicCheck: sql`CHECK (total_public >= 0)`,
-  eligiblePublicCheck: sql`CHECK (eligible_public >= 0)`,
-  eligibleLessThanTotalCheck: sql`CHECK (eligible_public <= total_public)`,
-}));
+export const subprojectFinancials = pgTable(
+  "subproject_financials",
+  {
+    id: serial("id").primaryKey(),
+    subproject_id: integer("subproject_id")
+      .notNull()
+      .references(() => subprojects.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    total_public: decimal("total_public", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    eligible_public: decimal("eligible_public", { precision: 12, scale: 2 })
+      .notNull()
+      .default("0"),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+    updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    subprojectIdIndex: index("idx_subproject_financials_subproject_id").on(
+      table.subproject_id,
+    ),
+    yearIndex: index("idx_subproject_financials_year").on(table.year),
+    uniqueSubprojectYear: sql`UNIQUE(subproject_id, year)`,
+    totalPublicCheck: sql`CHECK (total_public >= 0)`,
+    eligiblePublicCheck: sql`CHECK (eligible_public >= 0)`,
+    eligibleLessThanTotalCheck: sql`CHECK (eligible_public <= total_public)`,
+  }),
+);
 
 /**
  * Project Index Geographic Junction Tables
@@ -631,7 +627,7 @@ export const projectIndexRegions = pgTable(
 );
 
 export const projectIndexUnits = pgTable(
-  "project_index_units", 
+  "project_index_units",
   {
     project_index_id: integer("project_index_id")
       .notNull()
@@ -837,87 +833,115 @@ export const projectFormulations = pgTable(
  * Junction table for storing ΠΔΕ and ΕΠΑ budget versions for each enumeration code
  * Links to project formulations to support multiple budget versions per SA type
  */
-export const projectBudgetVersions = pgTable("project_budget_versions", {
-  id: serial("id").primaryKey(),
-  project_id: integer("project_id")
-    .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  formulation_id: bigint("formulation_id", { mode: "number" })
-    .references(() => projectFormulations.id, { onDelete: "cascade" }),
-  
-  // Budget version type: "ΠΔΕ" or "ΕΠΑ"
-  budget_type: text("budget_type").notNull(), // "ΠΔΕ" | "ΕΠΑ"
-  
-  // Version identification
-  version_number: decimal("version_number", { precision: 3, scale: 1 }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
-  
-  // ΠΔΕ specific fields
-  boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Οριοθέτησης
-  
-  // ΕΠΑ specific fields
-  epa_version: text("epa_version"),
-  
-  // Document references
-  protocol_number: text("protocol_number"),
-  ada: text("ada"),
-  decision_date: date("decision_date"),
-  
-  // Action details (renamed from decision_type)
-  action_type: text("action_type").default("Έγκριση"), // Είδος Πράξης: Έγκριση, Τροποποίηση, Κλείσιμο στο ύψος πληρωμών
-  
-  // Metadata
-  comments: text("comments"),
-  
-  
-  // Audit fields
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-  created_by: integer("created_by"),
-  updated_by: integer("updated_by"),
-}, (table) => ({
-  // Indexes for performance
-  projectIdIndex: index("idx_budget_versions_project_id").on(table.project_id),
-  formulationIdIndex: index("idx_budget_versions_formulation_id").on(table.formulation_id),
-  budgetTypeIndex: index("idx_budget_versions_budget_type").on(table.budget_type),
-  // Constraint for boundary_budget >= 0
-  boundaryBudgetCheck: sql`CHECK (boundary_budget >= 0 OR boundary_budget IS NULL)`,
-}));
+export const projectBudgetVersions = pgTable(
+  "project_budget_versions",
+  {
+    id: serial("id").primaryKey(),
+    project_id: integer("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    formulation_id: bigint("formulation_id", { mode: "number" }).references(
+      () => projectFormulations.id,
+      { onDelete: "cascade" },
+    ),
+
+    // Budget version type: "ΠΔΕ" or "ΕΠΑ"
+    budget_type: text("budget_type").notNull(), // "ΠΔΕ" | "ΕΠΑ"
+
+    // Version identification
+    version_number: decimal("version_number", {
+      precision: 3,
+      scale: 1,
+    }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
+
+    // ΠΔΕ specific fields
+    boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Οριοθέτησης
+
+    // ΕΠΑ specific fields
+    epa_version: text("epa_version"),
+
+    // Document references
+    protocol_number: text("protocol_number"),
+    ada: text("ada"),
+    decision_date: date("decision_date"),
+
+    // Action details (renamed from decision_type)
+    action_type: text("action_type").default("Έγκριση"), // Είδος Πράξης: Έγκριση, Τροποποίηση, Κλείσιμο στο ύψος πληρωμών
+
+    // Metadata
+    comments: text("comments"),
+
+    // Audit fields
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+    created_by: integer("created_by"),
+    updated_by: integer("updated_by"),
+  },
+  (table) => ({
+    // Indexes for performance
+    projectIdIndex: index("idx_budget_versions_project_id").on(
+      table.project_id,
+    ),
+    formulationIdIndex: index("idx_budget_versions_formulation_id").on(
+      table.formulation_id,
+    ),
+    budgetTypeIndex: index("idx_budget_versions_budget_type").on(
+      table.budget_type,
+    ),
+    // Constraint for boundary_budget >= 0
+    boundaryBudgetCheck: sql`CHECK (boundary_budget >= 0 OR boundary_budget IS NULL)`,
+  }),
+);
 
 /**
  * EPA Financials Table
  * Stores financial data for EPA budget versions by year
  * Each EPA version can have multiple financial entries (one per year)
  */
-export const epaFinancials = pgTable("epa_financials", {
-  id: serial("id").primaryKey(),
-  epa_version_id: integer("epa_version_id")
-    .notNull()
-    .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
-  year: integer("year").notNull(), // Έτος - unique per EPA version
-  total_public_expense: decimal("total_public_expense", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"), // Συνολική Δημόσια Δαπάνη ≥ 0
-  eligible_public_expense: decimal("eligible_public_expense", { precision: 12, scale: 2 })
-    .notNull()
-    .default("0"), // Επιλέξιμη Δημόσια Δαπάνη ≥ 0, ≤ Συνολική
-  
-  // Audit fields
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-}, (table) => ({
-  // Unique constraint: one financial record per EPA version per year
-  uniqueEpaVersionYear: unique("unique_epa_version_year").on(table.epa_version_id, table.year),
-  
-  // Business constraints
-  totalExpenseCheck: sql`CHECK (total_public_expense >= 0)`,
-  eligibleExpenseCheck: sql`CHECK (eligible_public_expense >= 0)`,
-  eligibleLteTotalCheck: sql`CHECK (eligible_public_expense <= total_public_expense)`,
-  
-  // Indexes for performance
-  epaVersionIdIndex: index("idx_epa_financials_version_id").on(table.epa_version_id),
-  yearIndex: index("idx_epa_financials_year").on(table.year),
-}));
+export const epaFinancials = pgTable(
+  "epa_financials",
+  {
+    id: serial("id").primaryKey(),
+    epa_version_id: integer("epa_version_id")
+      .notNull()
+      .references(() => projectBudgetVersions.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(), // Έτος - unique per EPA version
+    total_public_expense: decimal("total_public_expense", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"), // Συνολική Δημόσια Δαπάνη ≥ 0
+    eligible_public_expense: decimal("eligible_public_expense", {
+      precision: 12,
+      scale: 2,
+    })
+      .notNull()
+      .default("0"), // Επιλέξιμη Δημόσια Δαπάνη ≥ 0, ≤ Συνολική
 
+    // Audit fields
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    // Unique constraint: one financial record per EPA version per year
+    uniqueEpaVersionYear: unique("unique_epa_version_year").on(
+      table.epa_version_id,
+      table.year,
+    ),
+
+    // Business constraints
+    totalExpenseCheck: sql`CHECK (total_public_expense >= 0)`,
+    eligibleExpenseCheck: sql`CHECK (eligible_public_expense >= 0)`,
+    eligibleLteTotalCheck: sql`CHECK (eligible_public_expense <= total_public_expense)`,
+
+    // Indexes for performance
+    epaVersionIdIndex: index("idx_epa_financials_version_id").on(
+      table.epa_version_id,
+    ),
+    yearIndex: index("idx_epa_financials_year").on(table.year),
+  }),
+);
 
 // ==============================================================
 // 2. Table Definitions above, Schema Helpers below
@@ -945,7 +969,12 @@ export const extendedUserSchema = insertUserSchema.extend({
   role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
     message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
-  telephone: z.number().int().positive("Το τηλέφωνο πρέπει να είναι θετικός αριθμός").optional().nullable(), // Telephone as numeric field
+  telephone: z
+    .number()
+    .int()
+    .positive("Το τηλέφωνο πρέπει να είναι θετικός αριθμός")
+    .optional()
+    .nullable(), // Telephone as numeric field
   details: userDetailsSchema,
 });
 
@@ -953,9 +982,12 @@ export const insertProjectSchema = createInsertSchema(projects);
 
 export const insertProjectCatalogSchema = createInsertSchema(projectCatalog);
 
-export const insertProjectFormulationSchema = createInsertSchema(projectFormulations);
+export const insertProjectFormulationSchema =
+  createInsertSchema(projectFormulations);
 
-export const insertProjectBudgetVersionSchema = createInsertSchema(projectBudgetVersions);
+export const insertProjectBudgetVersionSchema = createInsertSchema(
+  projectBudgetVersions,
+);
 
 export const insertEpaFinancialsSchema = createInsertSchema(epaFinancials);
 
@@ -965,14 +997,20 @@ export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
     required_error: "Ο τύπος προϋπολογισμού είναι υποχρεωτικός",
   }),
   boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Οριοθέτησης
-  action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Είδος Πράξης
+  action_type: z
+    .enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"])
+    .default("Έγκριση"), // Είδος Πράξης
 });
 
 // Schema for EPA financials with validation
 export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
   year: z.number().int().min(2000).max(2100, "Το έτος πρέπει να είναι έγκυρο"),
-  total_public_expense: z.string().min(1, "Η συνολική δημόσια δαπάνη είναι υποχρεωτική"),
-  eligible_public_expense: z.string().min(1, "Η επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
+  total_public_expense: z
+    .string()
+    .min(1, "Η συνολική δημόσια δαπάνη είναι υποχρεωτική"),
+  eligible_public_expense: z
+    .string()
+    .min(1, "Η επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
 });
 
 // Schema for document recipients
@@ -1043,32 +1081,42 @@ export const insertProjectBudgetSchema = createInsertSchema(projectBudget);
 export const insertProjectIndexSchema = createInsertSchema(projectIndex);
 export const insertEventTypeSchema = createInsertSchema(eventTypes);
 export const insertExpenditureTypeSchema = createInsertSchema(expenditureTypes);
-export const insertKallikratisSchema = createInsertSchema(kallikratis);
 
 // Subprojects schemas
 export const insertSubprojectSchema = createInsertSchema(subprojects);
-export const insertSubprojectFinancialsSchema = createInsertSchema(subprojectFinancials);
+export const insertSubprojectFinancialsSchema =
+  createInsertSchema(subprojectFinancials);
 
 // Enhanced subprojects schema with validation for form handling
-export const subprojectFormSchema = insertSubprojectSchema.extend({
-  title: z.string().min(1, "Ο τίτλος υποέργου είναι υποχρεωτικός"),
-  status: z.enum(["Συνεχιζόμενο", "Σε αναμονή", "Ολοκληρωμένο"]).default("Συνεχιζόμενο"),
-  description: z.string().optional(),
-}).omit({ 
-  id: true,
-  created_at: true, 
-  updated_at: true 
-});
+export const subprojectFormSchema = insertSubprojectSchema
+  .extend({
+    title: z.string().min(1, "Ο τίτλος υποέργου είναι υποχρεωτικός"),
+    status: z
+      .enum(["Συνεχιζόμενο", "Σε αναμονή", "Ολοκληρωμένο"])
+      .default("Συνεχιζόμενο"),
+    description: z.string().optional(),
+  })
+  .omit({
+    id: true,
+    created_at: true,
+    updated_at: true,
+  });
 
-export const subprojectFinancialsFormSchema = insertSubprojectFinancialsSchema.extend({
-  year: z.number().int().min(2020, "Έτος πρέπει να είναι μετά το 2020"),
-  total_public: z.string().min(1, "Συνολική δημόσια δαπάνη είναι υποχρεωτική"),
-  eligible_public: z.string().min(1, "Επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
-}).omit({ 
-  id: true,
-  created_at: true, 
-  updated_at: true 
-});
+export const subprojectFinancialsFormSchema = insertSubprojectFinancialsSchema
+  .extend({
+    year: z.number().int().min(2020, "Έτος πρέπει να είναι μετά το 2020"),
+    total_public: z
+      .string()
+      .min(1, "Συνολική δημόσια δαπάνη είναι υποχρεωτική"),
+    eligible_public: z
+      .string()
+      .min(1, "Επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
+  })
+  .omit({
+    id: true,
+    created_at: true,
+    updated_at: true,
+  });
 
 // New geographic table schemas
 export const insertRegionSchema = createInsertSchema(regions);
@@ -1099,7 +1147,6 @@ export type DocumentVersion = typeof documentVersions.$inferSelect;
 export type ProjectIndex = typeof projectIndex.$inferSelect;
 export type EventType = typeof eventTypes.$inferSelect;
 export type ExpenditureType = typeof expenditureTypes.$inferSelect;
-export type Kallikratis = typeof kallikratis.$inferSelect;
 export type DocumentTemplate = typeof documentTemplates.$inferSelect;
 export type Subproject = typeof subprojects.$inferSelect;
 export type SubprojectFinancials = typeof subprojectFinancials.$inferSelect;
@@ -1141,7 +1188,9 @@ export type Recipient = z.infer<typeof recipientSchema>;
 
 // Subprojects insert types
 export type InsertSubproject = z.infer<typeof insertSubprojectSchema>;
-export type InsertSubprojectFinancials = z.infer<typeof insertSubprojectFinancialsSchema>;
+export type InsertSubprojectFinancials = z.infer<
+  typeof insertSubprojectFinancialsSchema
+>;
 export type SubprojectFormData = z.infer<typeof subprojectFormSchema>;
 
 // New geographic insert types
@@ -1157,6 +1206,7 @@ export type InsertMunicipality = z.infer<typeof insertMunicipalitySchema>;
 
 // Financial payment record structure for beneficiaries
 export interface BeneficiaryPaymentRecord {
+  id: number;
   amount: string;
   status: string | null;
   installment: string[];
@@ -1176,6 +1226,7 @@ export interface MonadaUnitName {
 
 // Optimized project data from project_index with related tables
 export interface OptimizedProject {
+  id: number;
   na853: string;
   mis: string;
   budget_na853?: number;
@@ -1263,8 +1314,12 @@ export const budgetValidationResponseSchema = z.object({
 // 7. TypeScript Types for new tables
 // ==============================================================
 
-export type ProjectBudgetVersion = InferSelectModel<typeof projectBudgetVersions>;
-export type InsertProjectBudgetVersion = InferInsertModel<typeof projectBudgetVersions>;
+export type ProjectBudgetVersion = InferSelectModel<
+  typeof projectBudgetVersions
+>;
+export type InsertProjectBudgetVersion = InferInsertModel<
+  typeof projectBudgetVersions
+>;
 
 export type EpaFinancials = InferSelectModel<typeof epaFinancials>;
 export type InsertEpaFinancials = InferInsertModel<typeof epaFinancials>;
@@ -1301,4 +1356,8 @@ export type Database = {
   projects: Project;
   employees: Employee;
   beneficiaries: Beneficiary;
+  eventTypes: EventType;
+  expenditureTypes: ExpenditureType;
+  Employees: typeof employees.$inferSelect;
+  Monada: typeof monada.$inferSelect;
 };

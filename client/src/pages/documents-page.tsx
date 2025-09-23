@@ -21,7 +21,10 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import DocumentCard from "@/components/documents/document-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ViewDocumentModal, DeleteDocumentModal } from "@/components/documents/document-modals";
+import {
+  ViewDocumentModal,
+  DeleteDocumentModal,
+} from "@/components/documents/document-modals";
 import { EditDocumentModal } from "@/components/documents/edit-document-modal";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/header";
@@ -68,11 +71,12 @@ export default function DocumentsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
-  
+
   // Enable WebSocket for real-time updates
   useWebSocketUpdates();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedDocument, setSelectedDocument] = useState<GeneratedDocument | null>(null);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedDocument, setSelectedDocument] =
+    useState<GeneratedDocument | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [modalState, setModalState] = useState<{
     view: boolean;
@@ -86,78 +90,79 @@ export default function DocumentsPage() {
 
   // Check if URL is /documents/new and open create dialog
   useEffect(() => {
-    if (location === '/documents/new') {
+    if (location === "/documents/new") {
       setShowCreateDialog(true);
       // Change URL to /documents without triggering a reload
-      setLocation('/documents', { replace: true });
+      setLocation("/documents", { replace: true });
     }
   }, [location, setLocation]);
 
   // Fetch units data for dropdown with aggressive caching
-  const { data: allUnits = [], isLoading: unitsLoading, error: unitsError } = useQuery<Unit[]>({
-    queryKey: ['/api/public/units'],
+  const {
+    data: allUnits = [],
+    isLoading: unitsLoading,
+    error: unitsError,
+  } = useQuery<Unit[]>({
+    queryKey: ["/api/public/units"],
     staleTime: 30 * 60 * 1000, // 30 minutes cache - units rarely change
     gcTime: 60 * 60 * 1000, // 1 hour cache retention (v5 renamed from cacheTime)
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     queryFn: async () => {
-      const response = await fetch('/api/public/units');
+      const response = await fetch("/api/public/units");
       if (!response.ok) {
-        throw new Error('Failed to fetch units');
+        throw new Error("Failed to fetch units");
       }
       return response.json();
-    }
+    },
   });
 
   // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
-    return allUnits.filter(unit => 
-      user.unit_id?.includes(unit.unit)
-    );
+    return allUnits.filter((unit) => user.unit_id?.includes(unit.unit));
   }, [allUnits, user?.unit_id]);
-  
-
 
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
-    unit: '',
-    status: 'pending',
-    user: 'all',
-    dateFrom: '',
-    dateTo: '',
-    amountFrom: '',
-    amountTo: '',
-    recipient: '',
-    afm: '',
-    expenditureType: '',
-    na853: ''
+    unit: "",
+    status: "pending",
+    user: "all",
+    dateFrom: "",
+    dateTo: "",
+    amountFrom: "",
+    amountTo: "",
+    recipient: "",
+    afm: "",
+    expenditureType: "",
+    na853: "",
   });
 
   // Fetch expenditure types for dropdown
-  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } = useExpenditureTypesForFilter();
+  const { data: expenditureTypes = [], isLoading: expenditureTypesLoading } =
+    useExpenditureTypesForFilter();
 
   // Ensure unit filter defaults to user's first unit when authentication completes
   useEffect(() => {
     if (user?.unit_id?.[0] && !filters.unit && userUnits.length > 0) {
       const defaultUnit = userUnits[0];
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
-        unit: defaultUnit.unit.toString() // Use unit ID as filter value
+        unit: defaultUnit.unit.toString(), // Use unit ID as filter value
       }));
     }
   }, [user?.unit_id, filters.unit, userUnits.length]);
-  
+
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
-    dateFrom: '',
-    dateTo: '',
-    amountFrom: '',
-    amountTo: '',
-    recipient: '',
-    afm: '',
-    expenditureType: '',
-    na853: ''
+    dateFrom: "",
+    dateTo: "",
+    amountFrom: "",
+    amountTo: "",
+    recipient: "",
+    afm: "",
+    expenditureType: "",
+    na853: "",
   });
 
   // For main category filters (unit, status, user) - apply immediately
@@ -165,38 +170,45 @@ export default function DocumentsPage() {
     const updatedFilters = { ...filters, ...newFilters };
     setFilters(updatedFilters);
   };
-  
+
   // For advanced filters - only store the values, don't refresh
-  const setAdvancedFilterValues = (newValues: Partial<typeof advancedFilters>) => {
-    setAdvancedFilters(prev => ({ ...prev, ...newValues }));
+  const setAdvancedFilterValues = (
+    newValues: Partial<typeof advancedFilters>,
+  ) => {
+    setAdvancedFilters((prev) => ({ ...prev, ...newValues }));
   };
-  
-  // Apply advanced filters only when button is clicked  
+
+  // Apply advanced filters only when button is clicked
   const applyAdvancedFilters = () => {
     // Update the main filters with advanced filter values
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      ...advancedFilters
+      ...advancedFilters,
     }));
   };
 
   // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
   const { data: matchingUsers = [] } = useQuery({
-    queryKey: ['/api/users/matching-units'],
+    queryKey: ["/api/users/matching-units"],
     staleTime: 15 * 60 * 1000, // Increased to 15 minutes cache - users rarely change
     gcTime: 45 * 60 * 1000, // Increased to 45 minutes cache retention
     refetchOnWindowFocus: false,
     refetchOnMount: false, // Prevent refetching on component mount
     queryFn: async () => {
-      const response = await apiRequest('/api/users/matching-units');
+      const response = await apiRequest("/api/users/matching-units");
       return response || [];
     },
-    enabled: !!user?.unit_id
+    enabled: !!user?.unit_id,
   });
 
   // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
-  const { data: documents = [], isLoading, error, refetch } = useQuery<GeneratedDocument[]>({
-    queryKey: ['/api/documents', filters],
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<GeneratedDocument[]>({
+    queryKey: ["/api/documents", filters],
     staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
     gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
     refetchOnMount: false, // Use cached data when available
@@ -204,93 +216,101 @@ export default function DocumentsPage() {
     queryFn: async () => {
       try {
         // Fetching documents with current filters
-        console.log('[DocumentsPage] Fetching documents with filters:', JSON.stringify(filters));
-        
+        console.log(
+          "[DocumentsPage] Fetching documents with filters:",
+          JSON.stringify(filters),
+        );
+
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
-        
+
         // Always enforce unit filter - users can only see their assigned units
         if (filters.unit) {
           // Verify the selected unit is in user's authorized units
           if (user?.unit_id?.includes(parseInt(filters.unit))) {
-            queryParams.append('unit', filters.unit);
+            queryParams.append("unit", filters.unit);
           } else {
             // If unauthorized unit, default to first authorized unit
             if (user?.unit_id?.[0]) {
-              queryParams.append('unit', user.unit_id[0].toString());
+              queryParams.append("unit", user.unit_id[0].toString());
             }
           }
         } else {
           // If no unit selected, default to first authorized unit
           if (user?.unit_id?.[0]) {
-            queryParams.append('unit', user.unit_id[0].toString());
+            queryParams.append("unit", user.unit_id[0].toString());
           }
         }
-        
-        if (filters.status !== 'all') {
-          queryParams.append('status', filters.status);
+
+        if (filters.status !== "all") {
+          queryParams.append("status", filters.status);
         }
-        
-        if (filters.user === 'current' && user?.id) {
-          queryParams.append('generated_by', user.id.toString());
-        } else if (filters.user !== 'all') {
-          queryParams.append('generated_by', filters.user);
+
+        if (filters.user === "current" && user?.id) {
+          queryParams.append("generated_by", user.id.toString());
+        } else if (filters.user !== "all") {
+          queryParams.append("generated_by", filters.user);
         }
-        
+
         if (filters.dateFrom) {
-          queryParams.append('dateFrom', filters.dateFrom);
+          queryParams.append("dateFrom", filters.dateFrom);
         }
-        
+
         if (filters.dateTo) {
-          queryParams.append('dateTo', filters.dateTo);
+          queryParams.append("dateTo", filters.dateTo);
         }
-        
+
         if (filters.amountFrom) {
-          queryParams.append('amountFrom', filters.amountFrom);
+          queryParams.append("amountFrom", filters.amountFrom);
         }
-        
+
         if (filters.amountTo) {
-          queryParams.append('amountTo', filters.amountTo);
+          queryParams.append("amountTo", filters.amountTo);
         }
-        
+
         if (filters.recipient) {
-          queryParams.append('recipient', filters.recipient);
+          queryParams.append("recipient", filters.recipient);
         }
-        
+
         if (filters.afm) {
-          queryParams.append('afm', filters.afm);
+          queryParams.append("afm", filters.afm);
         }
-        
+
         if (filters.expenditureType) {
-          queryParams.append('expenditureType', filters.expenditureType);
+          queryParams.append("expenditureType", filters.expenditureType);
         }
-        
+
         if (filters.na853) {
-          queryParams.append('na853', filters.na853);
+          queryParams.append("na853", filters.na853);
         }
-        
+
         const url = `/api/documents?${queryParams.toString()}`;
-        console.log('[DocumentsPage] Requesting documents from:', url);
-        
+        console.log("[DocumentsPage] Requesting documents from:", url);
+
         const data = await apiRequest<GeneratedDocument[]>(url);
-        
+
         // Ensure we always return an array, even if API returns null or undefined
         const documentsArray = Array.isArray(data) ? data : [];
-        console.log(`[DocumentsPage] Received ${documentsArray.length} documents`);
-        
+        console.log(
+          `[DocumentsPage] Received ${documentsArray.length} documents`,
+        );
+
         return documentsArray;
       } catch (error) {
         // Log error and notify user about document fetch failure
-        console.error('[DocumentsPage] Error fetching documents:', error);
+        console.error("[DocumentsPage] Error fetching documents:", error);
         toast({
           title: "Error",
-          description: error instanceof Error ? error.message : "Failed to fetch documents",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Failed to fetch documents",
           variant: "destructive",
         });
         // Return empty array in case of error
         return [];
       }
-    }
+    },
   });
 
   // PERFORMANCE OPTIMIZATION: Memoized refresh handler and optimized filter functions
@@ -300,16 +320,19 @@ export default function DocumentsPage() {
   }, [refetch]);
 
   // PERFORMANCE OPTIMIZATION: Memoized filter functions after refetch is available
-  const optimizedSetMainFilters = useCallback((newFilters: Partial<Filters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-    refetch();
-  }, [filters, refetch]);
+  const optimizedSetMainFilters = useCallback(
+    (newFilters: Partial<Filters>) => {
+      const updatedFilters = { ...filters, ...newFilters };
+      setFilters(updatedFilters);
+      refetch();
+    },
+    [filters, refetch],
+  );
 
   const optimizedApplyAdvancedFilters = useCallback(() => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      ...advancedFilters
+      ...advancedFilters,
     }));
     refetch();
   }, [advancedFilters, refetch]);
@@ -327,7 +350,9 @@ export default function DocumentsPage() {
       <div className="flex flex-col items-center justify-center min-h-screen text-destructive">
         <FileText className="h-12 w-12 mb-4" />
         <p>Failed to load documents</p>
-        {error instanceof Error && <p className="text-sm mt-2">{error.message}</p>}
+        {error instanceof Error && (
+          <p className="text-sm mt-2">{error.message}</p>
+        )}
       </div>
     );
   }
@@ -345,12 +370,18 @@ export default function DocumentsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                  onClick={() =>
+                    setViewMode(viewMode === "grid" ? "list" : "grid")
+                  }
                 >
                   {viewMode === "grid" ? (
-                    <><List className="mr-2 h-4 w-4" /> Λίστα</>
+                    <>
+                      <List className="mr-2 h-4 w-4" /> Λίστα
+                    </>
                   ) : (
-                    <><LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες</>
+                    <>
+                      <LayoutGrid className="mr-2 h-4 w-4" /> Κάρτες
+                    </>
                   )}
                 </Button>
                 <Button onClick={() => setShowCreateDialog(true)}>
@@ -363,10 +394,14 @@ export default function DocumentsPage() {
             {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Μονάδα</label>
+                <label className="text-sm font-medium text-foreground">
+                  Μονάδα
+                </label>
                 <Select
                   value={filters.unit}
-                  onValueChange={(value: string) => optimizedSetMainFilters({ unit: value })}
+                  onValueChange={(value: string) =>
+                    optimizedSetMainFilters({ unit: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -382,40 +417,71 @@ export default function DocumentsPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Κατάσταση</label>
+                <label className="text-sm font-medium text-foreground">
+                  Κατάσταση
+                </label>
                 <Select
                   value={filters.status}
-                  onValueChange={(value: string) => optimizedSetMainFilters({ status: value })}
+                  onValueChange={(value: string) =>
+                    optimizedSetMainFilters({ status: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε κατάσταση" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem key="all" value="all">Όλες οι Καταστάσεις</SelectItem>
-                    <SelectItem key="pending" value="pending">Σε Εκκρεμότητα</SelectItem>
-                    <SelectItem key="completed" value="completed">Ολοκληρωμένο</SelectItem>
-                    <SelectItem key="orthi_epanalipsi" value="orthi_epanalipsi">Ορθή Επανάληψη</SelectItem>
+                    <SelectItem key="all" value="all">
+                      Όλες οι Καταστάσεις
+                    </SelectItem>
+                    <SelectItem key="pending" value="pending">
+                      Σε Εκκρεμότητα
+                    </SelectItem>
+                    <SelectItem key="completed" value="completed">
+                      Ολοκληρωμένο
+                    </SelectItem>
+                    <SelectItem key="orthi_epanalipsi" value="orthi_epanalipsi">
+                      Ορθή Επανάληψη
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Χρήστης</label>
+                <label className="text-sm font-medium text-foreground">
+                  Χρήστης
+                </label>
                 <Select
                   value={filters.user}
-                  onValueChange={(value: string) => optimizedSetMainFilters({ user: value })}
+                  onValueChange={(value: string) =>
+                    optimizedSetMainFilters({ user: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Επιλέξτε χρήστη" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem key="all-users" value="all">Όλοι οι Χρήστες</SelectItem>
-                    <SelectItem key="current-user" value="current">Τα Έγγραφά μου</SelectItem>
-                    {Array.isArray(matchingUsers) && matchingUsers.map((u: { id: number; name?: string; email?: string }) => (
-                      <SelectItem key={u.id} value={u.id.toString()}>
-                        {u.name || u.email}
-                      </SelectItem>
-                    ))}
+                    <SelectItem key="all-users" value="all">
+                      Όλοι οι Χρήστες
+                    </SelectItem>
+                    <SelectItem key="current-user" value="current">
+                      Τα Έγγραφά μου
+                    </SelectItem>
+                    {Array.isArray(matchingUsers) &&
+                      matchingUsers.map(
+                        (u: { id: number; name?: string; email?: string }) => {
+                          const label = (
+                            u.name ||
+                            u.email ||
+                            `Χρήστης #${u.id}`
+                          ).trim();
+                          const val = u.id.toString(); // εγγυημένα string
+                          return (
+                            <SelectItem key={val} value={val}>
+                              {label}
+                            </SelectItem>
+                          );
+                        },
+                      )}
                   </SelectContent>
                 </Select>
               </div>
@@ -424,15 +490,22 @@ export default function DocumentsPage() {
             {/* Advanced Filters */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="w-full flex justify-between items-center">
+                <Button
+                  variant="outline"
+                  className="w-full flex justify-between items-center"
+                >
                   <span className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     Προχωρημένα Φίλτρα
                   </span>
-                  {(advancedFilters.dateFrom || advancedFilters.dateTo || 
-                    advancedFilters.amountFrom || advancedFilters.amountTo || 
-                    advancedFilters.recipient || advancedFilters.afm ||
-                    advancedFilters.expenditureType || advancedFilters.na853) && (
+                  {(advancedFilters.dateFrom ||
+                    advancedFilters.dateTo ||
+                    advancedFilters.amountFrom ||
+                    advancedFilters.amountTo ||
+                    advancedFilters.recipient ||
+                    advancedFilters.afm ||
+                    advancedFilters.expenditureType ||
+                    advancedFilters.na853) && (
                     <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                       Ενεργά
                     </span>
@@ -445,22 +518,34 @@ export default function DocumentsPage() {
                 </SheetHeader>
                 <div className="grid gap-4 py-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Εύρος Ημερομηνιών</label>
+                    <label className="text-sm font-medium">
+                      Εύρος Ημερομηνιών
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-muted-foreground">Από</label>
+                        <label className="text-xs text-muted-foreground">
+                          Από
+                        </label>
                         <Input
                           type="date"
                           value={advancedFilters.dateFrom}
-                          onChange={(e) => setAdvancedFilterValues({ dateFrom: e.target.value })}
+                          onChange={(e) =>
+                            setAdvancedFilterValues({
+                              dateFrom: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground">Έως</label>
+                        <label className="text-xs text-muted-foreground">
+                          Έως
+                        </label>
                         <Input
                           type="date"
                           value={advancedFilters.dateTo}
-                          onChange={(e) => setAdvancedFilterValues({ dateTo: e.target.value })}
+                          onChange={(e) =>
+                            setAdvancedFilterValues({ dateTo: e.target.value })
+                          }
                         />
                       </div>
                     </div>
@@ -470,30 +555,42 @@ export default function DocumentsPage() {
                     <label className="text-sm font-medium">Εύρος Ποσού</label>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-xs text-muted-foreground">Από</label>
+                        <label className="text-xs text-muted-foreground">
+                          Από
+                        </label>
                         <NumberInput
                           placeholder="Ελάχιστο ποσό"
                           value={advancedFilters.amountFrom}
-                          onChange={(formatted, numeric) => setAdvancedFilterValues({ amountFrom: formatted })}
+                          onChange={(formatted, numeric) =>
+                            setAdvancedFilterValues({ amountFrom: formatted })
+                          }
                         />
                       </div>
                       <div>
-                        <label className="text-xs text-muted-foreground">Έως</label>
+                        <label className="text-xs text-muted-foreground">
+                          Έως
+                        </label>
                         <NumberInput
                           placeholder="Μέγιστο ποσό"
                           value={advancedFilters.amountTo}
-                          onChange={(formatted, numeric) => setAdvancedFilterValues({ amountTo: formatted })}
+                          onChange={(formatted, numeric) =>
+                            setAdvancedFilterValues({ amountTo: formatted })
+                          }
                         />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Αναζήτηση Παραλήπτη</label>
+                    <label className="text-sm font-medium">
+                      Αναζήτηση Παραλήπτη
+                    </label>
                     <Input
                       placeholder="Αναζήτηση με όνομα παραλήπτη"
                       value={advancedFilters.recipient}
-                      onChange={(e) => setAdvancedFilterValues({ recipient: e.target.value })}
+                      onChange={(e) =>
+                        setAdvancedFilterValues({ recipient: e.target.value })
+                      }
                     />
                   </div>
 
@@ -502,7 +599,9 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με ΑΦΜ"
                       value={advancedFilters.afm}
-                      onChange={(e) => setAdvancedFilterValues({ afm: e.target.value })}
+                      onChange={(e) =>
+                        setAdvancedFilterValues({ afm: e.target.value })
+                      }
                     />
                   </div>
 
@@ -510,15 +609,26 @@ export default function DocumentsPage() {
                     <label className="text-sm font-medium">Τύπος Δαπάνης</label>
                     <Select
                       value={advancedFilters.expenditureType}
-                      onValueChange={(value) => setAdvancedFilterValues({ expenditureType: value })}
+                      onValueChange={(value) =>
+                        setAdvancedFilterValues({ expenditureType: value })
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={expenditureTypesLoading ? "Φόρτωση..." : "Επιλέξτε τύπο δαπάνης"} />
+                        <SelectValue
+                          placeholder={
+                            expenditureTypesLoading
+                              ? "Φόρτωση..."
+                              : "Επιλέξτε τύπο δαπάνης"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Όλοι οι τύποι</SelectItem>
+                        <SelectItem value="all">Όλοι οι τύποι</SelectItem>
                         {expenditureTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.expenditure_types || type.name || ''}>
+                          <SelectItem
+                            key={type.id}
+                            value={type.expenditure_types || type.name || ""}
+                          >
                             {type.expenditure_types || type.name}
                           </SelectItem>
                         ))}
@@ -531,31 +641,38 @@ export default function DocumentsPage() {
                     <Input
                       placeholder="Αναζήτηση με κωδικό NA853"
                       value={advancedFilters.na853}
-                      onChange={(e) => setAdvancedFilterValues({ na853: e.target.value })}
+                      onChange={(e) =>
+                        setAdvancedFilterValues({ na853: e.target.value })
+                      }
                     />
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    className="flex-1" 
+                  <Button
+                    variant="outline"
+                    className="flex-1"
                     onClick={() => {
                       setAdvancedFilterValues({
-                        dateFrom: '',
-                        dateTo: '',
-                        amountFrom: '',
-                        amountTo: '',
-                        recipient: '',
-                        afm: '',
-                        expenditureType: '',
-                        na853: ''
+                        dateFrom: "",
+                        dateTo: "",
+                        amountFrom: "",
+                        amountTo: "",
+                        recipient: "",
+                        afm: "",
+                        expenditureType: "",
+                        na853: "",
                       });
                     }}
                   >
                     Καθαρισμός
                   </Button>
                   <SheetClose asChild>
-                    <Button className="flex-1" onClick={optimizedApplyAdvancedFilters}>Εφαρμογή</Button>
+                    <Button
+                      className="flex-1"
+                      onClick={optimizedApplyAdvancedFilters}
+                    >
+                      Εφαρμογή
+                    </Button>
                   </SheetClose>
                 </div>
               </SheetContent>
@@ -569,7 +686,9 @@ export default function DocumentsPage() {
                 onClick={handleRefresh}
                 disabled={isLoading}
               >
-                <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCcw
+                  className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                />
                 Ανανέωση
               </Button>
             </div>
@@ -578,13 +697,28 @@ export default function DocumentsPage() {
           {/* Documents */}
           <div className="p-6">
             {isLoading ? (
-              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                    : "space-y-4"
+                }
+              >
                 {[...Array(6)].map((_, i) => (
-                  <div key={`skeleton-${i}`} className="h-48 rounded-lg bg-muted animate-pulse" />
+                  <div
+                    key={`skeleton-${i}`}
+                    className="h-48 rounded-lg bg-muted animate-pulse"
+                  />
                 ))}
               </div>
             ) : documents?.length ? (
-              <div className={viewMode === "grid" ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+                    : "space-y-4"
+                }
+              >
                 {documents.map((doc) => (
                   <DocumentCard
                     key={`doc-${doc.id}`}
@@ -592,15 +726,15 @@ export default function DocumentsPage() {
                     view={viewMode}
                     onView={() => {
                       setSelectedDocument(doc);
-                      setModalState(prev => ({ ...prev, view: true }));
+                      setModalState((prev) => ({ ...prev, view: true }));
                     }}
                     onEdit={() => {
                       setSelectedDocument(doc);
-                      setModalState(prev => ({ ...prev, edit: true }));
+                      setModalState((prev) => ({ ...prev, edit: true }));
                     }}
                     onDelete={() => {
                       setSelectedDocument(doc);
-                      setModalState(prev => ({ ...prev, delete: true }));
+                      setModalState((prev) => ({ ...prev, delete: true }));
                     }}
                   />
                 ))}
@@ -620,22 +754,24 @@ export default function DocumentsPage() {
       {/* Modals */}
       <ViewDocumentModal
         isOpen={modalState.view}
-        onClose={() => setModalState(prev => ({ ...prev, view: false }))}
+        onClose={() => setModalState((prev) => ({ ...prev, view: false }))}
         document={selectedDocument}
       />
 
       <EditDocumentModal
         open={modalState.edit}
-        onOpenChange={(open) => setModalState(prev => ({ ...prev, edit: open }))}
+        onOpenChange={(open) =>
+          setModalState((prev) => ({ ...prev, edit: open }))
+        }
         document={selectedDocument}
       />
 
       <DeleteDocumentModal
         isOpen={modalState.delete}
-        onClose={() => setModalState(prev => ({ ...prev, delete: false }))}
-        documentId={selectedDocument?.id.toString() || ''}
+        onClose={() => setModalState((prev) => ({ ...prev, delete: false }))}
+        documentId={selectedDocument?.id.toString() || ""}
         onDelete={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+          queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
         }}
       />
 

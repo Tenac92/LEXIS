@@ -37,6 +37,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FAB } from "@/components/ui/fab";
+import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -98,14 +100,15 @@ const beneficiaryFormSchema = z.object({
   surname: z.string().min(2, "Το επώνυμο είναι υποχρεωτικό"),
   name: z.string().min(2, "Το όνομα είναι υποχρεωτικό"),
   fathername: z.string().optional(),
-  
+
   // Tax Information with Greek AFM validation
-  afm: z.string()
+  afm: z
+    .string()
     .length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία")
     .regex(/^\d{9}$/, "Το ΑΦΜ πρέπει να περιέχει μόνο αριθμούς")
     .refine((val) => {
       // Greek AFM validation algorithm
-      const digits = val.split('').map(Number);
+      const digits = val.split("").map(Number);
       let sum = 0;
       for (let i = 0; i < 8; i++) {
         sum += digits[i] * Math.pow(2, 8 - i);
@@ -114,38 +117,51 @@ const beneficiaryFormSchema = z.object({
       const checkDigit = remainder < 2 ? remainder : 11 - remainder;
       return checkDigit === digits[8];
     }, "Μη έγκυρο ΑΦΜ"),
-  
+
   // Project & Location Information
   project: z.string().optional(),
   expenditure_type: z.string().optional(),
   region: z.string().optional(),
   monada: z.string().optional(),
-  
+
   // License Information
   adeia: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
-  
+
   // Engineer Information
   cengsur1: z.string().optional(),
   cengname1: z.string().optional(),
   cengsur2: z.string().optional(),
   cengname2: z.string().optional(),
-  
+
   // Financial Information - Multiple payment entries with complex structure
   selectedUnit: z.string().optional(),
   selectedNA853: z.string().optional(),
   amount: z.string().optional(),
   installment: z.string().optional(),
   protocol: z.string().optional(),
-  
+
   // Additional Information
-  freetext: z.string().max(500, "Το ελεύθερο κείμενο δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες").optional(),
+  freetext: z
+    .string()
+    .max(
+      500,
+      "Το ελεύθερο κείμενο δεν μπορεί να υπερβαίνει τους 500 χαρακτήρες",
+    )
+    .optional(),
   date: z.string().optional(),
 });
+interface User {
+  id: number;
+  role: string;
+  unit_id?: number[];
+  name?: string;
+}
 
 type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
 
 export default function BeneficiariesPage() {
+  const { user } = useAuth() as { user: User };
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<
     Beneficiary | undefined
@@ -158,8 +174,10 @@ export default function BeneficiariesPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(24); // Reduced from 60 to 24 for better performance
-  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] = useState(false);
-  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] = useState<Beneficiary | null>(null);
+  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] =
+    useState(false);
+  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
+    useState<Beneficiary | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -193,9 +211,7 @@ export default function BeneficiariesPage() {
   });
 
   // Fetch beneficiary payments for enhanced display with caching
-  const {
-    data: beneficiaryPayments = [],
-  } = useQuery({
+  const { data: beneficiaryPayments = [] } = useQuery({
     queryKey: ["/api/beneficiary-payments"],
     staleTime: 3 * 60 * 1000, // 3 minutes cache
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
@@ -218,7 +234,10 @@ export default function BeneficiariesPage() {
             }
           }
         });
-        return Array.from(regions.entries()).map(([id, name]) => ({ id, name }));
+        return Array.from(regions.entries()).map(([id, name]) => ({
+          id,
+          name,
+        }));
       }
       return [];
     },
@@ -231,9 +250,9 @@ export default function BeneficiariesPage() {
   // PERFORMANCE OPTIMIZATION: Memoized payment data to avoid recalculation on every render
   const beneficiaryPaymentData = useMemo(() => {
     if (!Array.isArray(beneficiaryPayments)) return new Map();
-    
+
     const paymentMap = new Map();
-    
+
     // Group payments by beneficiary ID for O(1) lookup
     beneficiaryPayments.forEach((payment: any) => {
       const id = payment.beneficiary_id;
@@ -241,10 +260,10 @@ export default function BeneficiariesPage() {
         paymentMap.set(id, {
           payments: [],
           totalAmount: 0,
-          expenditureTypes: new Set()
+          expenditureTypes: new Set(),
         });
       }
-      
+
       const data = paymentMap.get(id);
       data.payments.push(payment);
       data.totalAmount += parseFloat(payment.amount) || 0;
@@ -252,32 +271,54 @@ export default function BeneficiariesPage() {
         data.expenditureTypes.add(payment.expenditure_type);
       }
     });
-    
+
     return paymentMap;
   }, [beneficiaryPayments]);
 
   // REGION MAPPING: Helper function to get region name from region ID
-  const getRegionName = useCallback((regionId: string | null) => {
-    if (!regionId) return regionId;
-    
-    if (kallikratisData.length === 0) {
-      console.log('[RegionMapping] No kallikratis data available');
-      return regionId;
-    }
-    
-    console.log('[RegionMapping] Looking for region ID:', regionId, 'in', kallikratisData.length, 'regions');
-    console.log('[RegionMapping] Sample regions:', kallikratisData.slice(0, 3));
-    
-    const regionMapping = kallikratisData.find(region => region.id === regionId.toString());
-    
-    if (regionMapping) {
-      console.log('[RegionMapping] Found mapping:', regionId, '->', regionMapping.name);
-      return regionMapping.name;
-    } else {
-      console.log('[RegionMapping] No mapping found for region ID:', regionId);
-      return regionId;
-    }
-  }, [kallikratisData]);
+  const getRegionName = useCallback(
+    (regionId: string | null) => {
+      if (!regionId) return regionId;
+
+      if (kallikratisData.length === 0) {
+        console.log("[RegionMapping] No kallikratis data available");
+        return regionId;
+      }
+
+      console.log(
+        "[RegionMapping] Looking for region ID:",
+        regionId,
+        "in",
+        kallikratisData.length,
+        "regions",
+      );
+      console.log(
+        "[RegionMapping] Sample regions:",
+        kallikratisData.slice(0, 3),
+      );
+
+      const regionMapping = kallikratisData.find(
+        (region) => region.id === regionId.toString(),
+      );
+
+      if (regionMapping) {
+        console.log(
+          "[RegionMapping] Found mapping:",
+          regionId,
+          "->",
+          regionMapping.name,
+        );
+        return regionMapping.name;
+      } else {
+        console.log(
+          "[RegionMapping] No mapping found for region ID:",
+          regionId,
+        );
+        return regionId;
+      }
+    },
+    [kallikratisData],
+  );
 
   // Optimized helper functions using memoized data
   const getPaymentsForBeneficiary = (beneficiaryId: number) => {
@@ -371,7 +412,9 @@ export default function BeneficiariesPage() {
   };
 
   const handleDelete = (beneficiary: Beneficiary) => {
-    if (confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον δικαιούχο;")) {
+    if (
+      confirm("Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον δικαιούχο;")
+    ) {
       deleteMutation.mutate(beneficiary.id);
     }
   };
@@ -396,7 +439,7 @@ export default function BeneficiariesPage() {
   // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
   const filteredBeneficiaries = useMemo(() => {
     if (!searchTerm.trim()) return beneficiaries;
-    
+
     const searchLower = searchTerm.toLowerCase();
     return beneficiaries.filter((beneficiary) => {
       return (
@@ -416,7 +459,7 @@ export default function BeneficiariesPage() {
       startIndex,
       startIndex + itemsPerPage,
     );
-    
+
     return { totalPages, paginatedBeneficiaries };
   }, [filteredBeneficiaries, currentPage, itemsPerPage]);
 
@@ -432,7 +475,9 @@ export default function BeneficiariesPage() {
             <CardContent className="flex items-center justify-center h-64">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Φόρτωση δικαιούχων...</p>
+                <p className="mt-4 text-muted-foreground">
+                  Φόρτωση δικαιούχων...
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -452,8 +497,8 @@ export default function BeneficiariesPage() {
               <div className="text-center">
                 <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
                 <p className="text-destructive">Σφάλμα φόρτωσης δικαιούχων</p>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => window.location.reload()}
                   className="mt-4"
                 >
@@ -561,38 +606,66 @@ export default function BeneficiariesPage() {
                                   {beneficiary.region && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <Building className="w-4 h-4" />
-                                      <span>{getRegionName(beneficiary.region)}</span>
+                                      <span>
+                                        {getRegionName(beneficiary.region)}
+                                      </span>
                                     </div>
                                   )}
                                 </div>
                                 <div className="space-y-1">
-                                  {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
+                                  {getExpenditureTypesForBeneficiary(
+                                    beneficiary.id,
+                                  ).length > 0 && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <FileText className="w-4 h-4 flex-shrink-0" />
-                                      <span className="truncate" title={getExpenditureTypesForBeneficiary(beneficiary.id).join(", ")}>
-                                        {getExpenditureTypesForBeneficiary(beneficiary.id).slice(0, 2).join(", ")}
-                                        {getExpenditureTypesForBeneficiary(beneficiary.id).length > 2 && 
-                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`
-                                        }
+                                      <span
+                                        className="truncate"
+                                        title={getExpenditureTypesForBeneficiary(
+                                          beneficiary.id,
+                                        ).join(", ")}
+                                      >
+                                        {getExpenditureTypesForBeneficiary(
+                                          beneficiary.id,
+                                        )
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {getExpenditureTypesForBeneficiary(
+                                          beneficiary.id,
+                                        ).length > 2 &&
+                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`}
                                       </span>
                                     </div>
                                   )}
-                                  {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
+                                  {getTotalAmountForBeneficiary(
+                                    beneficiary.id,
+                                  ) > 0 && (
                                     <div className="flex items-center gap-2">
                                       <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded text-sm font-medium border border-green-200">
                                         <CreditCard className="w-4 h-4 flex-shrink-0" />
                                         <span>
-                                          {new Intl.NumberFormat('el-GR', { 
-                                            style: 'currency', 
-                                            currency: 'EUR',
+                                          {new Intl.NumberFormat("el-GR", {
+                                            style: "currency",
+                                            currency: "EUR",
                                             minimumFractionDigits: 0,
-                                            maximumFractionDigits: 0
-                                          }).format(getTotalAmountForBeneficiary(beneficiary.id))}
+                                            maximumFractionDigits: 0,
+                                          }).format(
+                                            getTotalAmountForBeneficiary(
+                                              beneficiary.id,
+                                            ),
+                                          )}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded text-sm font-medium border border-blue-200">
-                                        <span>{getPaymentsForBeneficiary(beneficiary.id).length}</span>
-                                        <span className="text-xs">πληρωμές</span>
+                                        <span>
+                                          {
+                                            getPaymentsForBeneficiary(
+                                              beneficiary.id,
+                                            ).length
+                                          }
+                                        </span>
+                                        <span className="text-xs">
+                                          πληρωμές
+                                        </span>
                                       </div>
                                     </div>
                                   )}
@@ -721,24 +794,36 @@ export default function BeneficiariesPage() {
                             {/* Key Information Section */}
                             <div className="flex-1 space-y-3">
                               {/* Financial Summary - Most Prominent */}
-                              {getTotalAmountForBeneficiary(beneficiary.id) > 0 && (
+                              {getTotalAmountForBeneficiary(beneficiary.id) >
+                                0 && (
                                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
                                   <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                       <DollarSign className="w-5 h-5 text-green-600" />
-                                      <span className="text-sm font-medium text-green-800">Συνολικό Ποσό</span>
+                                      <span className="text-sm font-medium text-green-800">
+                                        Συνολικό Ποσό
+                                      </span>
                                     </div>
                                     <div className="text-right">
                                       <div className="text-xl font-bold text-green-900">
-                                        {new Intl.NumberFormat('el-GR', { 
-                                          style: 'currency', 
-                                          currency: 'EUR',
+                                        {new Intl.NumberFormat("el-GR", {
+                                          style: "currency",
+                                          currency: "EUR",
                                           minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2 
-                                        }).format(getTotalAmountForBeneficiary(beneficiary.id))}
+                                          maximumFractionDigits: 2,
+                                        }).format(
+                                          getTotalAmountForBeneficiary(
+                                            beneficiary.id,
+                                          ),
+                                        )}
                                       </div>
                                       <div className="text-xs text-green-700">
-                                        {getPaymentsForBeneficiary(beneficiary.id).length} πληρωμές
+                                        {
+                                          getPaymentsForBeneficiary(
+                                            beneficiary.id,
+                                          ).length
+                                        }{" "}
+                                        πληρωμές
                                       </div>
                                     </div>
                                   </div>
@@ -751,46 +836,65 @@ export default function BeneficiariesPage() {
                                   <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                     <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
                                     <div>
-                                      <span className="text-xs text-blue-600 font-medium">Περιοχή</span>
-                                      <p className="text-sm text-blue-900 font-medium">{getRegionName(beneficiary.region)}</p>
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        Περιοχή
+                                      </span>
+                                      <p className="text-sm text-blue-900 font-medium">
+                                        {getRegionName(beneficiary.region)}
+                                      </p>
                                     </div>
                                   </div>
                                 )}
-                                
-                                {getExpenditureTypesForBeneficiary(beneficiary.id).length > 0 && (
+
+                                {getExpenditureTypesForBeneficiary(
+                                  beneficiary.id,
+                                ).length > 0 && (
                                   <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                                     <FileText className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
-                                      <span className="text-xs text-amber-600 font-medium">Τύποι Δαπάνης</span>
+                                      <span className="text-xs text-amber-600 font-medium">
+                                        Τύποι Δαπάνης
+                                      </span>
                                       <p className="text-sm text-amber-900 font-medium leading-tight">
-                                        {getExpenditureTypesForBeneficiary(beneficiary.id).slice(0, 2).join(", ")}
-                                        {getExpenditureTypesForBeneficiary(beneficiary.id).length > 2 && 
-                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`
-                                        }
+                                        {getExpenditureTypesForBeneficiary(
+                                          beneficiary.id,
+                                        )
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {getExpenditureTypesForBeneficiary(
+                                          beneficiary.id,
+                                        ).length > 2 &&
+                                          ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`}
                                       </p>
                                     </div>
                                   </div>
                                 )}
 
                                 {/* Administrative Info */}
-                                {(beneficiary.adeia || beneficiary.onlinefoldernumber) && (
+                                {(beneficiary.adeia ||
+                                  beneficiary.onlinefoldernumber) && (
                                   <div className="flex items-start gap-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
                                     <Shield className="w-4 h-4 text-slate-600 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
-                                      <span className="text-xs text-slate-600 font-medium">Διοικητικά Στοιχεία</span>
+                                      <span className="text-xs text-slate-600 font-medium">
+                                        Διοικητικά Στοιχεία
+                                      </span>
                                       {beneficiary.adeia && (
-                                        <p className="text-sm text-slate-900 font-medium">Άδεια: {beneficiary.adeia}</p>
+                                        <p className="text-sm text-slate-900 font-medium">
+                                          Άδεια: {beneficiary.adeia}
+                                        </p>
                                       )}
                                       {beneficiary.onlinefoldernumber && (
-                                        <p className="text-sm text-slate-900 font-medium">Φάκελος: {beneficiary.onlinefoldernumber}</p>
+                                        <p className="text-sm text-slate-900 font-medium">
+                                          Φάκελος:{" "}
+                                          {beneficiary.onlinefoldernumber}
+                                        </p>
                                       )}
                                     </div>
                                   </div>
                                 )}
                               </div>
                             </div>
-
-
 
                             <div
                               className="flex items-center justify-center"
@@ -839,42 +943,57 @@ export default function BeneficiariesPage() {
                             <div className="flex-1 overflow-y-auto space-y-4 text-sm custom-scrollbar">
                               {/* Financial Overview */}
                               {(() => {
-                                const payments = getPaymentsForBeneficiary(beneficiary.id);
-                                const totalAmount = getTotalAmountForBeneficiary(beneficiary.id);
-                                
+                                const payments = getPaymentsForBeneficiary(
+                                  beneficiary.id,
+                                );
+                                const totalAmount =
+                                  getTotalAmountForBeneficiary(beneficiary.id);
+
                                 if (payments.length === 0) return null;
-                                
+
                                 // Group payments by expenditure type
-                                const groupedPayments = payments.reduce((acc: any, payment: any) => {
-                                  const type = payment.expenditure_type || 'Άλλο';
-                                  if (!acc[type]) {
-                                    acc[type] = { payments: [], total: 0 };
-                                  }
-                                  acc[type].payments.push(payment);
-                                  acc[type].total += parseFloat(payment.amount || 0);
-                                  return acc;
-                                }, {});
-                                
+                                const groupedPayments = payments.reduce(
+                                  (acc: any, payment: any) => {
+                                    const type =
+                                      payment.expenditure_type || "Άλλο";
+                                    if (!acc[type]) {
+                                      acc[type] = { payments: [], total: 0 };
+                                    }
+                                    acc[type].payments.push(payment);
+                                    acc[type].total += parseFloat(
+                                      payment.amount || 0,
+                                    );
+                                    return acc;
+                                  },
+                                  {},
+                                );
+
                                 return (
                                   <div className="space-y-3">
                                     <div className="bg-gradient-to-r from-green-100 to-emerald-100 border border-green-300 rounded-lg p-4">
                                       <div className="flex items-center gap-2 mb-3">
                                         <CreditCard className="w-5 h-5 text-green-700" />
-                                        <span className="font-semibold text-green-800">Οικονομική Επισκόπηση</span>
+                                        <span className="font-semibold text-green-800">
+                                          Οικονομική Επισκόπηση
+                                        </span>
                                       </div>
-                                      
+
                                       <div className="grid grid-cols-2 gap-3 mb-3">
                                         <div className="bg-white/70 p-3 rounded border">
-                                          <div className="text-xs text-green-600 font-medium">Συνολικό Ποσό</div>
+                                          <div className="text-xs text-green-600 font-medium">
+                                            Συνολικό Ποσό
+                                          </div>
                                           <div className="text-lg font-bold text-green-900">
-                                            {new Intl.NumberFormat('el-GR', { 
-                                              style: 'currency', 
-                                              currency: 'EUR' 
+                                            {new Intl.NumberFormat("el-GR", {
+                                              style: "currency",
+                                              currency: "EUR",
                                             }).format(totalAmount)}
                                           </div>
                                         </div>
                                         <div className="bg-white/70 p-3 rounded border">
-                                          <div className="text-xs text-green-600 font-medium">Πληρωμές</div>
+                                          <div className="text-xs text-green-600 font-medium">
+                                            Πληρωμές
+                                          </div>
                                           <div className="text-lg font-bold text-green-900">
                                             {payments.length}
                                           </div>
@@ -883,21 +1002,36 @@ export default function BeneficiariesPage() {
 
                                       {/* Payment breakdown by type */}
                                       <div className="space-y-2">
-                                        <div className="text-xs text-green-700 font-medium">Κατανομή ανά Τύπο:</div>
-                                        {Object.entries(groupedPayments).map(([type, data]: [string, any]) => (
-                                          <div key={type} className="bg-white/70 p-2 rounded border flex justify-between items-center">
-                                            <div>
-                                              <div className="text-xs font-medium text-green-800">{type}</div>
-                                              <div className="text-xs text-green-600">{data.payments.length} πληρωμές</div>
+                                        <div className="text-xs text-green-700 font-medium">
+                                          Κατανομή ανά Τύπο:
+                                        </div>
+                                        {Object.entries(groupedPayments).map(
+                                          ([type, data]: [string, any]) => (
+                                            <div
+                                              key={type}
+                                              className="bg-white/70 p-2 rounded border flex justify-between items-center"
+                                            >
+                                              <div>
+                                                <div className="text-xs font-medium text-green-800">
+                                                  {type}
+                                                </div>
+                                                <div className="text-xs text-green-600">
+                                                  {data.payments.length}{" "}
+                                                  πληρωμές
+                                                </div>
+                                              </div>
+                                              <div className="font-semibold text-green-900 text-sm">
+                                                {new Intl.NumberFormat(
+                                                  "el-GR",
+                                                  {
+                                                    style: "currency",
+                                                    currency: "EUR",
+                                                  },
+                                                ).format(data.total)}
+                                              </div>
                                             </div>
-                                            <div className="font-semibold text-green-900 text-sm">
-                                              {new Intl.NumberFormat('el-GR', { 
-                                                style: 'currency', 
-                                                currency: 'EUR' 
-                                              }).format(data.total)}
-                                            </div>
-                                          </div>
-                                        ))}
+                                          ),
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -905,23 +1039,34 @@ export default function BeneficiariesPage() {
                               })()}
 
                               {/* Administrative Information */}
-                              {(beneficiary.adeia || beneficiary.onlinefoldernumber) && (
+                              {(beneficiary.adeia ||
+                                beneficiary.onlinefoldernumber) && (
                                 <div className="bg-slate-100 border border-slate-300 rounded-lg p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Shield className="w-5 h-5 text-slate-600" />
-                                    <span className="font-semibold text-slate-700">Διοικητικά Στοιχεία</span>
+                                    <span className="font-semibold text-slate-700">
+                                      Διοικητικά Στοιχεία
+                                    </span>
                                   </div>
                                   <div className="space-y-2">
                                     {beneficiary.adeia && (
                                       <div className="bg-white/70 p-3 rounded border">
-                                        <div className="text-xs text-slate-600 font-medium">Αριθμός Άδειας</div>
-                                        <div className="font-mono text-sm text-slate-900">{beneficiary.adeia}</div>
+                                        <div className="text-xs text-slate-600 font-medium">
+                                          Αριθμός Άδειας
+                                        </div>
+                                        <div className="font-mono text-sm text-slate-900">
+                                          {beneficiary.adeia}
+                                        </div>
                                       </div>
                                     )}
                                     {beneficiary.onlinefoldernumber && (
                                       <div className="bg-white/70 p-3 rounded border">
-                                        <div className="text-xs text-slate-600 font-medium">Διαδικτυακός Φάκελος</div>
-                                        <div className="font-mono text-sm text-slate-900">{beneficiary.onlinefoldernumber}</div>
+                                        <div className="text-xs text-slate-600 font-medium">
+                                          Διαδικτυακός Φάκελος
+                                        </div>
+                                        <div className="font-mono text-sm text-slate-900">
+                                          {beneficiary.onlinefoldernumber}
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -929,26 +1074,35 @@ export default function BeneficiariesPage() {
                               )}
 
                               {/* Engineering Information */}
-                              {(beneficiary.cengsur1 || beneficiary.cengsur2) && (
+                              {(beneficiary.cengsur1 ||
+                                beneficiary.cengsur2) && (
                                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Building2 className="w-5 h-5 text-orange-600" />
-                                    <span className="font-semibold text-orange-700">Στοιχεία Μηχανικών</span>
+                                    <span className="font-semibold text-orange-700">
+                                      Στοιχεία Μηχανικών
+                                    </span>
                                   </div>
                                   <div className="space-y-2">
                                     {beneficiary.cengsur1 && (
                                       <div className="bg-white/70 p-3 rounded border">
-                                        <div className="text-xs text-orange-600 font-medium">Μηχανικός 1</div>
+                                        <div className="text-xs text-orange-600 font-medium">
+                                          Μηχανικός 1
+                                        </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur1} {beneficiary.cengname1}
+                                          {beneficiary.cengsur1}{" "}
+                                          {beneficiary.cengname1}
                                         </div>
                                       </div>
                                     )}
                                     {beneficiary.cengsur2 && (
                                       <div className="bg-white/70 p-3 rounded border">
-                                        <div className="text-xs text-orange-600 font-medium">Μηχανικός 2</div>
+                                        <div className="text-xs text-orange-600 font-medium">
+                                          Μηχανικός 2
+                                        </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur2} {beneficiary.cengname2}
+                                          {beneficiary.cengsur2}{" "}
+                                          {beneficiary.cengname2}
                                         </div>
                                       </div>
                                     )}
@@ -961,7 +1115,9 @@ export default function BeneficiariesPage() {
                                 <div className="bg-purple-100 border border-purple-300 rounded-lg p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <FileText className="w-5 h-5 text-purple-600" />
-                                    <span className="font-semibold text-purple-700">Επιπλέον Πληροφορίες</span>
+                                    <span className="font-semibold text-purple-700">
+                                      Επιπλέον Πληροφορίες
+                                    </span>
                                   </div>
                                   <div className="bg-white/70 p-3 rounded border">
                                     <p className="text-sm text-purple-900 leading-relaxed break-words">
@@ -977,14 +1133,18 @@ export default function BeneficiariesPage() {
                                   <div className="flex items-center gap-2">
                                     <Calendar className="w-4 h-4 text-gray-600" />
                                     <div>
-                                      <div className="text-xs text-gray-600 font-medium">Ημερομηνία Δημιουργίας</div>
+                                      <div className="text-xs text-gray-600 font-medium">
+                                        Ημερομηνία Δημιουργίας
+                                      </div>
                                       <div className="text-sm text-gray-900">
-                                        {new Date(beneficiary.created_at).toLocaleDateString('el-GR', {
-                                          year: 'numeric',
-                                          month: 'long',
-                                          day: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
+                                        {new Date(
+                                          beneficiary.created_at,
+                                        ).toLocaleDateString("el-GR", {
+                                          year: "numeric",
+                                          month: "long",
+                                          day: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
                                         })}
                                       </div>
                                     </div>
@@ -992,10 +1152,6 @@ export default function BeneficiariesPage() {
                                 </div>
                               )}
                             </div>
-
-
-
-
                           </div>
                         </div>
                       </div>
@@ -1049,10 +1205,14 @@ export default function BeneficiariesPage() {
 
       {/* Details Modal */}
       <BeneficiaryDetailsModal
-        beneficiary={detailsBeneficiary ? {
-          ...detailsBeneficiary,
-          fathername: detailsBeneficiary.fathername || null
-        } : null}
+        beneficiary={
+          detailsBeneficiary
+            ? {
+                ...detailsBeneficiary,
+                fathername: detailsBeneficiary.fathername || null,
+              }
+            : null
+        }
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
       />
@@ -1075,10 +1235,9 @@ export default function BeneficiariesPage() {
               )}
             </DialogTitle>
             <DialogDescription>
-              {selectedBeneficiary ? 
-                "Επεξεργαστείτε τα στοιχεία του δικαιούχου και πατήστε αποθήκευση" : 
-                "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"
-              }
+              {selectedBeneficiary
+                ? "Επεξεργαστείτε τα στοιχεία του δικαιούχου και πατήστε αποθήκευση"
+                : "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"}
             </DialogDescription>
           </DialogHeader>
           <BeneficiaryForm
@@ -1100,7 +1259,10 @@ export default function BeneficiariesPage() {
       </Dialog>
 
       {/* Existing Payments Modal */}
-      <Dialog open={existingPaymentsModalOpen} onOpenChange={setExistingPaymentsModalOpen}>
+      <Dialog
+        open={existingPaymentsModalOpen}
+        onOpenChange={setExistingPaymentsModalOpen}
+      >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
@@ -1108,27 +1270,36 @@ export default function BeneficiariesPage() {
               Υπάρχουσες Πληρωμές
               {selectedBeneficiaryForPayments && (
                 <span className="text-sm font-normal text-muted-foreground">
-                  - {selectedBeneficiaryForPayments.surname} {selectedBeneficiaryForPayments.name}
+                  - {selectedBeneficiaryForPayments.surname}{" "}
+                  {selectedBeneficiaryForPayments.name}
                 </span>
               )}
             </DialogTitle>
             <DialogDescription>
-              Προβολή όλων των καταχωρημένων πληρωμών για τον επιλεγμένο δικαιούχο
+              Προβολή όλων των καταχωρημένων πληρωμών για τον επιλεγμένο
+              δικαιούχο
             </DialogDescription>
           </DialogHeader>
           {selectedBeneficiaryForPayments && (
-            <ExistingPaymentsDisplay beneficiary={selectedBeneficiaryForPayments} />
+            <ExistingPaymentsDisplay
+              beneficiary={selectedBeneficiaryForPayments}
+            />
           )}
         </DialogContent>
       </Dialog>
+      {user && <FAB />}
     </div>
   );
 }
 
-function ExistingPaymentsDisplay({ beneficiary }: { beneficiary: Beneficiary }) {
+function ExistingPaymentsDisplay({
+  beneficiary,
+}: {
+  beneficiary: Beneficiary;
+}) {
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["/api/beneficiary-payments", beneficiary.id],
-    enabled: !!beneficiary.id
+    enabled: !!beneficiary.id,
   });
 
   if (isLoading) {
@@ -1144,33 +1315,42 @@ function ExistingPaymentsDisplay({ beneficiary }: { beneficiary: Beneficiary }) 
       <div className="text-center py-8">
         <div className="text-muted-foreground">
           <DollarSign className="h-8 w-8 mx-auto mb-2" />
-          <p>Δεν βρέθηκαν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
+          <p>Δεν βρέθ;�καν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
         </div>
       </div>
     );
   }
 
-  const totalAmount = payments.reduce((sum: number, payment: any) => 
-    sum + (parseFloat(payment.amount) || 0), 0
+  const totalAmount = payments.reduce(
+    (sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0),
+    0,
   );
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
         <div>
-          <span className="text-sm font-medium text-muted-foreground">Συνολικές Πληρωμές</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            Συνολικές Πληρωμές
+          </span>
           <p className="text-lg font-bold">{payments.length}</p>
         </div>
         <div>
-          <span className="text-sm font-medium text-muted-foreground">Συνολικό Ποσό</span>
-          <p className="text-lg font-bold text-green-700">{totalAmount.toLocaleString("el-GR")} €</p>
+          <span className="text-sm font-medium text-muted-foreground">
+            Συνολικό Ποσό
+          </span>
+          <p className="text-lg font-bold text-green-700">
+            {totalAmount.toLocaleString("el-GR")} €
+          </p>
         </div>
         <div>
           <span className="text-sm font-medium text-muted-foreground">ΑΦΜ</span>
           <p className="text-lg font-mono">{beneficiary.afm}</p>
         </div>
         <div>
-          <span className="text-sm font-medium text-muted-foreground">Περιοχή</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            Περιοχή
+          </span>
           <p className="text-lg">{beneficiary.region || "—"}</p>
         </div>
       </div>
@@ -1184,35 +1364,53 @@ function ExistingPaymentsDisplay({ beneficiary }: { beneficiary: Beneficiary }) 
             <div key={payment.id || index} className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4 text-sm">
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Μονάδα
+                  </span>
                   <span className="text-sm">{payment.unit_code}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
-                  <span className="font-mono text-sm">{payment.na853_code}</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Κωδικός ΝΑ853
+                  </span>
+                  <span className="font-mono text-sm">
+                    {payment.na853_code}
+                  </span>
                 </div>
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Τύπος Δαπάνης
+                  </span>
                   <span className="text-sm">{payment.expenditure_type}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Δόση
+                  </span>
                   <span className="text-sm">{payment.installment}</span>
                 </div>
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Ποσό (€)
+                  </span>
                   <span className="font-semibold text-green-700 text-sm">
                     {parseFloat(payment.amount).toLocaleString("el-GR")} €
                   </span>
                 </div>
                 <div>
-                  <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
-                  <span className="font-mono text-sm">{payment.protocol_number || "—"}</span>
+                  <span className="font-medium text-xs text-muted-foreground block">
+                    Αρ. Πρωτοκόλλου
+                  </span>
+                  <span className="font-mono text-sm">
+                    {payment.protocol_number || "—"}
+                  </span>
                 </div>
               </div>
               {payment.payment_date && (
                 <div className="mt-2 pt-2 border-t border-muted">
-                  <span className="text-xs text-muted-foreground">Ημερομηνία Πληρωμής: </span>
+                  <span className="text-xs text-muted-foreground">
+                    Ημερομηνία Πληρωμής:{" "}
+                  </span>
                   <span className="text-xs">
                     {new Date(payment.payment_date).toLocaleDateString("el-GR")}
                   </span>
@@ -1237,49 +1435,51 @@ function BeneficiaryForm({
   onCancel?: () => void;
   dialogOpen: boolean;
 }) {
-  const [payments, setPayments] = useState<Array<{
-    unit: string;
-    expenditure_type: string;
-    na853: string;
-    amount: string;
-    installment: string;
-    protocol: string;
-    status: string;
-  }>>([]);
-  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] = useState(false);
-  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] = useState<Beneficiary | null>(null);
+  const [payments, setPayments] = useState<
+    Array<{
+      unit: string;
+      expenditure_type: string;
+      na853: string;
+      amount: string;
+      installment: string;
+      protocol: string;
+      status: string;
+    }>
+  >([]);
+  const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] =
+    useState(false);
+  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
+    useState<Beneficiary | null>(null);
 
-  const { data: userData } = useQuery({ 
+  const { data: userData } = useQuery({
     queryKey: ["/api/auth/me"],
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  
-  const { data: unitsData, isLoading: unitsLoading } = useQuery({ 
+
+  const { data: unitsData, isLoading: unitsLoading } = useQuery({
     queryKey: ["/api/public/units"],
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
-  
-  const { data: projectsData } = useQuery({ 
+
+  const { data: projectsData } = useQuery({
     queryKey: ["/api/projects"],
     staleTime: 5 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  
-  const { data: existingPayments } = useQuery({ 
-    queryKey: ["/api/beneficiary-payments", beneficiary?.id], 
+
+  const { data: existingPayments } = useQuery({
+    queryKey: ["/api/beneficiary-payments", beneficiary?.id],
     staleTime: 2 * 60 * 1000, // 2 minutes cache
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
-    enabled: !!beneficiary?.id 
+    enabled: !!beneficiary?.id,
   });
-
-
 
   const form = useForm<BeneficiaryFormData>({
     resolver: zodResolver(beneficiaryFormSchema),
@@ -1288,10 +1488,10 @@ function BeneficiaryForm({
       name: beneficiary?.name || "",
       fathername: beneficiary?.fathername || "",
       afm: beneficiary?.afm?.toString() || "",
-      project: "", 
-      expenditure_type: "", 
+      project: "",
+      expenditure_type: "",
       region: beneficiary?.region || "",
-      monada: "", 
+      monada: "",
       adeia: beneficiary?.adeia?.toString() || "",
       // onlinefoldernumber: removed due to database schema issues
       cengsur1: beneficiary?.cengsur1 || "",
@@ -1312,24 +1512,34 @@ function BeneficiaryForm({
   const initializationRef = useRef({
     hasAutoSelected: false,
     lastSelectedUnit: "",
-    isInitialized: false
+    isInitialized: false,
   });
 
   // Get user's available units with optimized filtering
   const userUnits = useMemo(() => {
     const userUnitsArray = (userData as any)?.user?.units;
-    
-    if (!userUnitsArray || !Array.isArray(userUnitsArray) || !Array.isArray(unitsData)) {
+
+    if (
+      !userUnitsArray ||
+      !Array.isArray(userUnitsArray) ||
+      !Array.isArray(unitsData)
+    ) {
       return [];
     }
-    
-    const filtered = unitsData.filter((unit: any) => userUnitsArray.includes(unit.id));
+
+    const filtered = unitsData.filter((unit: any) =>
+      userUnitsArray.includes(unit.id),
+    );
     return filtered;
   }, [userData, unitsData]);
 
   // Optimized auto-selection logic to prevent WebSocket connectivity issues
   const handleAutoUnitSelection = useCallback(() => {
-    if (!userData || unitsLoading || initializationRef.current.hasAutoSelected) {
+    if (
+      !userData ||
+      unitsLoading ||
+      initializationRef.current.hasAutoSelected
+    ) {
       return;
     }
 
@@ -1354,16 +1564,16 @@ function BeneficiaryForm({
   // Reset form when dialog opens - optimized to prevent excessive re-renders
   const handleFormReset = useCallback(() => {
     if (!userUnits.length) return;
-    
+
     const defaultValues = {
       surname: "",
       name: "",
       fathername: "",
       afm: "",
-      project: "", 
-      expenditure_type: "", 
+      project: "",
+      expenditure_type: "",
       region: "",
-      monada: "", 
+      monada: "",
       adeia: "",
       // onlinefoldernumber: removed due to database schema issues
       cengsur1: "",
@@ -1378,17 +1588,22 @@ function BeneficiaryForm({
       freetext: "",
       date: "",
     };
-    
+
     form.reset(defaultValues);
     initializationRef.current.isInitialized = true;
   }, [form, userUnits]);
 
   // Reset form when modal opens for new beneficiary
   useEffect(() => {
-    if (dialogOpen && !beneficiary && userUnits.length > 0 && !initializationRef.current.isInitialized) {
+    if (
+      dialogOpen &&
+      !beneficiary &&
+      userUnits.length > 0 &&
+      !initializationRef.current.isInitialized
+    ) {
       handleFormReset();
     }
-    
+
     // Reset initialization state when dialog closes
     if (!dialogOpen) {
       initializationRef.current.hasAutoSelected = false;
@@ -1399,10 +1614,13 @@ function BeneficiaryForm({
   // Optimized field dependency management to prevent WebSocket issues
   const watchedUnit = form.watch("selectedUnit");
   const watchedNA853 = form.watch("selectedNA853");
-  
+
   useEffect(() => {
     // Only clear dependent fields when unit actually changes
-    if (initializationRef.current.lastSelectedUnit && initializationRef.current.lastSelectedUnit !== watchedUnit) {
+    if (
+      initializationRef.current.lastSelectedUnit &&
+      initializationRef.current.lastSelectedUnit !== watchedUnit
+    ) {
       form.setValue("selectedNA853", "", { shouldValidate: false });
       form.setValue("expenditure_type", "", { shouldValidate: false });
     }
@@ -1421,28 +1639,29 @@ function BeneficiaryForm({
     if (!watchedUnit || !Array.isArray(projectsData)) {
       return [];
     }
-    
+
     // Filter by implementing_agency array which contains the unit
-    const filtered = projectsData.filter((project: any) => 
-      project.implementing_agency && 
-      Array.isArray(project.implementing_agency) &&
-      project.implementing_agency.includes(watchedUnit) &&
-      project.na853
+    const filtered = projectsData.filter(
+      (project: any) =>
+        project.implementing_agency &&
+        Array.isArray(project.implementing_agency) &&
+        project.implementing_agency.includes(watchedUnit) &&
+        project.na853,
     );
-    
+
     return filtered;
   }, [projectsData, watchedUnit]);
 
   // Get expenditure types for selected NA853 with stable reference
   const availableExpenditureTypes = useMemo(() => {
     if (!watchedNA853 || !Array.isArray(projectsData)) return [];
-    
+
     const project = projectsData.find((p: any) => p.na853 === watchedNA853);
     if (!project?.expenditure_type) return [];
-    
+
     // Parse expenditure types - handle both string and array formats
     let types: string[] = [];
-    if (typeof project.expenditure_type === 'string') {
+    if (typeof project.expenditure_type === "string") {
       try {
         types = JSON.parse(project.expenditure_type);
       } catch {
@@ -1451,23 +1670,29 @@ function BeneficiaryForm({
     } else if (Array.isArray(project.expenditure_type)) {
       types = project.expenditure_type;
     }
-    
-    return types.filter(type => type && type.trim());
+
+    return types.filter((type) => type && type.trim());
   }, [projectsData, watchedNA853]);
 
   // Format number to European format with proper comma support
   const formatEuropeanNumber = (value: string) => {
     // Allow only digits and comma
-    const cleanValue = value.replace(/[^\d,]/g, '');
-    
+    const cleanValue = value.replace(/[^\d,]/g, "");
+
     // Handle multiple commas - only keep the first one
-    const commaIndex = cleanValue.indexOf(',');
-    const beforeComma = cleanValue.substring(0, commaIndex === -1 ? cleanValue.length : commaIndex);
-    const afterComma = commaIndex === -1 ? '' : cleanValue.substring(commaIndex + 1).replace(/,/g, '');
-    
+    const commaIndex = cleanValue.indexOf(",");
+    const beforeComma = cleanValue.substring(
+      0,
+      commaIndex === -1 ? cleanValue.length : commaIndex,
+    );
+    const afterComma =
+      commaIndex === -1
+        ? ""
+        : cleanValue.substring(commaIndex + 1).replace(/,/g, "");
+
     // Format whole part with thousand separators (dots)
-    const formattedWhole = beforeComma.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    
+    const formattedWhole = beforeComma.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
     // Return formatted number with proper decimal handling
     if (afterComma) {
       return `${formattedWhole},${afterComma.slice(0, 2)}`; // Limit to 2 decimal places
@@ -1484,15 +1709,18 @@ function BeneficiaryForm({
     const protocol = form.getValues("protocol");
 
     if (selectedUnit && expenditure_type && amount) {
-      setPayments(prev => [...prev, {
-        unit: selectedUnit,
-        expenditure_type,
-        na853: selectedNA853 || "",
-        amount,
-        installment: installment || "ΕΦΑΠΑΞ",
-        protocol: protocol || "",
-        status: "νέα"
-      }]);
+      setPayments((prev) => [
+        ...prev,
+        {
+          unit: selectedUnit,
+          expenditure_type,
+          na853: selectedNA853 || "",
+          amount,
+          installment: installment || "ΕΦΑΠΑΞ",
+          protocol: protocol || "",
+          status: "νέα",
+        },
+      ]);
 
       // Clear the form fields
       form.setValue("selectedUnit", "");
@@ -1505,7 +1733,7 @@ function BeneficiaryForm({
   };
 
   const removePayment = (index: number) => {
-    setPayments(prev => prev.filter((_, i) => i !== index));
+    setPayments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const { data: units = [] } = useQuery<Unit[]>({
@@ -1583,13 +1811,13 @@ function BeneficiaryForm({
                 </FormLabel>
                 <FormControl>
                   <div className="relative">
-                    <Input 
-                      placeholder="123456789" 
-                      {...field} 
+                    <Input
+                      placeholder="123456789"
+                      {...field}
                       maxLength={9}
                       className="pl-8 font-mono"
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
+                        const value = e.target.value.replace(/\D/g, "");
                         field.onChange(value);
                       }}
                     />
@@ -1616,18 +1844,31 @@ function BeneficiaryForm({
                 </FormLabel>
                 <FormControl>
                   <Select
-                    value={field.value || 'none'}
-                    onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
+                    value={field.value || "none"}
+                    onValueChange={(value) =>
+                      field.onChange(value === "none" ? "" : value)
+                    }
                     disabled={!(geographicData as any)?.regions?.length}
                   >
                     <SelectTrigger data-testid="select-beneficiary-region">
-                      <SelectValue placeholder={(geographicData as any)?.regions?.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
+                      <SelectValue
+                        placeholder={
+                          (geographicData as any)?.regions?.length
+                            ? "Επιλέξτε περιφέρεια..."
+                            : "Φόρτωση γεωγραφικών δεδομένων..."
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Καμία επιλογή</SelectItem>
                       {((geographicData as any)?.regions || [])
-                        .map((r: any) => ({ code: String(r.code), name: r.name }))
-                        .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'))
+                        .map((r: any) => ({
+                          code: String(r.code),
+                          name: r.name,
+                        }))
+                        .sort((a: any, b: any) =>
+                          a.name.localeCompare(b.name, "el"),
+                        )
                         .map((region: any) => (
                           <SelectItem key={region.code} value={region.code}>
                             {region.name}
@@ -1728,9 +1969,9 @@ function BeneficiaryForm({
             Διαχείριση Πληρωμών
           </h3>
           <p className="text-sm text-muted-foreground">
-            Προσθήκη οικονομικών στοιχείων για τον δικαιούχο. Μπορείτε να προσθέσετε πολλαπλούς τύπους δαπάνης και κωδικούς ΝΑ853.
+            Προσθήκη οικονομικών στοιχείων για τον δικαιούχο. Μπορείτε να
+            προσθέσετε πολλαπλούς τύπους δαπάνης και κωδικούς ΝΑ853.
           </p>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormField
               control={form.control}
@@ -1738,20 +1979,22 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Μονάδα</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     value={field.value}
                     disabled={unitsLoading}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={
-                          unitsLoading 
-                            ? "Φόρτωση μονάδων..." 
-                            : userUnits.length === 0 
-                              ? "Δεν υπάρχουν διαθέσιμες μονάδες"
-                              : "Επιλέξτε μονάδα"
-                        } />
+                        <SelectValue
+                          placeholder={
+                            unitsLoading
+                              ? "Φόρτωση μονάδων..."
+                              : userUnits.length === 0
+                                ? "Δεν υπάρχουν διαθέσιμες μονάδες"
+                                : "Επιλέξτε μονάδα"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1782,39 +2025,50 @@ function BeneficiaryForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="selectedNA853"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Κωδικός ΝΑ853</FormLabel>
-                  <Select 
+                  <Select
                     onValueChange={(value) => {
                       field.onChange(value);
                       form.setValue("expenditure_type", "");
-                    }} 
+                    }}
                     value={field.value}
-                    disabled={!form.watch("selectedUnit") || availableProjects.length === 0}
+                    disabled={
+                      !form.watch("selectedUnit") ||
+                      availableProjects.length === 0
+                    }
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={
-                          form.watch("selectedUnit") 
-                            ? availableProjects.length > 0 
-                              ? "Επιλέξτε κωδικό ΝΑ853" 
-                              : "Δεν υπάρχουν διαθέσιμα έργα"
-                            : "Πρώτα επιλέξτε μονάδα"
-                        } />
+                        <SelectValue
+                          placeholder={
+                            form.watch("selectedUnit")
+                              ? availableProjects.length > 0
+                                ? "Επιλέξτε κωδικό ΝΑ853"
+                                : "Δεν υπάρχουν διαθέσιμα έργα"
+                              : "Πρώτα επιλέξτε μονάδα"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {availableProjects.map((project: any) => (
-                        <SelectItem key={project.id || project.mis} value={project.na853 || ""}>
+                        <SelectItem
+                          key={project.id || project.mis}
+                          value={project.na853 || ""}
+                        >
                           <div className="flex flex-col">
                             <span className="font-medium">{project.na853}</span>
                             <span className="text-xs text-muted-foreground">
-                              {project.title || project.event_description || project.name || `MIS: ${project.mis}`}
+                              {project.title ||
+                                project.event_description ||
+                                project.name ||
+                                `MIS: ${project.mis}`}
                             </span>
                           </div>
                         </SelectItem>
@@ -1825,25 +2079,27 @@ function BeneficiaryForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="expenditure_type"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Τύπος Δαπάνης</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
+                  <Select
+                    onValueChange={field.onChange}
                     defaultValue={field.value}
                     disabled={!form.watch("selectedNA853")}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={
-                          form.watch("selectedNA853") 
-                            ? "Επιλέξτε τύπο δαπάνης" 
-                            : "Πρώτα επιλέξτε κωδικό ΝΑ853"
-                        } />
+                        <SelectValue
+                          placeholder={
+                            form.watch("selectedNA853")
+                              ? "Επιλέξτε τύπο δαπάνης"
+                              : "Πρώτα επιλέξτε κωδικό ΝΑ853"
+                          }
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1859,7 +2115,6 @@ function BeneficiaryForm({
               )}
             />
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
@@ -1867,14 +2122,18 @@ function BeneficiaryForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Δόση</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Επιλέξτε δόση" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {form.watch("expenditure_type") === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? (
+                      {form.watch("expenditure_type") ===
+                      "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? (
                         <>
                           {Array.from({ length: 24 }, (_, i) => (
                             <SelectItem key={i + 1} value={`ΤΡΙΜΗΝΟ ${i + 1}`}>
@@ -1896,7 +2155,7 @@ function BeneficiaryForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="amount"
@@ -1904,12 +2163,14 @@ function BeneficiaryForm({
                 <FormItem>
                   <FormLabel>Ποσό (€)</FormLabel>
                   <FormControl>
-                    <Input 
-                      type="text" 
-                      placeholder="0,00" 
+                    <Input
+                      type="text"
+                      placeholder="0,00"
                       {...field}
                       onChange={(e) => {
-                        const formattedValue = formatEuropeanNumber(e.target.value);
+                        const formattedValue = formatEuropeanNumber(
+                          e.target.value,
+                        );
                         field.onChange(formattedValue);
                       }}
                     />
@@ -1918,7 +2179,7 @@ function BeneficiaryForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="protocol"
@@ -1933,35 +2194,41 @@ function BeneficiaryForm({
               )}
             />
           </div>
-          
           <div className="flex gap-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={addPayment}
-              disabled={!form.getValues("selectedUnit") || !form.getValues("expenditure_type") || !form.getValues("amount")}
+              disabled={
+                !form.getValues("selectedUnit") ||
+                !form.getValues("expenditure_type") ||
+                !form.getValues("amount")
+              }
             >
               <Plus className="w-4 h-4 mr-2" />
               Προσθήκη Πληρωμής
             </Button>
             {beneficiary && (
-              <Button 
-                type="button" 
-                variant="ghost" 
+              <Button
+                type="button"
+                variant="ghost"
                 size="sm"
                 onClick={() => {
                   setSelectedBeneficiaryForPayments(beneficiary);
                   setExistingPaymentsModalOpen(true);
                 }}
-                disabled={!Array.isArray(existingPayments) || existingPayments.length === 0}
+                disabled={
+                  !Array.isArray(existingPayments) ||
+                  existingPayments.length === 0
+                }
               >
                 <FileText className="w-4 h-4 mr-2" />
-                Προβολή Υπαρχουσών ({Array.isArray(existingPayments) ? existingPayments.length : 0})
+                Προβολή Υπαρχουσών (
+                {Array.isArray(existingPayments) ? existingPayments.length : 0})
               </Button>
             )}
           </div>
-
           {/* Payment Entries Table */}
           {payments.length > 0 && (
             <div className="border rounded-lg overflow-hidden">
@@ -1970,31 +2237,52 @@ function BeneficiaryForm({
               </div>
               <div className="divide-y">
                 {payments.map((payment, index) => (
-                  <div key={index} className="p-4 flex items-center justify-between">
+                  <div
+                    key={index}
+                    className="p-4 flex items-center justify-between"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-2 flex-1 text-sm">
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Μονάδα</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Μονάδα
+                        </span>
                         <span>{payment.unit}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Κωδικός ΝΑ853</span>
-                        <span className="font-mono">{payment.na853 || "—"}</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Κωδικός ΝΑ853
+                        </span>
+                        <span className="font-mono">
+                          {payment.na853 || "—"}
+                        </span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Τύπος Δαπάνης</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Τύπος Δαπάνης
+                        </span>
                         <span>{payment.expenditure_type}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Δόση</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Δόση
+                        </span>
                         <span>{payment.installment}</span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Ποσό (€)</span>
-                        <span className="font-semibold text-green-700">{payment.amount} €</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Ποσό (€)
+                        </span>
+                        <span className="font-semibold text-green-700">
+                          {payment.amount} €
+                        </span>
                       </div>
                       <div>
-                        <span className="font-medium text-xs text-muted-foreground block">Αρ. Πρωτοκόλλου</span>
-                        <span className="font-mono">{payment.protocol || "—"}</span>
+                        <span className="font-medium text-xs text-muted-foreground block">
+                          Αρ. Πρωτοκόλλου
+                        </span>
+                        <span className="font-mono">
+                          {payment.protocol || "—"}
+                        </span>
                       </div>
                     </div>
                     <Button
@@ -2011,8 +2299,6 @@ function BeneficiaryForm({
               </div>
             </div>
           )}
-
-
         </div>
 
         {/* Additional Information */}
@@ -2023,8 +2309,8 @@ function BeneficiaryForm({
             <FormItem>
               <FormLabel>Ελεύθερο Κείμενο</FormLabel>
               <FormControl>
-                <Textarea 
-                  placeholder="Πρόσθετες πληροφορίες..." 
+                <Textarea
+                  placeholder="Πρόσθετες πληροφορίες..."
                   {...field}
                   rows={3}
                 />
@@ -2035,8 +2321,8 @@ function BeneficiaryForm({
         />
 
         <div className="flex justify-end gap-3">
-          <Button 
-            type="button" 
+          <Button
+            type="button"
             variant="outline"
             onClick={() => {
               form.reset();

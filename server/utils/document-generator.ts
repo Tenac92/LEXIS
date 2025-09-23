@@ -48,7 +48,7 @@ export class DocumentGenerator {
    * Get expenditure type configuration - unified method to avoid repetition
    */
   private static getExpenditureConfig(documentData: DocumentData) {
-    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
+    const expenditureType = documentData.expenditure_type;
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     return { expenditureType, config };
   }
@@ -143,7 +143,10 @@ export class DocumentGenerator {
         ...this.createMainContent(documentData, unitDetails),
 
         // Project information
-        ...DocumentGenerator.createProjectInfo(documentData),
+        ...DocumentGenerator.createProjectInfo(
+          documentData,
+          documentData.expenditure_type,
+        ),
 
         // Payment table
         this.createPaymentTable(
@@ -894,18 +897,18 @@ export class DocumentGenerator {
   /**
    * Create note paragraph
    */
-  private static createNote(): Paragraph {
-    return new Paragraph({
-      children: [
-        new TextRun({
-          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-          font: DocumentUtilities.DEFAULT_FONT,
-        }),
-      ],
-      spacing: { before: 0, after: 0 },
-    });
-  }
+  // //  private static createNote(): Paragraph {
+  //   //  return new Paragraph({
+  //       children: [
+  //         new TextRun({
+  //           text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+  //           size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+  //           font: DocumentUtilities.DEFAULT_FONT,
+  //         }),
+  //       ],
+  //       spacing: { before: 0, after: 0 },
+  //     });
+  //   }
 
   /**
    * Create footer with signature
@@ -1150,114 +1153,225 @@ export class DocumentGenerator {
    */
   private static createProjectInfo(
     documentData: DocumentData,
+    expenditureType: string,
   ): (Table | Paragraph)[] {
-    return [
-      new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        columnWidths: [20, 80],
-        borders: {
-          top: { style: BorderStyle.NONE },
-          bottom: { style: BorderStyle.NONE },
-          left: { style: BorderStyle.NONE },
-          right: { style: BorderStyle.NONE },
-          insideHorizontal: { style: BorderStyle.NONE },
-          insideVertical: { style: BorderStyle.NONE },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                width: { size: 15, type: WidthType.PERCENTAGE },
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "ΑΡ. ΕΡΓΟΥ: ",
-                        bold: true,
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "ΑΛΕ: ",
-                        bold: true,
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableRow({
-            children: [
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "ΤΟΜΕΑΣ: ",
-                        bold: true,
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: "" })],
-      }),
-    ];
+    if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+      return [
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          columnWidths: [20, 80],
+          borders: {
+            top: { style: BorderStyle.NONE },
+            bottom: { style: BorderStyle.NONE },
+            left: { style: BorderStyle.NONE },
+            right: { style: BorderStyle.NONE },
+            insideHorizontal: { style: BorderStyle.NONE },
+            insideVertical: { style: BorderStyle.NONE },
+          },
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 15, type: WidthType.PERCENTAGE },
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΑΡ. ΕΡΓΟΥ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΑΛΕ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "2310989004",
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΤΟΜΕΑΣ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "" })],
+        }),
+      ];
+    } else {
+      return [
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          columnWidths: [20, 80],
+          borders: {
+            top: { style: BorderStyle.NONE },
+            bottom: { style: BorderStyle.NONE },
+            left: { style: BorderStyle.NONE },
+            right: { style: BorderStyle.NONE },
+            insideHorizontal: { style: BorderStyle.NONE },
+            insideVertical: { style: BorderStyle.NONE },
+          },
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 15, type: WidthType.PERCENTAGE },
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΑΡ. ΕΡΓΟΥ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΑΛΕ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "2310989004–Ο",
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "ΤΟΜΕΑΣ: ",
+                          bold: true,
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: "" })],
+        }),
+      ];
+    }
   }
 
   /**
@@ -1375,7 +1489,7 @@ export class DocumentGenerator {
                   "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
                 ),
                 DocumentUtilities.createBoldParagraph(
-                  "ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ",
+                  "ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ",
                 ),
                 DocumentUtilities.createBoldParagraph(
                   unitDetails?.unit_name?.name || unitDetails?.name || "",
