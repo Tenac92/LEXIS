@@ -1061,7 +1061,9 @@ router.get("/", async (req: Request, res: Response) => {
     const filters = {
       unit_id: req.query.unit ? parseInt(req.query.unit as string) : undefined,
       status: req.query.status as string,
-      generated_by: req.query.generated_by ? parseInt(req.query.generated_by as string) : undefined,
+      generated_by: req.query.generated_by
+        ? parseInt(req.query.generated_by as string)
+        : undefined,
       dateFrom: req.query.dateFrom as string,
       dateTo: req.query.dateTo as string,
       amountFrom: req.query.amountFrom
