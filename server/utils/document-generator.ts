@@ -1327,7 +1327,7 @@ export class DocumentGenerator {
                     new Paragraph({
                       children: [
                         new TextRun({
-                          text: "2310989004–Ο",
+                          text: "ΑΛΕ: 	2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
                           size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
                         }),
                       ],
