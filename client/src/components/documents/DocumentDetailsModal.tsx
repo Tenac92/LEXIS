@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  FileText, 
-  Calendar, 
+import {
+  FileText,
+  Calendar,
   User,
   Euro,
   Hash,
@@ -19,7 +19,7 @@ import {
   AlertCircle,
   FileEdit,
   X,
-  Edit3
+  Edit3,
 } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
@@ -47,7 +47,7 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
       label: "Ορθή Επανάληψη",
       variant: "secondary" as const,
       icon: FileEdit,
-      color: "text-purple-600"
+      color: "text-purple-600",
     };
   }
 
@@ -57,66 +57,69 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
         label: "Προσχέδιο",
         variant: "secondary" as const,
         icon: Clock,
-        color: "text-yellow-600"
+        color: "text-yellow-600",
       };
     case "ready":
       return {
         label: "Έτοιμο",
         variant: "default" as const,
         icon: CheckCircle,
-        color: "text-green-600"
+        color: "text-green-600",
       };
     case "sent":
       return {
-        label: "Αποσταλμένο",
+        label: "Απεσταλμένο",
         variant: "default" as const,
         icon: CheckCircle,
-        color: "text-blue-600"
+        color: "text-blue-600",
       };
     default:
       return {
         label: "Άγνωστη Κατάσταση",
         variant: "destructive" as const,
         icon: AlertCircle,
-        color: "text-red-600"
+        color: "text-red-600",
       };
   }
 };
 
-export function DocumentDetailsModal({ 
-  document, 
-  open, 
-  onOpenChange 
+export function DocumentDetailsModal({
+  document,
+  open,
+  onOpenChange,
 }: DocumentDetailsModalProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
-  
+
   if (!document) return null;
 
   const statusDetails = getStatusDetails(document.status, null);
 
   const formatCurrency = (amount: number | null) => {
-    if (!amount) return '€0,00';
+    if (!amount) return "€0,00";
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   // Parse recipients data
   let recipients: Recipient[] = [];
   try {
-    if (document.recipients && typeof document.recipients === 'string') {
+    if (document.recipients && typeof document.recipients === "string") {
       recipients = JSON.parse(document.recipients);
-    } else if (document.recipients && typeof document.recipients === 'object') {
+    } else if (document.recipients && typeof document.recipients === "object") {
       recipients = document.recipients as Recipient[];
     }
   } catch (error) {
-    console.error('Error parsing recipients data:', error);
+    console.error("Error parsing recipients data:", error);
   }
 
-  const totalAmount = recipients.reduce((sum, recipient) => sum + (recipient.amount || 0), 0);
+  const totalAmount = recipients.reduce(
+    (sum, recipient) => sum + (recipient.amount || 0),
+    0,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,7 +134,7 @@ export function DocumentDetailsModal({
                 Πλήρη στοιχεία και πληροφορίες για το επιλεγμένο έγγραφο
               </DialogDescription>
             </div>
-            <Button 
+            <Button
               onClick={() => setEditModalOpen(true)}
               variant="outline"
               className="flex items-center gap-2"
@@ -151,17 +154,19 @@ export function DocumentDetailsModal({
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-orange-700">Αριθμός Εγγράφου</label>
+                <label className="text-sm font-medium text-orange-700">
+                  Αριθμός Εγγράφου
+                </label>
                 <p className="text-orange-900 font-semibold bg-white px-3 py-2 rounded border">
-                  {document.protocol_number_input ? (
-                    `${document.protocol_number_input}/${document.protocol_date ? new Date(document.protocol_date).toLocaleDateString('el-GR') : ''}`
-                  ) : (
-                    `Έγγραφο #${document.id}`
-                  )}
+                  {document.protocol_number_input
+                    ? `${document.protocol_number_input}/${document.protocol_date ? new Date(document.protocol_date).toLocaleDateString("el-GR") : ""}`
+                    : `Έγγραφο #${document.id}`}
                 </p>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-orange-700">Κατάσταση</label>
+                <label className="text-sm font-medium text-orange-700">
+                  Κατάσταση
+                </label>
                 <div className="flex items-center">
                   <Badge variant={statusDetails.variant} className="text-sm">
                     <statusDetails.icon className="h-3 w-3 mr-1" />
@@ -170,28 +175,40 @@ export function DocumentDetailsModal({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-orange-700">Τύπος Δαπάνης</label>
+                <label className="text-sm font-medium text-orange-700">
+                  Τύπος Δαπάνης
+                </label>
                 <p className="text-orange-900 bg-white px-3 py-2 rounded border">
-                  {document.expenditure_type || 'Δ/Υ'}
+                  {document.expenditure_type || "Δ/Υ"}
                 </p>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-orange-700">Ημερομηνία Δημιουργίας</label>
+                <label className="text-sm font-medium text-orange-700">
+                  Ημερομηνία Δημιουργίας
+                </label>
                 <p className="text-orange-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-orange-600" />
-                  {document.created_at ? new Date(document.created_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
+                  {document.created_at
+                    ? new Date(document.created_at).toLocaleDateString("el-GR")
+                    : "Δ/Υ"}
                 </p>
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-orange-700">Τελευταία Ενημέρωση</label>
+                <label className="text-sm font-medium text-orange-700">
+                  Τελευταία Ενημέρωση
+                </label>
                 <p className="text-orange-900 bg-white px-3 py-2 rounded border flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-600" />
-                  {document.updated_at ? new Date(document.updated_at).toLocaleDateString('el-GR') : 'Δ/Υ'}
+                  {document.updated_at
+                    ? new Date(document.updated_at).toLocaleDateString("el-GR")
+                    : "Δ/Υ"}
                 </p>
               </div>
               {document.project_na853 && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-orange-700">ΝΑ853</label>
+                  <label className="text-sm font-medium text-orange-700">
+                    ΝΑ853
+                  </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border font-mono">
                     {document.project_na853}
                   </p>
@@ -199,7 +216,9 @@ export function DocumentDetailsModal({
               )}
               {document.unit && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-orange-700">Μονάδα</label>
+                  <label className="text-sm font-medium text-orange-700">
+                    Μονάδα
+                  </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border">
                     {document.unit}
                   </p>
@@ -207,7 +226,9 @@ export function DocumentDetailsModal({
               )}
               {document.total_amount && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-orange-700">Συνολικό Ποσό</label>
+                  <label className="text-sm font-medium text-orange-700">
+                    Συνολικό Ποσό
+                  </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border font-semibold flex items-center gap-2">
                     <Euro className="w-4 h-4 text-orange-600" />
                     {formatCurrency(parseFloat(document.total_amount))}
@@ -216,7 +237,9 @@ export function DocumentDetailsModal({
               )}
               {document.project_id && (
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-orange-700">ID Έργου</label>
+                  <label className="text-sm font-medium text-orange-700">
+                    ID Έργου
+                  </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border font-mono flex items-center gap-2">
                     <Hash className="w-4 h-4 text-orange-600" />
                     {document.project_id}
@@ -225,8 +248,6 @@ export function DocumentDetailsModal({
               )}
             </div>
           </div>
-
-
 
           {/* Recipients Information */}
           {recipients.length > 0 && (
@@ -237,19 +258,26 @@ export function DocumentDetailsModal({
                   Δικαιούχοι ({recipients.length})
                 </h3>
                 <div className="bg-green-100 px-4 py-2 rounded-lg border border-green-300">
-                  <span className="text-green-700 text-sm font-medium">Συνολικό Ποσό: </span>
+                  <span className="text-green-700 text-sm font-medium">
+                    Συνολικό Ποσό:{" "}
+                  </span>
                   <span className="text-green-900 font-bold text-lg">
                     {formatCurrency(totalAmount)}
                   </span>
                 </div>
               </div>
-              
+
               <div className="space-y-3">
                 {recipients.map((recipient, index) => (
-                  <div key={index} className="bg-white p-4 rounded-lg border border-green-200 shadow-sm">
+                  <div
+                    key={index}
+                    className="bg-white p-4 rounded-lg border border-green-200 shadow-sm"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">Δικαιούχος</label>
+                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                          Δικαιούχος
+                        </label>
                         <p className="text-green-900 font-medium">
                           {recipient.lastname} {recipient.firstname}
                           {recipient.fathername && (
@@ -259,42 +287,58 @@ export function DocumentDetailsModal({
                           )}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">ΑΦΜ</label>
+                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                          ΑΦΜ
+                        </label>
                         <p className="text-green-900 font-mono font-medium bg-green-50 px-2 py-1 rounded">
                           {recipient.afm}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-1">
-                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">Ποσό</label>
+                        <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                          Ποσό
+                        </label>
                         <p className="text-green-900 font-bold text-lg bg-green-50 px-2 py-1 rounded">
                           {formatCurrency(recipient.amount)}
                         </p>
                       </div>
-                      
+
                       {recipient.installment && (
                         <div className="space-y-1">
-                          <label className="text-xs font-medium text-green-600 uppercase tracking-wide">Δόση</label>
+                          <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                            Δόση
+                          </label>
                           <p className="text-green-900 font-medium bg-green-50 px-2 py-1 rounded">
                             {recipient.installment}
                           </p>
                         </div>
                       )}
-                      
-                      {recipient.installments && recipient.installments.length > 1 && (
-                        <div className="md:col-span-2 lg:col-span-4 space-y-1">
-                          <label className="text-xs font-medium text-green-600 uppercase tracking-wide">Όλες οι Δόσεις</label>
-                          <div className="flex flex-wrap gap-2">
-                            {recipient.installments.map((inst, instIndex) => (
-                              <span key={instIndex} className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">
-                                {inst}: {recipient.installmentAmounts && formatCurrency(recipient.installmentAmounts[inst] || 0)}
-                              </span>
-                            ))}
+
+                      {recipient.installments &&
+                        recipient.installments.length > 1 && (
+                          <div className="md:col-span-2 lg:col-span-4 space-y-1">
+                            <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                              Όλες οι Δόσεις
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {recipient.installments.map((inst, instIndex) => (
+                                <span
+                                  key={instIndex}
+                                  className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm"
+                                >
+                                  {inst}:{" "}
+                                  {recipient.installmentAmounts &&
+                                    formatCurrency(
+                                      recipient.installmentAmounts[inst] || 0,
+                                    )}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 ))}
@@ -303,7 +347,7 @@ export function DocumentDetailsModal({
           )}
         </div>
       </DialogContent>
-      
+
       {/* Edit Document Modal */}
       <EditDocumentModal
         document={document}
