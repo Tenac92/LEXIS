@@ -1061,6 +1061,7 @@ router.get("/", async (req: Request, res: Response) => {
     const filters = {
       unit_id: req.query.unit ? parseInt(req.query.unit as string) : undefined,
       status: req.query.status as string,
+      generated_by: req.query.generated_by ? parseInt(req.query.generated_by as string) : undefined,
       dateFrom: req.query.dateFrom as string,
       dateTo: req.query.dateTo as string,
       amountFrom: req.query.amountFrom
@@ -1087,6 +1088,9 @@ router.get("/", async (req: Request, res: Response) => {
     }
     if (filters.status) {
       query = query.eq("status", filters.status);
+    }
+    if (filters.generated_by) {
+      query = query.eq("generated_by", filters.generated_by);
     }
 
     const { data: documents, error } = await query;
