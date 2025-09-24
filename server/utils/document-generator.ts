@@ -308,7 +308,7 @@ export class DocumentGenerator {
     ];
 
     // Use consistent page content width for all document elements
-    const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) - margins (720 * 2)
+    const PAGE_CONTENT_WIDTH = 11906; // A4 usable content width with Word's default margins
 
     const BORDER = { style: BorderStyle.SINGLE, size: 4 };
     const CELL_BORDERS = {
@@ -617,7 +617,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
       rows,
     });
   }
@@ -797,7 +797,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -907,7 +907,7 @@ export class DocumentGenerator {
 
     const table = new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -991,7 +991,7 @@ export class DocumentGenerator {
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 120 },
+        spacing: { after: 60 },
         alignment: AlignmentType.LEFT,
       });
 
