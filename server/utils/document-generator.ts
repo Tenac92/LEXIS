@@ -58,9 +58,9 @@ export class DocumentGenerator {
    */
   private static getDefaultAddress() {
     return {
-      address: "Δημοκρίτου 2",
-      tk: "11523",
-      region: "Μαρούσι",
+      address: "",
+      tk: "",
+      region: "",
     };
   }
 
@@ -77,7 +77,7 @@ export class DocumentGenerator {
       documentData.generated_by?.telephone ||
       documentData.contact_number ||
       "2131331391";
-    const email = unitDetails?.email || "daefkke@civilprotection.gr";
+    const email = unitDetails?.email || "";
     const address = unitDetails?.address || this.getDefaultAddress();
 
     return { contactPerson, telephone, email, address };
@@ -137,7 +137,9 @@ export class DocumentGenerator {
         this.createDocumentSubject(documentData, unitDetails),
 
         // Legal references
-        ...DocumentGenerator.createLegalReferences(),
+        ...DocumentGenerator.createLegalReferences(
+          documentData.expenditure_type,
+        ),
 
         // Main request text
         ...this.createMainContent(documentData, unitDetails),
@@ -289,7 +291,6 @@ export class DocumentGenerator {
   ): Table {
     const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const documentTitle = config.documentTitle;
-
     const subjectText = [
       {
         text: "ΘΕΜΑ:",
@@ -298,7 +299,11 @@ export class DocumentGenerator {
         color: "000000",
       },
       {
-        text: ` ${documentTitle} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
+        text: ` ${documentTitle} ${
+          expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+            ? unitDetails?.unit_name?.prop || "τη"
+            : unitDetails?.unit_name?.prop || "της"
+        } ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
         italics: true,
         bold: true,
         color: "000000",
@@ -1125,253 +1130,95 @@ export class DocumentGenerator {
     });
   }
 
-  /**
-   * Create legal references section
-   */
-  private static createLegalReferences(): Paragraph[] {
-    const legalParagraphs: Paragraph[] = [];
+  //Create legal references section
 
-    legalParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε.",
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { after: 0 },
-      }),
+  private static createLegalReferences(expenditureType: string): Paragraph[] {
+    const baseOptions = {
+      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+      font: DocumentUtilities.DEFAULT_FONT,
+    };
+
+    const texts =
+      expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+        ? [
+            "Σχ.:α) Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει.",
+            "  β) Τις διατάξεις του Ν. 4336/2015 (Α’94) και ειδικότερα της υποπαραγράφου Δ9 «Δαπάνες μετακινούμενων εντός και εκτός έδρας» όπως τροποποιήθηκε και ισχύει.",
+            "  γ) Τη με αρ.2/73/ΔΕΠ/04.01.2016 (Β’20) απόφαση του Αν. Υπουργού Οικονομικών με θέμα: «Δικαιολογητικά αναγνώρισης και εκκαθάρισης δαπανών μετακινούμενων εντός και εκτός έδρας της Επικράτειας.",
+          ]
+        : [
+            "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε.",
+          ];
+
+    return texts.map(
+      (t) =>
+        new Paragraph({
+          children: [new TextRun({ text: t, ...baseOptions })],
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 0 },
+        }),
     );
-
-    return legalParagraphs;
   }
 
-  /**
-   * Create project information section using table layout
-   */
+  // Create project information section using table layout
   private static createProjectInfo(
     documentData: DocumentData,
     expenditureType: string,
   ): (Table | Paragraph)[] {
-    if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
-      return [
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          columnWidths: [20, 80],
-          borders: {
-            top: { style: BorderStyle.NONE },
-            bottom: { style: BorderStyle.NONE },
-            left: { style: BorderStyle.NONE },
-            right: { style: BorderStyle.NONE },
-            insideHorizontal: { style: BorderStyle.NONE },
-            insideVertical: { style: BorderStyle.NONE },
-          },
-          rows: [
-            new TableRow({
-              children: [
-                new TableCell({
-                  width: { size: 15, type: WidthType.PERCENTAGE },
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΑΡ. ΕΡΓΟΥ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableRow({
-              children: [
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΑΛΕ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "2310989004",
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableRow({
-              children: [
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΤΟΜΕΑΣ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: "" })],
-        }),
-      ];
-    } else {
-      return [
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          columnWidths: [20, 80],
-          borders: {
-            top: { style: BorderStyle.NONE },
-            bottom: { style: BorderStyle.NONE },
-            left: { style: BorderStyle.NONE },
-            right: { style: BorderStyle.NONE },
-            insideHorizontal: { style: BorderStyle.NONE },
-            insideVertical: { style: BorderStyle.NONE },
-          },
-          rows: [
-            new TableRow({
-              children: [
-                new TableCell({
-                  width: { size: 15, type: WidthType.PERCENTAGE },
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΑΡ. ΕΡΓΟΥ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: `${documentData.project_na853 || ""} της ΣΑΝΑ 853`,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableRow({
-              children: [
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΑΛΕ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΑΛΕ: 	2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.",
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-            new TableRow({
-              children: [
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "ΤΟΜΕΑΣ: ",
-                          bold: true,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                new TableCell({
-                  children: [
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: "" })],
-        }),
-      ];
-    }
+    const baseFont = {
+      size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+    };
+
+    // Only this changes per expenditure type
+    const aleValue =
+      expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+        ? "2420403001-2420405001-2420404001"
+        : "2310989004–Οικονομικής ενισχ. πυροπαθών, σεισμ/κτων, πλημ/παθών κ.λπ.";
+
+    const row = (label: string, value: string) =>
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 15, type: WidthType.PERCENTAGE },
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({ text: `${label}: `, bold: true, ...baseFont }),
+                ],
+              }),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: value, ...baseFont })],
+              }),
+            ],
+          }),
+        ],
+      });
+
+    const table = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [20, 80],
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
+      rows: [
+        row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
+        row("ΑΛΕ", aleValue),
+        row(
+          "ΤΟΜΕΑΣ",
+          "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+        ),
+      ],
+    });
+
+    return [table, new Paragraph({ children: [new TextRun({ text: "" })] })];
   }
 
   /**
@@ -1381,7 +1228,7 @@ export class DocumentGenerator {
     return new Paragraph({
       children: [
         new TextRun({
-          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε  στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εb�όφλησης των δικαιούχων, αποστείλετε  στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
           size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
@@ -1394,15 +1241,48 @@ export class DocumentGenerator {
   /**
    * Create document header with two-column layout (matches template exactly)
    */
+
   private static async createDocumentHeader(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
   ): Promise<Table> {
-    if (!documentData) {
-      throw new Error("Document data is required");
-    }
+    if (!documentData) throw new Error("Document data is required");
 
-    // Extract user information with fallbacks
+    // ---- small helpers
+    const NONE = { style: BorderStyle.NONE };
+    const NO_BORDERS = {
+      top: NONE,
+      bottom: NONE,
+      left: NONE,
+      right: NONE,
+      insideHorizontal: NONE,
+      insideVertical: NONE,
+    };
+    const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
+    const p = (text: string, opts: { bold?: boolean; [key: string]: any } = {}) =>
+      new Paragraph({
+        children: [
+          new TextRun({
+            text,
+            ...opts,
+          }),
+        ],
+      });
+    const boldP = (text: string) => p(text, { bold: true });
+    const contact = (label: string, value: string) =>
+      DocumentUtilities.createContactDetail(label, value);
+    const cell = (children: (Paragraph | Table)[], widthPct?: number) =>
+      new TableCell({
+        ...(widthPct
+          ? { width: { size: widthPct, type: WidthType.PERCENTAGE } }
+          : {}),
+        borders: NO_BORDERS,
+        margins: NO_MARGINS,
+        children,
+      });
+    const row = (cells: TableCell[]) => new TableRow({ children: cells });
+
+    // ---- data
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
@@ -1413,236 +1293,94 @@ export class DocumentGenerator {
         "",
     };
 
-    // Use unitDetails.address if available
-    const address = unitDetails?.address || {
-      address: "Δημοκρίτου 2",
-      tk: "11523",
-      region: "Μαρούσι",
-    };
+    const address = unitDetails?.address ?? { address: "", tk: "", region: "" };
 
-    // Load logo buffer (you may need to implement this)
-    const logoBuffer = Buffer.from(""); // Placeholder for logo
+    // ---- left column (logo + org + contacts)
+    const leftCol: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: fs.readFileSync(
+              path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
+            ),
+            transformation: { width: 40, height: 40 },
+            type: "png",
+          } as any),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 100 },
+      }),
+      boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+      boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+      boldP(
+        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+      ),
+      boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ "),
+      boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
+      boldP(userInfo.department),
+      contact("Ταχ. Δ/νση", address.address),
+      contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
+      contact("Πληροφορίες", userInfo.name),
+      contact("Τηλέφωνο", userInfo.contact_number),
+      contact("Email", unitDetails?.email || ""),
+      DocumentUtilities.createBlankLine(5),
+    ];
 
+    // ---- right column ("ΠΡΟΣ:" block)
+    const toLines = [
+      "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+      "Διεύθυνση Οικονομικής Διαχείρισης",
+      "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+      "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+      "Δημοκρίτου 2",
+      "151 23 Μαρούσι",
+    ];
+
+    const rightInnerTable = new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: NO_BORDERS,
+      rows: [
+        row([
+          cell(
+            [
+              new Paragraph({
+                children: [
+                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
+                ],
+                spacing: { before: 2200 },
+                alignment: AlignmentType.LEFT,
+              }),
+            ],
+            20,
+          ),
+          cell(
+            [
+              new Paragraph({
+                children: [new TextRun({ text: toLines[0], size: 20 })],
+                spacing: { before: 2200 },
+                alignment: AlignmentType.LEFT,
+              }),
+              ...toLines.slice(1).map(
+                (t) =>
+                  new Paragraph({
+                    children: [new TextRun({ text: t, size: 20 })],
+                    alignment: AlignmentType.LEFT,
+                  }),
+              ),
+            ],
+            80,
+          ),
+        ]),
+      ],
+    });
+
+    // ---- whole header table
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       columnWidths: [60, 40],
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      margins: {
-        top: 0,
-        bottom: 0,
-        left: 0,
-        right: 0,
-      },
-      rows: [
-        new TableRow({
-          children: [
-            // Ministry information column
-            new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              margins: {
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-              },
-              children: [
-                // Logo at the top - smaller size for Word compatibility
-                new Paragraph({
-                  children: [
-                    new ImageRun({
-                      data: fs.readFileSync(
-                        path.join(
-                          process.cwd(),
-                          "server",
-                          "utils",
-                          "ethnosimo22.png",
-                        ),
-                      ),
-                      transformation: {
-                        width: 40,
-                        height: 40,
-                      },
-                      type: "png",
-                    } as any),
-                  ],
-                  alignment: AlignmentType.LEFT,
-                  spacing: { after: 100 },
-                }),
-                DocumentUtilities.createBoldParagraph("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-                DocumentUtilities.createBoldParagraph(
-                  "ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ",
-                ),
-                DocumentUtilities.createBoldParagraph(
-                  "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
-                ),
-                DocumentUtilities.createBoldParagraph(
-                  "ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ",
-                ),
-                DocumentUtilities.createBoldParagraph(
-                  unitDetails?.unit_name?.name || unitDetails?.name || "",
-                ),
-                DocumentUtilities.createBoldParagraph(userInfo.department),
-                DocumentUtilities.createContactDetail(
-                  "Ταχ. Δ/νση",
-                  address.address,
-                ),
-                DocumentUtilities.createContactDetail(
-                  "Ταχ. Κώδικας",
-                  `${address.tk}, ${address.region}`,
-                ),
-                DocumentUtilities.createContactDetail(
-                  "Πληροφορίες",
-                  userInfo.name,
-                ),
-                DocumentUtilities.createContactDetail(
-                  "Τηλέφωνο",
-                  userInfo.contact_number,
-                ),
-                DocumentUtilities.createContactDetail(
-                  "Email",
-                  unitDetails?.email || "",
-                ),
-                DocumentUtilities.createBlankLine(5),
-              ],
-            }),
-            new TableCell({
-              width: { size: 40, type: WidthType.PERCENTAGE },
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
-              margins: {
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-              },
-              children: [
-                new Table({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                  borders: {
-                    top: { style: BorderStyle.NONE },
-                    bottom: { style: BorderStyle.NONE },
-                    left: { style: BorderStyle.NONE },
-                    right: { style: BorderStyle.NONE },
-                    insideHorizontal: { style: BorderStyle.NONE },
-                    insideVertical: { style: BorderStyle.NONE },
-                  },
-                  rows: [
-                    new TableRow({
-                      children: [
-                        new TableCell({
-                          width: { size: 20, type: WidthType.PERCENTAGE },
-                          borders: {
-                            top: { style: BorderStyle.NONE },
-                            bottom: { style: BorderStyle.NONE },
-                            left: { style: BorderStyle.NONE },
-                            right: { style: BorderStyle.NONE },
-                          },
-                          children: [
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "ΠΡΟΣ:",
-                                  bold: true,
-                                  size: 20,
-                                }),
-                              ],
-                              spacing: { before: 2200 },
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                        new TableCell({
-                          width: { size: 80, type: WidthType.PERCENTAGE },
-                          borders: {
-                            top: { style: BorderStyle.NONE },
-                            bottom: { style: BorderStyle.NONE },
-                            left: { style: BorderStyle.NONE },
-                            right: { style: BorderStyle.NONE },
-                          },
-                          children: [
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-                                  size: 20,
-                                }),
-                              ],
-                              spacing: { before: 2200 },
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "Διεύθυνση Οικονομικής Διαχείρισης",
-                                  size: 20,
-                                }),
-                              ],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-                                  size: 20,
-                                }),
-                              ],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-                                  size: 20,
-                                }),
-                              ],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "Δημοκρίτου 2",
-                                  size: 20,
-                                }),
-                              ],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                            new Paragraph({
-                              children: [
-                                new TextRun({
-                                  text: "151 23 Μαρούσι",
-                                  size: 20,
-                                }),
-                              ],
-                              alignment: AlignmentType.LEFT,
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ],
+      borders: NO_BORDERS,
+      margins: NO_MARGINS,
+      rows: [row([cell(leftCol, 60), cell([rightInnerTable], 40)])],
     });
   }
 }
