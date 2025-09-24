@@ -308,7 +308,7 @@ export class DocumentGenerator {
     ];
 
     // Use consistent page content width for all document elements
-    const PAGE_CONTENT_WIDTH = 11906; // A4 usable content width with Word's default margins
+    const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) minus left/right margins (720 each)
 
     const BORDER = { style: BorderStyle.SINGLE, size: 4 };
     const CELL_BORDERS = {
@@ -617,7 +617,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
       rows,
     });
   }
@@ -797,7 +797,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -907,7 +907,7 @@ export class DocumentGenerator {
 
     const table = new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 11906, type: WidthType.DXA }, // Use consistent page content width
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -968,9 +968,9 @@ export class DocumentGenerator {
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
 
-    // A4 usable content width with Word's default margins ≈ 11906 twips.
-    // If you've customized section margins elsewhere, update this value accordingly.
-    const PAGE_CONTENT_WIDTH = 11906;
+    // A4 usable content width with Word's default margins = 10466 twips.
+    // A4 page width (11906) minus left margin (720) and right margin (720)
+    const PAGE_CONTENT_WIDTH = 10466;
 
     const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
 
