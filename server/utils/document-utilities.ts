@@ -345,9 +345,8 @@ export class DocumentUtilities {
       rows,
     };
 
-    if (columnWidths) {
-      tableOptions.columnWidths = columnWidths;
-    }
+    // Note: columnWidths property removed for Word compatibility
+    // Individual cell widths should be specified on TableCell elements instead
 
     return new Table(tableOptions);
   }
