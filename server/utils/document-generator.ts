@@ -337,7 +337,6 @@ export class DocumentGenerator {
             new TableCell({
               width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
               borders: CELL_BORDERS,
-              margins: { top: 100, bottom: 100, left: 100, right: 100 },
               shading: { fill: "C0C0C0" },
               verticalAlign: VerticalAlign.CENTER,
               children: [
