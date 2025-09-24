@@ -550,26 +550,6 @@ export class DocumentGenerator {
         );
       }
       // Multiple installments processing complete - duplicate logic removed for Word compatibility
-        const amount = installmentAmounts[inst] ?? 0;
-        // This was duplicate logic - removing to fix shared cell references
-        // totalAmount already incremented above
-
-        const subsequentCells = columns.map((label: string) => {
-          if (label === "ΠΟΣΟ (€)")
-            return cell(DocumentUtilities.formatCurrency(amount));
-          if (["ΔΟΣΗ", "ΗΜΕΡΕΣ", "ΜΗΝΕΣ", "ΤΡΙΜΗΝΟ"].includes(label))
-            return cell(typeSpecificValue(recipient, inst));
-          // everything else is “occupied” by rowSpan in the first row, so empty here
-          return cell("");
-        });
-
-        rows.push(
-          new TableRow({
-            height: { value: 360, rule: HeightRule.ATLEAST },
-            children: subsequentCells,
-          }),
-        );
-      }
     });
 
     // ---- total row (dynamic width)
