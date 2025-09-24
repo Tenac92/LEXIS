@@ -338,11 +338,16 @@ export class SecondaryDocumentFormatter {
           totalAmount += quarterAmount;
 
           // Create complete row with all columns to maintain consistent structure
+          // Fixed: Create fresh TableCell objects to prevent shared references
           const quarterRow = new TableRow({
             children: [
-              // Index cell (repeat same index)
+              // Index cell (empty for subsequent quarters)
               new TableCell({
-                children: cells[0].options.children, // Same index as first row
+                children: [
+                  DocumentUtilities.createCenteredParagraph("", {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                  }),
+                ],
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -350,9 +355,13 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // Name cell (repeat same name)
+              // Name cell (empty for subsequent quarters)
               new TableCell({
-                children: cells[1].options.children, // Same name as first row
+                children: [
+                  DocumentUtilities.createCenteredParagraph("", {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                  }),
+                ],
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -360,9 +369,13 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // AFM cell (repeat same AFM)
+              // AFM cell (empty for subsequent quarters)
               new TableCell({
-                children: cells[2].options.children, // Same AFM as first row
+                children: [
+                  DocumentUtilities.createCenteredParagraph("", {
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                  }),
+                ],
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
