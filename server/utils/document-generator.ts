@@ -523,51 +523,35 @@ export class DocumentGenerator {
         return;
       }
 
-      // Multiple installments → first row with rowSpan for index/name/afm (and days if needed)
-      const span = installments.length;
-      const firstInst = installments[0];
-      const firstAmt = installmentAmounts[firstInst] ?? 0;
-      totalAmount += firstAmt;
+      // Multiple installments → create separate rows with ALL columns (consistent structure)
+      for (let k = 0; k < installments.length; k++) {
+        const inst = installments[k];
+        const amount = installmentAmounts[inst] ?? 0;
+        totalAmount += amount;
 
-      // Pre-create the row-spanned cells we need
-      const spanCells: Record<string, TableCell> = {
-        index: cell(rowNumber, {
-          borders: BORDER,
-          rowSpan: span,
-          vAlign: VerticalAlign.CENTER,
-        }),
-        name: cell(fullName, {
-          borders: BORDER,
-          rowSpan: span,
-          vAlign: VerticalAlign.CENTER,
-        }),
-        afm: cell(afm, {
-          borders: BORDER,
-          rowSpan: span,
-          vAlign: VerticalAlign.CENTER,
-        }),
-      };
+        // Create complete row with all columns to maintain consistent structure
+        const cMap: Record<string, string> = {
+          "Α/Α": rowNumber,
+          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
+          "Α.Φ.Μ.": afm,
+          ΔΟΣΗ: typeSpecificValue(recipient, inst),
+          ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
+          ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
+          ΤΡΙΜΗΝΟ: typeSpecificValue(recipient, inst),
+          "ΠΟΣΟ (€)": DocumentUtilities.formatCurrency(amount),
+        };
 
-      // Build first row children according to columns
-      const firstRowCells = columns.map((label: string) => {
-        if (label === "Α/Α") return spanCells.index;
-        if (label === "ΟΝΟΜΑΤΕΠΩΝΥΜΟ") return spanCells.name;
-        if (label === "Α.Φ.Μ.") return spanCells.afm;
-        if (label === "ΠΟΣΟ (€)")
-          return cell(DocumentUtilities.formatCurrency(firstAmt));
-        // type-specific column
-        if (["ΔΟΣΗ", "ΗΜΕΡΕΣ", "ΜΗΝΕΣ", "ΤΡΙΜΗΝΟ"].includes(label))
-          return cell(typeSpecificValue(recipient, firstInst));
-        // default empty
-        return cell("");
-      });
+        // Build row with consistent column structure
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST },
+            children: columns.map((label: string) =>
+              cell(cMap[label] ?? "", { borders: BORDER }),
+            ),
+          }),
+        );
+      }
 
-      rows.push(
-        new TableRow({
-          height: { value: 360, rule: HeightRule.ATLEAST },
-          children: firstRowCells,
-        }),
-      );
 
       // Subsequent rows: only type-specific column + ΠΟΣΟ
       for (let k = 1; k < installments.length; k++) {

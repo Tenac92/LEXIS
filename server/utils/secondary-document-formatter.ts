@@ -328,54 +328,49 @@ export class SecondaryDocumentFormatter {
           }),
         );
 
-        // Make Index, Name, AFM, and ΠΡΑΞΗ cells span multiple rows
-        // Index cell (position 0)
-        const indexCellOptions = cells[0].options;
-        cells[0] = new TableCell({
-          children: indexCellOptions.children,
-          borders: indexCellOptions.borders,
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-        });
-        
-        // Name cell (position 1)
-        const nameCellOptions = cells[1].options;
-        cells[1] = new TableCell({
-          children: nameCellOptions.children,
-          borders: nameCellOptions.borders,
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-        });
-        
-        // AFM cell (position 2)
-        const afmCellOptions = cells[2].options;
-        cells[2] = new TableCell({
-          children: afmCellOptions.children,
-          borders: afmCellOptions.borders,
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-        });
-        
-        // ΠΡΑΞΗ cell (second to last position)
-        const praxiCellOptions = cells[cells.length - 2].options;
-        cells[cells.length - 2] = new TableCell({
-          children: praxiCellOptions.children,
-          borders: praxiCellOptions.borders,
-          rowSpan: rowSpan,
-          verticalAlign: VerticalAlign.CENTER,
-        });
-
+        // Add first row without rowSpan - consistent structure
         rows.push(new TableRow({ children: cells }));
 
-        // Add remaining quarters as separate rows
+        // Add remaining quarters as separate rows with ALL columns (consistent structure)
         for (let i = 1; i < installments.length; i++) {
           const quarterNum = typeof installments[i] === 'string' ? 
             installments[i].replace("ΤΡΙΜΗΝΟ ", "") : installments[i];
           const quarterAmount = installmentAmounts[installments[i]] || installmentAmounts[quarterNum] || 0;
           totalAmount += quarterAmount;
 
+          // Create complete row with all columns to maintain consistent structure
           const quarterRow = new TableRow({
             children: [
+              // Index cell (repeat same index)
+              new TableCell({
+                children: cells[0].options.children, // Same index as first row
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
+              // Name cell (repeat same name)
+              new TableCell({
+                children: cells[1].options.children, // Same name as first row
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
+              // AFM cell (repeat same AFM)
+              new TableCell({
+                children: cells[2].options.children, // Same AFM as first row
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
               // Quarter column
               new TableCell({
                 children: [
@@ -403,6 +398,16 @@ export class SecondaryDocumentFormatter {
                     },
                   ),
                 ],
+                borders: {
+                  top: { style: borderStyle, size: 1 },
+                  bottom: { style: borderStyle, size: 1 },
+                  left: { style: borderStyle, size: 1 },
+                  right: { style: borderStyle, size: 1 },
+                },
+              }),
+              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ)
+              new TableCell({
+                children: cells[cells.length - 1].options.children, // Same ΠΡΑΞΗ as first row
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
