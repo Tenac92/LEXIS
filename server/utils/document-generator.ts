@@ -330,6 +330,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      columnWidths: [PAGE_CONTENT_WIDTH],
       borders: TABLE_BORDERS,
       rows: [
         new TableRow({
@@ -600,6 +601,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: columns.map(() => Math.floor(10466 / columns.length)),
       rows,
     });
   }
@@ -780,6 +782,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: [10466],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -890,6 +893,7 @@ export class DocumentGenerator {
     const table = new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: [5233, 5233], // Two equal columns
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -1061,6 +1065,7 @@ export class DocumentGenerator {
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
       width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
       borders: TABLE_NO_BORDERS, // Table borders may have inside*
       rows: [
         row([
@@ -1101,6 +1106,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
       borders: TABLE_NO_BORDERS, // Table borders here
       rows: [
         row([
