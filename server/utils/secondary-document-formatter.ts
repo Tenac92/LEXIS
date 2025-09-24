@@ -289,26 +289,85 @@ export class SecondaryDocumentFormatter {
         const firstAmount = installmentAmounts[installments[0]] || installmentAmounts[firstQuarterNum] || 0;
         totalAmount += firstAmount;
 
-        // Replace the quarter cell in the existing cells array
-        cells[cells.length - 2] = new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(
-              `Τ${firstQuarterNum}`,
-              {
+        // Create completely fresh cells array for first quarter row to prevent shared references
+        const firstRowCells = [
+          // Fresh index cell
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(rowNumber, {
                 size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              },
-            ),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        });
-
-        // Add amount for first quarter
-        cells.push(
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          // Fresh name cell
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(fullName, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          // Fresh AFM cell
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(afm, {
+                size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              }),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          // Add quarter cell
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                `Τ${firstQuarterNum}`,
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                },
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          // Fresh ΠΡΑΞΗ cell
+          new TableCell({
+            children: [
+              DocumentUtilities.createCenteredParagraph(
+                recipient.secondary_text || expenditureType || "",
+                {
+                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                },
+              ),
+            ],
+            borders: {
+              top: { style: borderStyle, size: 1 },
+              bottom: { style: borderStyle, size: 1 },
+              left: { style: borderStyle, size: 1 },
+              right: { style: borderStyle, size: 1 },
+            },
+          }),
+          // Add amount cell for first quarter
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(
@@ -325,10 +384,10 @@ export class SecondaryDocumentFormatter {
               right: { style: borderStyle, size: 1 },
             },
           }),
-        );
+        ];
 
-        // Add first row with consistent structure
-        rows.push(new TableRow({ children: cells }));
+        // Add first row with fresh cells to prevent shared references
+        rows.push(new TableRow({ children: firstRowCells }));
 
         // Add remaining quarters as separate rows with ALL columns (consistent structure)
         for (let i = 1; i < installments.length; i++) {
