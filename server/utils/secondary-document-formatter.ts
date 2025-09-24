@@ -282,9 +282,8 @@ export class SecondaryDocumentFormatter {
       if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" && recipient.installments && recipient.installments.length > 1) {
         const installments = recipient.installments;
         const installmentAmounts = recipient.installmentAmounts || {};
-        const rowSpan = installments.length;
 
-        // Create first row with row-spanned cells for Index, Name, AFM, and ΠΡΑΞΗ
+        // Create first row with consistent structure (no rowSpan)
         const firstQuarterNum = typeof installments[0] === 'string' ? 
           installments[0].replace("ΤΡΙΜΗΝΟ ", "") : installments[0];
         const firstAmount = installmentAmounts[installments[0]] || installmentAmounts[firstQuarterNum] || 0;
@@ -328,7 +327,7 @@ export class SecondaryDocumentFormatter {
           }),
         );
 
-        // Add first row without rowSpan - consistent structure
+        // Add first row with consistent structure
         rows.push(new TableRow({ children: cells }));
 
         // Add remaining quarters as separate rows with ALL columns (consistent structure)

@@ -423,12 +423,10 @@ export class DocumentGenerator {
       opts?: {
         bold?: boolean;
         borders?: any;
-        rowSpan?: number;
         vAlign?: typeof VerticalAlign.CENTER;
       },
     ) =>
       new TableCell({
-        rowSpan: opts?.rowSpan,
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
         children: [centeredP(text, {})],
