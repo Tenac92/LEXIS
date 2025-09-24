@@ -1011,7 +1011,6 @@ export class DocumentGenerator {
         width: { size: widthTwips || PAGE_CONTENT_WIDTH, type: WidthType.DXA },
         verticalAlign: valign,
         borders: NO_BORDERS,
-        margins: NO_MARGINS,
         children,
       });
 
