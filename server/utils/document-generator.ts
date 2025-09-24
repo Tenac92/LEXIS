@@ -347,14 +347,12 @@ export class DocumentGenerator {
     };
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      layout: TableLayoutType.AUTOFIT,
       borders: TABLE_BORDERS,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
               borders: CELL_BORDERS,
               shading: { fill: "C0C0C0" },
               verticalAlign: VerticalAlign.CENTER,
