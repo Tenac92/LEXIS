@@ -811,7 +811,6 @@ export class DocumentGenerator {
               width: { size: 6500, type: WidthType.DXA },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              margins: { right: 200 },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
