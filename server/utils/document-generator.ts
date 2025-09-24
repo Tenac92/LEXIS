@@ -136,7 +136,7 @@ export class DocumentGenerator {
 
         // Break column inheritance with blank paragraphs
         DocumentUtilities.createBlankLine(200),
-        
+
         // Subject
         this.createDocumentSubject(documentData, unitDetails),
 
@@ -150,7 +150,7 @@ export class DocumentGenerator {
 
         // Break any table inheritance before project info
         DocumentUtilities.createBlankLine(100),
-        
+
         // Project information
         ...DocumentGenerator.createProjectInfo(
           documentData,
@@ -465,9 +465,7 @@ export class DocumentGenerator {
           (c: string) =>
             new TableCell({
               borders: BORDER,
-              children: [
-                centeredP(c),
-              ],
+              children: [centeredP(c)],
             }),
         ),
       });
@@ -616,9 +614,7 @@ export class DocumentGenerator {
         });
       return new TableCell({
         borders: NB,
-        children: [
-          centeredP(DocumentUtilities.formatCurrency(totalAmount)),
-        ],
+        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount))],
       });
     });
     rows.push(new TableRow({ children: totalRowCells }));
@@ -1001,7 +997,6 @@ export class DocumentGenerator {
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
-        spacing: { after: 60 },
         alignment: AlignmentType.LEFT,
       });
 
@@ -1054,7 +1049,9 @@ export class DocumentGenerator {
       }),
       boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
       boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-      boldP("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+      boldP(
+        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+      ),
       boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
       boldP(userInfo.department),
@@ -1086,7 +1083,9 @@ export class DocumentGenerator {
           cellDXA(
             [
               new Paragraph({
-                children: [new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 })],
+                children: [
+                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
+                ],
                 spacing: { before: 2200 },
                 alignment: AlignmentType.LEFT,
               }),
