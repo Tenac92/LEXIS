@@ -89,9 +89,19 @@ export class DocumentGenerator {
    */
   public static async generatePrimaryDocument(
     documentData: DocumentData,
+    debugOptions?: {
+      disablePaymentTable?: boolean;
+      disableFooter?: boolean;
+      disableHeader?: boolean;
+      disableSubject?: boolean;
+      logTableCells?: boolean;
+    }
   ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData.id);
+      if (debugOptions) {
+        console.log("[DEBUG] Debug options enabled:", debugOptions);
+      }
       console.log("[PrimaryDocument] === DOCUMENT DATA RECEIVED ===");
       console.log("[PrimaryDocument] Document ID:", documentData.id);
       console.log(
@@ -129,45 +139,54 @@ export class DocumentGenerator {
         documentData.unit,
       );
 
-      // Create document sections
-      const children: any[] = [
-        // Header with two-column layout (includes logo, contact info and recipient section)
-        await this.createDocumentHeader(documentData, unitDetails),
+      // Create document sections with conditional inclusion for debugging
+      const children: any[] = [];
 
-        // Break column inheritance with blank paragraphs
-        DocumentUtilities.createBlankLine(5),
+      // Header with two-column layout (includes logo, contact info and recipient section)
+      if (!debugOptions?.disableHeader) {
+        console.log("[DEBUG] Adding header section");
+        children.push(await this.createDocumentHeader(documentData, unitDetails));
+        children.push(DocumentUtilities.createBlankLine(5));
+      } else {
+        console.log("[DEBUG] Skipping header section");
+        children.push(DocumentUtilities.createBlankLine(240)); // Add minimal spacing
+      }
 
-        // Subject
-        this.createDocumentSubject(documentData, unitDetails),
+      // Subject
+      if (!debugOptions?.disableSubject) {
+        console.log("[DEBUG] Adding subject section");
+        children.push(this.createDocumentSubject(documentData, unitDetails));
+      } else {
+        console.log("[DEBUG] Skipping subject section");
+      }
 
-        // Legal references
-        ...DocumentGenerator.createLegalReferences(
-          documentData.expenditure_type,
-        ),
+      // Always include legal references and main content for document validity
+      children.push(...DocumentGenerator.createLegalReferences(documentData.expenditure_type));
+      children.push(...this.createMainContent(documentData, unitDetails));
+      children.push(...DocumentGenerator.createProjectInfo(documentData, documentData.expenditure_type));
 
-        // Main request text
-        ...this.createMainContent(documentData, unitDetails),
-
-        // Project information
-        ...DocumentGenerator.createProjectInfo(
-          documentData,
-          documentData.expenditure_type,
-        ),
-
-        // Payment table
-        this.createPaymentTable(
+      // Payment table
+      if (!debugOptions?.disablePaymentTable) {
+        console.log("[DEBUG] Adding payment table");
+        children.push(this.createPaymentTable(
           documentData.recipients || [],
           documentData.expenditure_type,
-        ),
+          debugOptions
+        ));
+      } else {
+        console.log("[DEBUG] Skipping payment table");
+      }
 
-        // Final request
-        DocumentGenerator.createFinalRequest(),
+      // Final request
+      children.push(DocumentGenerator.createFinalRequest());
 
-        // Note: Attachments and distribution lists are handled in the footer
-
-        // Footer
-        this.createFooter(documentData, unitDetails),
-      ];
+      // Footer
+      if (!debugOptions?.disableFooter) {
+        console.log("[DEBUG] Adding footer section");
+        children.push(this.createFooter(documentData, unitDetails));
+      } else {
+        console.log("[DEBUG] Skipping footer section");
+      }
 
       const doc = new Document({
         sections: [
@@ -395,6 +414,7 @@ export class DocumentGenerator {
   private static createPaymentTable(
     recipients: any[],
     expenditureType: string,
+    debugOptions?: { logTableCells?: boolean }
   ): Table {
     const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
 
@@ -424,12 +444,19 @@ export class DocumentGenerator {
         borders?: any;
         vAlign?: typeof VerticalAlign.CENTER;
       },
-    ) =>
-      new TableCell({
+    ) => {
+      const cellInstance = new TableCell({
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
         children: [centeredP(text, opts?.bold ? { bold: opts.bold } : {})],
       });
+      
+      if (debugOptions?.logTableCells) {
+        console.log(`[DEBUG] PaymentTable Cell created: text="${text}", borders=${JSON.stringify(opts?.borders)}, vAlign=${opts?.vAlign}`);
+      }
+      
+      return cellInstance;
+    };
 
     const indexOfCol = (label: string) =>
       columns.findIndex((c: string) => c === label);
