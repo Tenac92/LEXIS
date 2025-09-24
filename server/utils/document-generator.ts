@@ -24,6 +24,7 @@ import {
   TableCell,
   AlignmentType,
   WidthType,
+  TableLayoutType,
   BorderStyle,
   HeightRule,
   VerticalAlign,
@@ -291,13 +292,9 @@ export class DocumentGenerator {
   ): Table {
     const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const documentTitle = config.documentTitle;
+
     const subjectText = [
-      {
-        text: "ΘΕΜΑ:",
-        bold: true,
-        italics: true,
-        color: "000000",
-      },
+      { text: "ΘΕΜΑ:", bold: true, italics: true, color: "000000" },
       {
         text: ` ${documentTitle} ${
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
@@ -309,34 +306,38 @@ export class DocumentGenerator {
         color: "000000",
       },
     ];
+
+    // A4 usable content width with default Word margins ≈ 11906 twips.
+    // If you've customized section margins elsewhere, update this value accordingly.
+    const PAGE_CONTENT_WIDTH = 11000;
+
+    const BORDER = { style: BorderStyle.SINGLE, size: 4 };
+    const CELL_BORDERS = {
+      top: BORDER,
+      bottom: BORDER,
+      left: BORDER,
+      right: BORDER,
+    };
+    const TABLE_BORDERS = {
+      top: BORDER,
+      bottom: BORDER,
+      left: BORDER,
+      right: BORDER,
+    };
+
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 4 },
-        bottom: { style: BorderStyle.SINGLE, size: 4 },
-        left: { style: BorderStyle.SINGLE, size: 4 },
-        right: { style: BorderStyle.SINGLE, size: 4 },
-      },
+      layout: TableLayoutType.FIXED, // ✅ prevent autofit/percent collapse
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute table width
+      borders: TABLE_BORDERS,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 4 },
-                bottom: { style: BorderStyle.SINGLE, size: 4 },
-                left: { style: BorderStyle.SINGLE, size: 4 },
-                right: { style: BorderStyle.SINGLE, size: 4 },
-              },
-              margins: {
-                top: 50,
-                bottom: 50,
-                left: 50,
-                right: 50,
-              },
-              shading: {
-                fill: "C0C0C0",
-              },
-              width: { size: 100, type: WidthType.PERCENTAGE },
+              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute cell width
+              borders: CELL_BORDERS,
+              margins: { top: 50, bottom: 50, left: 50, right: 50 },
+              shading: { fill: "C0C0C0" },
+              verticalAlign: VerticalAlign.CENTER,
               children: [
                 new Paragraph({
                   children: subjectText.map(
@@ -954,7 +955,7 @@ export class DocumentGenerator {
   ): Promise<Table> {
     if (!documentData) throw new Error("Document data is required");
 
-    // ---- small helpers
+    // ---- constants & helpers
     const NONE = { style: BorderStyle.NONE };
     const NO_BORDERS = {
       top: NONE,
@@ -965,6 +966,20 @@ export class DocumentGenerator {
       insideVertical: NONE,
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
+
+    // A4 usable content width with Word's default margins ≈ 11906 twips.
+    // If you've customized section margins elsewhere, update this value accordingly.
+    const PAGE_CONTENT_WIDTH = 11000;
+
+    const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
+
+    const LEFT_COL_WIDTH = pctTwips(40);
+    const RIGHT_COL_WIDTH = pctTwips(40);
+
+    // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
+    const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.2);
+    const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.8);
+
     const p = (text: string, opts: Partial<TextRun> = {}) =>
       new Paragraph({
         children: [
@@ -973,18 +988,27 @@ export class DocumentGenerator {
           ),
         ],
       });
+
     const boldP = (text: string) => p(text, { bold: true });
     const contact = (label: string, value: string) =>
       DocumentUtilities.createContactDetail(label, value);
-    const cell = (children: (Paragraph | Table)[], widthPct?: number) =>
+
+    // Cell helper using DXA (twips), not percentages
+    const cellDXA = (
+      children: (Paragraph | Table)[],
+      widthTwips?: number,
+      valign: VerticalAlign = VerticalAlign.TOP,
+    ) =>
       new TableCell({
-        ...(widthPct
-          ? { width: { size: widthPct, type: WidthType.PERCENTAGE } }
+        ...(widthTwips
+          ? { width: { size: widthTwips, type: WidthType.DXA } }
           : {}),
+        verticalAlign: valign,
         borders: NO_BORDERS,
         margins: NO_MARGINS,
         children,
       });
+
     const row = (cells: TableCell[]) => new TableRow({ children: cells });
 
     // ---- data
@@ -1009,7 +1033,6 @@ export class DocumentGenerator {
               path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
             ),
             transformation: { width: 40, height: 40 },
-            type: "png",
           } as any),
         ],
         alignment: AlignmentType.LEFT,
@@ -1042,11 +1065,13 @@ export class DocumentGenerator {
     ];
 
     const rightInnerTable = new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
+      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
       borders: NO_BORDERS,
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL], // ✅ absolute column widths
       rows: [
         row([
-          cell(
+          cellDXA(
             [
               new Paragraph({
                 children: [
@@ -1056,9 +1081,9 @@ export class DocumentGenerator {
                 alignment: AlignmentType.LEFT,
               }),
             ],
-            20,
+            PROS_LABEL_COL,
           ),
-          cell(
+          cellDXA(
             [
               new Paragraph({
                 children: [new TextRun({ text: toLines[0], size: 20 })],
@@ -1073,7 +1098,7 @@ export class DocumentGenerator {
                   }),
               ),
             ],
-            80,
+            PROS_TEXT_COL,
           ),
         ]),
       ],
@@ -1081,11 +1106,17 @@ export class DocumentGenerator {
 
     // ---- whole header table
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [60, 40],
+      layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH], // ✅ absolute column widths
       borders: NO_BORDERS,
       margins: NO_MARGINS,
-      rows: [row([cell(leftCol, 60), cell([rightInnerTable], 40)])],
+      rows: [
+        row([
+          cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
+          cellDXA([rightInnerTable], RIGHT_COL_WIDTH, VerticalAlign.TOP),
+        ]),
+      ],
     });
   }
 }
