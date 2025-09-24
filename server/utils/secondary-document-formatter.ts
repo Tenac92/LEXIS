@@ -486,17 +486,11 @@ export class SecondaryDocumentFormatter {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       layout: TableLayoutType.FIXED,
-      columnWidths: this.getColumnWidths(columns),
       rows: rows,
     });
   }
 
-  private static getColumnWidths(columns: string[]): number[] {
-    // Equal distribution of column widths in twips for Word compatibility
-    const totalWidth = 10466; // Page content width in twips
-    const columnWidth = Math.floor(totalWidth / columns.length);
-    return columns.map(() => columnWidth);
-  }
+  // getColumnWidths method removed for Word compatibility - cell widths specified directly on TableCell elements
 
   private static createRetentionText(): Paragraph {
     return new Paragraph({
@@ -573,7 +567,6 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [5233, 5233], // Two equal columns for signature
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
