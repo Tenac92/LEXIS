@@ -441,8 +441,10 @@ export class DocumentGenerator {
       right: { style: BorderStyle.NONE },
     };
 
-    const centeredP = (text: string, extra: { bold?: boolean; size?: number; underline?: boolean } = {}) =>
-      DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
+    const centeredP = (
+      text: string,
+      extra: { bold?: boolean; size?: number; underline?: boolean } = {},
+    ) => DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
 
     const cell = (
       text: string,
@@ -995,14 +997,17 @@ export class DocumentGenerator {
       insideVertical: NONE,
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
-    const p = (text: string, opts: { bold?: boolean; size?: number; font?: string } = {}) =>
+    const p = (
+      text: string,
+      opts: { bold?: boolean; size?: number; font?: string } = {},
+    ) =>
       new Paragraph({
         children: [
           new TextRun({
             text,
             bold: opts.bold || false,
             size: opts.size || DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: "Arial", // Use widely supported font for better compatibility
+            font: "Calibri", // Use widely supported font for better compatibility
           }),
         ],
         spacing: { after: 0, before: 0 },
@@ -1039,7 +1044,12 @@ export class DocumentGenerator {
       // Logo image with error handling for better compatibility
       (() => {
         try {
-          const logoPath = path.join(process.cwd(), "server", "utils", "ethnosimo22.png");
+          const logoPath = path.join(
+            process.cwd(),
+            "server",
+            "utils",
+            "ethnosimo22.png",
+          );
           if (fs.existsSync(logoPath)) {
             return new Paragraph({
               children: [
@@ -1063,7 +1073,7 @@ export class DocumentGenerator {
               text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
               bold: true,
               size: 14,
-              font: "Arial",
+              font: "Calibri",
             }),
           ],
           alignment: AlignmentType.LEFT,
@@ -1105,11 +1115,11 @@ export class DocumentGenerator {
             [
               new Paragraph({
                 children: [
-                  new TextRun({ 
-                    text: "ΠΡΟΣ:", 
-                    bold: true, 
+                  new TextRun({
+                    text: "ΠΡΟΣ:",
+                    bold: true,
                     size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    font: "Arial"
+                    font: "Calibri",
                   }),
                 ],
                 spacing: { before: 2200, after: 120 },
@@ -1121,22 +1131,26 @@ export class DocumentGenerator {
           cell(
             [
               new Paragraph({
-                children: [new TextRun({ 
-                  text: toLines[0], 
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  font: "Arial"
-                })],
+                children: [
+                  new TextRun({
+                    text: toLines[0],
+                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                    font: "Calibri",
+                  }),
+                ],
                 spacing: { before: 2200, after: 0 },
                 alignment: AlignmentType.LEFT,
               }),
               ...toLines.slice(1).map(
                 (t) =>
                   new Paragraph({
-                    children: [new TextRun({ 
-                      text: t, 
-                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                      font: "Arial"
-                    })],
+                    children: [
+                      new TextRun({
+                        text: t,
+                        size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                        font: "Calibri",
+                      }),
+                    ],
                     alignment: AlignmentType.LEFT,
                     spacing: { after: 0, before: 0 },
                   }),
