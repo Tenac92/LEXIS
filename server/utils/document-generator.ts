@@ -414,7 +414,7 @@ export class DocumentGenerator {
       right: { style: BorderStyle.NONE },
     };
 
-    const centeredP = (text: string, extra: Partial<TextRun> = {}) =>
+    const centeredP = (text: string, extra: { bold?: boolean; underline?: boolean; size?: number; spacing?: number } = {}) =>
       DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
 
     const cell = (
@@ -428,7 +428,7 @@ export class DocumentGenerator {
       new TableCell({
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
-        children: [centeredP(text, {})],
+        children: [centeredP(text, opts?.bold ? { bold: opts.bold } : {})],
       });
 
     const indexOfCol = (label: string) =>
@@ -457,7 +457,7 @@ export class DocumentGenerator {
           (c: string) =>
             new TableCell({
               borders: BORDER,
-              children: [centeredP(c)],
+              children: [centeredP(c, { bold: true })],
             }),
         ),
       });
