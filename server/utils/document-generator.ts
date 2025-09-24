@@ -802,8 +802,6 @@ export class DocumentGenerator {
         bottom: { style: BorderStyle.NONE },
         left: { style: BorderStyle.NONE },
         right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
       },
       rows: [
         new TableRow({
@@ -913,8 +911,6 @@ export class DocumentGenerator {
         bottom: { style: BorderStyle.NONE },
         left: { style: BorderStyle.NONE },
         right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
       },
       rows: [
         row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
@@ -963,8 +959,6 @@ export class DocumentGenerator {
       bottom: NONE,
       left: NONE,
       right: NONE,
-      insideHorizontal: NONE,
-      insideVertical: NONE,
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
 
