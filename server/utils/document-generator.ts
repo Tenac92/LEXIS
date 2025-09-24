@@ -310,7 +310,7 @@ export class DocumentGenerator {
     // Use consistent page content width for all document elements
     const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) - margins (720 * 2)
 
-    const BORDER = { style: BorderStyle.SINGLE, size: 6 };
+    const BORDER = { style: BorderStyle.SINGLE, size: 4 };
     const CELL_BORDERS = {
       top: BORDER,
       bottom: BORDER,
@@ -351,7 +351,7 @@ export class DocumentGenerator {
                       }),
                   ),
                   spacing: { after: 0 },
-                  alignment: AlignmentType.CENTER,
+                  alignment: AlignmentType.LEFT,
                 }),
               ],
             }),
@@ -985,16 +985,31 @@ export class DocumentGenerator {
     const p = (text: string, opts: Partial<TextRun> = {}) =>
       new Paragraph({
         children: [
-          new TextRun(
-            opts.bold ? { text, bold: true, size: DocumentUtilities.DEFAULT_FONT_SIZE, font: DocumentUtilities.DEFAULT_FONT, ...opts } : { text, size: DocumentUtilities.DEFAULT_FONT_SIZE, font: DocumentUtilities.DEFAULT_FONT, ...opts },
-          ),
+          new TextRun({
+            text,
+            bold: opts.bold || false,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+            ...opts
+          }),
         ],
-        spacing: { after: 60 },
+        spacing: { after: 120 },
+        alignment: AlignmentType.LEFT,
       });
 
     const boldP = (text: string) => p(text, { bold: true });
     const contact = (label: string, value: string) =>
-      DocumentUtilities.createContactDetail(label, value);
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `${label}: ${value}`,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 60 },
+        alignment: AlignmentType.LEFT,
+      });
 
     // Cell helper using DXA (twips), not percentages
     const cellDXA = (
@@ -1037,16 +1052,15 @@ export class DocumentGenerator {
           } as any),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 150 },
+        spacing: { after: 240 },
       }),
       boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
       boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-      boldP(
-        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
-      ),
-      boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ "),
+      boldP("ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ"),
+      boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
       boldP(userInfo.department),
+      DocumentUtilities.createBlankLine(120),
       contact("Ταχ. Δ/νση", address.address),
       contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
       contact("Πληροφορίες", userInfo.name),
@@ -1082,7 +1096,7 @@ export class DocumentGenerator {
                     font: DocumentUtilities.DEFAULT_FONT 
                   }),
                 ],
-                spacing: { before: 2400 },
+                spacing: { before: 1200, after: 0 },
                 alignment: AlignmentType.LEFT,
               }),
             ],
@@ -1096,7 +1110,7 @@ export class DocumentGenerator {
                   size: DocumentUtilities.DEFAULT_FONT_SIZE,
                   font: DocumentUtilities.DEFAULT_FONT 
                 })],
-                spacing: { before: 2400 },
+                spacing: { before: 1200, after: 60 },
                 alignment: AlignmentType.LEFT,
               }),
               ...toLines.slice(1).map(
