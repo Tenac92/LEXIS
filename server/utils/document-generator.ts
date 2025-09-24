@@ -527,11 +527,11 @@ export class DocumentGenerator {
         const amount = installmentAmounts[inst] ?? 0;
         totalAmount += amount;
 
-        // Create complete row with all columns to maintain consistent structure
+        // Create fresh cell mapping for each installment to prevent shared references
         const cMap: Record<string, string> = {
-          "Α/Α": rowNumber,
-          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
-          "Α.Φ.Μ.": afm,
+          "Α/Α": k === 0 ? rowNumber : "", // Only show row number on first installment
+          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: k === 0 ? fullName : "", // Only show name on first installment  
+          "Α.Φ.Μ.": k === 0 ? afm : "", // Only show AFM on first installment
           ΔΟΣΗ: typeSpecificValue(recipient, inst),
           ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
           ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
@@ -549,13 +549,10 @@ export class DocumentGenerator {
           }),
         );
       }
-
-
-      // Subsequent rows: only type-specific column + ΠΟΣΟ
-      for (let k = 1; k < installments.length; k++) {
-        const inst = installments[k];
+      // Multiple installments processing complete - duplicate logic removed for Word compatibility
         const amount = installmentAmounts[inst] ?? 0;
-        totalAmount += amount;
+        // This was duplicate logic - removing to fix shared cell references
+        // totalAmount already incremented above
 
         const subsequentCells = columns.map((label: string) => {
           if (label === "ΠΟΣΟ (€)")
