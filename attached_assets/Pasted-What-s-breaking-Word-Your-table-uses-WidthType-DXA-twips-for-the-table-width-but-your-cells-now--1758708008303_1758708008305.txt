@@ -1,0 +1,131 @@
+What’s breaking Word
+
+Your table uses WidthType.DXA (twips) for the table width, but your cells now use WidthType.PERCENTAGE. Mixing units is valid in OOXML, but:
+
+The percentage scale is 1–5000 (i.e., 100% = 5000), not “100”.
+
+You’re passing size: 100 for full width, which Word interprets as 2%. That leads to a layout Word “repairs”, triggering the error.
+
+The right/left cell widths should sum exactly to the table width under TableLayoutType.FIXED. Small rounding mismatches can also trigger repair warnings.
+
+Minimal, stable fix
+
+Keep everything in DXA (twips) in this table.
+
+Make the right column the exact complement of the left, so the two add up to PAGE_CONTENT_WIDTH.
+
+Keep cell borders free of inside*.
+
+Drop-in patch for your createDocumentHeader:
+
+// ---- constants & helpers
+const NONE = { style: BorderStyle.NONE };
+
+// Table borders: can include inside*
+const TABLE_NO_BORDERS = {
+  top: NONE,
+  bottom: NONE,
+  left: NONE,
+  right: NONE,
+  insideHorizontal: NONE,
+  insideVertical: NONE,
+};
+
+// Cell borders: must NOT include inside*
+const CELL_NO_BORDERS = {
+  top: NONE,
+  bottom: NONE,
+  left: NONE,
+  right: NONE,
+};
+
+const PAGE_CONTENT_WIDTH = 10466; // DXA (twips)
+const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
+
+// Use DXA for both columns, and make right the exact complement
+const LEFT_COL_WIDTH = pctTwips(60);
+const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
+
+// (You don’t need NO_MARGINS here, safe to remove)
+
+const p = (text: string, opts?: { bold?: boolean }) =>
+  new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        bold: opts?.bold || false,
+        size: DocumentUtilities.DEFAULT_FONT_SIZE,
+        font: DocumentUtilities.DEFAULT_FONT,
+      }),
+    ],
+    alignment: AlignmentType.LEFT,
+  });
+
+const boldP = (text: string) => p(text, { bold: true });
+const contact = (label: string, value: string) =>
+  DocumentUtilities.createContactDetail(label, value);
+
+// Keep DXA for cells too; do NOT switch to percentage here
+const cellDXA = (
+  children: (Paragraph | Table)[],
+  widthTwips?: number,
+  vAlign: VerticalAlign = VerticalAlign.TOP, // <-- no `typeof`
+) =>
+  new TableCell({
+    width: { size: widthTwips ?? PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+    verticalAlign: vAlign,
+    borders: CELL_NO_BORDERS,
+    children,
+  });
+
+const row = (cells: TableCell[]) => new TableRow({ children: cells });
+
+// ... your data prep (userInfo, address, leftCol, toLines) ...
+
+// Right column as simple paragraphs (good choice)
+const rightCol: Paragraph[] = [
+  new Paragraph({
+    children: [new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 })],
+    spacing: { before: 2200 },
+    alignment: AlignmentType.LEFT,
+  }),
+  new Paragraph({
+    children: [new TextRun({ text: toLines[0], size: 20 })],
+    spacing: { before: 100 },
+    alignment: AlignmentType.LEFT,
+  }),
+  ...toLines.slice(1).map(
+    (t) =>
+      new Paragraph({
+        children: [new TextRun({ text: t, size: 20 })],
+        alignment: AlignmentType.LEFT,
+      }),
+  ),
+];
+
+// ---- whole header table
+return new Table({
+  layout: TableLayoutType.FIXED,
+  width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+  borders: TABLE_NO_BORDERS,
+  rows: [
+    row([
+      cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
+      cellDXA(rightCol, RIGHT_COL_WIDTH, VerticalAlign.TOP),
+    ]),
+  ],
+});
+
+If you prefer percentages
+
+If you really want % widths, do both:
+
+Use WidthType.PERCENTAGE consistently on table and cells.
+
+Map 100% → 5000 (not 100). Example: size: Math.round((widthTwips / PAGE_CONTENT_WIDTH) * 5000).
+
+One more small thing
+
+In your current signature you still have valign: typeof VerticalAlign.TOP. That’s a typing smell. Use vAlign: VerticalAlign = VerticalAlign.TOP. (It won’t cause the Word error, but it’s cleaner.)
+
+Try the DXA-only patch above—this should stop Word from “repairing” the file. If anything still fires, the next suspects are: a corrupt PNG payload or an out-of-range spacing value (you can temporarily remove spacing: { before: 2200 } to test).

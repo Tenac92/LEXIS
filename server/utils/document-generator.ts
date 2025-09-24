@@ -965,12 +965,13 @@ export class DocumentGenerator {
 
     const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
 
+    // Use DXA for both columns, and make right the exact complement
     const LEFT_COL_WIDTH = pctTwips(60);
-    const RIGHT_COL_WIDTH = pctTwips(40);
+    const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
 
     // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
     const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.2);
-    const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.8);
+    const PROS_TEXT_COL = RIGHT_COL_WIDTH - PROS_LABEL_COL;
 
     const p = (text: string, opts?: { bold?: boolean }) =>
       new Paragraph({
@@ -989,16 +990,16 @@ export class DocumentGenerator {
     const contact = (label: string, value: string) =>
       DocumentUtilities.createContactDetail(label, value);
 
-    // Cell helper using DXA (twips), not percentages
+    // Keep DXA for cells too; do NOT switch to percentage here
     const cellDXA = (
       children: (Paragraph | Table)[],
       widthTwips?: number,
-      valign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
+      vAlign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
     ) =>
       new TableCell({
-        width: { size: widthTwips ? Math.round((widthTwips / PAGE_CONTENT_WIDTH) * 100) : 100, type: WidthType.PERCENTAGE },
-        verticalAlign: valign,
-        borders: CELL_NO_BORDERS, // Cell borders must NOT include inside*
+        width: { size: widthTwips ?? PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+        verticalAlign: vAlign,
+        borders: CELL_NO_BORDERS,
         children,
       });
 
@@ -1046,7 +1047,7 @@ export class DocumentGenerator {
       contact("Email", unitDetails?.email || ""),
     ];
 
-    // ---- right column ("ΠΡΟΣ:" block) - using simple paragraphs instead of nested table
+    // ---- right column ("ΠΡΟΣ:" block)
     const toLines = [
       "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
       "Διεύθυνση Οικονομικής Διαχείρισης",
@@ -1056,38 +1057,54 @@ export class DocumentGenerator {
       "151 23 Μαρούσι",
     ];
 
-    // Create simple paragraph layout instead of nested table
-    const rightCol: Paragraph[] = [
-      new Paragraph({
-        children: [
-          new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
-        ],
-        spacing: { before: 2200 },
-        alignment: AlignmentType.LEFT,
-      }),
-      new Paragraph({
-        children: [new TextRun({ text: toLines[0], size: 20 })],
-        spacing: { before: 100 },
-        alignment: AlignmentType.LEFT,
-      }),
-      ...toLines.slice(1).map(
-        (t) =>
-          new Paragraph({
-            children: [new TextRun({ text: t, size: 20 })],
-            alignment: AlignmentType.LEFT,
-          }),
-      ),
-    ];
+    const rightInnerTable = new Table({
+      layout: TableLayoutType.FIXED,
+      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA },
+      borders: TABLE_NO_BORDERS,
+      rows: [
+        row([
+          cellDXA(
+            [
+              new Paragraph({
+                children: [
+                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
+                ],
+                spacing: { before: 2200 },
+                alignment: AlignmentType.LEFT,
+              }),
+            ],
+            PROS_LABEL_COL,
+          ),
+          cellDXA(
+            [
+              new Paragraph({
+                children: [new TextRun({ text: toLines[0], size: 20 })],
+                spacing: { before: 2200 },
+                alignment: AlignmentType.LEFT,
+              }),
+              ...toLines.slice(1).map(
+                (t) =>
+                  new Paragraph({
+                    children: [new TextRun({ text: t, size: 20 })],
+                    alignment: AlignmentType.LEFT,
+                  }),
+              ),
+            ],
+            PROS_TEXT_COL,
+          ),
+        ]),
+      ],
+    });
 
     // ---- whole header table
     return new Table({
-      layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
-      borders: TABLE_NO_BORDERS, // Table borders here
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      borders: TABLE_NO_BORDERS,
       rows: [
         row([
           cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
-          cellDXA(rightCol, RIGHT_COL_WIDTH, VerticalAlign.TOP),
+          cellDXA([rightInnerTable], RIGHT_COL_WIDTH, VerticalAlign.TOP),
         ]),
       ],
     });
