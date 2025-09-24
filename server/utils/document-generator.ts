@@ -134,6 +134,9 @@ export class DocumentGenerator {
         // Header with two-column layout (includes logo, contact info and recipient section)
         await this.createDocumentHeader(documentData, unitDetails),
 
+        // Break column inheritance with blank paragraphs
+        DocumentUtilities.createBlankLine(200),
+        
         // Subject
         this.createDocumentSubject(documentData, unitDetails),
 
@@ -145,6 +148,9 @@ export class DocumentGenerator {
         // Main request text
         ...this.createMainContent(documentData, unitDetails),
 
+        // Break any table inheritance before project info
+        DocumentUtilities.createBlankLine(100),
+        
         // Project information
         ...DocumentGenerator.createProjectInfo(
           documentData,
@@ -328,6 +334,8 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: TABLE_BORDERS,
+      columnWidths: [PAGE_CONTENT_WIDTH], // Explicitly set single column to full width
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }, // Reset any inherited margins
       rows: [
         new TableRow({
           children: [
@@ -908,6 +916,8 @@ export class DocumentGenerator {
     const table = new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: [1574, 8892], // Explicit column widths: label (15%) + value (85%)
+      margins: { top: 0, bottom: 0, left: 0, right: 0 }, // Reset any inherited margins
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
