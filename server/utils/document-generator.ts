@@ -600,7 +600,8 @@ export class DocumentGenerator {
     rows.push(new TableRow({ children: totalRowCells }));
 
     return new Table({
-      layout: TableLayoutType.AUTOFIT,
+      layout: TableLayoutType.FIXED,
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
       rows,
     });
   }
@@ -1061,8 +1062,7 @@ export class DocumentGenerator {
     ];
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA },
+      layout: TableLayoutType.AUTOFIT,
       borders: TABLE_NO_BORDERS,
       rows: [
         row([
