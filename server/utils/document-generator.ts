@@ -998,7 +998,7 @@ export class DocumentGenerator {
       valign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
     ) =>
       new TableCell({
-        width: { size: widthTwips || PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+        width: { size: widthTwips ? Math.round((widthTwips / PAGE_CONTENT_WIDTH) * 100) : 100, type: WidthType.PERCENTAGE },
         verticalAlign: valign,
         borders: CELL_NO_BORDERS, // Cell borders must NOT include inside*
         children,
