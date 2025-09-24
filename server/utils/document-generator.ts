@@ -958,7 +958,9 @@ export class DocumentGenerator {
 
     // ---- constants & helpers
     const NONE = { style: BorderStyle.NONE };
-    const NO_BORDERS = {
+    
+    // Table borders: can include insideHorizontal/insideVertical
+    const TABLE_NO_BORDERS = {
       top: NONE,
       bottom: NONE,
       left: NONE,
@@ -966,6 +968,15 @@ export class DocumentGenerator {
       insideHorizontal: NONE,
       insideVertical: NONE,
     };
+    
+    // Cell borders: **must NOT** include inside*
+    const CELL_NO_BORDERS = {
+      top: NONE,
+      bottom: NONE,
+      left: NONE,
+      right: NONE,
+    };
+    
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
 
     // A4 usable content width with Word's default margins = 10466 twips.
@@ -1007,7 +1018,7 @@ export class DocumentGenerator {
       new TableCell({
         width: { size: widthTwips || PAGE_CONTENT_WIDTH, type: WidthType.DXA },
         verticalAlign: valign,
-        borders: NO_BORDERS,
+        borders: CELL_NO_BORDERS, // Cell borders must NOT include inside*
         children,
       });
 
@@ -1068,7 +1079,7 @@ export class DocumentGenerator {
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
       width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
-      borders: NO_BORDERS,
+      borders: TABLE_NO_BORDERS, // Table borders may have inside*
       rows: [
         row([
           cellDXA(
@@ -1108,7 +1119,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
-      borders: NO_BORDERS,
+      borders: TABLE_NO_BORDERS, // Table borders here
       rows: [
         row([
           cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
