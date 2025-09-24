@@ -144,7 +144,7 @@ router.get("/debug-sections/:docId", authenticateSession, async (req: Authentica
       project_title: projectData?.project_title || projectData?.event_description || "",
       expenditure_type: document.expenditure_type || "ΔΑΠΑΝΗ",
       recipients: beneficiaryData,
-      attachments: attachmentsData.map(a => a.attachment_name)
+      attachments: attachmentsData?.map(a => a.attachment_name) || []
     };
 
     // Generate document with debug options
