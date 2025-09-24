@@ -135,7 +135,7 @@ export class DocumentGenerator {
         await this.createDocumentHeader(documentData, unitDetails),
 
         // Break column inheritance with blank paragraphs
-        DocumentUtilities.createBlankLine(200),
+        DocumentUtilities.createBlankLine(5),
 
         // Subject
         this.createDocumentSubject(documentData, unitDetails),
@@ -149,7 +149,7 @@ export class DocumentGenerator {
         ...this.createMainContent(documentData, unitDetails),
 
         // Break any table inheritance before project info
-        DocumentUtilities.createBlankLine(100),
+        DocumentUtilities.createBlankLine(5),
 
         // Project information
         ...DocumentGenerator.createProjectInfo(
@@ -334,8 +334,6 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: TABLE_BORDERS,
-      columnWidths: [PAGE_CONTENT_WIDTH], // Explicitly set single column to full width
-      margins: { top: 0, bottom: 0, left: 0, right: 0 }, // Reset any inherited margins
       rows: [
         new TableRow({
           children: [
@@ -890,7 +888,7 @@ export class DocumentGenerator {
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 15, type: WidthType.PERCENTAGE },
+            width: { size: 1574, type: WidthType.DXA }, // 15% of page width
             children: [
               new Paragraph({
                 children: [
@@ -900,6 +898,7 @@ export class DocumentGenerator {
             ],
           }),
           new TableCell({
+            width: { size: 8892, type: WidthType.DXA }, // 85% of page width
             children: [
               new Paragraph({
                 children: [new TextRun({ text: value, ...baseFont })],
@@ -912,8 +911,6 @@ export class DocumentGenerator {
     const table = new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
-      columnWidths: [1574, 8892], // Explicit column widths: label (15%) + value (85%)
-      margins: { top: 0, bottom: 0, left: 0, right: 0 }, // Reset any inherited margins
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -1060,7 +1057,6 @@ export class DocumentGenerator {
       contact("Πληροφορίες", userInfo.name),
       contact("Τηλέφωνο", userInfo.contact_number),
       contact("Email", unitDetails?.email || ""),
-      DocumentUtilities.createBlankLine(5),
     ];
 
     // ---- right column ("ΠΡΟΣ:" block)
