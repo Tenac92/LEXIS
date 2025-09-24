@@ -148,9 +148,6 @@ export class DocumentGenerator {
         // Main request text
         ...this.createMainContent(documentData, unitDetails),
 
-        // Break any table inheritance before project info
-        DocumentUtilities.createBlankLine(1),
-
         // Project information
         ...DocumentGenerator.createProjectInfo(
           documentData,
