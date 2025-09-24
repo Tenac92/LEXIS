@@ -590,11 +590,11 @@ export class DocumentGenerator {
       if (idx === totalLabelCellIndex)
         return new TableCell({
           borders: NB,
-          children: [centeredP("ΣΥΝΟΛΟ:")],
+          children: [centeredP("ΣΥΝΟΛΟ:", { bold: true })],
         });
       return new TableCell({
         borders: NB,
-        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount))],
+        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount), { bold: true })],
       });
     });
     rows.push(new TableRow({ children: totalRowCells }));
