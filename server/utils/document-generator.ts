@@ -598,8 +598,7 @@ export class DocumentGenerator {
     rows.push(new TableRow({ children: totalRowCells }));
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      layout: TableLayoutType.AUTOFIT,
       rows,
     });
   }
@@ -778,8 +777,7 @@ export class DocumentGenerator {
       );
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      layout: TableLayoutType.AUTOFIT,
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -792,7 +790,6 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 6500, type: WidthType.DXA },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
               borders: {
@@ -803,7 +800,6 @@ export class DocumentGenerator {
               },
             }),
             new TableCell({
-              width: { size: 3966, type: WidthType.DXA },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
               borders: {
