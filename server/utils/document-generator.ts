@@ -421,14 +421,14 @@ export class DocumentGenerator {
         bold?: boolean;
         borders?: any;
         rowSpan?: number;
-        vAlign?: VerticalAlign;
+        vAlign?: typeof VerticalAlign.CENTER;
       },
     ) =>
       new TableCell({
         rowSpan: opts?.rowSpan,
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
-        children: [centeredP(text, { bold: opts?.bold })],
+        children: [centeredP(text, {})],
       });
 
     const indexOfCol = (label: string) =>
@@ -458,7 +458,7 @@ export class DocumentGenerator {
             new TableCell({
               borders: BORDER,
               children: [
-                centeredP(c, { size: DocumentUtilities.DEFAULT_FONT_SIZE }),
+                centeredP(c),
               ],
             }),
         ),
@@ -604,14 +604,12 @@ export class DocumentGenerator {
       if (idx === totalLabelCellIndex)
         return new TableCell({
           borders: NB,
-          children: [centeredP("ΣΥΝΟΛΟ:", { bold: true })],
+          children: [centeredP("ΣΥΝΟΛΟ:")],
         });
       return new TableCell({
         borders: NB,
         children: [
-          centeredP(DocumentUtilities.formatCurrency(totalAmount), {
-            bold: true,
-          }),
+          centeredP(DocumentUtilities.formatCurrency(totalAmount)),
         ],
       });
     });
@@ -970,8 +968,9 @@ export class DocumentGenerator {
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
 
-    // Use consistent page content width for all document elements
-    const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) - margins (720 * 2)
+    // A4 usable content width with Word's default margins ≈ 11906 twips.
+    // If you've customized section margins elsewhere, update this value accordingly.
+    const PAGE_CONTENT_WIDTH = 11906;
 
     const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
 
@@ -982,15 +981,14 @@ export class DocumentGenerator {
     const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.2);
     const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.8);
 
-    const p = (text: string, opts: Partial<TextRun> = {}) =>
+    const p = (text: string, opts?: { bold?: boolean }) =>
       new Paragraph({
         children: [
           new TextRun({
             text,
-            bold: opts.bold || false,
+            bold: opts?.bold || false,
             size: DocumentUtilities.DEFAULT_FONT_SIZE,
             font: DocumentUtilities.DEFAULT_FONT,
-            ...opts
           }),
         ],
         spacing: { after: 120 },
@@ -999,23 +997,13 @@ export class DocumentGenerator {
 
     const boldP = (text: string) => p(text, { bold: true });
     const contact = (label: string, value: string) =>
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `${label}: ${value}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        spacing: { after: 60 },
-        alignment: AlignmentType.LEFT,
-      });
+      DocumentUtilities.createContactDetail(label, value);
 
     // Cell helper using DXA (twips), not percentages
     const cellDXA = (
       children: (Paragraph | Table)[],
       widthTwips?: number,
-      valign: VerticalAlign = VerticalAlign.TOP,
+      valign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
     ) =>
       new TableCell({
         width: { size: widthTwips || PAGE_CONTENT_WIDTH, type: WidthType.DXA },
@@ -1048,11 +1036,11 @@ export class DocumentGenerator {
             data: fs.readFileSync(
               path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
             ),
-            transformation: { width: 50, height: 50 },
+            transformation: { width: 40, height: 40 },
           } as any),
         ],
         alignment: AlignmentType.LEFT,
-        spacing: { after: 240 },
+        spacing: { after: 100 },
       }),
       boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
       boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
@@ -1060,13 +1048,12 @@ export class DocumentGenerator {
       boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
       boldP(userInfo.department),
-      DocumentUtilities.createBlankLine(120),
       contact("Ταχ. Δ/νση", address.address),
       contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
       contact("Πληροφορίες", userInfo.name),
       contact("Τηλέφωνο", userInfo.contact_number),
       contact("Email", unitDetails?.email || ""),
-      DocumentUtilities.createBlankLine(240),
+      DocumentUtilities.createBlankLine(5),
     ];
 
     // ---- right column ("ΠΡΟΣ:" block)
@@ -1080,23 +1067,17 @@ export class DocumentGenerator {
     ];
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
+      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
       borders: NO_BORDERS,
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL], // ✅ absolute column widths
       rows: [
         row([
           cellDXA(
             [
               new Paragraph({
-                children: [
-                  new TextRun({ 
-                    text: "ΠΡΟΣ:", 
-                    bold: true, 
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    font: DocumentUtilities.DEFAULT_FONT 
-                  }),
-                ],
-                spacing: { before: 1200, after: 0 },
+                children: [new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 })],
+                spacing: { before: 2200 },
                 alignment: AlignmentType.LEFT,
               }),
             ],
@@ -1105,24 +1086,15 @@ export class DocumentGenerator {
           cellDXA(
             [
               new Paragraph({
-                children: [new TextRun({ 
-                  text: toLines[0], 
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  font: DocumentUtilities.DEFAULT_FONT 
-                })],
-                spacing: { before: 1200, after: 60 },
+                children: [new TextRun({ text: toLines[0], size: 20 })],
+                spacing: { before: 2200 },
                 alignment: AlignmentType.LEFT,
               }),
               ...toLines.slice(1).map(
                 (t) =>
                   new Paragraph({
-                    children: [new TextRun({ 
-                      text: t, 
-                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                      font: DocumentUtilities.DEFAULT_FONT 
-                    })],
+                    children: [new TextRun({ text: t, size: 20 })],
                     alignment: AlignmentType.LEFT,
-                    spacing: { after: 60 },
                   }),
               ),
             ],
@@ -1134,8 +1106,9 @@ export class DocumentGenerator {
 
     // ---- whole header table
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH], // ✅ absolute column widths
       borders: NO_BORDERS,
       margins: NO_MARGINS,
       rows: [

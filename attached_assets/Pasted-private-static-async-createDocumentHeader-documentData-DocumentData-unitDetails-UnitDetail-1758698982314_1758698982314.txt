@@ -1,0 +1,164 @@
+private static async createDocumentHeader(
+  documentData: DocumentData,
+  unitDetails: UnitDetails | null | undefined,
+): Promise<Table> {
+  if (!documentData) throw new Error("Document data is required");
+
+  // ---- constants & helpers
+  const NONE = { style: BorderStyle.NONE };
+  const NO_BORDERS = {
+    top: NONE,
+    bottom: NONE,
+    left: NONE,
+    right: NONE,
+    insideHorizontal: NONE,
+    insideVertical: NONE,
+  };
+  const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
+
+  // A4 usable content width with Word's default margins ≈ 11906 twips.
+  // If you've customized section margins elsewhere, update this value accordingly.
+  const PAGE_CONTENT_WIDTH = 11906;
+
+  const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
+
+  const LEFT_COL_WIDTH = pctTwips(60);
+  const RIGHT_COL_WIDTH = pctTwips(40);
+
+  // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
+  const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.20);
+  const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.80);
+
+  const p = (text: string, opts: Partial<TextRun> = {}) =>
+    new Paragraph({
+      children: [
+        new TextRun(opts.bold ? { text, bold: true, ...opts } : { text, ...opts }),
+      ],
+    });
+
+  const boldP = (text: string) => p(text, { bold: true });
+  const contact = (label: string, value: string) =>
+    DocumentUtilities.createContactDetail(label, value);
+
+  // Cell helper using DXA (twips), not percentages
+  const cellDXA = (
+    children: (Paragraph | Table)[],
+    widthTwips?: number,
+    valign: VerticalAlign = VerticalAlign.TOP,
+  ) =>
+    new TableCell({
+      ...(widthTwips ? { width: { size: widthTwips, type: WidthType.DXA } } : {}),
+      verticalAlign: valign,
+      borders: NO_BORDERS,
+      margins: NO_MARGINS,
+      children,
+    });
+
+  const row = (cells: TableCell[]) => new TableRow({ children: cells });
+
+  // ---- data
+  const userInfo = {
+    name: documentData.generated_by?.name || documentData.user_name || "",
+    department:
+      documentData.generated_by?.department || documentData.department || "",
+    contact_number:
+      documentData.generated_by?.telephone?.toString() ||
+      documentData.contact_number?.toString() ||
+      "",
+  };
+
+  const address = unitDetails?.address ?? { address: "", tk: "", region: "" };
+
+  // ---- left column (logo + org + contacts)
+  const leftCol: Paragraph[] = [
+    new Paragraph({
+      children: [
+        new ImageRun({
+          data: fs.readFileSync(
+            path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
+          ),
+          transformation: { width: 40, height: 40 },
+        } as any),
+      ],
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 100 },
+    }),
+    boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+    boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+    boldP(
+      "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+    ),
+    boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ "),
+    boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
+    boldP(userInfo.department),
+    contact("Ταχ. Δ/νση", address.address),
+    contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
+    contact("Πληροφορίες", userInfo.name),
+    contact("Τηλέφωνο", userInfo.contact_number),
+    contact("Email", unitDetails?.email || ""),
+    DocumentUtilities.createBlankLine(5),
+  ];
+
+  // ---- right column ("ΠΡΟΣ:" block)
+  const toLines = [
+    "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+    "Διεύθυνση Οικονομικής Διαχείρισης",
+    "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+    "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+    "Δημοκρίτου 2",
+    "151 23 Μαρούσι",
+  ];
+
+  const rightInnerTable = new Table({
+    layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
+    width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
+    borders: NO_BORDERS,
+    columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL], // ✅ absolute column widths
+    rows: [
+      row([
+        cellDXA(
+          [
+            new Paragraph({
+              children: [new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 })],
+              spacing: { before: 2200 },
+              alignment: AlignmentType.LEFT,
+            }),
+          ],
+          PROS_LABEL_COL,
+        ),
+        cellDXA(
+          [
+            new Paragraph({
+              children: [new TextRun({ text: toLines[0], size: 20 })],
+              spacing: { before: 2200 },
+              alignment: AlignmentType.LEFT,
+            }),
+            ...toLines.slice(1).map(
+              (t) =>
+                new Paragraph({
+                  children: [new TextRun({ text: t, size: 20 })],
+                  alignment: AlignmentType.LEFT,
+                }),
+            ),
+          ],
+          PROS_TEXT_COL,
+        ),
+      ]),
+    ],
+  });
+
+  // ---- whole header table
+  return new Table({
+    layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
+    width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+    columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH], // ✅ absolute column widths
+    borders: NO_BORDERS,
+    margins: NO_MARGINS,
+    rows: [
+      row([
+        cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
+        cellDXA([rightInnerTable], RIGHT_COL_WIDTH, VerticalAlign.TOP),
+      ]),
+    ],
+  });
+}
