@@ -309,7 +309,7 @@ export class DocumentGenerator {
 
     // A4 usable content width with default Word margins ≈ 11906 twips.
     // If you've customized section margins elsewhere, update this value accordingly.
-    const PAGE_CONTENT_WIDTH = 11000;
+    const PAGE_CONTENT_WIDTH = 10466;
 
     const BORDER = { style: BorderStyle.SINGLE, size: 4 };
     const CELL_BORDERS = {
@@ -969,11 +969,11 @@ export class DocumentGenerator {
 
     // A4 usable content width with Word's default margins ≈ 11906 twips.
     // If you've customized section margins elsewhere, update this value accordingly.
-    const PAGE_CONTENT_WIDTH = 11000;
+    const PAGE_CONTENT_WIDTH = 10466;
 
     const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
 
-    const LEFT_COL_WIDTH = pctTwips(40);
+    const LEFT_COL_WIDTH = pctTwips(60);
     const RIGHT_COL_WIDTH = pctTwips(40);
 
     // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
