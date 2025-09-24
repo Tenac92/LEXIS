@@ -1050,7 +1050,7 @@ export class DocumentGenerator {
       contact("Email", unitDetails?.email || ""),
     ];
 
-    // ---- right column ("ΠΡΟΣ:" block)
+    // ---- right column ("ΠΡΟΣ:" block) - using simple paragraphs instead of nested table
     const toLines = [
       "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
       "Διεύθυνση Οικονομικής Διαχείρισης",
@@ -1060,45 +1060,28 @@ export class DocumentGenerator {
       "151 23 Μαρούσι",
     ];
 
-    const rightInnerTable = new Table({
-      layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
-      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
-      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
-      borders: TABLE_NO_BORDERS, // Table borders may have inside*
-      rows: [
-        row([
-          cellDXA(
-            [
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
-                ],
-                spacing: { before: 2200 },
-                alignment: AlignmentType.LEFT,
-              }),
-            ],
-            PROS_LABEL_COL,
-          ),
-          cellDXA(
-            [
-              new Paragraph({
-                children: [new TextRun({ text: toLines[0], size: 20 })],
-                spacing: { before: 2200 },
-                alignment: AlignmentType.LEFT,
-              }),
-              ...toLines.slice(1).map(
-                (t) =>
-                  new Paragraph({
-                    children: [new TextRun({ text: t, size: 20 })],
-                    alignment: AlignmentType.LEFT,
-                  }),
-              ),
-            ],
-            PROS_TEXT_COL,
-          ),
-        ]),
-      ],
-    });
+    // Create simple paragraph layout instead of nested table
+    const rightCol: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
+        ],
+        spacing: { before: 2200 },
+        alignment: AlignmentType.LEFT,
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: toLines[0], size: 20 })],
+        spacing: { before: 100 },
+        alignment: AlignmentType.LEFT,
+      }),
+      ...toLines.slice(1).map(
+        (t) =>
+          new Paragraph({
+            children: [new TextRun({ text: t, size: 20 })],
+            alignment: AlignmentType.LEFT,
+          }),
+      ),
+    ];
 
     // ---- whole header table
     return new Table({
@@ -1109,7 +1092,7 @@ export class DocumentGenerator {
       rows: [
         row([
           cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
-          cellDXA([rightInnerTable], RIGHT_COL_WIDTH, VerticalAlign.TOP),
+          cellDXA(rightCol, RIGHT_COL_WIDTH, VerticalAlign.TOP),
         ]),
       ],
     });
