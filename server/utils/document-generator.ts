@@ -600,8 +600,7 @@ export class DocumentGenerator {
     rows.push(new TableRow({ children: totalRowCells }));
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      layout: TableLayoutType.AUTOFIT,
       rows,
     });
   }
