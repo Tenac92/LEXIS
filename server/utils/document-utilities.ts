@@ -90,7 +90,7 @@ export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
 export class DocumentUtilities {
   // Document constants
   public static readonly DEFAULT_FONT_SIZE = 20;
-  public static readonly DEFAULT_FONT = "Calibri";
+  public static readonly DEFAULT_FONT = "Arial"; // Changed to more universally supported font
   public static readonly DEFAULT_MARGINS = {
     top: 720, // 0.5 inch top margin for Greek government documents
     right: 720, // 0.5 inch right margin
