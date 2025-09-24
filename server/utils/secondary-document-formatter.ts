@@ -476,9 +476,16 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ)
+              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ) - create fresh content to avoid shared references
               new TableCell({
-                children: cells[cells.length - 1].options.children, // Same ΠΡΑΞΗ as first row
+                children: [
+                  DocumentUtilities.createCenteredParagraph(
+                    recipient.secondary_text || expenditureType || "",
+                    {
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                    },
+                  ),
+                ],
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
