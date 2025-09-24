@@ -1073,7 +1073,6 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
       width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
       borders: NO_BORDERS,
-      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL], // ✅ absolute column widths
       rows: [
         row([
           cellDXA(
@@ -1113,9 +1112,7 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
-      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH], // ✅ absolute column widths
       borders: NO_BORDERS,
-      margins: NO_MARGINS,
       rows: [
         row([
           cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
