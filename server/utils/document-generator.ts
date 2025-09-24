@@ -171,51 +171,20 @@ export class DocumentGenerator {
             properties: {
               page: {
                 margin: DocumentUtilities.DOCUMENT_MARGINS,
-                size: {
-                  orientation: "portrait",
-                },
               },
             },
-            headers: {},
-            footers: {},
             children,
           },
         ],
-        creator: "Greek Government Document System",
-        title: "Official Government Document",
-        description: "Generated government document",
         styles: {
           default: {
             document: {
               run: {
-                font: "Arial", // Explicitly set widely supported font
+                font: DocumentUtilities.DEFAULT_FONT,
                 size: DocumentUtilities.DEFAULT_FONT_SIZE,
               },
             },
           },
-          paragraphStyles: [
-            {
-              id: "Heading1",
-              name: "Heading 1",
-              basedOn: "Normal",
-              next: "Normal",
-              run: {
-                size: 24,
-                bold: true,
-                font: "Arial",
-              },
-              paragraph: {
-                spacing: {
-                  after: 240,
-                  before: 240,
-                },
-              },
-            },
-          ],
-        },
-        compatibility: {
-          doNotBreakWrappedTables: true,
-          splitPgBreakAndParaMark: true,
         },
       });
 
@@ -314,7 +283,7 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create document subject with bordered table - Enhanced for cross-platform compatibility
+   * Create document subject with bordered table
    */
   private static createDocumentSubject(
     documentData: DocumentData,
@@ -327,6 +296,7 @@ export class DocumentGenerator {
         text: "ΘΕΜΑ:",
         bold: true,
         italics: true,
+        color: "000000",
       },
       {
         text: ` ${documentTitle} ${
@@ -336,35 +306,35 @@ export class DocumentGenerator {
         } ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
         italics: true,
         bold: true,
+        color: "000000",
       },
     ];
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
-        top: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-        bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-        left: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-        right: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
       },
       rows: [
         new TableRow({
           children: [
             new TableCell({
               borders: {
-                top: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-                bottom: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-                left: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
-                right: { style: BorderStyle.SINGLE, size: 8, color: "000000" },
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
               },
               margins: {
-                top: 100,
-                bottom: 100,
-                left: 100,
-                right: 100,
+                top: 50,
+                bottom: 50,
+                left: 50,
+                right: 50,
               },
               shading: {
-                fill: "D3D3D3",
-                type: "solid",
+                fill: "C0C0C0",
               },
               width: { size: 100, type: WidthType.PERCENTAGE },
               children: [
@@ -375,12 +345,12 @@ export class DocumentGenerator {
                         text: part.text,
                         bold: part.bold,
                         italics: part.italics,
+                        color: part.color,
                         size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                        font: "Arial", // Use widely supported font
+                        font: DocumentUtilities.DEFAULT_FONT,
                       }),
                   ),
-                  spacing: { after: 0, before: 0 },
-                  alignment: AlignmentType.LEFT,
+                  spacing: { after: 0 },
                 }),
               ],
             }),
@@ -441,10 +411,8 @@ export class DocumentGenerator {
       right: { style: BorderStyle.NONE },
     };
 
-    const centeredP = (
-      text: string,
-      extra: { bold?: boolean; size?: number; underline?: boolean } = {},
-    ) => DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
+    const centeredP = (text: string, extra: Partial<TextRun> = {}) =>
+      DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
 
     const cell = (
       text: string,
@@ -452,14 +420,14 @@ export class DocumentGenerator {
         bold?: boolean;
         borders?: any;
         rowSpan?: number;
-        vAlign?: typeof VerticalAlign.CENTER;
+        vAlign?: VerticalAlign;
       },
     ) =>
       new TableCell({
         rowSpan: opts?.rowSpan,
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
-        children: [centeredP(text, opts?.bold ? { bold: true } : {})],
+        children: [centeredP(text, { bold: opts?.bold })],
       });
 
     const indexOfCol = (label: string) =>
@@ -997,20 +965,13 @@ export class DocumentGenerator {
       insideVertical: NONE,
     };
     const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
-    const p = (
-      text: string,
-      opts: { bold?: boolean; size?: number; font?: string } = {},
-    ) =>
+    const p = (text: string, opts: Partial<TextRun> = {}) =>
       new Paragraph({
         children: [
-          new TextRun({
-            text,
-            bold: opts.bold || false,
-            size: opts.size || DocumentUtilities.DEFAULT_FONT_SIZE,
-            font: "Calibri", // Use widely supported font for better compatibility
-          }),
+          new TextRun(
+            opts.bold ? { text, bold: true, ...opts } : { text, ...opts },
+          ),
         ],
-        spacing: { after: 0, before: 0 },
       });
     const boldP = (text: string) => p(text, { bold: true });
     const contact = (label: string, value: string) =>
@@ -1041,45 +1002,19 @@ export class DocumentGenerator {
 
     // ---- left column (logo + org + contacts)
     const leftCol: Paragraph[] = [
-      // Logo image with error handling for better compatibility
-      (() => {
-        try {
-          const logoPath = path.join(
-            process.cwd(),
-            "server",
-            "utils",
-            "ethnosimo22.png",
-          );
-          if (fs.existsSync(logoPath)) {
-            return new Paragraph({
-              children: [
-                new ImageRun({
-                  data: fs.readFileSync(logoPath),
-                  transformation: { width: 40, height: 40 },
-                  type: "png",
-                } as any),
-              ],
-              alignment: AlignmentType.LEFT,
-              spacing: { after: 150, before: 0 },
-            });
-          }
-        } catch (error) {
-          console.warn("Logo file not found, using text fallback");
-        }
-        // Fallback to text if logo fails
-        return new Paragraph({
-          children: [
-            new TextRun({
-              text: "ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ",
-              bold: true,
-              size: 14,
-              font: "Calibri",
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 150, before: 0 },
-        });
-      })(),
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: fs.readFileSync(
+              path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
+            ),
+            transformation: { width: 40, height: 40 },
+            type: "png",
+          } as any),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 100 },
+      }),
       boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
       boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
       boldP(
@@ -1115,14 +1050,9 @@ export class DocumentGenerator {
             [
               new Paragraph({
                 children: [
-                  new TextRun({
-                    text: "ΠΡΟΣ:",
-                    bold: true,
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    font: "Calibri",
-                  }),
+                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
                 ],
-                spacing: { before: 2200, after: 120 },
+                spacing: { before: 2200 },
                 alignment: AlignmentType.LEFT,
               }),
             ],
@@ -1131,28 +1061,15 @@ export class DocumentGenerator {
           cell(
             [
               new Paragraph({
-                children: [
-                  new TextRun({
-                    text: toLines[0],
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    font: "Calibri",
-                  }),
-                ],
-                spacing: { before: 2200, after: 0 },
+                children: [new TextRun({ text: toLines[0], size: 20 })],
+                spacing: { before: 2200 },
                 alignment: AlignmentType.LEFT,
               }),
               ...toLines.slice(1).map(
                 (t) =>
                   new Paragraph({
-                    children: [
-                      new TextRun({
-                        text: t,
-                        size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                        font: "Calibri",
-                      }),
-                    ],
+                    children: [new TextRun({ text: t, size: 20 })],
                     alignment: AlignmentType.LEFT,
-                    spacing: { after: 0, before: 0 },
                   }),
               ),
             ],
