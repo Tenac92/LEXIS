@@ -89,19 +89,9 @@ export class DocumentGenerator {
    */
   public static async generatePrimaryDocument(
     documentData: DocumentData,
-    debugOptions?: {
-      disablePaymentTable?: boolean;
-      disableFooter?: boolean;
-      disableHeader?: boolean;
-      disableSubject?: boolean;
-      logTableCells?: boolean;
-    }
   ): Promise<Buffer> {
     try {
       logger.debug("Generating primary document for:", documentData.id);
-      if (debugOptions) {
-        console.log("[DEBUG] Debug options enabled:", debugOptions);
-      }
       console.log("[PrimaryDocument] === DOCUMENT DATA RECEIVED ===");
       console.log("[PrimaryDocument] Document ID:", documentData.id);
       console.log(
@@ -139,54 +129,45 @@ export class DocumentGenerator {
         documentData.unit,
       );
 
-      // Create document sections with conditional inclusion for debugging
-      const children: any[] = [];
+      // Create document sections
+      const children: any[] = [
+        // Header with two-column layout (includes logo, contact info and recipient section)
+        await this.createDocumentHeader(documentData, unitDetails),
 
-      // Header with two-column layout (includes logo, contact info and recipient section)
-      if (!debugOptions?.disableHeader) {
-        console.log("[DEBUG] Adding header section");
-        children.push(await this.createDocumentHeader(documentData, unitDetails));
-        children.push(DocumentUtilities.createBlankLine(5));
-      } else {
-        console.log("[DEBUG] Skipping header section");
-        children.push(DocumentUtilities.createBlankLine(240)); // Add minimal spacing
-      }
+        // Break column inheritance with blank paragraphs
+        DocumentUtilities.createBlankLine(5),
 
-      // Subject
-      if (!debugOptions?.disableSubject) {
-        console.log("[DEBUG] Adding subject section");
-        children.push(this.createDocumentSubject(documentData, unitDetails));
-      } else {
-        console.log("[DEBUG] Skipping subject section");
-      }
+        // Subject
+        this.createDocumentSubject(documentData, unitDetails),
 
-      // Always include legal references and main content for document validity
-      children.push(...DocumentGenerator.createLegalReferences(documentData.expenditure_type));
-      children.push(...this.createMainContent(documentData, unitDetails));
-      children.push(...DocumentGenerator.createProjectInfo(documentData, documentData.expenditure_type));
+        // Legal references
+        ...DocumentGenerator.createLegalReferences(
+          documentData.expenditure_type,
+        ),
 
-      // Payment table
-      if (!debugOptions?.disablePaymentTable) {
-        console.log("[DEBUG] Adding payment table");
-        children.push(this.createPaymentTable(
+        // Main request text
+        ...this.createMainContent(documentData, unitDetails),
+
+        // Project information
+        ...DocumentGenerator.createProjectInfo(
+          documentData,
+          documentData.expenditure_type,
+        ),
+
+        // Payment table
+        this.createPaymentTable(
           documentData.recipients || [],
           documentData.expenditure_type,
-          debugOptions
-        ));
-      } else {
-        console.log("[DEBUG] Skipping payment table");
-      }
+        ),
 
-      // Final request
-      children.push(DocumentGenerator.createFinalRequest());
+        // Final request
+        DocumentGenerator.createFinalRequest(),
 
-      // Footer
-      if (!debugOptions?.disableFooter) {
-        console.log("[DEBUG] Adding footer section");
-        children.push(this.createFooter(documentData, unitDetails));
-      } else {
-        console.log("[DEBUG] Skipping footer section");
-      }
+        // Note: Attachments and distribution lists are handled in the footer
+
+        // Footer
+        this.createFooter(documentData, unitDetails),
+      ];
 
       const doc = new Document({
         sections: [
@@ -347,12 +328,15 @@ export class DocumentGenerator {
     };
 
     return new Table({
-      layout: TableLayoutType.AUTOFIT,
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      columnWidths: [PAGE_CONTENT_WIDTH],
       borders: TABLE_BORDERS,
       rows: [
         new TableRow({
           children: [
             new TableCell({
+              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
               borders: CELL_BORDERS,
               shading: { fill: "C0C0C0" },
               verticalAlign: VerticalAlign.CENTER,
@@ -412,7 +396,6 @@ export class DocumentGenerator {
   private static createPaymentTable(
     recipients: any[],
     expenditureType: string,
-    debugOptions?: { logTableCells?: boolean }
   ): Table {
     const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
 
@@ -432,7 +415,7 @@ export class DocumentGenerator {
       right: { style: BorderStyle.NONE },
     };
 
-    const centeredP = (text: string, extra: { bold?: boolean; underline?: boolean; size?: number; spacing?: number } = {}) =>
+    const centeredP = (text: string, extra: Partial<TextRun> = {}) =>
       DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
 
     const cell = (
@@ -442,19 +425,12 @@ export class DocumentGenerator {
         borders?: any;
         vAlign?: typeof VerticalAlign.CENTER;
       },
-    ) => {
-      const cellInstance = new TableCell({
+    ) =>
+      new TableCell({
         verticalAlign: opts?.vAlign,
         borders: opts?.borders ?? BORDER,
-        children: [centeredP(text, opts?.bold ? { bold: opts.bold } : {})],
+        children: [centeredP(text, {})],
       });
-      
-      if (debugOptions?.logTableCells) {
-        console.log(`[DEBUG] PaymentTable Cell created: text="${text}", borders=${JSON.stringify(opts?.borders)}, vAlign=${opts?.vAlign}`);
-      }
-      
-      return cellInstance;
-    };
 
     const indexOfCol = (label: string) =>
       columns.findIndex((c: string) => c === label);
@@ -482,7 +458,7 @@ export class DocumentGenerator {
           (c: string) =>
             new TableCell({
               borders: BORDER,
-              children: [centeredP(c, { bold: true })],
+              children: [centeredP(c)],
             }),
         ),
       });
@@ -552,11 +528,11 @@ export class DocumentGenerator {
         const amount = installmentAmounts[inst] ?? 0;
         totalAmount += amount;
 
-        // Create fresh cell mapping for each installment to prevent shared references
+        // Create complete row with all columns to maintain consistent structure
         const cMap: Record<string, string> = {
-          "Α/Α": k === 0 ? rowNumber : "", // Only show row number on first installment
-          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: k === 0 ? fullName : "", // Only show name on first installment  
-          "Α.Φ.Μ.": k === 0 ? afm : "", // Only show AFM on first installment
+          "Α/Α": rowNumber,
+          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
+          "Α.Φ.Μ.": afm,
           ΔΟΣΗ: typeSpecificValue(recipient, inst),
           ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
           ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
@@ -574,7 +550,30 @@ export class DocumentGenerator {
           }),
         );
       }
-      // Multiple installments processing complete - duplicate logic removed for Word compatibility
+
+
+      // Subsequent rows: only type-specific column + ΠΟΣΟ
+      for (let k = 1; k < installments.length; k++) {
+        const inst = installments[k];
+        const amount = installmentAmounts[inst] ?? 0;
+        totalAmount += amount;
+
+        const subsequentCells = columns.map((label: string) => {
+          if (label === "ΠΟΣΟ (€)")
+            return cell(DocumentUtilities.formatCurrency(amount));
+          if (["ΔΟΣΗ", "ΗΜΕΡΕΣ", "ΜΗΝΕΣ", "ΤΡΙΜΗΝΟ"].includes(label))
+            return cell(typeSpecificValue(recipient, inst));
+          // everything else is “occupied” by rowSpan in the first row, so empty here
+          return cell("");
+        });
+
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST },
+            children: subsequentCells,
+          }),
+        );
+      }
     });
 
     // ---- total row (dynamic width)
@@ -588,17 +587,19 @@ export class DocumentGenerator {
       if (idx === totalLabelCellIndex)
         return new TableCell({
           borders: NB,
-          children: [centeredP("ΣΥΝΟΛΟ:", { bold: true })],
+          children: [centeredP("ΣΥΝΟΛΟ:")],
         });
       return new TableCell({
         borders: NB,
-        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount), { bold: true })],
+        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount))],
       });
     });
     rows.push(new TableRow({ children: totalRowCells }));
 
     return new Table({
-      layout: TableLayoutType.AUTOFIT,
+      layout: TableLayoutType.FIXED,
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: columns.map(() => Math.floor(10466 / columns.length)),
       rows,
     });
   }
@@ -777,7 +778,9 @@ export class DocumentGenerator {
       );
 
     return new Table({
-      layout: TableLayoutType.AUTOFIT,
+      layout: TableLayoutType.FIXED,
+      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: [10466],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -790,6 +793,7 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
+              width: { size: 6500, type: WidthType.DXA },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
               borders: {
@@ -800,6 +804,7 @@ export class DocumentGenerator {
               },
             }),
             new TableCell({
+              width: { size: 3966, type: WidthType.DXA },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
               borders: {
@@ -886,6 +891,7 @@ export class DocumentGenerator {
     const table = new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
+      columnWidths: [5233, 5233], // Two equal columns
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -963,13 +969,12 @@ export class DocumentGenerator {
 
     const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
 
-    // Use DXA for both columns, and make right the exact complement
     const LEFT_COL_WIDTH = pctTwips(60);
-    const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
+    const RIGHT_COL_WIDTH = pctTwips(40);
 
     // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
     const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.2);
-    const PROS_TEXT_COL = RIGHT_COL_WIDTH - PROS_LABEL_COL;
+    const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.8);
 
     const p = (text: string, opts?: { bold?: boolean }) =>
       new Paragraph({
@@ -988,16 +993,16 @@ export class DocumentGenerator {
     const contact = (label: string, value: string) =>
       DocumentUtilities.createContactDetail(label, value);
 
-    // Keep DXA for cells too; do NOT switch to percentage here
+    // Cell helper using DXA (twips), not percentages
     const cellDXA = (
       children: (Paragraph | Table)[],
       widthTwips?: number,
-      vAlign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
+      valign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
     ) =>
       new TableCell({
-        width: { size: widthTwips ?? PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-        verticalAlign: vAlign,
-        borders: CELL_NO_BORDERS,
+        width: { size: widthTwips ? Math.round((widthTwips / PAGE_CONTENT_WIDTH) * 100) : 100, type: WidthType.PERCENTAGE },
+        verticalAlign: valign,
+        borders: CELL_NO_BORDERS, // Cell borders must NOT include inside*
         children,
       });
 
@@ -1056,8 +1061,10 @@ export class DocumentGenerator {
     ];
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.AUTOFIT,
-      borders: TABLE_NO_BORDERS,
+      layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
+      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
+      borders: TABLE_NO_BORDERS, // Table borders may have inside*
       rows: [
         row([
           cellDXA(
@@ -1095,9 +1102,10 @@ export class DocumentGenerator {
 
     // ---- whole header table
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-      borders: TABLE_NO_BORDERS,
+      layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
+      borders: TABLE_NO_BORDERS, // Table borders here
       rows: [
         row([
           cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),

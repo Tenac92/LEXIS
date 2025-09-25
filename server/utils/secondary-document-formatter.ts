@@ -289,85 +289,26 @@ export class SecondaryDocumentFormatter {
         const firstAmount = installmentAmounts[installments[0]] || installmentAmounts[firstQuarterNum] || 0;
         totalAmount += firstAmount;
 
-        // Create completely fresh cells array for first quarter row to prevent shared references
-        const firstRowCells = [
-          // Fresh index cell
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(rowNumber, {
+        // Replace the quarter cell in the existing cells array
+        cells[cells.length - 2] = new TableCell({
+          children: [
+            DocumentUtilities.createCenteredParagraph(
+              `Τ${firstQuarterNum}`,
+              {
                 size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              }),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-          // Fresh name cell
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(fullName, {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              }),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-          // Fresh AFM cell
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(afm, {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              }),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-          // Add quarter cell
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                `Τ${firstQuarterNum}`,
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-          // Fresh ΠΡΑΞΗ cell
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.secondary_text || expenditureType || "",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-          // Add amount cell for first quarter
+              },
+            ),
+          ],
+          borders: {
+            top: { style: borderStyle, size: 1 },
+            bottom: { style: borderStyle, size: 1 },
+            left: { style: borderStyle, size: 1 },
+            right: { style: borderStyle, size: 1 },
+          },
+        });
+
+        // Add amount for first quarter
+        cells.push(
           new TableCell({
             children: [
               DocumentUtilities.createCenteredParagraph(
@@ -384,10 +325,10 @@ export class SecondaryDocumentFormatter {
               right: { style: borderStyle, size: 1 },
             },
           }),
-        ];
+        );
 
-        // Add first row with fresh cells to prevent shared references
-        rows.push(new TableRow({ children: firstRowCells }));
+        // Add first row with consistent structure
+        rows.push(new TableRow({ children: cells }));
 
         // Add remaining quarters as separate rows with ALL columns (consistent structure)
         for (let i = 1; i < installments.length; i++) {
@@ -397,16 +338,11 @@ export class SecondaryDocumentFormatter {
           totalAmount += quarterAmount;
 
           // Create complete row with all columns to maintain consistent structure
-          // Fixed: Create fresh TableCell objects to prevent shared references
           const quarterRow = new TableRow({
             children: [
-              // Index cell (empty for subsequent quarters)
+              // Index cell (repeat same index)
               new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph("", {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  }),
-                ],
+                children: cells[0].options.children, // Same index as first row
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -414,13 +350,9 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // Name cell (empty for subsequent quarters)
+              // Name cell (repeat same name)
               new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph("", {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  }),
-                ],
+                children: cells[1].options.children, // Same name as first row
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -428,13 +360,9 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // AFM cell (empty for subsequent quarters)
+              // AFM cell (repeat same AFM)
               new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph("", {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  }),
-                ],
+                children: cells[2].options.children, // Same AFM as first row
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -476,16 +404,9 @@ export class SecondaryDocumentFormatter {
                   right: { style: borderStyle, size: 1 },
                 },
               }),
-              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ) - create fresh content to avoid shared references
+              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ)
               new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph(
-                    recipient.secondary_text || expenditureType || "",
-                    {
-                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    },
-                  ),
-                ],
+                children: cells[cells.length - 1].options.children, // Same ΠΡΑΞΗ as first row
                 borders: {
                   top: { style: borderStyle, size: 1 },
                   bottom: { style: borderStyle, size: 1 },
@@ -565,11 +486,17 @@ export class SecondaryDocumentFormatter {
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
       layout: TableLayoutType.FIXED,
+      columnWidths: this.getColumnWidths(columns),
       rows: rows,
     });
   }
 
-  // getColumnWidths method removed for Word compatibility - cell widths specified directly on TableCell elements
+  private static getColumnWidths(columns: string[]): number[] {
+    // Equal distribution of column widths in twips for Word compatibility
+    const totalWidth = 10466; // Page content width in twips
+    const columnWidth = Math.floor(totalWidth / columns.length);
+    return columns.map(() => columnWidth);
+  }
 
   private static createRetentionText(): Paragraph {
     return new Paragraph({
@@ -646,6 +573,7 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
+      columnWidths: [5233, 5233], // Two equal columns for signature
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
