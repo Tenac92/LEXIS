@@ -1310,7 +1310,7 @@ export class DocumentGenerator {
     const logoBuffer = Buffer.from(""); // Placeholder for logo
 
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.AUTOFIT,
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -1330,7 +1330,7 @@ export class DocumentGenerator {
           children: [
             // Ministry information column
             new TableCell({
-              width: { size: 60, type: WidthType.PERCENTAGE },
+              width: { size: 6280, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -1404,7 +1404,7 @@ export class DocumentGenerator {
               ],
             }),
             new TableCell({
-              width: { size: 40, type: WidthType.PERCENTAGE },
+              width: { size: 40, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE },
                 bottom: { style: BorderStyle.NONE },
@@ -1419,7 +1419,7 @@ export class DocumentGenerator {
               },
               children: [
                 new Table({
-                  width: { size: 100, type: WidthType.PERCENTAGE },
+                  width: { size: 100, type: WidthType.DXA },
                   borders: {
                     top: { style: BorderStyle.NONE },
                     bottom: { style: BorderStyle.NONE },
@@ -1432,7 +1432,7 @@ export class DocumentGenerator {
                     new TableRow({
                       children: [
                         new TableCell({
-                          width: { size: 20, type: WidthType.PERCENTAGE },
+                          width: { size: 20, type: WidthType.DXA },
                           borders: {
                             top: { style: BorderStyle.NONE },
                             bottom: { style: BorderStyle.NONE },
@@ -1454,7 +1454,7 @@ export class DocumentGenerator {
                           ],
                         }),
                         new TableCell({
-                          width: { size: 80, type: WidthType.PERCENTAGE },
+                          width: { size: 80, type: WidthType.DXA },
                           borders: {
                             top: { style: BorderStyle.NONE },
                             bottom: { style: BorderStyle.NONE },
