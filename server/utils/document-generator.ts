@@ -1311,7 +1311,6 @@ export class DocumentGenerator {
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
-      columnWidths: [60, 40],
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
