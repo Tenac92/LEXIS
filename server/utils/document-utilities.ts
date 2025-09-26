@@ -126,13 +126,14 @@ export class DocumentUtilities {
     },
 
     // Payment table borders (size 1 - standard visible borders)
+    // NOTE: Using subject table's working pattern - cell-level borders only
     PAYMENT_TABLE: {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
       left: { style: BorderStyle.SINGLE, size: 1 },
       right: { style: BorderStyle.SINGLE, size: 1 },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+      insideVertical: { style: BorderStyle.NONE, size: 0 },
     },
     PAYMENT_CELL: {
       top: { style: BorderStyle.SINGLE, size: 1 },
@@ -142,13 +143,14 @@ export class DocumentUtilities {
     },
 
     // Standard borders for secondary documents (size 1)
+    // NOTE: Using subject table's working pattern - cell-level borders only
     STANDARD_TABLE: {
       top: { style: BorderStyle.SINGLE, size: 1 },
       bottom: { style: BorderStyle.SINGLE, size: 1 },
       left: { style: BorderStyle.SINGLE, size: 1 },
       right: { style: BorderStyle.SINGLE, size: 1 },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+      insideVertical: { style: BorderStyle.NONE, size: 0 },
     },
     STANDARD_CELL: {
       top: { style: BorderStyle.SINGLE, size: 1 },

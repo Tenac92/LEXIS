@@ -13,7 +13,6 @@ import {
   AlignmentType,
   WidthType,
   TableLayoutType,
-  BorderStyle,
   HeightRule,
   VerticalAlign,
   UnderlineType,
@@ -288,7 +287,7 @@ export class DocumentGenerator {
       opts?: {
         bold?: boolean;
         borders?: typeof DocumentUtilities.BORDERS.PAYMENT_CELL;
-        vAlign?: typeof VerticalAlign;
+        vAlign?: VerticalAlign;
       },
     ) =>
       new TableCell({
