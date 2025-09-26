@@ -503,22 +503,12 @@ export class DocumentGenerator {
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex)
             return new TableCell({
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 4 },
-                bottom: { style: BorderStyle.SINGLE, size: 4 },
-                left: { style: BorderStyle.SINGLE, size: 4 },
-                right: { style: BorderStyle.SINGLE, size: 4 },
-              },
+              borders: CELL_NO_BORDER,
               children: [new Paragraph({ children: [new TextRun("")] })],
             });
           if (idx === totalLabelCellIndex)
             return new TableCell({
-              borders: {
-                top: { style: BorderStyle.SINGLE, size: 4 },
-                bottom: { style: BorderStyle.SINGLE, size: 4 },
-                left: { style: BorderStyle.SINGLE, size: 4 },
-                right: { style: BorderStyle.SINGLE, size: 4 },
-              },
+              borders: CELL_NO_BORDER,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -530,7 +520,7 @@ export class DocumentGenerator {
               ],
             });
           return new TableCell({
-            borders: DocumentUtilities.BorderFactory.cell.single,
+            borders: CELL_NO_BORDER,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -574,12 +564,12 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null,
   ): Table {
     const NB = {
-      top: { style: BorderStyle.NONE, size: 0 },
-      bottom: { style: BorderStyle.NONE, size: 0 },
-      left: { style: BorderStyle.NONE, size: 0 },
-      right: { style: BorderStyle.NONE, size: 0 },
-      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-      insideVertical: { style: BorderStyle.NONE, size: 0 },
+      top: { style: BorderStyle.NONE },
+      bottom: { style: BorderStyle.NONE },
+      left: { style: BorderStyle.NONE },
+      right: { style: BorderStyle.NONE },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
     } as const;
 
     // Left column - attachments, notifications, and internal distribution

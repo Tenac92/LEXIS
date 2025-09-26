@@ -100,51 +100,7 @@ export class DocumentUtilities {
   };
   public static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
-  // =============================================================================
-  // BORDER FACTORY - PROPER TABLE VS CELL SEMANTICS 
-  // =============================================================================
-
-  /**
-   * BorderFactory with proper separation of table vs cell border semantics.
-   * Root cause of Word repair issues: NB/BORDER constants mixed table-level 
-   * and cell-level properties causing invalid XML.
-   */
-  public static readonly BorderFactory = {
-    // For Table.borders (includes inside properties)
-    table: {
-      none: {
-        top: { style: BorderStyle.NONE, size: 0 },
-        bottom: { style: BorderStyle.NONE, size: 0 },
-        left: { style: BorderStyle.NONE, size: 0 },
-        right: { style: BorderStyle.NONE, size: 0 },
-        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-        insideVertical: { style: BorderStyle.NONE, size: 0 },
-      },
-      single: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-      }
-    },
-    // For TableCell.borders (NO inside properties)
-    cell: {
-      none: {
-        top: { style: BorderStyle.NONE, size: 0 },
-        bottom: { style: BorderStyle.NONE, size: 0 },
-        left: { style: BorderStyle.NONE, size: 0 },
-        right: { style: BorderStyle.NONE, size: 0 },
-      },
-      single: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-      }
-    }
-  };
+  // BorderFactory removed - caused Word repair issues
 
   // =============================================================================
   // ASSET MANAGEMENT
