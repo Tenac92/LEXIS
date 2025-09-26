@@ -308,7 +308,8 @@ export class SecondaryDocumentFormatter {
       );
 
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.FIXED,
+      width: { size: 10466, type: WidthType.DXA },
       columnWidths: [5233, 5233], // Two equal columns for signature
       borders: {
         top: { style: BorderStyle.NONE },

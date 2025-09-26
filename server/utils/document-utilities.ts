@@ -16,6 +16,7 @@ import {
   WidthType,
   BorderStyle,
   VerticalAlign,
+  TableLayoutType,
 } from "docx";
 import * as fs from "fs";
 import * as path from "path";
@@ -333,7 +334,8 @@ export class DocumentUtilities {
     columnWidths?: number[],
   ): Table {
     const tableOptions: any = {
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.FIXED,
+      width: { size: 10466, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -415,6 +417,7 @@ export class DocumentUtilities {
           },
           address: unitData.address,
           email: unitData.email,
+          parts: unitData.parts || {}, // Include the parts data from database
         };
       }
 
