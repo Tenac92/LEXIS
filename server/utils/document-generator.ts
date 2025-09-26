@@ -287,7 +287,7 @@ export class DocumentGenerator {
       opts?: {
         bold?: boolean;
         borders?: typeof DocumentUtilities.BORDERS.PAYMENT_CELL;
-        vAlign?: VerticalAlign;
+        vAlign?: typeof VerticalAlign[keyof typeof VerticalAlign];
       },
     ) =>
       new TableCell({
