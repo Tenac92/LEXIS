@@ -48,454 +48,188 @@ export class SecondaryDocumentFormatter {
     recipients: any[],
     expenditureType: string,
   ): Table {
-    // Get the original configuration and add ΠΡΑΞΗ column
-    const config = DocumentUtilities.getExpenditureConfig(expenditureType);
-    const originalColumns = config.columns;
+    const cfg = DocumentUtilities.getExpenditureConfig(expenditureType);
+    const original = cfg.columns as string[];
 
-    // Create modified columns by inserting ΠΡΑΞΗ before the last column (amount)
-    const columns = [...originalColumns];
-    const amountColumnIndex = columns.findIndex((col) => col.includes("ΠΟΣΟ"));
-    if (amountColumnIndex > -1) {
-      columns.splice(amountColumnIndex, 0, "ΠΡΑΞΗ");
-    } else {
-      // Fallback if amount column not found
-      columns.splice(-1, 0, "ΠΡΑΞΗ");
-    }
+    // Insert ΠΡΑΞΗ before ΠΟΣΟ (€)
+    const cols = [...original];
+    const idxAmount = cols.findIndex((c) => c.includes("ΠΟΣΟ"));
+    if (idxAmount >= 0) cols.splice(idxAmount, 0, "ΠΡΑΞΗ");
+    else cols.splice(cols.length - 1, 0, "ΠΡΑΞΗ"); // fallback
 
-    const borderStyle = BorderStyle.SINGLE;
+    // Ensure final header order is exactly what we will emit in rows
+    // We will always output: [Α/Α, ΟΝΟΜΑΤΕΠΩΝΥΜΟ, Α.Φ.Μ., <TYPE>, ΠΡΑΞΗ, ΠΟΣΟ (€)]
+    const headerOrder = ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ."];
+    const typeCol =
+      expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+        ? "ΗΜΕΡΕΣ"
+        : expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ"
+          ? "ΤΡΙΜΗΝΟ"
+          : "ΔΟΣΗ";
+    headerOrder.push(typeCol, "ΠΡΑΞΗ", "ΠΟΣΟ (€)");
 
-    // Create header cells using the same approach as document-generator.ts
-    const headerCells = columns.map(
-      (column) =>
+    // Build a clean header using the intended order
+    const border = { style: BorderStyle.SINGLE, size: 1 } as const;
+    const cellBorder = {
+      top: border,
+      bottom: border,
+      left: border,
+      right: border,
+    } as const;
+
+    const mkCentered = (text: string, bold = false) =>
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text,
+            bold,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 0 },
+      });
+
+    const headerCells = headerOrder.map(
+      (label) =>
         new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(column, {
-              bold: false,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
+          borders: cellBorder,
+          children: [mkCentered(label, true)],
+          verticalAlign: VerticalAlign.CENTER,
         }),
     );
 
-    const rows = [new TableRow({ children: headerCells, tableHeader: true })];
+    const rows: TableRow[] = [
+      new TableRow({ tableHeader: true, children: headerCells }),
+    ];
+
+    // Equal DXA grid (last col absorbs remainder)
+    const PAGE_DXA = 14000;
+    const base = Math.floor(PAGE_DXA / headerOrder.length);
+    const grid = headerOrder.map((_, i) =>
+      i < headerOrder.length - 1
+        ? base
+        : PAGE_DXA - base * (headerOrder.length - 1),
+    );
+
+    // Helper to build one data row in the exact header order
+    const mkRow = (data: Record<string, string>) =>
+      new TableRow({
+        children: headerOrder.map(
+          (col) =>
+            new TableCell({
+              borders: cellBorder,
+              children: [mkCentered(data[col] ?? "", false)],
+              verticalAlign: VerticalAlign.CENTER,
+            }),
+        ),
+      });
 
     let totalAmount = 0;
 
-    recipients.forEach((recipient, index) => {
-      // Use the same name formatting logic as document-generator.ts
-      const firstname = recipient.firstname || "";
-      const lastname = recipient.lastname || "";
-      const fathername = recipient.fathername || "";
+    recipients.forEach((r: any, i: number) => {
+      const lastname = (r.lastname || "").trim();
+      const firstname = (r.firstname || "").trim();
+      const fathername = (r.fathername || "").trim();
+      const fullName = fathername
+        ? `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim()
+        : `${lastname} ${firstname}`.trim();
+      const afm = r.afm ? String(r.afm) : "";
+      const praxis = r.secondary_text || expenditureType || "";
 
-      const fullName =
-        !fathername || fathername.trim() === ""
-          ? `${lastname} ${firstname}`.trim()
-          : `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim();
+      const addOneRow = (typeValue: string, amountNum: number) => {
+        const amountStr = DocumentUtilities.formatCurrency(amountNum || 0);
+        totalAmount += Number.isFinite(amountNum) ? amountNum : 0;
 
-      // Convert numeric AFM to string for document display
-      const afm = recipient.afm ? String(recipient.afm) : "";
-      console.log(`[SecondaryDocument] Processing recipient ${index + 1}:`, {
-        name: fullName,
-        afm: afm,
-        afm_length: afm.length,
-        afm_type: typeof afm,
-        raw_afm: recipient.afm,
-        raw_afm_type: typeof recipient.afm,
-        recipient_keys: Object.keys(recipient)
-      });
-      const rowNumber = (index + 1).toString() + ".";
-      const amount =
-        typeof recipient.amount === "number" ? recipient.amount : 0;
-      totalAmount += amount;
+        rows.push(
+          mkRow({
+            "Α/Α": `${i + 1}.`,
+            ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
+            "Α.Φ.Μ.": afm,
+            [typeCol]: typeValue,
+            ΠΡΑΞΗ: praxis,
+            "ΠΟΣΟ (€)": amountStr,
+          }),
+        );
+      };
 
-      // Create table cells using the same structure as document-generator.ts
-      const cells = [
-        // Index/Number column (Α/Α)
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(rowNumber, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-        // Name column (ΟΝΟΜΑΤΕΠΩΝΥΜΟ)
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(fullName, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-        // AFM column (Α.Φ.Μ.)
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(afm, {
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-            }),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-      ];
-
-      // Add expenditure-specific column based on type
       if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.days?.toString() || "1",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
-      } else if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
-        // For housing allowance, replicate primary document structure exactly
-        // Check if recipient has multiple installments (quarters)
-        const installments = recipient.installments || [recipient.installment || "1"];
-        const installmentAmounts = recipient.installmentAmounts || {};
-        
-        if (installments.length === 1) {
-          // Single quarter - simple row structure
-          const quarterNum = typeof installments[0] === 'string' ? 
-            installments[0].replace("ΤΡΙΜΗΝΟ ", "") : installments[0];
-          
-          cells.push(
-            new TableCell({
-              children: [
-                DocumentUtilities.createCenteredParagraph(
-                  `Τ${quarterNum}`,
-                  {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  },
-                ),
-              ],
-              borders: {
-                top: { style: borderStyle, size: 1 },
-                bottom: { style: borderStyle, size: 1 },
-                left: { style: borderStyle, size: 1 },
-                right: { style: borderStyle, size: 1 },
-              },
-            }),
-          );
-        } else {
-          // Multiple quarters - use the same multi-row structure as primary document
-          // This will be handled in the multi-installment processing section below
-          // For now, show the first quarter in this row
-          const firstQuarter = installments[0];
-          const quarterNum = typeof firstQuarter === 'string' ? 
-            firstQuarter.replace("ΤΡΙΜΗΝΟ ", "") : firstQuarter;
-          
-          cells.push(
-            new TableCell({
-              children: [
-                DocumentUtilities.createCenteredParagraph(
-                  `Τ${quarterNum}`,
-                  {
-                    size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  },
-                ),
-              ],
-              borders: {
-                top: { style: borderStyle, size: 1 },
-                bottom: { style: borderStyle, size: 1 },
-                left: { style: borderStyle, size: 1 },
-                right: { style: borderStyle, size: 1 },
-              },
-            }),
-          );
-        }
-      } else {
-        // For ΔΚΑ types, add installment column (ΔΟΣΗ)
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                recipient.installment || "ΕΦΑΠΑΞ",
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
+        const days = r?.days != null ? String(r.days) : "1";
+        const amt =
+          typeof r.amount === "number" ? r.amount : Number(r.amount) || 0;
+        addOneRow(days, amt);
+        return;
       }
 
-      // Add ΠΡΑΞΗ column
-      cells.push(
-        new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(
-              recipient.secondary_text || expenditureType || "",
-              {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              },
-            ),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-      );
+      if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+        const installments: (string | number)[] =
+          Array.isArray(r.installments) && r.installments.length
+            ? r.installments
+            : [r.installment ?? 1];
 
-      // For housing allowance with multiple quarters, create multi-row structure exactly like primary document
-      if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" && recipient.installments && recipient.installments.length > 1) {
-        const installments = recipient.installments;
-        const installmentAmounts = recipient.installmentAmounts || {};
+        const amounts: Record<string, number> = r.installmentAmounts || {};
 
-        // Create first row with consistent structure (no rowSpan)
-        const firstQuarterNum = typeof installments[0] === 'string' ? 
-          installments[0].replace("ΤΡΙΜΗΝΟ ", "") : installments[0];
-        const firstAmount = installmentAmounts[installments[0]] || installmentAmounts[firstQuarterNum] || 0;
-        totalAmount += firstAmount;
+        installments.forEach((inst) => {
+          // Normalize like primary: strip "ΤΡΙΜΗΝΟ "
+          const instKey =
+            typeof inst === "string"
+              ? inst.replace("ΤΡΙΜΗΝΟ ", "")
+              : String(inst);
+          const quarterLabel = `Τ${instKey}`;
+          const amt =
+            amounts[inst as any] ??
+            amounts[instKey] ??
+            (typeof r.amount === "number" ? r.amount : Number(r.amount) || 0);
 
-        // Replace the quarter cell in the existing cells array
-        cells[cells.length - 2] = new TableCell({
-          children: [
-            DocumentUtilities.createCenteredParagraph(
-              `Τ${firstQuarterNum}`,
-              {
-                size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              },
-            ),
-          ],
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
+          addOneRow(quarterLabel, amt);
         });
-
-        // Add amount for first quarter
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                DocumentUtilities.formatCurrency(firstAmount),
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
-
-        // Add first row with consistent structure
-        rows.push(new TableRow({ children: cells }));
-
-        // Add remaining quarters as separate rows with ALL columns (consistent structure)
-        for (let i = 1; i < installments.length; i++) {
-          const quarterNum = typeof installments[i] === 'string' ? 
-            installments[i].replace("ΤΡΙΜΗΝΟ ", "") : installments[i];
-          const quarterAmount = installmentAmounts[installments[i]] || installmentAmounts[quarterNum] || 0;
-          totalAmount += quarterAmount;
-
-          // Create complete row with all columns to maintain consistent structure
-          const quarterRow = new TableRow({
-            children: [
-              // Index cell (repeat same index)
-              new TableCell({
-                children: cells[0].options.children, // Same index as first row
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-              // Name cell (repeat same name)
-              new TableCell({
-                children: cells[1].options.children, // Same name as first row
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-              // AFM cell (repeat same AFM)
-              new TableCell({
-                children: cells[2].options.children, // Same AFM as first row
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-              // Quarter column
-              new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph(
-                    `Τ${quarterNum}`,
-                    {
-                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    },
-                  ),
-                ],
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-              // Amount column
-              new TableCell({
-                children: [
-                  DocumentUtilities.createCenteredParagraph(
-                    DocumentUtilities.formatCurrency(quarterAmount),
-                    {
-                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                    },
-                  ),
-                ],
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-              // ΠΡΑΞΗ cell (repeat same ΠΡΑΞΗ)
-              new TableCell({
-                children: cells[cells.length - 1].options.children, // Same ΠΡΑΞΗ as first row
-                borders: {
-                  top: { style: borderStyle, size: 1 },
-                  bottom: { style: borderStyle, size: 1 },
-                  left: { style: borderStyle, size: 1 },
-                  right: { style: borderStyle, size: 1 },
-                },
-              }),
-            ],
-          });
-          rows.push(quarterRow);
-        }
-      } else {
-        // Single installment or non-housing allowance - add amount column normally
-        cells.push(
-          new TableCell({
-            children: [
-              DocumentUtilities.createCenteredParagraph(
-                DocumentUtilities.formatCurrency(amount),
-                {
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                },
-              ),
-            ],
-            borders: {
-              top: { style: borderStyle, size: 1 },
-              bottom: { style: borderStyle, size: 1 },
-              left: { style: borderStyle, size: 1 },
-              right: { style: borderStyle, size: 1 },
-            },
-          }),
-        );
-
-        rows.push(new TableRow({ children: cells }));
+        return;
       }
+
+      // Default ΔΚΑ* types — single row with ΔΟΣΗ
+      const dose = r.installment || "ΕΦΑΠΑΞ";
+      const amt =
+        typeof r.amount === "number" ? r.amount : Number(r.amount) || 0;
+      addOneRow(dose, amt);
     });
 
-    // Create total row spanning to the amount column
-    const totalRow = new TableRow({
-      children: [
-        new TableCell({
-          children: [new Paragraph({ text: "" })],
-          columnSpan: columns.length - 1,
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-        new TableCell({
+    // Total row: label in ΠΡΑΞΗ col, value in ΠΟΣΟ (€)
+    const totalLabelIdx = headerOrder.indexOf("ΠΡΑΞΗ");
+    const totalValueIdx = headerOrder.indexOf("ΠΟΣΟ (€)");
+
+    const totalChildren = headerOrder.map((_, idx) => {
+      if (idx === totalLabelIdx) {
+        return new TableCell({
+          borders: cellBorder,
+          children: [mkCentered("ΣΥΝΟΛΟ:", true)],
+          verticalAlign: VerticalAlign.CENTER,
+        });
+      }
+      if (idx === totalValueIdx) {
+        return new TableCell({
+          borders: cellBorder,
           children: [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `ΣΥΝΟΛΟ: ${DocumentUtilities.formatCurrency(totalAmount)}`,
-                  bold: true,
-                  size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                  font: DocumentUtilities.DEFAULT_FONT,
-                }),
-              ],
-              alignment: AlignmentType.CENTER,
-            }),
+            mkCentered(DocumentUtilities.formatCurrency(totalAmount), true),
           ],
           verticalAlign: VerticalAlign.CENTER,
-          borders: {
-            top: { style: borderStyle, size: 1 },
-            bottom: { style: borderStyle, size: 1 },
-            left: { style: borderStyle, size: 1 },
-            right: { style: borderStyle, size: 1 },
-          },
-        }),
-      ],
+        });
+      }
+      return new TableCell({
+        borders: cellBorder,
+        children: [mkCentered("", false)],
+        verticalAlign: VerticalAlign.CENTER,
+      });
     });
 
-    rows.push(totalRow);
+    rows.push(new TableRow({ children: totalChildren }));
 
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
       layout: TableLayoutType.FIXED,
-      columnWidths: this.getColumnWidths(columns),
-      rows: rows,
+      width: { size: PAGE_DXA, type: WidthType.DXA },
+      columnWidths: grid,
+      rows,
     });
-  }
-
-  private static getColumnWidths(columns: string[]): number[] {
-    // Equal distribution of column widths in twips for Word compatibility
-    const totalWidth = 10466; // Page content width in twips
-    const columnWidth = Math.floor(totalWidth / columns.length);
-    return columns.map(() => columnWidth);
   }
 
   private static createRetentionText(): Paragraph {
@@ -569,7 +303,9 @@ export class SecondaryDocumentFormatter {
 
     // Use DocumentUtilities to create manager signature paragraphs from director_signature field
     const rightColumnParagraphs =
-      DocumentUtilities.createManagerSignatureParagraphs(documentData.director_signature);
+      DocumentUtilities.createManagerSignatureParagraphs(
+        documentData.director_signature,
+      );
 
     return new Table({
       width: { size: 100, type: WidthType.PERCENTAGE },
@@ -614,15 +350,24 @@ export class SecondaryDocumentFormatter {
   ): Promise<Buffer> {
     try {
       logger.debug("Generating secondary document for:", documentData.id);
-      console.log('[SecondaryDocument] === DOCUMENT DATA RECEIVED ===');
-      console.log('[SecondaryDocument] Document ID:', documentData.id);
-      console.log('[SecondaryDocument] Expenditure type:', documentData.expenditure_type);
-      console.log('[SecondaryDocument] Recipients count:', documentData.recipients?.length || 0);
-      console.log('[SecondaryDocument] Recipients details:', documentData.recipients?.map(r => ({ 
-        name: `${r.firstname} ${r.lastname}`, 
-        afm: r.afm, 
-        amount: r.amount 
-      })) || []);
+      console.log("[SecondaryDocument] === DOCUMENT DATA RECEIVED ===");
+      console.log("[SecondaryDocument] Document ID:", documentData.id);
+      console.log(
+        "[SecondaryDocument] Expenditure type:",
+        documentData.expenditure_type,
+      );
+      console.log(
+        "[SecondaryDocument] Recipients count:",
+        documentData.recipients?.length || 0,
+      );
+      console.log(
+        "[SecondaryDocument] Recipients details:",
+        documentData.recipients?.map((r) => ({
+          name: `${r.firstname} ${r.lastname}`,
+          afm: r.afm,
+          amount: r.amount,
+        })) || [],
+      );
 
       const unitDetails = await DocumentUtilities.getUnitDetails(
         documentData.unit,

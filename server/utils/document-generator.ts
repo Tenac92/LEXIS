@@ -28,6 +28,8 @@ import {
   BorderStyle,
   HeightRule,
   VerticalAlign,
+  UnderlineType,
+  ShadingType,
   ImageRun,
 } from "docx";
 import * as fs from "fs";
@@ -200,93 +202,6 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create contact information section
-   */
-  private static createContactInfo(
-    documentData: DocumentData,
-    unitDetails: UnitDetails | null | undefined,
-  ): Paragraph[] {
-    const contactParagraphs: Paragraph[] = [];
-    const { contactPerson, telephone, email, address } = this.getContactInfo(
-      documentData,
-      unitDetails,
-    );
-
-    // Contact details
-    contactParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Ταχ. Δ/νση: ${address.address}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      }),
-    );
-
-    contactParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Ταχ. Κώδικας: ${address.tk}, ${address.region}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      }),
-    );
-
-    contactParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Πληροφορίες: ${contactPerson}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      }),
-    );
-
-    contactParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Τηλέφωνο: ${telephone}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 0 },
-      }),
-    );
-
-    contactParagraphs.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Email: ${email}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
-        ],
-        alignment: AlignmentType.LEFT,
-        spacing: { after: 120 },
-      }),
-    );
-
-    return contactParagraphs;
-  }
-
-  /**
    * Create document subject with bordered table
    */
   private static createDocumentSubject(
@@ -310,8 +225,7 @@ export class DocumentGenerator {
       },
     ];
 
-    // Use consistent page content width for all document elements
-    const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) minus left/right margins (720 each)
+    const PAGE_CONTENT_WIDTH = 10466; // A4 width (11906) minus margins (720 each)
 
     const BORDER = { style: BorderStyle.SINGLE, size: 4 };
     const CELL_BORDERS = {
@@ -336,9 +250,13 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+              // no per-cell width here
               borders: CELL_BORDERS,
-              shading: { fill: "C0C0C0" },
+              shading: {
+                fill: "C0C0C0",
+                type: ShadingType.CLEAR,
+                color: "auto",
+              },
               verticalAlign: VerticalAlign.CENTER,
               children: [
                 new Paragraph({
@@ -373,7 +291,6 @@ export class DocumentGenerator {
   ): Paragraph[] {
     const contentParagraphs: Paragraph[] = [];
 
-    // Main request text based on expenditure type
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
@@ -393,114 +310,155 @@ export class DocumentGenerator {
 
     return contentParagraphs;
   }
+
+  /**
+   * Payment table (exact grid, single source of widths, no per-cell widths)
+   */
   private static createPaymentTable(
     recipients: any[],
     expenditureType: string,
   ): Table {
     const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
 
-    // ---- helpers
-    const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
-    const B = (style = BorderStyle.SINGLE, size = 1) => ({
-      top: { style, size },
-      bottom: { style, size },
-      left: { style, size },
-      right: { style, size },
-    });
-    const BORDER = B();
-    const NB = {
-      top: { style: BorderStyle.NONE },
-      bottom: { style: BorderStyle.NONE },
-      left: { style: BorderStyle.NONE },
-      right: { style: BorderStyle.NONE },
-    };
+    // Guard: if no columns configured, emit a minimal empty table
+    if (!Array.isArray(columns) || columns.length === 0) {
+      return new Table({
+        layout: TableLayoutType.FIXED,
+        width: { size: 10466, type: WidthType.DXA },
+        columnWidths: [10466],
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ children: [new TextRun(" ")] })],
+              }),
+            ],
+          }),
+        ],
+      });
+    }
 
-    const centeredP = (text: string, extra: Partial<TextRun> = {}) =>
-      DocumentUtilities.createCenteredParagraph(text, { ...FONT, ...extra });
+    const TABLE_WIDTH_DXA = 10466;
+
+    // exact grid (last column absorbs rounding)
+    const base = Math.floor(TABLE_WIDTH_DXA / columns.length);
+    const columnWidths: number[] = columns.map((_, i) =>
+      i < columns.length - 1
+        ? base
+        : TABLE_WIDTH_DXA - base * (columns.length - 1),
+    );
+
+    // helpers
+    const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
+    const BORDER = {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+    } as const;
+    const NB = {
+      top: { style: BorderStyle.NONE, size: 0 },
+      bottom: { style: BorderStyle.NONE, size: 0 },
+      left: { style: BorderStyle.NONE, size: 0 },
+      right: { style: BorderStyle.NONE, size: 0 },
+    } as const;
+
+    const safeAmount = (n: unknown) => {
+      const v = typeof n === "number" ? n : Number(n);
+      return Number.isFinite(v) ? v : 0;
+    };
 
     const cell = (
       text: string,
       opts?: {
         bold?: boolean;
-        borders?: any;
+        borders?: typeof BORDER | typeof NB;
         vAlign?: typeof VerticalAlign.CENTER;
       },
     ) =>
       new TableCell({
-        verticalAlign: opts?.vAlign,
+        // no per-cell width; table grid drives widths
+        verticalAlign: VerticalAlign.CENTER,
         borders: opts?.borders ?? BORDER,
-        children: [centeredP(text, {})],
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 0 },
+            children: [
+              new TextRun({
+                text: (text ?? "").toString(),
+                bold: opts?.bold ?? false,
+                ...FONT,
+              }),
+            ],
+          }),
+        ],
       });
 
-    const indexOfCol = (label: string) =>
-      columns.findIndex((c: string) => c === label);
+    const mkHeaderRow = () =>
+      new TableRow({
+        tableHeader: true,
+        children: columns.map((c: string) =>
+          cell(c, {
+            borders: BORDER,
+            bold: true,
+            vAlign: VerticalAlign.CENTER,
+          }),
+        ),
+      });
 
     const typeSpecificValue = (
       recipient: any,
       installment: string | number,
     ) => {
       if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ")
-        return recipient.days?.toString() || "1";
+        return recipient?.days?.toString?.() || "1";
       if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
         const q =
           typeof installment === "string"
             ? installment.replace("ΤΡΙΜΗΝΟ ", "")
             : installment;
-        return q.toString();
+        return q != null ? String(q) : "";
       }
-      return String(installment); // ΔΚΑ etc.
+      return installment != null ? String(installment) : "";
     };
 
-    const mkHeaderRow = () =>
-      new TableRow({
-        tableHeader: true,
-        children: columns.map(
-          (c: string) =>
-            new TableCell({
-              borders: BORDER,
-              children: [centeredP(c)],
-            }),
-        ),
-      });
-
-    // Common formatter blocks
     const formatFullName = (r: any) => {
-      const firstname = r.firstname || "";
-      const lastname = r.lastname || "";
-      const fathername = r.fathername?.trim();
+      const firstname = (r?.firstname || "").trim();
+      const lastname = (r?.lastname || "").trim();
+      const fathername = r?.fathername?.trim();
       return fathername
         ? `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim()
         : `${lastname} ${firstname}`.trim();
     };
 
-    const formatAFM = (r: any) => (r.afm ? String(r.afm) : "");
+    const formatAFM = (r: any) => (r?.afm != null ? String(r.afm) : "");
 
-    // Build rows
+    // build rows
     const rows: TableRow[] = [mkHeaderRow()];
     let totalAmount = 0;
 
-    recipients.forEach((recipient: any, i: number) => {
+    (recipients || []).forEach((recipient: any, i: number) => {
       const rowNumber = `${i + 1}.`;
       const fullName = formatFullName(recipient);
       const afm = formatAFM(recipient);
 
-      // normalize installments
       const installments: string[] =
-        Array.isArray(recipient.installments) && recipient.installments.length
-          ? recipient.installments
-          : recipient.installment
+        Array.isArray(recipient?.installments) && recipient.installments.length
+          ? recipient.installments.map((x: any) => String(x))
+          : recipient?.installment != null
             ? [String(recipient.installment)]
             : ["ΕΦΑΠΑΞ"];
 
-      const installmentAmounts = recipient.installmentAmounts || {};
+      const installmentAmounts: Record<string, number> =
+        recipient?.installmentAmounts || {};
 
-      // Single installment → one row
-      if (installments.length === 1) {
-        const inst = installments[0];
-        const amount = installmentAmounts[inst] ?? recipient.amount ?? 0;
+      installments.forEach((inst) => {
+        const amount = safeAmount(
+          installmentAmounts[inst] ?? recipient?.amount ?? 0,
+        );
         totalAmount += amount;
 
-        // cells in same order as columns
         const cMap: Record<string, string> = {
           "Α/Α": rowNumber,
           ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
@@ -514,113 +472,97 @@ export class DocumentGenerator {
 
         rows.push(
           new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST },
             children: columns.map((label: string) =>
-              cell(cMap[label] ?? "", { borders: BORDER }),
+              cell(cMap[label] ?? "", {
+                borders: BORDER,
+                vAlign: VerticalAlign.CENTER,
+              }),
             ),
           }),
         );
-        return;
-      }
-
-      // Multiple installments → create separate rows with ALL columns (consistent structure)
-      for (let k = 0; k < installments.length; k++) {
-        const inst = installments[k];
-        const amount = installmentAmounts[inst] ?? 0;
-        totalAmount += amount;
-
-        // Create complete row with all columns to maintain consistent structure
-        const cMap: Record<string, string> = {
-          "Α/Α": rowNumber,
-          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
-          "Α.Φ.Μ.": afm,
-          ΔΟΣΗ: typeSpecificValue(recipient, inst),
-          ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
-          ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
-          ΤΡΙΜΗΝΟ: typeSpecificValue(recipient, inst),
-          "ΠΟΣΟ (€)": DocumentUtilities.formatCurrency(amount),
-        };
-
-        // Build row with consistent column structure
-        rows.push(
-          new TableRow({
-            height: { value: 360, rule: HeightRule.ATLEAST },
-            children: columns.map((label: string) =>
-              cell(cMap[label] ?? "", { borders: BORDER }),
-            ),
-          }),
-        );
-      }
-
-
-      // Subsequent rows: only type-specific column + ΠΟΣΟ
-      for (let k = 1; k < installments.length; k++) {
-        const inst = installments[k];
-        const amount = installmentAmounts[inst] ?? 0;
-        totalAmount += amount;
-
-        const subsequentCells = columns.map((label: string) => {
-          if (label === "ΠΟΣΟ (€)")
-            return cell(DocumentUtilities.formatCurrency(amount));
-          if (["ΔΟΣΗ", "ΗΜΕΡΕΣ", "ΜΗΝΕΣ", "ΤΡΙΜΗΝΟ"].includes(label))
-            return cell(typeSpecificValue(recipient, inst));
-          // everything else is “occupied” by rowSpan in the first row, so empty here
-          return cell("");
-        });
-
-        rows.push(
-          new TableRow({
-            height: { value: 360, rule: HeightRule.ATLEAST },
-            children: subsequentCells,
-          }),
-        );
-      }
-    });
-
-    // ---- total row (dynamic width)
-    const totalLabelCellIndex = Math.max(0, columns.length - 2);
-    const totalRowCells = columns.map((_, idx) => {
-      if (idx < totalLabelCellIndex)
-        return new TableCell({
-          borders: NB,
-          children: [new Paragraph({ text: "" })],
-        });
-      if (idx === totalLabelCellIndex)
-        return new TableCell({
-          borders: NB,
-          children: [centeredP("ΣΥΝΟΛΟ:")],
-        });
-      return new TableCell({
-        borders: NB,
-        children: [centeredP(DocumentUtilities.formatCurrency(totalAmount))],
       });
     });
-    rows.push(new TableRow({ children: totalRowCells }));
 
+    // total row (label in penultimate column, value in last)
+    const totalLabelCellIndex = Math.max(0, columns.length - 2);
+    rows.push(
+      new TableRow({
+        children: columns.map((_, idx) => {
+          if (idx < totalLabelCellIndex)
+            return new TableCell({
+              borders: NB,
+              children: [new Paragraph({ children: [new TextRun("")] })],
+            });
+          if (idx === totalLabelCellIndex)
+            return new TableCell({
+              borders: NB,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 0 },
+                  children: [
+                    new TextRun({ text: "ΣΥΝΟΛΟ:", ...FONT, bold: true }),
+                  ],
+                }),
+              ],
+            });
+          return new TableCell({
+            borders: NB,
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 0 },
+                children: [
+                  new TextRun({
+                    text: DocumentUtilities.formatCurrency(totalAmount),
+                    ...FONT,
+                    bold: true,
+                  }),
+                ],
+              }),
+            ],
+          });
+        }),
+      }),
+    );
+
+    // final table
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
-      columnWidths: columns.map(() => Math.floor(10466 / columns.length)),
+      width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
+      columnWidths, // exact grid
       rows,
     });
   }
 
-  // Create footer with signature
-
+  /**
+   * Create footer with signature
+   */
   private static createFooter(
     documentData: DocumentData,
     unitDetails: UnitDetails | null,
   ): Table {
+    const NB = {
+      top: { style: BorderStyle.NONE, size: 0 },
+      bottom: { style: BorderStyle.NONE, size: 0 },
+      left: { style: BorderStyle.NONE, size: 0 },
+      right: { style: BorderStyle.NONE, size: 0 },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+      insideVertical: { style: BorderStyle.NONE, size: 0 },
+    } as const;
+
     // Left column - attachments, notifications, and internal distribution
     const leftColumnParagraphs: Paragraph[] = [];
 
-    // Add ΣΥΝΗΜΜΕΝΑ section
+    // ΣΥΝΗΜΜΕΝΑ
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
           new TextRun({
             text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
             bold: true,
-            underline: {},
+            underline: typeof UnderlineType.SINGLE === "string" ? {} : {},
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
@@ -631,12 +573,6 @@ export class DocumentGenerator {
     const attachments = (documentData.attachments || [])
       .map((item) => item.replace(/^\d+\-/, ""))
       .filter(Boolean);
-
-    console.log("[PrimaryDocument] Footer attachments processing:", {
-      rawAttachments: documentData.attachments,
-      processedAttachments: attachments,
-      count: attachments.length,
-    });
 
     for (let i = 0; i < attachments.length; i++) {
       leftColumnParagraphs.push(
@@ -657,7 +593,7 @@ export class DocumentGenerator {
       new Paragraph({ children: [new TextRun({ text: "" })] }),
     );
 
-    // Add ΚΟΙΝΟΠΟΙΗΣΗ section
+    // ΚΟΙΝΟΠΟΙΗΣΗ
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
@@ -697,7 +633,7 @@ export class DocumentGenerator {
       new Paragraph({ children: [new TextRun({ text: "" })] }),
     );
 
-    // Add ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ section
+    // ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
@@ -725,31 +661,11 @@ export class DocumentGenerator {
       }),
     );
 
-    // Add ESDIAN fields if they exist
+    // ESDIAN
     let esdianCounter = 2;
-    console.log(
-      "[DocumentGenerator] ESDIAN Debug - documentData.esdian:",
-      documentData.esdian,
-    );
-    console.log(
-      "[DocumentGenerator] ESDIAN Debug - Array check:",
-      Array.isArray(documentData.esdian),
-    );
     if (documentData.esdian && Array.isArray(documentData.esdian)) {
-      console.log(
-        "[DocumentGenerator] ESDIAN Debug - Processing ESDIAN array with length:",
-        documentData.esdian.length,
-      );
       for (const esdianItem of documentData.esdian) {
-        console.log(
-          "[DocumentGenerator] ESDIAN Debug - Processing item:",
-          esdianItem,
-        );
         if (esdianItem && esdianItem.trim()) {
-          console.log(
-            "[DocumentGenerator] ESDIAN Debug - Adding paragraph for:",
-            esdianItem.trim(),
-          );
           leftColumnParagraphs.push(
             new Paragraph({
               children: [
@@ -765,13 +681,9 @@ export class DocumentGenerator {
           esdianCounter++;
         }
       }
-    } else {
-      console.log(
-        "[DocumentGenerator] ESDIAN Debug - No ESDIAN data found or not an array",
-      );
     }
 
-    // Right column - use signature from director_signature field
+    // Right column - director signature block
     const rightColumnParagraphs =
       DocumentUtilities.createManagerSignatureParagraphs(
         documentData.director_signature,
@@ -779,40 +691,31 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
-      columnWidths: [10466],
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
+      width: { size: 10466, type: WidthType.DXA },
+      columnWidths: [6500, 3966],
+      borders: NB,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 6500, type: WidthType.DXA },
+              borders: {
+                top: NB.top,
+                bottom: NB.bottom,
+                left: NB.left,
+                right: NB.right,
+              },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
             }),
             new TableCell({
-              width: { size: 3966, type: WidthType.DXA },
+              borders: {
+                top: NB.top,
+                bottom: NB.bottom,
+                left: NB.left,
+                right: NB.right,
+              },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
             }),
           ],
         }),
@@ -820,8 +723,9 @@ export class DocumentGenerator {
     });
   }
 
-  //Create legal references section
-
+  /**
+   * Legal references
+   */
   private static createLegalReferences(expenditureType: string): Paragraph[] {
     const baseOptions = {
       size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
@@ -836,7 +740,7 @@ export class DocumentGenerator {
             "  γ) Τη με αρ.2/73/ΔΕΠ/04.01.2016 (Β’20) απόφαση του Αν. Υπουργού Οικονομικών με θέμα: «Δικαιολογητικά αναγνώρισης και εκκαθάρισης δαπανών μετακινούμενων εντός και εκτός έδρας της Επικράτειας.",
           ]
         : [
-            "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε.",
+            "Σχ.: Οι διατάξεις των άρθρων 7 και 14 του Π.Δ. 77/2023 (Α΄130) «Σύσταση Υπουργείου και μετονομασία Υπουργείων – Σύσταση, κατάργηση και μετονομασία Γενικών και Ειδικών Γραμματειών – Μεταφορά αρμοδιοτήτων, υπηρεσιακών μονάδων, θέσεων προσωπικού και εποπτευόμενων φορέων», όπως τροποποιήθηκε, συμπληρώθηκε και ισχύει..",
           ];
 
     return texts.map(
@@ -849,7 +753,9 @@ export class DocumentGenerator {
     );
   }
 
-  // Create project information section using table layout
+  /**
+   * Project information table
+   */
   private static createProjectInfo(
     documentData: DocumentData,
     expenditureType: string,
@@ -858,7 +764,6 @@ export class DocumentGenerator {
       size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
     };
 
-    // Only this changes per expenditure type
     const aleValue =
       expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
         ? "2420403001-2420405001-2420404001"
@@ -868,7 +773,6 @@ export class DocumentGenerator {
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 1574, type: WidthType.DXA }, // 15% of page width
             children: [
               new Paragraph({
                 children: [
@@ -878,7 +782,6 @@ export class DocumentGenerator {
             ],
           }),
           new TableCell({
-            width: { size: 8892, type: WidthType.DXA }, // 85% of page width
             children: [
               new Paragraph({
                 children: [new TextRun({ text: value, ...baseFont })],
@@ -888,33 +791,34 @@ export class DocumentGenerator {
         ],
       });
 
-    const table = new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA }, // Use consistent page content width
-      columnWidths: [5233, 5233], // Two equal columns
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
-      rows: [
-        row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
-        row("ΑΛΕ", aleValue),
-        row(
-          "ΤΟΜΕΑΣ",
-          "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
-        ),
-      ],
-    });
-
-    return [table, new Paragraph({ children: [new TextRun({ text: "" })] })];
+    return [
+      new Table({
+        layout: TableLayoutType.FIXED,
+        width: { size: 10466, type: WidthType.DXA },
+        columnWidths: [1574, 8892], // 15% / 85% exact
+        borders: {
+          top: { style: BorderStyle.NONE, size: 0 },
+          bottom: { style: BorderStyle.NONE, size: 0 },
+          left: { style: BorderStyle.NONE, size: 0 },
+          right: { style: BorderStyle.NONE, size: 0 },
+          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+          insideVertical: { style: BorderStyle.NONE, size: 0 },
+        },
+        rows: [
+          row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
+          row("ΑΛΕ", aleValue),
+          row(
+            "ΤΟΜΕΑΣ",
+            "Υπο-Πρόγραμμα Κρατικής αρωγής και αποκατάστασης επιπτώσεων φυσικών καταστροφών",
+          ),
+        ],
+      }),
+      new Paragraph({ children: [new TextRun({ text: "" })] }),
+    ];
   }
 
   /**
-   * Create final request paragraph
+   * Final request paragraph
    */
   private static createFinalRequest(): Paragraph {
     return new Paragraph({
@@ -931,19 +835,17 @@ export class DocumentGenerator {
   }
 
   /**
-   * Create document header with two-column layout (matches template exactly)
+   * Document header with two-column layout
    */
-
   private static async createDocumentHeader(
     documentData: DocumentData,
     unitDetails: UnitDetails | null | undefined,
   ): Promise<Table> {
     if (!documentData) throw new Error("Document data is required");
 
-    // ---- constants & helpers
-    const NONE = { style: BorderStyle.NONE };
-    
-    // Table borders: can include insideHorizontal/insideVertical
+    const NONE = { style: BorderStyle.NONE, size: 0 };
+
+    // Table borders may include inside*
     const TABLE_NO_BORDERS = {
       top: NONE,
       bottom: NONE,
@@ -952,29 +854,24 @@ export class DocumentGenerator {
       insideHorizontal: NONE,
       insideVertical: NONE,
     };
-    
-    // Cell borders: **must NOT** include inside*
+
+    // Cell borders must NOT include inside*
     const CELL_NO_BORDERS = {
       top: NONE,
       bottom: NONE,
       left: NONE,
       right: NONE,
     };
-    
-    const NO_MARGINS = { top: 0, bottom: 0, left: 0, right: 0 };
 
-    // A4 usable content width with Word's default margins = 10466 twips.
-    // A4 page width (11906) minus left margin (720) and right margin (720)
     const PAGE_CONTENT_WIDTH = 10466;
 
-    const pctTwips = (n: number) => Math.round((PAGE_CONTENT_WIDTH * n) / 100);
+    // exact split: avoid rounding drift
+    const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6); // 60%
+    const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH; // remainder
 
-    const LEFT_COL_WIDTH = pctTwips(60);
-    const RIGHT_COL_WIDTH = pctTwips(40);
-
-    // Right-inner "ΠΡΟΣ:" table column widths (20% / 80% of right column)
+    // Right-inner table (20% / 80% of the right column)
     const PROS_LABEL_COL = Math.round(RIGHT_COL_WIDTH * 0.2);
-    const PROS_TEXT_COL = Math.round(RIGHT_COL_WIDTH * 0.8);
+    const PROS_TEXT_COL = RIGHT_COL_WIDTH - PROS_LABEL_COL;
 
     const p = (text: string, opts?: { bold?: boolean }) =>
       new Paragraph({
@@ -993,22 +890,6 @@ export class DocumentGenerator {
     const contact = (label: string, value: string) =>
       DocumentUtilities.createContactDetail(label, value);
 
-    // Cell helper using DXA (twips), not percentages
-    const cellDXA = (
-      children: (Paragraph | Table)[],
-      widthTwips?: number,
-      valign: typeof VerticalAlign.TOP = VerticalAlign.TOP,
-    ) =>
-      new TableCell({
-        width: { size: widthTwips ? Math.round((widthTwips / PAGE_CONTENT_WIDTH) * 100) : 100, type: WidthType.PERCENTAGE },
-        verticalAlign: valign,
-        borders: CELL_NO_BORDERS, // Cell borders must NOT include inside*
-        children,
-      });
-
-    const row = (cells: TableCell[]) => new TableRow({ children: cells });
-
-    // ---- data
     const userInfo = {
       name: documentData.generated_by?.name || documentData.user_name || "",
       department:
@@ -1021,7 +902,7 @@ export class DocumentGenerator {
 
     const address = unitDetails?.address ?? { address: "", tk: "", region: "" };
 
-    // ---- left column (logo + org + contacts)
+    // left column content
     const leftCol: Paragraph[] = [
       new Paragraph({
         children: [
@@ -1050,67 +931,86 @@ export class DocumentGenerator {
       contact("Email", unitDetails?.email || ""),
     ];
 
-    // ---- right column ("ΠΡΟΣ:" block)
-    const toLines = [
-      "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-      "Διεύθυνση Οικονομικής Διαχείρισης",
-      "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-      "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-      "Δημοκρίτου 2",
-      "151 23 Μαρούσι",
-    ];
+    // right column: inner table with "ΠΡΟΣ:"
+    // Make inner width slightly smaller than parent cell to avoid rare nested-table repair
+    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.FIXED, // ✅ fixed layout to avoid autofit collapse
-      width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA }, // ✅ absolute width matching parent cell
-      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
-      borders: TABLE_NO_BORDERS, // Table borders may have inside*
+      layout: TableLayoutType.AUTOFIT,
+      width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL - 10], // sum equals RIGHT_INNER_WIDTH
+      borders: TABLE_NO_BORDERS,
       rows: [
-        row([
-          cellDXA(
-            [
-              new Paragraph({
-                children: [
-                  new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
-                ],
-                spacing: { before: 2200 },
-                alignment: AlignmentType.LEFT,
-              }),
-            ],
-            PROS_LABEL_COL,
-          ),
-          cellDXA(
-            [
-              new Paragraph({
-                children: [new TextRun({ text: toLines[0], size: 20 })],
-                spacing: { before: 2200 },
-                alignment: AlignmentType.LEFT,
-              }),
-              ...toLines.slice(1).map(
-                (t) =>
-                  new Paragraph({
-                    children: [new TextRun({ text: t, size: 20 })],
-                    alignment: AlignmentType.LEFT,
-                  }),
-              ),
-            ],
-            PROS_TEXT_COL,
-          ),
-        ]),
+        new TableRow({
+          children: [
+            new TableCell({
+              borders: CELL_NO_BORDERS,
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 }),
+                  ],
+                  spacing: { before: 2200 },
+                  alignment: AlignmentType.LEFT,
+                }),
+              ],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+            new TableCell({
+              borders: CELL_NO_BORDERS,
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+                      size: 20,
+                    }),
+                  ],
+                  spacing: { before: 2200 },
+                  alignment: AlignmentType.LEFT,
+                }),
+                ...[
+                  "Διεύθυνση Οικονομικής Διαχείρισης",
+                  "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+                  "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+                  "Δημοκρίτου 2",
+                  "151 23 Μαρούσι",
+                ].map(
+                  (t) =>
+                    new Paragraph({
+                      children: [new TextRun({ text: t, size: 20 })],
+                      alignment: AlignmentType.LEFT,
+                    }),
+                ),
+              ],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
       ],
     });
 
-    // ---- whole header table
+    // whole header table
     return new Table({
-      layout: TableLayoutType.FIXED, // ✅ fixed layout across the whole header
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA }, // ✅ absolute page content width
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
-      borders: TABLE_NO_BORDERS, // Table borders here
+      borders: TABLE_NO_BORDERS,
       rows: [
-        row([
-          cellDXA(leftCol, LEFT_COL_WIDTH, VerticalAlign.TOP),
-          cellDXA([rightInnerTable], RIGHT_COL_WIDTH, VerticalAlign.TOP),
-        ]),
+        new TableRow({
+          children: [
+            new TableCell({
+              borders: CELL_NO_BORDERS,
+              children: leftCol,
+              verticalAlign: VerticalAlign.TOP,
+            }),
+            new TableCell({
+              borders: CELL_NO_BORDERS,
+              children: [rightInnerTable],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
       ],
     });
   }
