@@ -953,7 +953,7 @@ export class DocumentGenerator {
     const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.AUTOFIT,
+      layout: TableLayoutType.FIXED,
       width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
       columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL - 10], // sum equals RIGHT_INNER_WIDTH
       borders: TABLE_NO_BORDERS,
