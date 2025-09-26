@@ -924,17 +924,21 @@ export class DocumentGenerator {
       boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
       boldP((() => {
-        // Get tmima from unitDetails.parts if available
-        if (unitDetails?.parts && typeof unitDetails.parts === 'object') {
-          // Find the first part that has a tmima value
+        // Get tmima from the specific part that matches the chosen signature
+        if (unitDetails?.parts && typeof unitDetails.parts === 'object' && documentData.director_signature) {
+          const signatureName = documentData.director_signature.name;
+          
+          // Find the part where the manager name matches the chosen signature
           const partsEntries = Object.entries(unitDetails.parts);
           for (const [key, value] of partsEntries) {
-            if (value && typeof value === 'object' && value.tmima) {
+            if (value && typeof value === 'object' && 
+                value.manager && value.manager.name === signatureName &&
+                value.tmima) {
               return value.tmima;
             }
           }
         }
-        // Fallback to original department if no tmima found
+        // Fallback to original department if no matching tmima found
         return userInfo.department;
       })()),
       contact("Ταχ. Δ/νση", address.address),
