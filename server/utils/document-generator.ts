@@ -527,6 +527,10 @@ export class DocumentGenerator {
       }),
     );
 
+    // DEBUG: Log table structure for Word repair debugging
+    console.log(`[TABLE DEBUG] Payment table - Columns: ${columns.length}, ColumnWidths: [${columnWidths.join(', ')}], Total Width: ${columnWidths.reduce((a, b) => a + b, 0)}, Expected: ${TABLE_WIDTH_DXA}`);
+    console.log(`[TABLE DEBUG] Payment table - Rows: ${rows.length}`);
+
     // final table
     return new Table({
       layout: TableLayoutType.FIXED,
@@ -923,24 +927,34 @@ export class DocumentGenerator {
       ),
       boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
-      boldP((() => {
-        // Get tmima from the specific part that matches the chosen signature
-        if (unitDetails?.parts && typeof unitDetails.parts === 'object' && documentData.director_signature) {
-          const signatureName = documentData.director_signature.name;
-          
-          // Find the part where the manager name matches the chosen signature
-          const partsEntries = Object.entries(unitDetails.parts);
-          for (const [key, value] of partsEntries) {
-            if (value && typeof value === 'object' && 
-                value.manager && value.manager.name === signatureName &&
-                value.tmima) {
-              return value.tmima;
+      boldP(
+        (() => {
+          // Get tmima from the specific part that matches the chosen signature
+          if (
+            unitDetails?.parts &&
+            typeof unitDetails.parts === "object" &&
+            documentData.director_signature
+          ) {
+            const signatureTitle = documentData.director_signature.title;
+
+            // Find the part where the manager name matches the chosen signature
+            const partsEntries = Object.entries(unitDetails.parts);
+            for (const [key, value] of partsEntries) {
+              if (
+                value &&
+                typeof value === "object" &&
+                value.manager &&
+                value.manager.title === signatureTitle &&
+                value.tmima
+              ) {
+                return value.tmima;
+              }
             }
           }
-        }
-        // Fallback to original department if no matching tmima found
-        return userInfo.department;
-      })()),
+          // Fallback to original department if no matching tmima found
+          return userInfo.department;
+        })(),
+      ),
       contact("Ταχ. Δ/νση", address.address),
       contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
       contact("Πληροφορίες", userInfo.name),
@@ -1006,6 +1020,10 @@ export class DocumentGenerator {
         }),
       ],
     });
+
+    // DEBUG: Log header table structure for Word repair debugging
+    console.log(`[TABLE DEBUG] Header table - ColumnWidths: [${LEFT_COL_WIDTH}, ${RIGHT_COL_WIDTH}], Total: ${LEFT_COL_WIDTH + RIGHT_COL_WIDTH}, Expected: ${PAGE_CONTENT_WIDTH}`);
+    console.log(`[TABLE DEBUG] Header table - Inner table width: ${RIGHT_INNER_WIDTH}, Inner columnWidths: [${PROS_LABEL_COL}, ${PROS_TEXT_COL - 10}], Inner total: ${PROS_LABEL_COL + (PROS_TEXT_COL - 10)}`);
 
     // whole header table
     return new Table({
