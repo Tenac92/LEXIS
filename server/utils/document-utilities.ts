@@ -100,7 +100,79 @@ export class DocumentUtilities {
   };
   public static readonly DOCUMENT_MARGINS = this.DEFAULT_MARGINS;
 
-  // BorderFactory removed - caused Word repair issues
+  // =============================================================================
+  // UNIFIED BORDER SYSTEM - CONSISTENT ACROSS ALL TABLES
+  // =============================================================================
+
+  /**
+   * Centralized border definitions to ensure consistency and prevent Word repair issues.
+   * All sizes are specified to avoid mixing table-level and cell-level semantics.
+   */
+  public static readonly BORDERS = {
+    // Subject table borders (size 4 - thick visible borders)
+    SUBJECT_TABLE: {
+      top: { style: BorderStyle.SINGLE, size: 4 },
+      bottom: { style: BorderStyle.SINGLE, size: 4 },
+      left: { style: BorderStyle.SINGLE, size: 4 },
+      right: { style: BorderStyle.SINGLE, size: 4 },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+      insideVertical: { style: BorderStyle.NONE, size: 0 },
+    },
+    SUBJECT_CELL: {
+      top: { style: BorderStyle.SINGLE, size: 4 },
+      bottom: { style: BorderStyle.SINGLE, size: 4 },
+      left: { style: BorderStyle.SINGLE, size: 4 },
+      right: { style: BorderStyle.SINGLE, size: 4 },
+    },
+
+    // Payment table borders (size 1 - standard visible borders)
+    PAYMENT_TABLE: {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+    },
+    PAYMENT_CELL: {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+    },
+
+    // Standard borders for secondary documents (size 1)
+    STANDARD_TABLE: {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+    },
+    STANDARD_CELL: {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+    },
+
+    // No borders (for layout tables)
+    NO_BORDER_TABLE: {
+      top: { style: BorderStyle.NONE, size: 0 },
+      bottom: { style: BorderStyle.NONE, size: 0 },
+      left: { style: BorderStyle.NONE, size: 0 },
+      right: { style: BorderStyle.NONE, size: 0 },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+      insideVertical: { style: BorderStyle.NONE, size: 0 },
+    },
+    NO_BORDER_CELL: {
+      top: { style: BorderStyle.NONE, size: 0 },
+      bottom: { style: BorderStyle.NONE, size: 0 },
+      left: { style: BorderStyle.NONE, size: 0 },
+      right: { style: BorderStyle.NONE, size: 0 },
+    },
+  } as const;
 
   // =============================================================================
   // ASSET MANAGEMENT
