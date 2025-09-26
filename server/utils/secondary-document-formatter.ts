@@ -69,8 +69,14 @@ export class SecondaryDocumentFormatter {
     headerOrder.push(typeCol, "ΠΡΑΞΗ", "ΠΟΣΟ (€)");
 
     // Build a clean header using the intended order
-    // Use BorderFactory for consistent border management
-    const cellBorder = DocumentUtilities.BorderFactory.cell.single;
+    // Simple working cell borders 
+    const border = { style: BorderStyle.SINGLE, size: 1 };
+    const cellBorder = {
+      top: border,
+      bottom: border,
+      left: border,
+      right: border,
+    };
 
     const mkCentered = (text: string, bold = false) =>
       new Paragraph({
@@ -223,7 +229,14 @@ export class SecondaryDocumentFormatter {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_DXA, type: WidthType.DXA },
       columnWidths: grid,
-      borders: DocumentUtilities.BorderFactory.table.single,
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 1 },
+        left: { style: BorderStyle.SINGLE, size: 1 },
+        right: { style: BorderStyle.SINGLE, size: 1 },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
+      },
       rows,
     });
   }
@@ -307,17 +320,34 @@ export class SecondaryDocumentFormatter {
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
       columnWidths: [5233, 5233], // Two equal columns for signature
-      borders: DocumentUtilities.BorderFactory.table.none,
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
               children: leftColumnParagraphs,
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
             }),
             new TableCell({
               children: rightColumnParagraphs,
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
             }),
           ],
         }),

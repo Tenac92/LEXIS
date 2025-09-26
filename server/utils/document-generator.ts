@@ -245,13 +245,25 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       columnWidths: [PAGE_CONTENT_WIDTH],
-      borders: DocumentUtilities.BorderFactory.table.single,
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
               // no per-cell width here
-              borders: DocumentUtilities.BorderFactory.cell.single,
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
               shading: {
                 fill: "C0C0C0",
                 type: ShadingType.CLEAR,
@@ -350,9 +362,19 @@ export class DocumentGenerator {
 
     // helpers  
     const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
-    // Use proper border factory instead of mixed NB/BORDER constants
-    const CELL_BORDER = DocumentUtilities.BorderFactory.cell.single;
-    const CELL_NO_BORDER = DocumentUtilities.BorderFactory.cell.none;
+    // Simple working borders for payment table
+    const CELL_BORDER = {
+      top: { style: BorderStyle.SINGLE, size: 1 },
+      bottom: { style: BorderStyle.SINGLE, size: 1 },
+      left: { style: BorderStyle.SINGLE, size: 1 },
+      right: { style: BorderStyle.SINGLE, size: 1 },
+    };
+    const CELL_NO_BORDER = {
+      top: { style: BorderStyle.NONE, size: 1 },
+      bottom: { style: BorderStyle.NONE, size: 1 },
+      left: { style: BorderStyle.NONE, size: 1 },
+      right: { style: BorderStyle.NONE, size: 1 },
+    };
 
     const safeAmount = (n: unknown) => {
       const v = typeof n === "number" ? n : Number(n);
@@ -481,12 +503,22 @@ export class DocumentGenerator {
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex)
             return new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.single,
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
               children: [new Paragraph({ children: [new TextRun("")] })],
             });
           if (idx === totalLabelCellIndex)
             return new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.single,
+              borders: {
+                top: { style: BorderStyle.SINGLE, size: 4 },
+                bottom: { style: BorderStyle.SINGLE, size: 4 },
+                left: { style: BorderStyle.SINGLE, size: 4 },
+                right: { style: BorderStyle.SINGLE, size: 4 },
+              },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -522,7 +554,14 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
       columnWidths, // exact grid
-      borders: DocumentUtilities.BorderFactory.table.single,
+      borders: {
+        top: { style: BorderStyle.NONE, size: 1 },
+        bottom: { style: BorderStyle.NONE, size: 1 },
+        left: { style: BorderStyle.NONE, size: 1 },
+        right: { style: BorderStyle.NONE, size: 1 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 1 },
+        insideVertical: { style: BorderStyle.NONE, size: 1 },
+      },
       rows,
     });
   }
@@ -684,17 +723,34 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
       columnWidths: [6500, 3966],
-      borders: DocumentUtilities.BorderFactory.table.none,
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
@@ -777,7 +833,14 @@ export class DocumentGenerator {
         layout: TableLayoutType.FIXED,
         width: { size: 10466, type: WidthType.DXA },
         columnWidths: [1574, 8892], // 15% / 85% exact
-        borders: DocumentUtilities.BorderFactory.table.none,
+        borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
         rows: [
           row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
           row("ΑΛΕ", aleValue),
@@ -940,12 +1003,24 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
       columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL - 10], // sum equals RIGHT_INNER_WIDTH
-      borders: DocumentUtilities.BorderFactory.table.none,
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: [
                 new Paragraph({
                   children: [
@@ -958,7 +1033,12 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: [
                 new Paragraph({
                   children: [
@@ -996,17 +1076,34 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
-      borders: DocumentUtilities.BorderFactory.table.none,
+      borders: {
+        top: { style: BorderStyle.NONE },
+        bottom: { style: BorderStyle.NONE },
+        left: { style: BorderStyle.NONE },
+        right: { style: BorderStyle.NONE },
+        insideHorizontal: { style: BorderStyle.NONE },
+        insideVertical: { style: BorderStyle.NONE },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: leftCol,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: DocumentUtilities.BorderFactory.cell.none,
+              borders: {
+                top: { style: BorderStyle.NONE },
+                bottom: { style: BorderStyle.NONE },
+                left: { style: BorderStyle.NONE },
+                right: { style: BorderStyle.NONE },
+              },
               children: [rightInnerTable],
               verticalAlign: VerticalAlign.TOP,
             }),
