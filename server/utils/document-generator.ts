@@ -397,7 +397,6 @@ export class DocumentGenerator {
 
     const mkHeaderRow = () =>
       new TableRow({
-        tableHeader: true,
         children: columns.map((c: string) =>
           cell(c, {
             borders: BORDER,
@@ -526,10 +525,6 @@ export class DocumentGenerator {
         }),
       }),
     );
-
-    // DEBUG: Log table structure for Word repair debugging
-    console.log(`[TABLE DEBUG] Payment table - Columns: ${columns.length}, ColumnWidths: [${columnWidths.join(', ')}], Total Width: ${columnWidths.reduce((a, b) => a + b, 0)}, Expected: ${TABLE_WIDTH_DXA}`);
-    console.log(`[TABLE DEBUG] Payment table - Rows: ${rows.length}`);
 
     // final table
     return new Table({
@@ -1020,10 +1015,6 @@ export class DocumentGenerator {
         }),
       ],
     });
-
-    // DEBUG: Log header table structure for Word repair debugging
-    console.log(`[TABLE DEBUG] Header table - ColumnWidths: [${LEFT_COL_WIDTH}, ${RIGHT_COL_WIDTH}], Total: ${LEFT_COL_WIDTH + RIGHT_COL_WIDTH}, Expected: ${PAGE_CONTENT_WIDTH}`);
-    console.log(`[TABLE DEBUG] Header table - Inner table width: ${RIGHT_INNER_WIDTH}, Inner columnWidths: [${PROS_LABEL_COL}, ${PROS_TEXT_COL - 10}], Inner total: ${PROS_LABEL_COL + (PROS_TEXT_COL - 10)}`);
 
     // whole header table
     return new Table({

@@ -101,7 +101,7 @@ export class SecondaryDocumentFormatter {
     );
 
     const rows: TableRow[] = [
-      new TableRow({ tableHeader: true, children: headerCells }),
+      new TableRow({ children: headerCells }),
     ];
 
     // Equal DXA grid (last col absorbs remainder)
@@ -223,10 +223,6 @@ export class SecondaryDocumentFormatter {
     });
 
     rows.push(new TableRow({ children: totalChildren }));
-
-    // DEBUG: Log secondary table structure for Word repair debugging
-    console.log(`[TABLE DEBUG] Secondary table - Columns: ${headerOrder.length}, ColumnWidths: [${grid.join(', ')}], Total Width: ${grid.reduce((a, b) => a + b, 0)}, Expected: ${PAGE_DXA}`);
-    console.log(`[TABLE DEBUG] Secondary table - Rows: ${rows.length}`);
 
     return new Table({
       layout: TableLayoutType.FIXED,
