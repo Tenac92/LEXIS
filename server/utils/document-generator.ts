@@ -923,7 +923,20 @@ export class DocumentGenerator {
       ),
       boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
       boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
-      boldP(userInfo.department),
+      boldP((() => {
+        // Get tmima from unitDetails.parts if available
+        if (unitDetails?.parts && typeof unitDetails.parts === 'object') {
+          // Find the first part that has a tmima value
+          const partsEntries = Object.entries(unitDetails.parts);
+          for (const [key, value] of partsEntries) {
+            if (value && typeof value === 'object' && value.tmima) {
+              return value.tmima;
+            }
+          }
+        }
+        // Fallback to original department if no tmima found
+        return userInfo.department;
+      })()),
       contact("Ταχ. Δ/νση", address.address),
       contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
       contact("Πληροφορίες", userInfo.name),

@@ -31,6 +31,18 @@ export interface UnitDetails {
     tk: string;
     region: string;
   };
+  parts?: {
+    [key: string]: {
+      tmima?: string;
+      manager?: {
+        name: string;
+        order?: string;
+        title?: string;
+        degree?: string;
+      };
+      [key: string]: any;
+    };
+  };
 }
 
 export interface DocumentData {
