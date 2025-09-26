@@ -348,20 +348,11 @@ export class DocumentGenerator {
         : TABLE_WIDTH_DXA - base * (columns.length - 1),
     );
 
-    // helpers
+    // helpers  
     const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
-    const BORDER = {
-      top: { style: BorderStyle.SINGLE, size: 1 },
-      bottom: { style: BorderStyle.SINGLE, size: 1 },
-      left: { style: BorderStyle.SINGLE, size: 1 },
-      right: { style: BorderStyle.SINGLE, size: 1 },
-    } as const;
-    const NB = {
-      top: { style: BorderStyle.NONE, size: 0 },
-      bottom: { style: BorderStyle.NONE, size: 0 },
-      left: { style: BorderStyle.NONE, size: 0 },
-      right: { style: BorderStyle.NONE, size: 0 },
-    } as const;
+    // Use proper border factory instead of mixed NB/BORDER constants
+    const CELL_BORDER = DocumentUtilities.BorderFactory.cell.single;
+    const CELL_NO_BORDER = DocumentUtilities.BorderFactory.cell.none;
 
     const safeAmount = (n: unknown) => {
       const v = typeof n === "number" ? n : Number(n);
@@ -372,14 +363,14 @@ export class DocumentGenerator {
       text: string,
       opts?: {
         bold?: boolean;
-        borders?: typeof BORDER | typeof NB;
+        borders?: typeof CELL_BORDER | typeof CELL_NO_BORDER;
         vAlign?: typeof VerticalAlign.CENTER;
       },
     ) =>
       new TableCell({
         // no per-cell width; table grid drives widths
         verticalAlign: VerticalAlign.CENTER,
-        borders: opts?.borders ?? BORDER,
+        borders: opts?.borders ?? CELL_BORDER,
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -399,7 +390,7 @@ export class DocumentGenerator {
       new TableRow({
         children: columns.map((c: string) =>
           cell(c, {
-            borders: BORDER,
+            borders: CELL_BORDER,
             bold: true,
             vAlign: VerticalAlign.CENTER,
           }),
@@ -474,7 +465,7 @@ export class DocumentGenerator {
             height: { value: 360, rule: HeightRule.ATLEAST },
             children: columns.map((label: string) =>
               cell(cMap[label] ?? "", {
-                borders: BORDER,
+                borders: CELL_BORDER,
                 vAlign: VerticalAlign.CENTER,
               }),
             ),
@@ -490,12 +481,12 @@ export class DocumentGenerator {
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex)
             return new TableCell({
-              borders: NB,
+              borders: CELL_NO_BORDER,
               children: [new Paragraph({ children: [new TextRun("")] })],
             });
           if (idx === totalLabelCellIndex)
             return new TableCell({
-              borders: NB,
+              borders: CELL_NO_BORDER,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -507,7 +498,7 @@ export class DocumentGenerator {
               ],
             });
           return new TableCell({
-            borders: NB,
+            borders: CELL_NO_BORDER,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -531,14 +522,7 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
       columnWidths, // exact grid
-      borders: {
-        top: { style: BorderStyle.NONE, size: 0 },
-        bottom: { style: BorderStyle.NONE, size: 0 },
-        left: { style: BorderStyle.NONE, size: 0 },
-        right: { style: BorderStyle.NONE, size: 0 },
-        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-        insideVertical: { style: BorderStyle.NONE, size: 0 },
-      },
+      borders: DocumentUtilities.BorderFactory.table.none,
       rows,
     });
   }

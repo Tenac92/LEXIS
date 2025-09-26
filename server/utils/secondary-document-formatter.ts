@@ -228,14 +228,7 @@ export class SecondaryDocumentFormatter {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_DXA, type: WidthType.DXA },
       columnWidths: grid,
-      borders: {
-        top: { style: BorderStyle.SINGLE, size: 1 },
-        bottom: { style: BorderStyle.SINGLE, size: 1 },
-        left: { style: BorderStyle.SINGLE, size: 1 },
-        right: { style: BorderStyle.SINGLE, size: 1 },
-        insideHorizontal: { style: BorderStyle.SINGLE, size: 1 },
-        insideVertical: { style: BorderStyle.SINGLE, size: 1 },
-      },
+      borders: DocumentUtilities.BorderFactory.table.single,
       rows,
     });
   }
