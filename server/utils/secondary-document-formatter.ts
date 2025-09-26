@@ -69,13 +69,8 @@ export class SecondaryDocumentFormatter {
     headerOrder.push(typeCol, "ΠΡΑΞΗ", "ΠΟΣΟ (€)");
 
     // Build a clean header using the intended order
-    const border = { style: BorderStyle.SINGLE, size: 1 } as const;
-    const cellBorder = {
-      top: border,
-      bottom: border,
-      left: border,
-      right: border,
-    } as const;
+    // Use BorderFactory for consistent border management
+    const cellBorder = DocumentUtilities.BorderFactory.cell.single;
 
     const mkCentered = (text: string, bold = false) =>
       new Paragraph({
@@ -312,34 +307,17 @@ export class SecondaryDocumentFormatter {
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
       columnWidths: [5233, 5233], // Two equal columns for signature
-      borders: {
-        top: { style: BorderStyle.NONE },
-        bottom: { style: BorderStyle.NONE },
-        left: { style: BorderStyle.NONE },
-        right: { style: BorderStyle.NONE },
-        insideHorizontal: { style: BorderStyle.NONE },
-        insideVertical: { style: BorderStyle.NONE },
-      },
+      borders: DocumentUtilities.BorderFactory.table.none,
       rows: [
         new TableRow({
           children: [
             new TableCell({
               children: leftColumnParagraphs,
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
+              borders: DocumentUtilities.BorderFactory.cell.none,
             }),
             new TableCell({
               children: rightColumnParagraphs,
-              borders: {
-                top: { style: BorderStyle.NONE },
-                bottom: { style: BorderStyle.NONE },
-                left: { style: BorderStyle.NONE },
-                right: { style: BorderStyle.NONE },
-              },
+              borders: DocumentUtilities.BorderFactory.cell.none,
             }),
           ],
         }),

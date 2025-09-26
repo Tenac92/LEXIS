@@ -245,13 +245,13 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       columnWidths: [PAGE_CONTENT_WIDTH],
-      borders: TABLE_BORDERS,
+      borders: DocumentUtilities.BorderFactory.table.single,
       rows: [
         new TableRow({
           children: [
             new TableCell({
               // no per-cell width here
-              borders: CELL_BORDERS,
+              borders: DocumentUtilities.BorderFactory.cell.single,
               shading: {
                 fill: "C0C0C0",
                 type: ShadingType.CLEAR,
@@ -481,12 +481,12 @@ export class DocumentGenerator {
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex)
             return new TableCell({
-              borders: CELL_NO_BORDER,
+              borders: DocumentUtilities.BorderFactory.cell.single,
               children: [new Paragraph({ children: [new TextRun("")] })],
             });
           if (idx === totalLabelCellIndex)
             return new TableCell({
-              borders: CELL_NO_BORDER,
+              borders: DocumentUtilities.BorderFactory.cell.single,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -498,7 +498,7 @@ export class DocumentGenerator {
               ],
             });
           return new TableCell({
-            borders: CELL_NO_BORDER,
+            borders: DocumentUtilities.BorderFactory.cell.single,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -522,7 +522,7 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
       columnWidths, // exact grid
-      borders: DocumentUtilities.BorderFactory.table.none,
+      borders: DocumentUtilities.BorderFactory.table.single,
       rows,
     });
   }
@@ -684,27 +684,17 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
       columnWidths: [6500, 3966],
-      borders: NB,
+      borders: DocumentUtilities.BorderFactory.table.none,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: {
-                top: NB.top,
-                bottom: NB.bottom,
-                left: NB.left,
-                right: NB.right,
-              },
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: {
-                top: NB.top,
-                bottom: NB.bottom,
-                left: NB.left,
-                right: NB.right,
-              },
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
@@ -787,14 +777,7 @@ export class DocumentGenerator {
         layout: TableLayoutType.FIXED,
         width: { size: 10466, type: WidthType.DXA },
         columnWidths: [1574, 8892], // 15% / 85% exact
-        borders: {
-          top: { style: BorderStyle.NONE, size: 0 },
-          bottom: { style: BorderStyle.NONE, size: 0 },
-          left: { style: BorderStyle.NONE, size: 0 },
-          right: { style: BorderStyle.NONE, size: 0 },
-          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-          insideVertical: { style: BorderStyle.NONE, size: 0 },
-        },
+        borders: DocumentUtilities.BorderFactory.table.none,
         rows: [
           row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
           row("ΑΛΕ", aleValue),
@@ -957,12 +940,12 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
       columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL - 10], // sum equals RIGHT_INNER_WIDTH
-      borders: TABLE_NO_BORDERS,
+      borders: DocumentUtilities.BorderFactory.table.none,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: CELL_NO_BORDERS,
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: [
                 new Paragraph({
                   children: [
@@ -975,7 +958,7 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: CELL_NO_BORDERS,
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: [
                 new Paragraph({
                   children: [
@@ -1013,17 +996,17 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
-      borders: TABLE_NO_BORDERS,
+      borders: DocumentUtilities.BorderFactory.table.none,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: CELL_NO_BORDERS,
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: leftCol,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: CELL_NO_BORDERS,
+              borders: DocumentUtilities.BorderFactory.cell.none,
               children: [rightInnerTable],
               verticalAlign: VerticalAlign.TOP,
             }),
