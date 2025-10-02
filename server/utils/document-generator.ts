@@ -33,6 +33,29 @@ import { createLogger } from "./logger";
 
 const logger = createLogger("DocumentGenerator");
 
+/* -------------------------------------------------------------------------- */
+/*                               TEXT SANITIZER                               */
+/* -------------------------------------------------------------------------- */
+
+// Strips XML-illegal control chars and U+FFFD; normalizes dashes and spaces.
+const cleanText = (input: unknown): string => {
+  return String(input ?? "")
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD]/g, "") // control + �
+    .replace(/[\u2012-\u2015]/g, "-") // en/em/fancy dashes -> hyphen
+    .replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, " ") // NBSP & space variants -> space
+    .trim();
+};
+
+// Convenience wrapper for TextRun that always sanitizes text.
+type TRInit = ConstructorParameters<typeof TextRun>[0];
+const t = (text: unknown, opts: Partial<TRInit> = {}) =>
+  new TextRun({ text: cleanText(text), ...(opts as TRInit) });
+
+const safeCurrency = (n: number) =>
+  cleanText(DocumentUtilities.formatCurrency(n)).replace(/\u00A0/g, " ");
+
+/* -------------------------------------------------------------------------- */
+
 export class DocumentGenerator {
   /**
    * Get expenditure type configuration
@@ -153,77 +176,73 @@ export class DocumentGenerator {
   }
 
   /**
-   * Subject (boxed, shaded)
+   * Subject (boxed, shaded) — all borders inlined
    */
-    private static createDocumentSubject(
-      documentData: DocumentData,
-      unitDetails: UnitDetails | null | undefined,
-    ): Table {
-      const { expenditureType, config } = this.getExpenditureConfig(documentData);
-      const documentTitle = config.documentTitle;
+  private static createDocumentSubject(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Table {
+    const { expenditureType, config } = this.getExpenditureConfig(documentData);
+    const documentTitle = config.documentTitle;
 
-      const subjectText = [
-        { text: "ΘΕΜΑ:", bold: true, italics: true, color: "000000" },
-        {
-          text: ` ${documentTitle} ${
-            expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-              ? unitDetails?.unit_name?.prop || "τη"
-              : unitDetails?.unit_name?.prop || "της"
-          } ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
-          italics: true,
-          bold: true,
-          color: "000000",
-        },
-      ];
+    const subjectText = [
+      { text: "ΘΕΜΑ:", bold: true, italics: true, color: "000000" },
+      {
+        text: ` ${documentTitle} ${
+          expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+            ? unitDetails?.unit_name?.prop || "τη"
+            : unitDetails?.unit_name?.prop || "της"
+        } ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
+        italics: true,
+        bold: true,
+        color: "000000",
+      },
+    ];
 
-      const PAGE_CONTENT_WIDTH = 10466;
+    const PAGE_CONTENT_WIDTH = 10466;
 
-      return new Table({
-        layout: TableLayoutType.FIXED,
-        width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-        columnWidths: [PAGE_CONTENT_WIDTH],
-        borders: {
-          top: { style: BorderStyle.SINGLE, size: 4 },
-          bottom: { style: BorderStyle.SINGLE, size: 4 },
-          left: { style: BorderStyle.SINGLE, size: 4 },
-          right: { style: BorderStyle.SINGLE, size: 4 },
-          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-          insideVertical: { style: BorderStyle.NONE, size: 0 },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                borders: {
-                  top: { style: BorderStyle.SINGLE, size: 4 },
-                  bottom: { style: BorderStyle.SINGLE, size: 4 },
-                  left: { style: BorderStyle.SINGLE, size: 4 },
-                  right: { style: BorderStyle.SINGLE, size: 4 },
-                },
-                shading: { fill: "C0C0C0", type: ShadingType.CLEAR, color: "auto" },
-                verticalAlign: VerticalAlign.CENTER,
-                children: [
-                  new Paragraph({
-                    children: subjectText.map(
-                      (part) =>
-                        new TextRun({
-                          text: part.text,
-                          bold: part.bold,
-                          italics: part.italics,
-                          color: part.color,
-                          size: DocumentUtilities.DEFAULT_FONT_SIZE,
-                          font: DocumentUtilities.DEFAULT_FONT,
-                        }),
-                    ),
-                    spacing: { after: 0 },
-                    alignment: AlignmentType.LEFT,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      });
+    return new Table({
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      columnWidths: [PAGE_CONTENT_WIDTH],
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 4 },
+        bottom: { style: BorderStyle.SINGLE, size: 4 },
+        left: { style: BorderStyle.SINGLE, size: 4 },
+        right: { style: BorderStyle.SINGLE, size: 4 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              shading: {
+                fill: "C0C0C0",
+                type: ShadingType.CLEAR,
+                color: "auto",
+              },
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  children: subjectText.map((part) =>
+                    t(part.text, {
+                      bold: part.bold,
+                      italics: part.italics,
+                      color: part.color,
+                      size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                      font: DocumentUtilities.DEFAULT_FONT,
+                    }),
+                  ),
+                  spacing: { after: 0 },
+                  alignment: AlignmentType.LEFT,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   /**
@@ -241,11 +260,13 @@ export class DocumentGenerator {
     paragraphs.push(
       new Paragraph({
         children: [
-          new TextRun({
-            text: `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name}`,
-            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-            font: DocumentUtilities.DEFAULT_FONT,
-          }),
+          t(
+            `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name}`,
+            {
+              size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+              font: DocumentUtilities.DEFAULT_FONT,
+            },
+          ),
         ],
         spacing: { after: 0 },
       }),
@@ -255,192 +276,179 @@ export class DocumentGenerator {
   }
 
   /**
-   * Payment table
+   * Payment table — all borders inlined
    */
-      private static createPaymentTable(
-        recipients: any[],
-        expenditureType: string,
-      ): Table {
-        const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
+  private static createPaymentTable(
+    recipients: any[],
+    expenditureType: string,
+  ): Table {
+    const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
 
-        if (!Array.isArray(columns) || columns.length === 0) {
-          return new Table({
-            layout: TableLayoutType.FIXED,
-            width: { size: 10466, type: WidthType.DXA },
-            columnWidths: [10466],
-            borders: {
-              top: { style: BorderStyle.SINGLE, size: 1 },
-              bottom: { style: BorderStyle.SINGLE, size: 1 },
-              left: { style: BorderStyle.SINGLE, size: 1 },
-              right: { style: BorderStyle.SINGLE, size: 1 },
-              insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-              insideVertical: { style: BorderStyle.NONE, size: 0 },
-            },
-            rows: [
-              new TableRow({
-                children: [
-                  new TableCell({
-                    borders: {
-                      top: { style: BorderStyle.SINGLE, size: 1 },
-                      bottom: { style: BorderStyle.SINGLE, size: 1 },
-                      left: { style: BorderStyle.SINGLE, size: 1 },
-                      right: { style: BorderStyle.SINGLE, size: 1 },
-                    },
-                    children: [new Paragraph({ children: [new TextRun(" ")] })],
-                  }),
-                ],
-              }),
-            ],
-          });
-        }
-
-        const TABLE_WIDTH_DXA = 10466;
-        const base = Math.floor(TABLE_WIDTH_DXA / columns.length);
-        const columnWidths: number[] = columns.map((_, i) =>
-          i < columns.length - 1 ? base : TABLE_WIDTH_DXA - base * (columns.length - 1),
-        );
-
-        const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
-
-        const safeAmount = (n: unknown) => {
-          const v = typeof n === "number" ? n : Number(n);
-          return Number.isFinite(v) ? v : 0;
-        };
-
-        const border4 = {
+    // Fallback: minimal table if config missing
+    if (!Array.isArray(columns) || columns.length === 0) {
+      return new Table({
+        layout: TableLayoutType.FIXED,
+        width: { size: 10466, type: WidthType.DXA },
+        columnWidths: [10466],
+        borders: {
           top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
           left: { style: BorderStyle.SINGLE, size: 1 },
           right: { style: BorderStyle.SINGLE, size: 1 },
-        };
-
-        const cell = (text: string, opts?: { bold?: boolean }) =>
-          new TableCell({
-            borders: border4,
-            verticalAlign: VerticalAlign.CENTER,
+          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+          insideVertical: { style: BorderStyle.NONE, size: 0 },
+        },
+        rows: [
+          new TableRow({
             children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                spacing: { after: 0 },
-                children: [
-                  new TextRun({
-                    text: (text ?? "").toString(),
-                    bold: opts?.bold ?? false,
-                    ...FONT,
-                  }),
-                ],
+              new TableCell({
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 1 },
+                  bottom: { style: BorderStyle.SINGLE, size: 1 },
+                  left: { style: BorderStyle.SINGLE, size: 1 },
+                  right: { style: BorderStyle.SINGLE, size: 1 },
+                },
+                children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
-          });
+          }),
+        ],
+      });
+    }
 
-        const mkHeaderRow = () =>
+    const TABLE_WIDTH_DXA = 10466;
+    const base = Math.floor(TABLE_WIDTH_DXA / columns.length);
+    const columnWidths: number[] = columns.map((_, i) =>
+      i < columns.length - 1
+        ? base
+        : TABLE_WIDTH_DXA - base * (columns.length - 1),
+    );
+
+    const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
+
+    const safeAmount = (n: unknown) => {
+      const v = typeof n === "number" ? n : Number(n);
+      return Number.isFinite(v) ? v : 0;
+    };
+
+    const makeCell = (text: string, bold = false) =>
+      new TableCell({
+        verticalAlign: VerticalAlign.CENTER,
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 0 },
+            children: [t((text ?? "").toString(), { bold, ...FONT })],
+          }),
+        ],
+      });
+
+    const mkHeaderRow = () =>
+      new TableRow({
+        children: columns.map((c: string) => makeCell(c, true)),
+      });
+
+    const typeSpecificValue = (
+      recipient: any,
+      installment: string | number,
+    ) => {
+      if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ")
+        return cleanText(recipient?.days?.toString?.() || "1");
+      if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
+        const q =
+          typeof installment === "string"
+            ? installment.replace("ΤΡΙΜΗΝΟ ", "")
+            : installment;
+        return q != null ? cleanText(String(q)) : "";
+      }
+      return installment != null ? cleanText(String(installment)) : "";
+    };
+
+    const formatFullName = (r: any) => {
+      const firstname = cleanText(r?.firstname);
+      const lastname = cleanText(r?.lastname);
+      const fathername = cleanText(r?.fathername);
+      return fathername
+        ? `${lastname} ${firstname} ΤΟΥ ${fathername}`
+        : `${lastname} ${firstname}`;
+    };
+
+    const formatAFM = (r: any) => cleanText(r?.afm);
+
+    const rows: TableRow[] = [mkHeaderRow()];
+    let totalAmount = 0;
+
+    (recipients || []).forEach((recipient: any, i: number) => {
+      const rowNumber = `${i + 1}.`;
+      const fullName = formatFullName(recipient);
+      const afm = formatAFM(recipient);
+
+      const installments: string[] =
+        Array.isArray(recipient?.installments) && recipient.installments.length
+          ? recipient.installments.map((x: any) => cleanText(x))
+          : recipient?.installment != null
+            ? [cleanText(recipient.installment)]
+            : ["ΕΦΑΠΑΞ"];
+
+      const installmentAmounts: Record<string, number> =
+        recipient?.installmentAmounts || {};
+
+      installments.forEach((inst) => {
+        const amount = safeAmount(
+          installmentAmounts[inst] ?? recipient?.amount ?? 0,
+        );
+        totalAmount += amount;
+
+        const cMap: Record<string, string> = {
+          "Α/Α": rowNumber,
+          ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
+          "Α.Φ.Μ.": afm,
+          ΔΟΣΗ: typeSpecificValue(recipient, inst),
+          ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
+          ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
+          ΤΡΙΜΗΝΟ: typeSpecificValue(recipient, inst),
+          "ΠΟΣΟ (€)": safeCurrency(amount),
+        };
+
+        rows.push(
           new TableRow({
-            children: columns.map((c: string) => cell(c, { bold: true })),
-          });
+            height: { value: 360, rule: HeightRule.ATLEAST },
+            children: columns.map((label: string) =>
+              makeCell(cMap[label] ?? "", false),
+            ),
+          }),
+        );
+      });
+    });
 
-        const typeSpecificValue = (recipient: any, installment: string | number) => {
-          if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ")
-            return recipient?.days?.toString?.() || "1";
-          if (expenditureType === "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ") {
-            const q =
-              typeof installment === "string"
-                ? installment.replace("ΤΡΙΜΗΝΟ ", "")
-                : installment;
-            return q != null ? String(q) : "";
-          }
-          return installment != null ? String(installment) : "";
-        };
-
-        const formatFullName = (r: any) => {
-          const firstname = (r?.firstname || "").trim();
-          const lastname = (r?.lastname || "").trim();
-          const fathername = r?.fathername?.trim();
-          return fathername
-            ? `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim()
-            : `${lastname} ${firstname}`.trim();
-        };
-
-        const formatAFM = (r: any) => (r?.afm != null ? String(r.afm) : "");
-
-        const rows: TableRow[] = [mkHeaderRow()];
-        let totalAmount = 0;
-
-        (recipients || []).forEach((recipient: any, i: number) => {
-          const rowNumber = `${i + 1}.`;
-          const fullName = formatFullName(recipient);
-          const afm = formatAFM(recipient);
-
-          const installments: string[] =
-            Array.isArray(recipient?.installments) && recipient.installments.length
-              ? recipient.installments.map((x: any) => String(x))
-              : recipient?.installment != null
-                ? [String(recipient.installment)]
-                : ["ΕΦΑΠΑΞ"];
-
-          const installmentAmounts: Record<string, number> =
-            recipient?.installmentAmounts || {};
-
-          installments.forEach((inst) => {
-            const amount = safeAmount(installmentAmounts[inst] ?? recipient?.amount ?? 0);
-            totalAmount += amount;
-
-            const cMap: Record<string, string> = {
-              "Α/Α": rowNumber,
-              ΟΝΟΜΑΤΕΠΩΝΥΜΟ: fullName,
-              "Α.Φ.Μ.": afm,
-              ΔΟΣΗ: typeSpecificValue(recipient, inst),
-              ΗΜΕΡΕΣ: typeSpecificValue(recipient, inst),
-              ΜΗΝΕΣ: typeSpecificValue(recipient, inst),
-              ΤΡΙΜΗΝΟ: typeSpecificValue(recipient, inst),
-              "ΠΟΣΟ (€)": DocumentUtilities.formatCurrency(amount),
-            };
-
-            rows.push(
-              new TableRow({
-                height: { value: 360, rule: HeightRule.ATLEAST },
-                children: columns.map((label: string) => cell(cMap[label] ?? "")),
-              }),
-            );
-          });
-        });
-
-    // Add total row
+    // Total row
     const totalLabelCellIndex = Math.max(0, columns.length - 2);
     rows.push(
       new TableRow({
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex) {
             return new TableCell({
-              borders: DocumentUtilities.BORDERS.PAYMENT_CELL,
-              children: [new Paragraph({ children: [new TextRun("")] })],
+              children: [new Paragraph({ children: [t("")] })],
             });
           }
           if (idx === totalLabelCellIndex) {
             return new TableCell({
-              borders: DocumentUtilities.BORDERS.PAYMENT_CELL,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
                   spacing: { after: 0 },
-                  children: [
-                    new TextRun({ text: "ΣΥΝΟΛΟ:", ...FONT, bold: true }),
-                  ],
+                  children: [t("ΣΥΝΟΛΟ:", { ...FONT, bold: true })],
                 }),
               ],
             });
           }
           return new TableCell({
-            borders: DocumentUtilities.BORDERS.PAYMENT_CELL,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 spacing: { after: 0 },
                 children: [
-                  new TextRun({
-                    text: DocumentUtilities.formatCurrency(totalAmount),
-                    ...FONT,
-                    bold: true,
-                  }),
+                  t(safeCurrency(totalAmount), { ...FONT, bold: true }),
                 ],
               }),
             ],
@@ -449,17 +457,17 @@ export class DocumentGenerator {
       }),
     );
 
+    // Final table (no table-level borders to avoid repair issues)
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
       columnWidths,
-      borders: DocumentUtilities.BORDERS.PAYMENT_TABLE,
       rows,
     });
   }
 
   /**
-   * Footer with signature
+   * Footer with signature — all borders inlined
    */
   private static createFooter(
     documentData: DocumentData,
@@ -471,8 +479,7 @@ export class DocumentGenerator {
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
-          new TextRun({
-            text: "ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)",
+          t("ΣΥΝΗΜΜΕΝΑ (Εντός κλειστού φακέλου)", {
             bold: true,
             underline: { type: UnderlineType.SINGLE },
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
@@ -483,15 +490,14 @@ export class DocumentGenerator {
     );
 
     const attachments = (documentData.attachments || [])
-      .map((item) => item.replace(/^\d+\-/, ""))
+      .map((item) => cleanText(item).replace(/^\d+\-/, ""))
       .filter(Boolean);
 
     attachments.forEach((att, i) =>
       leftColumnParagraphs.push(
         new Paragraph({
           children: [
-            new TextRun({
-              text: `${i + 1}. ${att}`,
+            t(`${i + 1}. ${att}`, {
               size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
               font: DocumentUtilities.DEFAULT_FONT,
             }),
@@ -501,16 +507,13 @@ export class DocumentGenerator {
       ),
     );
 
-    leftColumnParagraphs.push(
-      new Paragraph({ children: [new TextRun({ text: "" })] }),
-    );
+    leftColumnParagraphs.push(new Paragraph({ children: [t("")] }));
 
     // ΚΟΙΝΟΠΟΙΗΣΗ
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
-          new TextRun({
-            text: "ΚΟΙΝΟΠΟΙΗΣΗ",
+          t("ΚΟΙΝΟΠΟΙΗΣΗ", {
             bold: true,
             underline: { type: UnderlineType.SINGLE },
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
@@ -528,8 +531,7 @@ export class DocumentGenerator {
       leftColumnParagraphs.push(
         new Paragraph({
           children: [
-            new TextRun({
-              text: `${i + 1}. ${n}`,
+            t(`${i + 1}. ${n}`, {
               size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
               font: DocumentUtilities.DEFAULT_FONT,
             }),
@@ -539,16 +541,13 @@ export class DocumentGenerator {
       ),
     );
 
-    leftColumnParagraphs.push(
-      new Paragraph({ children: [new TextRun({ text: "" })] }),
-    );
+    leftColumnParagraphs.push(new Paragraph({ children: [t("")] }));
 
     // ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
-          new TextRun({
-            text: "ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ",
+          t("ΕΣΩΤΕΡΙΚΗ ΔΙΑΝΟΜΗ", {
             bold: true,
             underline: { type: UnderlineType.SINGLE },
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
@@ -561,8 +560,7 @@ export class DocumentGenerator {
     leftColumnParagraphs.push(
       new Paragraph({
         children: [
-          new TextRun({
-            text: "1. Χρονολογικό Αρχείο",
+          t("1. Χρονολογικό Αρχείο", {
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
@@ -578,8 +576,7 @@ export class DocumentGenerator {
           leftColumnParagraphs.push(
             new Paragraph({
               children: [
-                new TextRun({
-                  text: `${esdianCounter}. ${esdianItem.trim()}`,
+                t(`${esdianCounter}. ${cleanText(esdianItem)}`, {
                   size: DocumentUtilities.DEFAULT_FONT_SIZE - 4,
                   font: DocumentUtilities.DEFAULT_FONT,
                 }),
@@ -601,17 +598,34 @@ export class DocumentGenerator {
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
       columnWidths: [6500, 3966],
-      borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0 },
+        bottom: { style: BorderStyle.NONE, size: 0 },
+        left: { style: BorderStyle.NONE, size: 0 },
+        right: { style: BorderStyle.NONE, size: 0 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 },
+      },
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
+              borders: {
+                top: { style: BorderStyle.NONE, size: 0 },
+                bottom: { style: BorderStyle.NONE, size: 0 },
+                left: { style: BorderStyle.NONE, size: 0 },
+                right: { style: BorderStyle.NONE, size: 0 },
+              },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
+              borders: {
+                top: { style: BorderStyle.NONE, size: 0 },
+                bottom: { style: BorderStyle.NONE, size: 0 },
+                left: { style: BorderStyle.NONE, size: 0 },
+                right: { style: BorderStyle.NONE, size: 0 },
+              },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
@@ -642,9 +656,9 @@ export class DocumentGenerator {
           ];
 
     return texts.map(
-      (t) =>
+      (txt) =>
         new Paragraph({
-          children: [new TextRun({ text: t, ...baseOptions })],
+          children: [t(txt, baseOptions)],
           alignment: AlignmentType.JUSTIFIED,
           spacing: { after: 0 },
         }),
@@ -652,7 +666,7 @@ export class DocumentGenerator {
   }
 
   /**
-   * Project information table
+   * Project information (no borders) — all borders inlined
    */
   private static createProjectInfo(
     documentData: DocumentData,
@@ -669,22 +683,26 @@ export class DocumentGenerator {
       new TableRow({
         children: [
           new TableCell({
-            borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0 },
+              bottom: { style: BorderStyle.NONE, size: 0 },
+              left: { style: BorderStyle.NONE, size: 0 },
+              right: { style: BorderStyle.NONE, size: 0 },
+            },
             children: [
               new Paragraph({
-                children: [
-                  new TextRun({ text: `${label}: `, bold: true, ...baseFont }),
-                ],
+                children: [t(`${label}: `, { bold: true, ...baseFont })],
               }),
             ],
           }),
           new TableCell({
-            borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
-            children: [
-              new Paragraph({
-                children: [new TextRun({ text: value, ...baseFont })],
-              }),
-            ],
+            borders: {
+              top: { style: BorderStyle.NONE, size: 0 },
+              bottom: { style: BorderStyle.NONE, size: 0 },
+              left: { style: BorderStyle.NONE, size: 0 },
+              right: { style: BorderStyle.NONE, size: 0 },
+            },
+            children: [new Paragraph({ children: [t(value, baseFont)] })],
           }),
         ],
       });
@@ -694,9 +712,19 @@ export class DocumentGenerator {
         layout: TableLayoutType.FIXED,
         width: { size: 10466, type: WidthType.DXA },
         columnWidths: [1574, 8892],
-        borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
+        borders: {
+          top: { style: BorderStyle.NONE, size: 0 },
+          bottom: { style: BorderStyle.NONE, size: 0 },
+          left: { style: BorderStyle.NONE, size: 0 },
+          right: { style: BorderStyle.NONE, size: 0 },
+          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+          insideVertical: { style: BorderStyle.NONE, size: 0 },
+        },
         rows: [
-          row("ΑΡ. ΕΡΓΟΥ", `${documentData.project_na853 || ""} της ΣΑΝΑ 853`),
+          row(
+            "ΑΡ. ΕΡΓΟΥ",
+            `${cleanText(documentData.project_na853) || ""} της ΣΑΝΑ 853`,
+          ),
           row("ΑΛΕ", aleValue),
           row(
             "ΤΟΜΕΑΣ",
@@ -704,7 +732,7 @@ export class DocumentGenerator {
           ),
         ],
       }),
-      new Paragraph({ children: [new TextRun({ text: "" })] }),
+      new Paragraph({ children: [t("")] }),
     ];
   }
 
@@ -714,11 +742,13 @@ export class DocumentGenerator {
   private static createFinalRequest(): Paragraph {
     return new Paragraph({
       children: [
-        new TextRun({
-          text: "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε  στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
-          size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
-          font: DocumentUtilities.DEFAULT_FONT,
-        }),
+        t(
+          "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε  στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          {
+            size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
+            font: DocumentUtilities.DEFAULT_FONT,
+          },
+        ),
       ],
       alignment: AlignmentType.JUSTIFIED,
       spacing: { after: 0 },
@@ -726,207 +756,194 @@ export class DocumentGenerator {
   }
 
   /**
-   * Header with two-column layout (nested TO block)
+   * Header with two-column layout (nested "ΠΡΟΣ:") — all borders inlined
    */
-    private static async createDocumentHeader(
-      documentData: DocumentData,
-      unitDetails: UnitDetails | null | undefined,
-    ): Promise<Table> {
-      if (!documentData) throw new Error("Document data is required");
+  private static async createDocumentHeader(
+    documentData: DocumentData,
+    unitDetails: UnitDetails | null | undefined,
+  ): Promise<Table> {
+    if (!documentData) throw new Error("Document data is required");
 
-      const PAGE_CONTENT_WIDTH = 10466;
-      const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6);
-      const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
+    const PAGE_CONTENT_WIDTH = 10466;
+    const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6);
+    const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
 
-      const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
-      const PROS_LABEL_COL = Math.round(RIGHT_INNER_WIDTH * 0.2);
-      const PROS_TEXT_COL = RIGHT_INNER_WIDTH - PROS_LABEL_COL;
+    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
+    const PROS_LABEL_COL = Math.round(RIGHT_INNER_WIDTH * 0.2);
+    const PROS_TEXT_COL = RIGHT_INNER_WIDTH - PROS_LABEL_COL;
 
-      const p = (text: string, opts?: { bold?: boolean }) =>
-        new Paragraph({
-          children: [
-            new TextRun({
-              text,
-              bold: opts?.bold || false,
-              size: DocumentUtilities.DEFAULT_FONT_SIZE,
-              font: DocumentUtilities.DEFAULT_FONT,
-            }),
-          ],
-          alignment: AlignmentType.LEFT,
-        });
+    const p = (text: string, opts?: { bold?: boolean }) =>
+      new Paragraph({
+        children: [
+          t(text, {
+            bold: opts?.bold || false,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        alignment: AlignmentType.LEFT,
+      });
 
-      const boldP = (text: string) => p(text, { bold: true });
-      const contact = (label: string, value: string) =>
-        DocumentUtilities.createContactDetail(label, value);
+    const boldP = (text: string) => p(text, { bold: true });
+    const contact = (label: string, value: string) =>
+      DocumentUtilities.createContactDetail(label, cleanText(value));
 
-      const userInfo = {
-        name: documentData.generated_by?.name || documentData.user_name || "",
-        department:
-          documentData.generated_by?.department || documentData.department || "",
-        contact_number:
-          documentData.generated_by?.telephone?.toString() ||
-          documentData.contact_number?.toString() ||
-          "",
-      };
+    const userInfo = {
+      name: documentData.generated_by?.name || documentData.user_name || "",
+      department:
+        documentData.generated_by?.department || documentData.department || "",
+      contact_number:
+        documentData.generated_by?.telephone?.toString() ||
+        documentData.contact_number?.toString() ||
+        "",
+    };
 
-      const address = unitDetails?.address ?? { address: "", tk: "", region: "" };
+    const address = unitDetails?.address ?? { address: "", tk: "", region: "" };
 
-      const leftCol: Paragraph[] = [
-        new Paragraph({
-          children: [
-            new ImageRun({
-              data: fs.readFileSync(
-                path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
-              ),
-              transformation: { width: 40, height: 40 },
-            } as any),
-          ],
-          alignment: AlignmentType.LEFT,
-          spacing: { after: 100 },
-        }),
-        boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
-        boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
-        boldP(
-          "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
-        ),
-        boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
-        boldP(unitDetails?.unit_name?.name || unitDetails?.name || ""),
-        boldP(
-          (() => {
-            if (
-              unitDetails?.parts &&
-              typeof unitDetails.parts === "object" &&
-              documentData.director_signature
-            ) {
-              const signatureTitle = documentData.director_signature.title;
-              for (const [, value] of Object.entries(unitDetails.parts)) {
-                if (
-                  value &&
-                  typeof value === "object" &&
-                  (value as any).manager &&
-                  (value as any).manager.title === signatureTitle &&
-                  (value as any).tmima
-                ) {
-                  return (value as any).tmima;
-                }
+    const leftCol: Paragraph[] = [
+      new Paragraph({
+        children: [
+          new ImageRun({
+            data: fs.readFileSync(
+              path.join(process.cwd(), "server", "utils", "ethnosimo22.png"),
+            ),
+            transformation: { width: 40, height: 40 },
+          } as any),
+        ],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 100 },
+      }),
+      boldP("ΕΛΛΗΝΙΚΗ ΔΗΜΟΚΡΑΤΙΑ"),
+      boldP("ΥΠΟΥΡΓΕΙΟ ΚΛΙΜΑΤΙΚΗΣ ΚΡΙΣΗΣ & ΠΟΛΙΤΙΚΗΣ ΠΡΟΣΤΑΣΙΑΣ"),
+      boldP(
+        "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
+      ),
+      boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+      boldP(cleanText(unitDetails?.unit_name?.name || unitDetails?.name || "")),
+      boldP(
+        (() => {
+          if (
+            unitDetails?.parts &&
+            typeof unitDetails.parts === "object" &&
+            documentData.director_signature
+          ) {
+            const signatureTitle = documentData.director_signature.title;
+            for (const [, value] of Object.entries(unitDetails.parts)) {
+              if (
+                value &&
+                typeof value === "object" &&
+                (value as any).manager &&
+                (value as any).manager.title === signatureTitle &&
+                (value as any).tmima
+              ) {
+                return cleanText((value as any).tmima);
               }
             }
-            return userInfo.department;
-          })(),
-        ),
-        contact("Ταχ. Δ/νση", address.address),
-        contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
-        contact("Πληροφορίες", userInfo.name),
-        contact("Τηλέφωνο", userInfo.contact_number),
-        contact("Email", unitDetails?.email || ""),
-      ];
+          }
+          return cleanText(userInfo.department);
+        })(),
+      ),
+      contact("Ταχ. Δ/νση", address.address),
+      contact("Ταχ. Κώδικας", `${address.tk}, ${address.region}`),
+      contact("Πληροφορίες", userInfo.name),
+      contact("Τηλέφωνο", userInfo.contact_number),
+      contact("Email", unitDetails?.email || ""),
+    ];
 
-      const toLines = [
-        "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
-        "Διεύθυνση Οικονομικής Διαχείρισης",
-        "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
-        "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-        "Δημοκρίτου 2",
-        "151 23 Μαρούσι",
-      ];
+    const toLines = [
+      "Γενική Δ/νση Οικονομικών  Υπηρεσιών",
+      "Διεύθυνση Οικονομικής Διαχείρισης",
+      "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
+      "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
+      "Δημοκρίτου 2",
+      "151 23 Μαρούσι",
+    ].map(cleanText);
 
-      const rightInnerTable = new Table({
-        layout: TableLayoutType.FIXED,
-        width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
-        columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
-        borders: {
-          top: { style: BorderStyle.NONE, size: 0 },
-          bottom: { style: BorderStyle.NONE, size: 0 },
-          left: { style: BorderStyle.NONE, size: 0 },
-          right: { style: BorderStyle.NONE, size: 0 },
-          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-          insideVertical: { style: BorderStyle.NONE, size: 0 },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                borders: {
-                  top: { style: BorderStyle.NONE, size: 0 },
-                  bottom: { style: BorderStyle.NONE, size: 0 },
-                  left: { style: BorderStyle.NONE, size: 0 },
-                  right: { style: BorderStyle.NONE, size: 0 },
-                },
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: "ΠΡΟΣ:", bold: true, size: 20 })],
-                    spacing: { before: 2200 },
-                    alignment: AlignmentType.LEFT,
-                  }),
-                ],
-                verticalAlign: VerticalAlign.TOP,
-              }),
-              new TableCell({
-                borders: {
-                  top: { style: BorderStyle.NONE, size: 0 },
-                  bottom: { style: BorderStyle.NONE, size: 0 },
-                  left: { style: BorderStyle.NONE, size: 0 },
-                  right: { style: BorderStyle.NONE, size: 0 },
-                },
-                children: [
-                  new Paragraph({
-                    children: [new TextRun({ text: toLines[0], size: 20 })],
-                    spacing: { before: 2200 },
-                    alignment: AlignmentType.LEFT,
-                  }),
-                  ...toLines.slice(1).map(
-                    (t) =>
-                      new Paragraph({
-                        children: [new TextRun({ text: t, size: 20 })],
-                        alignment: AlignmentType.LEFT,
-                      }),
-                  ),
-                ],
-                verticalAlign: VerticalAlign.TOP,
-              }),
-            ],
-          }),
-        ],
-      });
+    const rightInnerTable = new Table({
+      layout: TableLayoutType.FIXED,
+      width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0 },
+        bottom: { style: BorderStyle.NONE, size: 0 },
+        left: { style: BorderStyle.NONE, size: 0 },
+        right: { style: BorderStyle.NONE, size: 0 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [t("ΠΡΟΣ:", { bold: true, size: 20 })],
+                  spacing: { before: 2200 },
+                  alignment: AlignmentType.LEFT,
+                }),
+              ],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [t(toLines[0], { size: 20 })],
+                  spacing: { before: 2200 },
+                  alignment: AlignmentType.LEFT,
+                }),
+                ...toLines.slice(1).map(
+                  (line) =>
+                    new Paragraph({
+                      children: [t(line, { size: 20 })],
+                      alignment: AlignmentType.LEFT,
+                    }),
+                ),
+              ],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
+      ],
+    });
 
-      return new Table({
-        layout: TableLayoutType.FIXED,
-        width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-        columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
-        borders: {
-          top: { style: BorderStyle.NONE, size: 0 },
-          bottom: { style: BorderStyle.NONE, size: 0 },
-          left: { style: BorderStyle.NONE, size: 0 },
-          right: { style: BorderStyle.NONE, size: 0 },
-          insideHorizontal: { style: BorderStyle.NONE, size: 0 },
-          insideVertical: { style: BorderStyle.NONE, size: 0 },
-        },
-        rows: [
-          new TableRow({
-            children: [
-              new TableCell({
-                borders: {
-                  top: { style: BorderStyle.NONE, size: 0 },
-                  bottom: { style: BorderStyle.NONE, size: 0 },
-                  left: { style: BorderStyle.NONE, size: 0 },
-                  right: { style: BorderStyle.NONE, size: 0 },
-                },
-                children: leftCol,
-                verticalAlign: VerticalAlign.TOP,
-              }),
-              new TableCell({
-                borders: {
-                  top: { style: BorderStyle.NONE, size: 0 },
-                  bottom: { style: BorderStyle.NONE, size: 0 },
-                  left: { style: BorderStyle.NONE, size: 0 },
-                  right: { style: BorderStyle.NONE, size: 0 },
-                },
-                children: [rightInnerTable],
-                verticalAlign: VerticalAlign.TOP,
-              }),
-            ],
-          }),
-        ],
-      });
+    return new Table({
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
+      borders: {
+        top: { style: BorderStyle.NONE, size: 0 },
+        bottom: { style: BorderStyle.NONE, size: 0 },
+        left: { style: BorderStyle.NONE, size: 0 },
+        right: { style: BorderStyle.NONE, size: 0 },
+        insideHorizontal: { style: BorderStyle.NONE, size: 0 },
+        insideVertical: { style: BorderStyle.NONE, size: 0 },
+      },
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              borders: {
+                top: { style: BorderStyle.NONE, size: 0 },
+                bottom: { style: BorderStyle.NONE, size: 0 },
+                left: { style: BorderStyle.NONE, size: 0 },
+                right: { style: BorderStyle.NONE, size: 0 },
+              },
+              children: leftCol,
+              verticalAlign: VerticalAlign.TOP,
+            }),
+            new TableCell({
+              borders: {
+                top: { style: BorderStyle.NONE, size: 0 },
+                bottom: { style: BorderStyle.NONE, size: 0 },
+                left: { style: BorderStyle.NONE, size: 0 },
+                right: { style: BorderStyle.NONE, size: 0 },
+              },
+              children: [rightInnerTable],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        }),
+      ],
+    });
   }
 }
