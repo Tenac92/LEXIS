@@ -2,6 +2,16 @@
 
 This is a comprehensive document management system specifically designed for the Greek Civil Protection agency, built with a full-stack TypeScript architecture. The system handles budget management, project tracking, document generation, employee and beneficiary management, with features like real-time notifications, PDF document generation, and comprehensive budget monitoring with quarterly transitions.
 
+# Recent Changes
+
+## October 2, 2025 - Beneficiary Freetext Field Support
+- **Issue**: The `secondary_text` field from AFM autocomplete (populated from `personData.freetext` or `personData.attribute`) was not being saved to the `beneficiary_payments` table
+- **Solution**: 
+  - Updated `shared/schema.ts` to include `freetext` column in `beneficiaryPayments` table schema (line 418)
+  - Modified `server/controllers/documentsController.ts` to map `recipient.secondary_text` from frontend to `freetext` column when creating beneficiary payment records (lines 874 and 930)
+  - The frontend sends `secondary_text`, which is correctly mapped to the database column `freetext` during payment creation
+- **Impact**: When creating documents with recipients, any additional text from the AFM autocomplete (profession, department, etc.) is now properly saved and can be retrieved with beneficiary payment records
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
