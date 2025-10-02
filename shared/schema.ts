@@ -412,6 +412,7 @@ export const beneficiaryPayments = pgTable(
     amount: decimal("amount", { precision: 12, scale: 2 }),
     status: text("status").default("pending"),
     payment_date: date("payment_date"),
+    secondary_text: text("secondary_text"),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
 

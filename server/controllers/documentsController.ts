@@ -868,6 +868,7 @@ router.post(
                     amount: installmentAmount,
                     status: "pending",
                     installment: installmentName, // Use specific installment name
+                    secondary_text: recipient.secondary_text || null,
                     unit_id: numericUnitId,
                     project_index_id: projectIndexId,
                     created_at: now,
@@ -923,6 +924,7 @@ router.post(
                 amount: recipient.amount,
                 status: "pending",
                 installment: recipient.installment,
+                secondary_text: recipient.secondary_text || null,
                 unit_id: numericUnitId,
                 project_index_id: projectIndexId,
                 created_at: now,
