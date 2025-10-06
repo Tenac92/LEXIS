@@ -287,7 +287,7 @@ export class DocumentGenerator {
     // Fallback: minimal table if config missing
     if (!Array.isArray(columns) || columns.length === 0) {
       return new Table({
-        layout: TableLayoutType.FIXED,
+        layout: TableLayoutType.AUTOFIT,
         width: { size: 10466, type: WidthType.DXA },
         columnWidths: [10466],
         borders: {
@@ -309,14 +309,6 @@ export class DocumentGenerator {
         ],
       });
     }
-
-    const TABLE_WIDTH_DXA = 10466;
-    const base = Math.floor(TABLE_WIDTH_DXA / columns.length);
-    const columnWidths: number[] = columns.map((_, i) =>
-      i < columns.length - 1
-        ? base
-        : TABLE_WIDTH_DXA - base * (columns.length - 1),
-    );
 
     const FONT = { size: DocumentUtilities.DEFAULT_FONT_SIZE - 2 };
 
@@ -479,11 +471,10 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table (no table-level borders to avoid repair issues)
+    // Final table with auto-fit columns that resize to content
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: TABLE_WIDTH_DXA, type: WidthType.DXA },
-      columnWidths,
+      layout: TableLayoutType.AUTOFIT,
+      width: { size: 100, type: WidthType.PERCENTAGE },
       rows,
     });
   }
