@@ -32,9 +32,15 @@ export class SecondaryDocumentFormatter {
       new Paragraph({
         children: [
           new TextRun({
-            text: `ΕΡΓΟ: ${title} - ΑΡ.ΕΡΓΟΥ: ${na853Code} της ΣΑΝΑ 853`,
+            text: `${title} - `,
             bold: true,
             size: 24,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+          new TextRun({
+            text: `ΑΡ.ΕΡΓΟΥ: ${na853Code} της ΣΑΝΑ 853`,
+            bold: true,
+            size: 22,
             font: DocumentUtilities.DEFAULT_FONT,
           }),
         ],
@@ -95,9 +101,7 @@ export class SecondaryDocumentFormatter {
         }),
     );
 
-    const rows: TableRow[] = [
-      new TableRow({ children: headerCells }),
-    ];
+    const rows: TableRow[] = [new TableRow({ children: headerCells })];
 
     // Equal DXA grid (last col absorbs remainder)
     const PAGE_DXA = 14000;
@@ -232,7 +236,7 @@ export class SecondaryDocumentFormatter {
     return new Paragraph({
       children: [
         new TextRun({
-          text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΔΩΡΕΑΝ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
+          text: "ΤΑ ΔΙΚΑΙΟΛΟΓΗΤΙΚΑ ΒΑΣΕΙ ΤΩΝ ΟΠΟΙΩΝ ΕΚΔΟΘΗΚΑΝ ΟΙ ΔΙΟΙΚΗΤΙΚΕΣ ΠΡΑΞΕΙΣ ΑΝΑΓΝΩΡΙΣΗΣ ΔΙΚΑΙΟΥΧΩΝ ΤΗΡΟΥΝΤΑΙ ΣΤΟ ΑΡΧΕΙΟ ΤΗΣ ΥΠΗΡΕΣΙΑΣ ΜΑΣ.",
           size: 22,
           font: DocumentUtilities.DEFAULT_FONT,
         }),
@@ -272,7 +276,7 @@ export class SecondaryDocumentFormatter {
           }),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
+        spacing: { before: 120, after: 700 },
       }),
       new Paragraph({
         children: [
@@ -305,8 +309,8 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA },
-      columnWidths: [5233, 5233], // Two equal columns for signature
+      width: { size: 14000, type: WidthType.DXA },
+      columnWidths: [7000, 7000], // Two equal columns for signature
       borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
       rows: [
         new TableRow({
