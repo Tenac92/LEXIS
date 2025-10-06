@@ -302,12 +302,6 @@ export class DocumentGenerator {
           new TableRow({
             children: [
               new TableCell({
-                // borders: {
-                //   top: { style: BorderStyle.SINGLE, size: 1 },
-                //   bottom: { style: BorderStyle.SINGLE, size: 1 },
-                //   left: { style: BorderStyle.SINGLE, size: 1 },
-                //   right: { style: BorderStyle.SINGLE, size: 1 },
-                // },
                 children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
@@ -343,16 +337,19 @@ export class DocumentGenerator {
         ],
       });
 
-    const makeNameCell = (fullName: string, freetext: string | null | undefined) => {
+    const makeNameCell = (
+      fullName: string,
+      freetext: string | null | undefined,
+    ) => {
       const children: any[] = [t(fullName, { ...FONT })];
-      
+
       if (freetext && freetext.trim()) {
         children.push(
           new TextRun({ break: 1 }),
-          t(cleanText(freetext), { ...FONT })
+          t(cleanText(freetext), { ...FONT }),
         );
       }
-      
+
       return new TableCell({
         verticalAlign: VerticalAlign.CENTER,
         children: [
@@ -394,7 +391,6 @@ export class DocumentGenerator {
         ? `${lastname} ${firstname} ΤΟΥ ${fathername}`
         : `${lastname} ${firstname}`;
     };
-    
 
     const formatAFM = (r: any) => cleanText(r?.afm);
 
@@ -636,22 +632,10 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              borders: {
-                top: { style: BorderStyle.NONE, size: 0 },
-                bottom: { style: BorderStyle.NONE, size: 0 },
-                left: { style: BorderStyle.NONE, size: 0 },
-                right: { style: BorderStyle.NONE, size: 0 },
-              },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              borders: {
-                top: { style: BorderStyle.NONE, size: 0 },
-                bottom: { style: BorderStyle.NONE, size: 0 },
-                left: { style: BorderStyle.NONE, size: 0 },
-                right: { style: BorderStyle.NONE, size: 0 },
-              },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),

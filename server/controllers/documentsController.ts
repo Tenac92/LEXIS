@@ -1127,6 +1127,7 @@ router.get("/", async (req: Request, res: Response) => {
                 amount,
                 installment,
                 status,
+                freetext,
                 beneficiaries (
                   id,
                   afm,
@@ -1155,6 +1156,7 @@ router.get("/", async (req: Request, res: Response) => {
                   installment: payment.installment || "",
                   region: beneficiary?.region || "",
                   status: payment.status || "pending",
+                  freetext: payment.freetext || null,
                 };
               });
             }
@@ -2245,6 +2247,7 @@ router.get(
             id,
             amount,
             installment,
+            freetext,
             beneficiaries:beneficiary_id (
               id,
               afm,
@@ -2265,6 +2268,7 @@ router.get(
               afm: (payment.beneficiaries as any)?.afm || "",
               amount: parseFloat(payment.amount || "0"),
               installment: payment.installment || "ΕΦΑΠΑΞ",
+              freetext: payment.freetext || null,
             }));
           }
         } catch (error) {
