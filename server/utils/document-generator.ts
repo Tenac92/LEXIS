@@ -302,12 +302,12 @@ export class DocumentGenerator {
           new TableRow({
             children: [
               new TableCell({
-                borders: {
-                  top: { style: BorderStyle.SINGLE, size: 1 },
-                  bottom: { style: BorderStyle.SINGLE, size: 1 },
-                  left: { style: BorderStyle.SINGLE, size: 1 },
-                  right: { style: BorderStyle.SINGLE, size: 1 },
-                },
+                // borders: {
+                //   top: { style: BorderStyle.SINGLE, size: 1 },
+                //   bottom: { style: BorderStyle.SINGLE, size: 1 },
+                //   left: { style: BorderStyle.SINGLE, size: 1 },
+                //   right: { style: BorderStyle.SINGLE, size: 1 },
+                // },
                 children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
@@ -343,6 +343,28 @@ export class DocumentGenerator {
         ],
       });
 
+    const makeNameCell = (fullName: string, freetext: string | null | undefined) => {
+      const children: any[] = [t(fullName, { ...FONT })];
+      
+      if (freetext && freetext.trim()) {
+        children.push(
+          new TextRun({ break: 1 }),
+          t(cleanText(freetext), { ...FONT })
+        );
+      }
+      
+      return new TableCell({
+        verticalAlign: VerticalAlign.CENTER,
+        children: [
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 0 },
+            children,
+          }),
+        ],
+      });
+    };
+
     const mkHeaderRow = () =>
       new TableRow({
         children: columns.map((c: string) => makeCell(c, true)),
@@ -372,6 +394,7 @@ export class DocumentGenerator {
         ? `${lastname} ${firstname} ΤΟΥ ${fathername}`
         : `${lastname} ${firstname}`;
     };
+    
 
     const formatAFM = (r: any) => cleanText(r?.afm);
 
@@ -413,9 +436,12 @@ export class DocumentGenerator {
         rows.push(
           new TableRow({
             height: { value: 360, rule: HeightRule.ATLEAST },
-            children: columns.map((label: string) =>
-              makeCell(cMap[label] ?? "", false),
-            ),
+            children: columns.map((label: string) => {
+              if (label === "ΟΝΟΜΑΤΕΠΩΝΥΜΟ") {
+                return makeNameCell(fullName, recipient?.freetext);
+              }
+              return makeCell(cMap[label] ?? "", false);
+            }),
           }),
         );
       });
