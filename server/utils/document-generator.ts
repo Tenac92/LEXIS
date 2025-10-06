@@ -49,7 +49,7 @@ const cleanText = (input: unknown): string => {
 // Convenience wrapper for TextRun that always sanitizes text.
 type TRInit = ConstructorParameters<typeof TextRun>[0];
 const t = (text: unknown, opts: Partial<TRInit> = {}) =>
-  new TextRun({ text: cleanText(text), ...(opts as TRInit) });
+  new TextRun({ ...(opts as object), text: cleanText(text) });
 
 const safeCurrency = (n: number) =>
   cleanText(DocumentUtilities.formatCurrency(n)).replace(/\u00A0/g, " ");
@@ -753,7 +753,7 @@ export class DocumentGenerator {
     return new Paragraph({
       children: [
         t(
-          "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε  στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
+          "Παρακαλούμε όπως, μετά την ολοκλήρωση της διαδικασίας ελέγχου και εξόφλησης των δικαιούχων, αποστείλετε στην Υπηρεσία μας αντίγραφα των επιβεβαιωμένων ηλεκτρονικών τραπεζικών εντολών.",
           {
             size: DocumentUtilities.DEFAULT_FONT_SIZE - 2,
             font: DocumentUtilities.DEFAULT_FONT,
