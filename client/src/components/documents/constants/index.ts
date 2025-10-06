@@ -1,7 +1,7 @@
 // Document creation constants
 export const DKA_TYPES = ["ΔΚΑ ΑΝΑΚΑΤΑΣΚΕΥΗ", "ΔΚΑ ΕΠΙΣΚΕΥΗ", "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ"];
-export const DKA_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
-export const ALL_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Β", "Γ"];
+export const DKA_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Α συμπληρωματική", "Β", "Β συμπληρωματική", "Γ", "Γ συμπληρωματική"];
+export const ALL_INSTALLMENTS = ["ΕΦΑΠΑΞ", "Α", "Α συμπληρωματική", "Β", "Β συμπληρωματική", "Γ", "Γ συμπληρωματική"];
 
 // Housing allowance constants
 export const HOUSING_ALLOWANCE_TYPE = "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ";

@@ -1017,11 +1017,17 @@ export function CreateDocumentDialog({
     if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
       return false;
 
-    // Filter out ΕΦΑΠΑΞ and get only the Greek letter installments
-    const letters = installments.filter((i) => i !== "ΕΦΑΠΑΞ");
+    // Separate regular and supplementary installments
+    const regularInstallments = installments.filter(
+      (i) => i !== "ΕΦΑΠΑΞ" && !i.includes("συμπληρωματική")
+    );
+    const supplementaryInstallments = installments.filter((i) =>
+      i.includes("συμπληρωματική")
+    );
 
-    // Create a map of letter to index
-    const letterOrder = ALL_INSTALLMENTS.reduce<Record<string, number>>(
+    // Create a map of letter to index for regular installments only (Α, Β, Γ)
+    const baseLetters = ["Α", "Β", "Γ"];
+    const letterOrder = baseLetters.reduce<Record<string, number>>(
       (acc, letter, idx) => {
         acc[letter] = idx;
         return acc;
@@ -1029,16 +1035,36 @@ export function CreateDocumentDialog({
       {},
     );
 
-    // Sort by the order of letters in ALL_INSTALLMENTS
-    const sortedLetters = [...letters].sort(
-      (a, b) => letterOrder[a] - letterOrder[b],
-    );
+    // Check sequence for regular installments
+    if (regularInstallments.length > 1) {
+      const sortedRegular = [...regularInstallments].sort(
+        (a, b) => letterOrder[a] - letterOrder[b],
+      );
 
-    // Check if the letters are consecutive in ALL_INSTALLMENTS
-    for (let i = 1; i < sortedLetters.length; i++) {
-      const prevIdx = letterOrder[sortedLetters[i - 1]];
-      const currIdx = letterOrder[sortedLetters[i]];
-      if (currIdx - prevIdx !== 1) return false;
+      for (let i = 1; i < sortedRegular.length; i++) {
+        const prevIdx = letterOrder[sortedRegular[i - 1]];
+        const currIdx = letterOrder[sortedRegular[i]];
+        if (currIdx - prevIdx !== 1) return false;
+      }
+    }
+
+    // Check sequence for supplementary installments
+    if (supplementaryInstallments.length > 1) {
+      const supplementaryOrder: Record<string, number> = {
+        "Α συμπληρωματική": 1,
+        "Β συμπληρωματική": 2,
+        "Γ συμπληρωματική": 3,
+      };
+
+      const sortedSupplementary = [...supplementaryInstallments].sort(
+        (a, b) => supplementaryOrder[a] - supplementaryOrder[b],
+      );
+
+      for (let i = 1; i < sortedSupplementary.length; i++) {
+        const prevIdx = supplementaryOrder[sortedSupplementary[i - 1]];
+        const currIdx = supplementaryOrder[sortedSupplementary[i]];
+        if (currIdx - prevIdx !== 1) return false;
+      }
     }
 
     return true;
@@ -1172,12 +1198,20 @@ export function CreateDocumentDialog({
           return aNum - bNum;
         });
       } else {
-        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Β, Γ
+        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Α συμπ., Β, Β συμπ., Γ, Γ συμπ.
         newInstallments.sort((a, b) => {
-          const order = { Α: 1, Β: 2, Γ: 3, ΕΦΑΠΑΞ: 0 };
+          const order: Record<string, number> = { 
+            ΕΦΑΠΑΞ: 0,
+            Α: 1, 
+            "Α συμπληρωματική": 2,
+            Β: 3, 
+            "Β συμπληρωματική": 4,
+            Γ: 5,
+            "Γ συμπληρωματική": 6
+          };
           return (
-            (order[a as keyof typeof order] || 99) -
-            (order[b as keyof typeof order] || 99)
+            (order[a] || 99) -
+            (order[b] || 99)
           );
         });
       }
@@ -1411,24 +1445,54 @@ export function CreateDocumentDialog({
               )}
             </div>
           ) : (
-            // Standard installment selection
-            <div className="flex flex-row gap-1 flex-wrap">
-              {availableInstallments.map((installment) => (
-                <Button
-                  key={installment}
-                  type="button"
-                  variant={
-                    selectedInstallments.includes(installment)
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  onClick={() => handleInstallmentToggle(installment)}
-                  className="h-7 px-2 min-w-[32px]"
-                >
-                  {installment}
-                </Button>
-              ))}
+            // Standard installment selection with grouping
+            <div className="space-y-2">
+              <div className="flex flex-row gap-1 flex-wrap">
+                {availableInstallments
+                  .filter((i) => !i.includes("συμπληρωματική"))
+                  .map((installment) => (
+                    <Button
+                      key={installment}
+                      type="button"
+                      variant={
+                        selectedInstallments.includes(installment)
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleInstallmentToggle(installment)}
+                      className="h-7 px-2 min-w-[32px]"
+                    >
+                      {installment}
+                    </Button>
+                  ))}
+              </div>
+              
+              {availableInstallments.some((i) => i.includes("συμπληρωματική")) && (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Συμπληρωματικές:</div>
+                  <div className="flex flex-row gap-1 flex-wrap">
+                    {availableInstallments
+                      .filter((i) => i.includes("συμπληρωματική"))
+                      .map((installment) => (
+                        <Button
+                          key={installment}
+                          type="button"
+                          variant={
+                            selectedInstallments.includes(installment)
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handleInstallmentToggle(installment)}
+                          className="h-7 px-2 text-xs"
+                        >
+                          {installment.replace(" συμπληρωματική", " συμπ.")}
+                        </Button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
