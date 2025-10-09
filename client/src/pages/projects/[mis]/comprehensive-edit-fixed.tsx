@@ -632,34 +632,6 @@ export default function ComprehensiveEditFixed() {
   // Check if all essential data is loading
   const isEssentialDataLoading = isCompleteDataLoading;
   const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
-  
-  // Debug logging for optimized data fetch
-  console.log("DEBUG - Project Data:", {
-    hasProjectData: !!completeProjectData,
-    hasReferenceData: !!referenceData,
-    projectData: !!projectData,
-    decisionsCount: decisionsData?.length || 0,
-    formulationsCount: formulationsData?.length || 0,
-    isProjectLoading: isCompleteDataLoading,
-    isReferenceLoading: isReferenceDataLoading,
-    projectError: completeDataError?.message || completeDataError,
-    referenceError: referenceDataError?.message || referenceDataError,
-  });
-
-  // Debug logging for geographic data status  
-  console.log("DEBUG - Geographic Data Status:", {
-    hasNormalizedGeographicData: !!geographicData,
-    normalizedRegions: geographicData?.regions?.length || 0,
-    normalizedRegionalUnits: geographicData?.regionalUnits?.length || 0,
-    normalizedMunicipalities: geographicData?.municipalities?.length || 0,
-  });
-
-  // Debug logging for ΣΑ types and enumeration codes
-  console.log("DEBUG - ΣΑ Data:", {
-    existingSATypes,
-    existingEnumerationCodes,
-    formulationsDataSample: formulationsData?.slice(0, 2),
-  });
 
   // Reset initialization state when component mounts
   useEffect(() => {
