@@ -77,17 +77,17 @@ export const sessionMiddleware = session({
   store: storage.sessionStore, // Using the in-memory store from storage.ts
   name: "sid", // Custom session ID name
   cookie: {
-    secure: process.env.NODE_ENV === "production", // Only true in production
+    secure: true, // Always use secure cookies (Render provides HTTPS)
     httpOnly: true,
     maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin in production
+    sameSite: "lax", // Use 'lax' for same-site requests (works better with single domain)
     path: "/",
     // Only set domain if it's a valid non-empty string
     ...(process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
       ? { domain: process.env.COOKIE_DOMAIN.trim() } 
       : {}),
   },
-  proxy: true, // Enable proxy support
+  proxy: true, // Enable proxy support for Render/Cloudflare
 });
 
 // ============================================================================

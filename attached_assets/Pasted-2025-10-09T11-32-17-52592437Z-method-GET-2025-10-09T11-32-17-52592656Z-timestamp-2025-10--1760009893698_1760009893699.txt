@@ -1,0 +1,50 @@
+2025-10-09T11:32:17.52592437Z   method: 'GET',
+2025-10-09T11:32:17.52592656Z   timestamp: '2025-10-09T11:32:17.525Z'
+2025-10-09T11:32:17.5259287Z }
+2025-10-09T11:32:17.526136636Z 11:32:17 AM [express] GET /api/budget/notifications 401 in 1ms
+2025-10-09T11:32:17.527742837Z 11:32:17 AM [express] [Request] GET /api/admin/system-stats from 172.70.162.191
+2025-10-09T11:32:17.527825649Z [Auth] authenticateSession middleware called for: /api/admin/system-stats
+2025-10-09T11:32:17.52784082Z [Auth] Session ID: 4ORvFKx98zEnKssQcaT0uPA0_K1c35zQ
+2025-10-09T11:32:17.52784336Z [Auth] Session user exists: false
+2025-10-09T11:32:17.527893141Z [Auth] No user in session for path: /api/admin/system-stats
+2025-10-09T11:32:17.527899521Z [Auth] Session ID: 4ORvFKx98zEnKssQcaT0uPA0_K1c35zQ
+2025-10-09T11:32:17.527914082Z [Auth] Session exists: true
+2025-10-09T11:32:17.527917522Z [Auth] Session user: undefined
+2025-10-09T11:32:17.527973563Z [Auth] Cookie header: undefined
+2025-10-09T11:32:17.528089176Z [Auth] Authentication error: Error: Authentication required
+2025-10-09T11:32:17.528094506Z     at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)
+2025-10-09T11:32:17.528096966Z     at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+2025-10-09T11:32:17.528099016Z     at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+2025-10-09T11:32:17.528101076Z     at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+2025-10-09T11:32:17.528103356Z     at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+2025-10-09T11:32:17.528105527Z     at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+2025-10-09T11:32:17.528107647Z     at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+2025-10-09T11:32:17.528110077Z     at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+2025-10-09T11:32:17.528112097Z     at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)
+2025-10-09T11:32:17.528114427Z     at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+2025-10-09T11:32:17.528294032Z [ErrorHandler] Error caught: {
+2025-10-09T11:32:17.528303902Z   error: 'Authentication required',
+2025-10-09T11:32:17.528306172Z   stack: 'Error: Authentication required\n' +
+2025-10-09T11:32:17.528308402Z     '    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)\n' +
+2025-10-09T11:32:17.528311082Z     '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+2025-10-09T11:32:17.528313202Z     '    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)\n' +
+2025-10-09T11:32:17.528315452Z     '    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)\n' +
+2025-10-09T11:32:17.528317542Z     '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+2025-10-09T11:32:17.528319602Z     '    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15\n' +
+2025-10-09T11:32:17.528321772Z     '    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)\n' +
+2025-10-09T11:32:17.528323902Z     '    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)\n' +
+2025-10-09T11:32:17.528325952Z     '    at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)\n' +
+2025-10-09T11:32:17.528328022Z     '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)',
+2025-10-09T11:32:17.528330102Z   path: '/api/admin/system-stats',
+2025-10-09T11:32:17.528332182Z   method: 'GET',
+2025-10-09T11:32:17.528334342Z   timestamp: '2025-10-09T11:32:17.528Z'
+2025-10-09T11:32:17.528336462Z }
+2025-10-09T11:32:17.528556978Z 11:32:17 AM [express] GET /api/admin/system-stats 401 in 1ms
+2025-10-09T11:32:17.598110675Z 11:32:17 AM [express] [Request] GET /api/projects from 162.158.216.28
+2025-10-09T11:32:17.598979687Z [Projects] Fetching all projects with optimized schema
+2025-10-09T11:32:17.728882463Z 11:32:17 AM [express] GET /api/projects 304 in 131ms
+2025-10-09T11:32:18.0202696Z 11:32:18 AM [cors] [CORS] Request from allowed origin: https://lexis-ig6p.onrender.com
+2025-10-09T11:32:18.020578258Z 11:32:18 AM [cors] [CORS] Method: GET, Path: /assets/index-Bk4J66Sx.js
+2025-10-09T11:32:18.031813628Z 11:32:18 AM [cors] [CORS] Request from allowed origin: https://lexis-ig6p.onrender.com
+2025-10-09T11:32:18.03191043Z 11:32:18 AM [cors] [CORS] Method: GET, Path: /assets/index-DasTTfdD.css
+2025-10-09T11:32:18.455909003Z 11:32:18 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
