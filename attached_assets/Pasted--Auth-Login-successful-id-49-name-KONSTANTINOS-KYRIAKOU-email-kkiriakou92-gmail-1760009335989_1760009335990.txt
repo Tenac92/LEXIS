@@ -1,0 +1,199 @@
+[Auth] Login successful: {
+  id: 49,
+  name: 'KONSTANTINOS KYRIAKOU',
+  email: 'kkiriakou92@gmail.com',
+  role: 'admin',
+  unit_id: [ 2 ],
+  department: undefined,
+  sessionID: 'amebpEL79QEqq9PtVR-pZ6cuTtE9bXXc',
+  ip: '172.70.242.22'
+}
+[ErrorHandler] Error caught: {
+  error: 'option domain is invalid',
+  stack: 'TypeError: option domain is invalid\n' +
+    '    at Object.serialize (/opt/render/project/src/node_modules/express-session/node_modules/cookie/index.js:217:13)\n' +
+    '    at setcookie (/opt/render/project/src/node_modules/express-session/index.js:665:21)\n' +
+    '    at ServerResponse.<anonymous> (/opt/render/project/src/node_modules/express-session/index.js:248:9)\n' +
+    '    at ServerResponse.writeHead (/opt/render/project/src/node_modules/on-headers/index.js:35:16)\n' +
+    '    at ServerResponse._implicitHeader (node:_http_server:344:8)\n' +
+    '    at write_ (node:_http_outgoing:989:9)\n' +
+    '    at ServerResponse.end (node:_http_outgoing:1106:5)\n' +
+    '    at ServerResponse.end (/opt/render/project/src/node_modules/express-session/index.js:367:19)\n' +
+    '    at ServerResponse.send (/opt/render/project/src/node_modules/express/lib/response.js:232:10)\n' +
+    '    at ServerResponse.json (/opt/render/project/src/node_modules/express/lib/response.js:278:15)',
+  path: '/api/auth/login',
+  method: 'POST',
+  timestamp: '2025-10-09T11:27:50.525Z'
+}
+Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+    at ServerResponse.setHeader (node:_http_outgoing:699:11)
+    at ServerResponse.header (/opt/render/project/src/node_modules/express/lib/response.js:794:10)
+    at ServerResponse.send (/opt/render/project/src/node_modules/express/lib/response.js:174:12)
+    at ServerResponse.json (/opt/render/project/src/node_modules/express/lib/response.js:278:15)
+    at errorHandler (file:///opt/render/project/src/dist/index.js:16313:19)
+    at Layer.handle_error (/opt/render/project/src/node_modules/express/lib/router/layer.js:71:5)
+    at trim_prefix (/opt/render/project/src/node_modules/express/lib/router/index.js:326:13)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:286:9
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+11:27:50 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+11:27:50 AM [express] [Request] GET /api/budget/notifications from 172.70.242.137
+[Auth] authenticateSession middleware called for: /notifications
+[Auth] Session ID: QHqc1FU27ySSi9tlNPa4T33UGHhxB0Bm
+[Auth] Session user exists: false
+[Auth] No user in session for path: /notifications
+[Auth] Session ID: QHqc1FU27ySSi9tlNPa4T33UGHhxB0Bm
+[Auth] Session exists: true
+[Auth] Session user: undefined
+[Auth] Cookie header: undefined
+[Auth] Authentication error: Error: Authentication required
+    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+    at Function.handle (/opt/render/project/src/node_modules/express/lib/router/index.js:175:3)
+    at router (/opt/render/project/src/node_modules/express/lib/router/index.js:47:12)
+[ErrorHandler] Error caught: {
+  error: 'Authentication required',
+  stack: 'Error: Authentication required\n' +
+    '    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15\n' +
+    '    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at Function.handle (/opt/render/project/src/node_modules/express/lib/router/index.js:175:3)\n' +
+    '    at router (/opt/render/project/src/node_modules/express/lib/router/index.js:47:12)',
+  path: '/api/budget/notifications',
+  method: 'GET',
+  timestamp: '2025-10-09T11:27:50.910Z'
+}
+11:27:50 AM [express] GET /api/budget/notifications 401 in 3ms
+11:27:50 AM [express] [Request] GET /api/dashboard/stats from 162.158.95.35
+[Auth] authenticateSession middleware called for: /api/dashboard/stats
+[Auth] Session ID: DmX9Ei6NSCNRv12RDeyr7BShp3eJI3SB
+[Auth] Session user exists: false
+[Auth] No user in session for path: /api/dashboard/stats
+[Auth] Session ID: DmX9Ei6NSCNRv12RDeyr7BShp3eJI3SB
+[Auth] Session exists: true
+[Auth] Session user: undefined
+[Auth] Cookie header: undefined
+[Auth] Authentication error: Error: Authentication required
+    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+    at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+[ErrorHandler] Error caught: {
+  error: 'Authentication required',
+  stack: 'Error: Authentication required\n' +
+    '    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15\n' +
+    '    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)',
+  path: '/api/dashboard/stats',
+  method: 'GET',
+  timestamp: '2025-10-09T11:27:50.913Z'
+}
+11:27:50 AM [express] GET /api/dashboard/stats 401 in 1ms
+11:27:50 AM [express] [Request] GET /api/budget/overview from 162.158.95.197
+[Auth] authenticateSession middleware called for: /overview
+[Auth] Session ID: _1xvaaKyabxbOl88XAB_QvFjRuU8TKvy
+[Auth] Session user exists: false
+[Auth] No user in session for path: /overview
+[Auth] Session ID: _1xvaaKyabxbOl88XAB_QvFjRuU8TKvy
+[Auth] Session exists: true
+[Auth] Session user: undefined
+[Auth] Cookie header: undefined
+[Auth] Authentication error: Error: Authentication required
+    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+    at Function.handle (/opt/render/project/src/node_modules/express/lib/router/index.js:175:3)
+    at router (/opt/render/project/src/node_modules/express/lib/router/index.js:47:12)
+[ErrorHandler] Error caught: {
+  error: 'Authentication required',
+  stack: 'Error: Authentication required\n' +
+    '    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15\n' +
+    '    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at Function.handle (/opt/render/project/src/node_modules/express/lib/router/index.js:175:3)\n' +
+    '    at router (/opt/render/project/src/node_modules/express/lib/router/index.js:47:12)',
+  path: '/api/budget/overview',
+  method: 'GET',
+  timestamp: '2025-10-09T11:27:50.916Z'
+}
+11:27:50 AM [express] GET /api/budget/overview 401 in 2ms
+11:27:50 AM [express] [Request] GET /api/projects from 141.101.99.12
+[Projects] Fetching all projects with optimized schema
+11:27:50 AM [express] [Request] GET /api/admin/system-stats from 172.69.43.183
+[Auth] authenticateSession middleware called for: /api/admin/system-stats
+[Auth] Session ID: qFVC4O3FNyOQTK80pEKEMwUKeXtMlgUc
+[Auth] Session user exists: false
+[Auth] No user in session for path: /api/admin/system-stats
+[Auth] Session ID: qFVC4O3FNyOQTK80pEKEMwUKeXtMlgUc
+[Auth] Session exists: true
+[Auth] Session user: undefined
+[Auth] Cookie header: undefined
+[Auth] Authentication error: Error: Authentication required
+    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)
+    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15
+    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)
+    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)
+    at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)
+    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)
+[ErrorHandler] Error caught: {
+  error: 'Authentication required',
+  stack: 'Error: Authentication required\n' +
+    '    at authenticateSession (file:///opt/render/project/src/dist/index.js:1726:29)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/route.js:149:13)\n' +
+    '    at Route.dispatch (/opt/render/project/src/node_modules/express/lib/router/route.js:119:3)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at /opt/render/project/src/node_modules/express/lib/router/index.js:284:15\n' +
+    '    at Function.process_params (/opt/render/project/src/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/opt/render/project/src/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at documentsPreHandler (file:///opt/render/project/src/dist/index.js:16823:12)\n' +
+    '    at Layer.handle [as handle_request] (/opt/render/project/src/node_modules/express/lib/router/layer.js:95:5)',
+  path: '/api/admin/system-stats',
+  method: 'GET',
+  timestamp: '2025-10-09T11:27:50.953Z'
+}
+11:27:50 AM [express] GET /api/admin/system-stats 401 in 1ms
+11:27:51 AM [express] GET /api/projects 304 in 190ms
+11:27:51 AM [cors] [CORS] Request from allowed origin: https://lexis-ig6p.onrender.com
+11:27:51 AM [cors] [CORS] Method: GET, Path: /assets/index-Bk4J66Sx.js
+11:27:51 AM [cors] [CORS] Request from allowed origin: https://lexis-ig6p.onrender.com
+11:27:51 AM [cors] [CORS] Method: GET, Path: /assets/index-DasTTfdD.css
+11:27:51 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions

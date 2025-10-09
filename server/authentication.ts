@@ -82,7 +82,10 @@ export const sessionMiddleware = session({
     maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // 'none' for cross-origin in production
     path: "/",
-    domain: process.env.COOKIE_DOMAIN || undefined, // Set domain for cross-domain cookies
+    // Only set domain if it's a valid non-empty string
+    ...(process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
+      ? { domain: process.env.COOKIE_DOMAIN.trim() } 
+      : {}),
   },
   proxy: true, // Enable proxy support
 });
