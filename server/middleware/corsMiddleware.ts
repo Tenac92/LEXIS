@@ -35,6 +35,11 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
     }
   }
   
+  // Allow Render domain
+  if (origin && origin.includes('onrender.com')) {
+    allowedOrigins.push(origin);
+  }
+  
   // Enhanced detection of sdegdaefk.gr requests
   const isSdegdaefkRequest = 
     (origin && (allowedOrigins.includes(origin) || origin.endsWith('.sdegdaefk.gr'))) ||
@@ -45,6 +50,7 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   const isAllowedDomain = origin && (
     allowedOrigins.includes(origin) || 
     origin.endsWith('.sdegdaefk.gr') ||
+    origin.includes('onrender.com') ||
     (process.env.NODE_ENV !== 'production' && (
       origin.includes('replit.dev') || 
       origin.includes('replit.app') ||

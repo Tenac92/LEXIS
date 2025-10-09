@@ -38,7 +38,10 @@ const EXEMPT_DOMAINS = [
   'replit.app',
   'replit.dev',
   'repl.co',
-  'replit.com'
+  'replit.com',
+  // Render domain
+  'onrender.com',
+  'lexis-ig6p.onrender.com'
 ];
 
 /**
