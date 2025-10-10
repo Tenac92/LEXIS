@@ -289,48 +289,15 @@ export function SimpleAFMAutocomplete({
     };
   }, []);
 
-  const handleSelect = useCallback(async (person: Employee | Beneficiary) => {
+  const handleSelect = useCallback((person: Employee | Beneficiary) => {
     console.log('[SimpleAFM] Person selected:', person);
-    console.log('[SimpleAFM] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
     
-    // For beneficiaries, fetch financial data first, then add smart installment selection
-    if (!useEmployeeData) {
-      try {
-        // Fetch financial data for the selected beneficiary
-        const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(person.afm)}&includeFinancial=true`);
-        const data = await response.json();
-        
-        if (data.success && data.data && data.data.length > 0) {
-          const beneficiaryWithFinancial = data.data[0];
-          console.log('[SimpleAFM] Processing beneficiary with oikonomika:', beneficiaryWithFinancial.oikonomika);
-          
-          const smartData = getSmartInstallmentData(beneficiaryWithFinancial, expenditureType, userUnit, projectNa853);
-          console.log('[SimpleAFM] Smart data result:', smartData);
-          
-          const enhancedPerson = {
-            ...beneficiaryWithFinancial,
-            suggestedInstallment: smartData.installment,
-            suggestedAmount: smartData.amount,
-            suggestedInstallments: smartData.suggestedInstallments,
-            suggestedInstallmentAmounts: smartData.installmentAmounts
-          };
-          console.log('[SimpleAFM] Enhanced person data:', enhancedPerson);
-          onSelectPerson(enhancedPerson);
-        } else {
-          onSelectPerson(person);
-        }
-      } catch (error) {
-        console.error('[SimpleAFM] Error fetching financial data:', error);
-        onSelectPerson(person);
-      }
-    } else {
-      console.log('[SimpleAFM] No smart processing - using basic selection');
-      onSelectPerson(person);
-    }
+    // No financial data fetching - just pass the person directly
+    onSelectPerson(person);
     
     setShowDropdown(false);
     setSearchTerm(String(person.afm || ""));
-  }, [onSelectPerson, useEmployeeData, expenditureType, userUnit, projectNa853, getSmartInstallmentData]);
+  }, [onSelectPerson]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
