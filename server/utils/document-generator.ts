@@ -510,10 +510,9 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table with fixed column widths to prevent Word corruption
+    // Final table with fixed column widths - no table-level width to avoid grid mismatch
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: PAGE_DXA, type: WidthType.DXA },
       rows,
     });
   }

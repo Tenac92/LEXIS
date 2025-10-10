@@ -231,7 +231,6 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: PAGE_DXA, type: WidthType.DXA },
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
