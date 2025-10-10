@@ -2979,36 +2979,37 @@ export function CreateDocumentDialog({
 
                       {/* Filter by Region */}
                       {availableRegions.length > 0 && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-gray-600">
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
                             Φίλτρο Περιφέρειας
                           </label>
-                          <Select
-                            value={selectedRegionFilter}
-                            onValueChange={(value) => {
-                              const regionCode = value === "all" ? "" : value;
-                              setSelectedRegionFilter(regionCode);
-                              setSelectedUnitFilter(""); // Reset unit filter when region changes
+                          <div className="flex-1">
+                            <Select
+                              value={selectedRegionFilter}
+                              onValueChange={(value) => {
+                                const regionCode = value === "all" ? "" : value;
+                                setSelectedRegionFilter(regionCode);
+                                setSelectedUnitFilter(""); // Reset unit filter when region changes
 
-                              // Set as final selected region for document (last hierarchy choice)
-                              if (regionCode) {
-                                const selectedRegionName =
-                                  availableRegions.find(
-                                    (r: any) => r.code === regionCode,
-                                  )?.name || "";
-                                form.setValue("region", selectedRegionName);
-                                setSelectedMunicipalityId(""); // Clear municipality selection
-                                console.log(
-                                  "[Geographic] Selected region as final choice:",
-                                  selectedRegionName,
-                                );
-                              } else {
-                                form.setValue("region", "");
-                                setSelectedMunicipalityId("");
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-8">
+                                // Set as final selected region for document (last hierarchy choice)
+                                if (regionCode) {
+                                  const selectedRegionName =
+                                    availableRegions.find(
+                                      (r: any) => r.code === regionCode,
+                                    )?.name || "";
+                                  form.setValue("region", selectedRegionName);
+                                  setSelectedMunicipalityId(""); // Clear municipality selection
+                                  console.log(
+                                    "[Geographic] Selected region as final choice:",
+                                    selectedRegionName,
+                                  );
+                                } else {
+                                  form.setValue("region", "");
+                                  setSelectedMunicipalityId("");
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
                               <SelectValue placeholder="Όλες οι περιφέρειες" />
                             </SelectTrigger>
                             <SelectContent>
@@ -3025,13 +3026,14 @@ export function CreateDocumentDialog({
                               ))}
                             </SelectContent>
                           </Select>
+                          </div>
                         </div>
                       )}
 
                       {/* Filter by Regional Unit */}
                       {availableUnits.length > 0 && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-gray-600">
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
                             Φίλτρο Περιφερειακής Ενότητας
                             {selectedRegionFilter && (
                               <span className="text-gray-500">
@@ -3045,7 +3047,8 @@ export function CreateDocumentDialog({
                               </span>
                             )}
                           </label>
-                          <Select
+                          <div className="flex-1">
+                            <Select
                             value={selectedUnitFilter}
                             onValueChange={(value) => {
                               const unitCode = value === "all" ? "" : value;
@@ -3093,13 +3096,14 @@ export function CreateDocumentDialog({
                               ))}
                             </SelectContent>
                           </Select>
+                          </div>
                         </div>
                       )}
 
                       {/* Final Municipality Selection */}
                       {availableMunicipalities.length > 0 && (
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium">
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium whitespace-nowrap min-w-[140px]">
                             Τελική Επιλογή Δήμου/Κοινότητας
                             {(selectedRegionFilter || selectedUnitFilter) && (
                               <span className="text-xs text-gray-500 ml-2">
@@ -3108,7 +3112,8 @@ export function CreateDocumentDialog({
                               </span>
                             )}
                           </label>
-                          <Select
+                          <div className="flex-1">
+                            <Select
                             value={selectedMunicipalityId}
                             onValueChange={(value) => {
                               // Set as final selected region for document (last hierarchy choice - municipality)
@@ -3176,6 +3181,7 @@ export function CreateDocumentDialog({
                               )}
                             </SelectContent>
                           </Select>
+                          </div>
                         </div>
                       )}
 
