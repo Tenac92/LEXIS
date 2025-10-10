@@ -133,7 +133,8 @@ export function SimpleAFMAutocomplete({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
       if (!searchTerm || searchTerm.length < 2) return [];
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
+      // Fast search without financial data for instant autocomplete
+      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
@@ -288,25 +289,40 @@ export function SimpleAFMAutocomplete({
     };
   }, []);
 
-  const handleSelect = useCallback((person: Employee | Beneficiary) => {
+  const handleSelect = useCallback(async (person: Employee | Beneficiary) => {
     console.log('[SimpleAFM] Person selected:', person);
     console.log('[SimpleAFM] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
     
-    // For beneficiaries, add smart installment selection
-    if (!useEmployeeData && 'oikonomika' in person) {
-      console.log('[SimpleAFM] Processing beneficiary with oikonomika:', person.oikonomika);
-      const smartData = getSmartInstallmentData(person, expenditureType, userUnit, projectNa853);
-      console.log('[SimpleAFM] Smart data result:', smartData);
-      
-      const enhancedPerson = {
-        ...person,
-        suggestedInstallment: smartData.installment,
-        suggestedAmount: smartData.amount,
-        suggestedInstallments: smartData.suggestedInstallments,
-        suggestedInstallmentAmounts: smartData.installmentAmounts
-      };
-      console.log('[SimpleAFM] Enhanced person data:', enhancedPerson);
-      onSelectPerson(enhancedPerson);
+    // For beneficiaries, fetch financial data first, then add smart installment selection
+    if (!useEmployeeData) {
+      try {
+        // Fetch financial data for the selected beneficiary
+        const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(person.afm)}&includeFinancial=true`);
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+          const beneficiaryWithFinancial = data.data[0];
+          console.log('[SimpleAFM] Processing beneficiary with oikonomika:', beneficiaryWithFinancial.oikonomika);
+          
+          const smartData = getSmartInstallmentData(beneficiaryWithFinancial, expenditureType, userUnit, projectNa853);
+          console.log('[SimpleAFM] Smart data result:', smartData);
+          
+          const enhancedPerson = {
+            ...beneficiaryWithFinancial,
+            suggestedInstallment: smartData.installment,
+            suggestedAmount: smartData.amount,
+            suggestedInstallments: smartData.suggestedInstallments,
+            suggestedInstallmentAmounts: smartData.installmentAmounts
+          };
+          console.log('[SimpleAFM] Enhanced person data:', enhancedPerson);
+          onSelectPerson(enhancedPerson);
+        } else {
+          onSelectPerson(person);
+        }
+      } catch (error) {
+        console.error('[SimpleAFM] Error fetching financial data:', error);
+        onSelectPerson(person);
+      }
     } else {
       console.log('[SimpleAFM] No smart processing - using basic selection');
       onSelectPerson(person);
@@ -364,7 +380,7 @@ export function SimpleAFMAutocomplete({
       {showDropdown && searchTerm.length >= 2 && (
         <div 
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+          className="absolute z-50 min-w-full w-[500px] mt-1 bg-popover border border-border rounded-md shadow-lg max-h-[400px] overflow-auto"
         >
           {isLoading ? (
             <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
