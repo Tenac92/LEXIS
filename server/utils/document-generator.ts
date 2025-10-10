@@ -224,7 +224,6 @@ export class DocumentGenerator {
               shading: {
                 fill: "C0C0C0",
                 type: ShadingType.CLEAR,
-                color: "auto",
               },
               verticalAlign: VerticalAlign.CENTER,
               children: [
