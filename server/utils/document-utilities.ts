@@ -374,8 +374,7 @@ export class DocumentUtilities {
   ): Table {
     const tableOptions: any = {
       layout: TableLayoutType.FIXED,
-      // IMPORTANT: Do NOT specify table-level width for FIXED layout tables
-      // as it conflicts with cell-level widths and causes Word corruption
+      width: { size: 10466, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE },
         bottom: { style: BorderStyle.NONE },
@@ -387,10 +386,8 @@ export class DocumentUtilities {
       rows,
     };
 
-    // Add columnWidths if provided (for FIXED layout compatibility)
-    if (columnWidths && columnWidths.length > 0) {
-      tableOptions.columnWidths = columnWidths;
-    }
+    // Note: columnWidths property removed for Word compatibility
+    // Individual cell widths should be specified on TableCell elements instead
 
     return new Table(tableOptions);
   }

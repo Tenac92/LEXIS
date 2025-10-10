@@ -177,10 +177,6 @@ export class DocumentGenerator {
 
   /**
    * Subject (boxed, shaded) — all borders inlined
-   * 
-   * IMPORTANT: TableLayoutType.FIXED tables must NOT have table-level width when cells have explicit widths.
-   * Specifying both causes docx to generate incorrect tblGrid elements (all gridCol set to 100 DXA),
-   * which Word detects as corruption. Always use cell-level widths only for FIXED layout tables.
    */
   private static createDocumentSubject(
     documentData: DocumentData,
@@ -207,7 +203,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [PAGE_CONTENT_WIDTH],
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -220,10 +216,10 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
               shading: {
                 fill: "C0C0C0",
                 type: ShadingType.CLEAR,
+                color: "auto",
               },
               verticalAlign: VerticalAlign.CENTER,
               children: [
@@ -280,9 +276,6 @@ export class DocumentGenerator {
 
   /**
    * Payment table — all borders inlined
-   * 
-   * IMPORTANT: Uses TableLayoutType.FIXED with cell-level widths only (no table-level width).
-   * This prevents docx grid corruption where table width + cell widths generate invalid tblGrid elements.
    */
   private static createPaymentTable(
     recipients: any[],
@@ -292,10 +285,9 @@ export class DocumentGenerator {
 
     // Fallback: minimal table if config missing
     if (!Array.isArray(columns) || columns.length === 0) {
-      const PAGE_DXA = 10466;
       return new Table({
-        layout: TableLayoutType.FIXED,
-        columnWidths: [PAGE_DXA],
+        layout: TableLayoutType.AUTOFIT,
+        width: { size: 10466, type: WidthType.DXA },
         borders: {
           top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -308,8 +300,6 @@ export class DocumentGenerator {
           new TableRow({
             children: [
               new TableCell({
-                width: { size: PAGE_DXA, type: WidthType.DXA },
-                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
                 children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
@@ -337,7 +327,6 @@ export class DocumentGenerator {
     const makeCell = (text: string, bold = false, colIndex: number) =>
       new TableCell({
         width: { size: colWidths[colIndex], type: WidthType.DXA },
-        borders: DocumentUtilities.BORDERS.STANDARD_CELL,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -364,7 +353,6 @@ export class DocumentGenerator {
 
       return new TableCell({
         width: { size: colWidths[colIndex], type: WidthType.DXA },
-        borders: DocumentUtilities.BORDERS.STANDARD_CELL,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -491,14 +479,12 @@ export class DocumentGenerator {
           if (idx < totalLabelCellIndex) {
             return new TableCell({
               width: { size: colWidths[idx], type: WidthType.DXA },
-              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
               children: [new Paragraph({ children: [t("")] })],
             });
           }
           if (idx === totalLabelCellIndex) {
             return new TableCell({
               width: { size: colWidths[idx], type: WidthType.DXA },
-              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -510,7 +496,6 @@ export class DocumentGenerator {
           }
           return new TableCell({
             width: { size: colWidths[idx], type: WidthType.DXA },
-            borders: DocumentUtilities.BORDERS.STANDARD_CELL,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -525,11 +510,10 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table with fixed column widths and borders matching secondary document
+    // Final table with fixed column widths to prevent Word corruption
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: colWidths,
-      borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
+      width: { size: PAGE_DXA, type: WidthType.DXA },
       rows,
     });
   }
@@ -664,7 +648,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [6500, 3966],
+      width: { size: 10466, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -769,7 +753,7 @@ export class DocumentGenerator {
     return [
       new Table({
         layout: TableLayoutType.FIXED,
-        columnWidths: [1574, 8892],
+        width: { size: 10466, type: WidthType.DXA },
         borders: {
           top: { style: BorderStyle.NONE, size: 0 },
           bottom: { style: BorderStyle.NONE, size: 0 },
@@ -826,8 +810,7 @@ export class DocumentGenerator {
     const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6);
     const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
 
-    // Nested table must match parent cell width exactly
-    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH;
+    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
     const PROS_LABEL_COL = Math.round(RIGHT_INNER_WIDTH * 0.2);
     const PROS_TEXT_COL = RIGHT_INNER_WIDTH - PROS_LABEL_COL;
 
@@ -920,7 +903,7 @@ export class DocumentGenerator {
 
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
+      width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -968,7 +951,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
+      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },

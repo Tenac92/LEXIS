@@ -50,10 +50,6 @@ export class SecondaryDocumentFormatter {
     ];
   }
 
-  /**
-   * IMPORTANT: Uses TableLayoutType.FIXED with cell-level widths only (no table-level width).
-   * This prevents docx grid corruption where table width + cell widths generate invalid tblGrid elements.
-   */
   private static createRecipientsTable(
     recipients: any[],
     expenditureType: string,
@@ -235,7 +231,7 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: grid,
+      width: { size: PAGE_DXA, type: WidthType.DXA },
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
@@ -316,24 +312,20 @@ export class SecondaryDocumentFormatter {
         documentData.director_signature,
       );
 
-    // Page width is 10466 DXA, split equally for two columns
-    const PAGE_WIDTH = 10466;
-    const COLUMN_WIDTH = Math.floor(PAGE_WIDTH / 2);
-    
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [COLUMN_WIDTH, PAGE_WIDTH - COLUMN_WIDTH],
+      width: { size: 14000, type: WidthType.DXA },
       borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              width: { size: COLUMN_WIDTH, type: WidthType.DXA },
+              width: { size: 7000, type: WidthType.DXA },
               children: leftColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
             new TableCell({
-              width: { size: PAGE_WIDTH - COLUMN_WIDTH, type: WidthType.DXA },
+              width: { size: 7000, type: WidthType.DXA },
               children: rightColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
