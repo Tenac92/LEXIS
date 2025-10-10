@@ -204,7 +204,6 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-      columnWidths: [PAGE_CONTENT_WIDTH],
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -289,7 +288,6 @@ export class DocumentGenerator {
       return new Table({
         layout: TableLayoutType.AUTOFIT,
         width: { size: 10466, type: WidthType.DXA },
-        columnWidths: [10466],
         borders: {
           top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -317,8 +315,18 @@ export class DocumentGenerator {
       return Number.isFinite(v) ? v : 0;
     };
 
-    const makeCell = (text: string, bold = false) =>
+    // Calculate column widths - distribute PAGE_DXA equally
+    const PAGE_DXA = 10466;
+    const baseColWidth = Math.floor(PAGE_DXA / columns.length);
+    const colWidths = columns.map((_, i) =>
+      i < columns.length - 1
+        ? baseColWidth
+        : PAGE_DXA - baseColWidth * (columns.length - 1),
+    );
+
+    const makeCell = (text: string, bold = false, colIndex: number) =>
       new TableCell({
+        width: { size: colWidths[colIndex], type: WidthType.DXA },
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -332,6 +340,7 @@ export class DocumentGenerator {
     const makeNameCell = (
       fullName: string,
       freetext: string | null | undefined,
+      colIndex: number,
     ) => {
       const children: any[] = [t(fullName, { ...FONT })];
 
@@ -343,6 +352,7 @@ export class DocumentGenerator {
       }
 
       return new TableCell({
+        width: { size: colWidths[colIndex], type: WidthType.DXA },
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -356,7 +366,7 @@ export class DocumentGenerator {
 
     const mkHeaderRow = () =>
       new TableRow({
-        children: columns.map((c: string) => makeCell(c, true)),
+        children: columns.map((c: string, idx: number) => makeCell(c, true, idx)),
       });
 
     const typeSpecificValue = (
@@ -450,11 +460,11 @@ export class DocumentGenerator {
         rows.push(
           new TableRow({
             height: { value: 360, rule: HeightRule.ATLEAST },
-            children: columns.map((label: string) => {
+            children: columns.map((label: string, idx: number) => {
               if (label === "ΟΝΟΜΑΤΕΠΩΝΥΜΟ") {
-                return makeNameCell(fullName, recipient?.freetext);
+                return makeNameCell(fullName, recipient?.freetext, idx);
               }
-              return makeCell(cMap[label] ?? "", false);
+              return makeCell(cMap[label] ?? "", false, idx);
             }),
           }),
         );
@@ -468,11 +478,13 @@ export class DocumentGenerator {
         children: columns.map((_, idx) => {
           if (idx < totalLabelCellIndex) {
             return new TableCell({
+              width: { size: colWidths[idx], type: WidthType.DXA },
               children: [new Paragraph({ children: [t("")] })],
             });
           }
           if (idx === totalLabelCellIndex) {
             return new TableCell({
+              width: { size: colWidths[idx], type: WidthType.DXA },
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -483,6 +495,7 @@ export class DocumentGenerator {
             });
           }
           return new TableCell({
+            width: { size: colWidths[idx], type: WidthType.DXA },
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -497,10 +510,10 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table with auto-fit columns that resize to content
+    // Final table with fixed column widths to prevent Word corruption
     return new Table({
-      layout: TableLayoutType.AUTOFIT,
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      layout: TableLayoutType.FIXED,
+      width: { size: PAGE_DXA, type: WidthType.DXA },
       rows,
     });
   }
@@ -636,7 +649,6 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 10466, type: WidthType.DXA },
-      columnWidths: [6500, 3966],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -649,10 +661,12 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
+              width: { size: 6500, type: WidthType.DXA },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
+              width: { size: 3966, type: WidthType.DXA },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
@@ -710,6 +724,7 @@ export class DocumentGenerator {
       new TableRow({
         children: [
           new TableCell({
+            width: { size: 1574, type: WidthType.DXA },
             borders: {
               top: { style: BorderStyle.NONE, size: 0 },
               bottom: { style: BorderStyle.NONE, size: 0 },
@@ -723,6 +738,7 @@ export class DocumentGenerator {
             ],
           }),
           new TableCell({
+            width: { size: 8892, type: WidthType.DXA },
             borders: {
               top: { style: BorderStyle.NONE, size: 0 },
               bottom: { style: BorderStyle.NONE, size: 0 },
@@ -738,7 +754,6 @@ export class DocumentGenerator {
       new Table({
         layout: TableLayoutType.FIXED,
         width: { size: 10466, type: WidthType.DXA },
-        columnWidths: [1574, 8892],
         borders: {
           top: { style: BorderStyle.NONE, size: 0 },
           bottom: { style: BorderStyle.NONE, size: 0 },
@@ -889,7 +904,6 @@ export class DocumentGenerator {
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED,
       width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
-      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -902,6 +916,7 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
+              width: { size: PROS_LABEL_COL, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [t("ΠΡΟΣ:", { bold: true, size: 20 })],
@@ -912,6 +927,7 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
+              width: { size: PROS_TEXT_COL, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [t(toLines[0], { size: 20 })],
@@ -936,7 +952,6 @@ export class DocumentGenerator {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
-      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -949,6 +964,7 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
+              width: { size: LEFT_COL_WIDTH, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE, size: 0 },
                 bottom: { style: BorderStyle.NONE, size: 0 },
@@ -959,6 +975,7 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
+              width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE, size: 0 },
                 bottom: { style: BorderStyle.NONE, size: 0 },

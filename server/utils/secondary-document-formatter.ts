@@ -92,9 +92,19 @@ export class SecondaryDocumentFormatter {
         spacing: { after: 0 },
       });
 
+    // Equal DXA grid (last col absorbs remainder) - MUST be defined before usage
+    const PAGE_DXA = 14000;
+    const columnCount = headerOrder.length;
+    const base = Math.floor(PAGE_DXA / columnCount);
+    const grid: number[] = [];
+    for (let i = 0; i < columnCount; i++) {
+      grid.push(i < columnCount - 1 ? base : PAGE_DXA - base * (columnCount - 1));
+    }
+
     const headerCells = headerOrder.map(
-      (label) =>
+      (label, i) =>
         new TableCell({
+          width: { size: grid[i], type: WidthType.DXA },
           borders: cellBorder,
           children: [mkCentered(label, true)],
           verticalAlign: VerticalAlign.CENTER,
@@ -103,21 +113,14 @@ export class SecondaryDocumentFormatter {
 
     const rows: TableRow[] = [new TableRow({ children: headerCells })];
 
-    // Equal DXA grid (last col absorbs remainder)
-    const PAGE_DXA = 14000;
-    const base = Math.floor(PAGE_DXA / headerOrder.length);
-    const grid = headerOrder.map((_, i) =>
-      i < headerOrder.length - 1
-        ? base
-        : PAGE_DXA - base * (headerOrder.length - 1),
-    );
 
     // Helper to build one data row in the exact header order
     const mkRow = (data: Record<string, string>) =>
       new TableRow({
         children: headerOrder.map(
-          (col) =>
+          (col, i) =>
             new TableCell({
+              width: { size: grid[i], type: WidthType.DXA },
               borders: cellBorder,
               children: [mkCentered(data[col] ?? "", false)],
               verticalAlign: VerticalAlign.CENTER,
@@ -200,6 +203,7 @@ export class SecondaryDocumentFormatter {
     const totalChildren = headerOrder.map((_, idx) => {
       if (idx === totalLabelIdx) {
         return new TableCell({
+          width: { size: grid[idx], type: WidthType.DXA },
           borders: cellBorder,
           children: [mkCentered("ΣΥΝΟΛΟ:", true)],
           verticalAlign: VerticalAlign.CENTER,
@@ -207,6 +211,7 @@ export class SecondaryDocumentFormatter {
       }
       if (idx === totalValueIdx) {
         return new TableCell({
+          width: { size: grid[idx], type: WidthType.DXA },
           borders: cellBorder,
           children: [
             mkCentered(DocumentUtilities.formatCurrency(totalAmount), true),
@@ -215,6 +220,7 @@ export class SecondaryDocumentFormatter {
         });
       }
       return new TableCell({
+        width: { size: grid[idx], type: WidthType.DXA },
         borders: cellBorder,
         children: [mkCentered("", false)],
         verticalAlign: VerticalAlign.CENTER,
@@ -226,7 +232,6 @@ export class SecondaryDocumentFormatter {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: PAGE_DXA, type: WidthType.DXA },
-      columnWidths: grid,
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
@@ -310,16 +315,17 @@ export class SecondaryDocumentFormatter {
     return new Table({
       layout: TableLayoutType.FIXED,
       width: { size: 14000, type: WidthType.DXA },
-      columnWidths: [7000, 7000], // Two equal columns for signature
       borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
       rows: [
         new TableRow({
           children: [
             new TableCell({
+              width: { size: 7000, type: WidthType.DXA },
               children: leftColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
             new TableCell({
+              width: { size: 7000, type: WidthType.DXA },
               children: rightColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
