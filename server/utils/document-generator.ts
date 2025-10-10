@@ -293,9 +293,10 @@ export class DocumentGenerator {
 
     // Fallback: minimal table if config missing
     if (!Array.isArray(columns) || columns.length === 0) {
+      const PAGE_DXA = 10466;
       return new Table({
-        layout: TableLayoutType.AUTOFIT,
-        width: { size: 10466, type: WidthType.DXA },
+        layout: TableLayoutType.FIXED,
+        columnWidths: [PAGE_DXA],
         borders: {
           top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -308,6 +309,7 @@ export class DocumentGenerator {
           new TableRow({
             children: [
               new TableCell({
+                width: { size: PAGE_DXA, type: WidthType.DXA },
                 children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
