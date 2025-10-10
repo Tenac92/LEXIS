@@ -207,6 +207,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: [PAGE_CONTENT_WIDTH],
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -655,6 +656,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: [6500, 3966],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -759,6 +761,7 @@ export class DocumentGenerator {
     return [
       new Table({
         layout: TableLayoutType.FIXED,
+        columnWidths: [1574, 8892],
         borders: {
           top: { style: BorderStyle.NONE, size: 0 },
           bottom: { style: BorderStyle.NONE, size: 0 },
@@ -908,6 +911,7 @@ export class DocumentGenerator {
 
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: [PROS_LABEL_COL, PROS_TEXT_COL],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -955,6 +959,7 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: [LEFT_COL_WIDTH, RIGHT_COL_WIDTH],
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },

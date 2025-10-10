@@ -318,6 +318,7 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: [7000, 7000],
       borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
       rows: [
         new TableRow({
