@@ -818,7 +818,8 @@ export class DocumentGenerator {
     const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6);
     const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
 
-    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH - 10;
+    // Nested table must match parent cell width exactly
+    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH;
     const PROS_LABEL_COL = Math.round(RIGHT_INNER_WIDTH * 0.2);
     const PROS_TEXT_COL = RIGHT_INNER_WIDTH - PROS_LABEL_COL;
 
