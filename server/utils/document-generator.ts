@@ -186,7 +186,7 @@ export class DocumentGenerator {
     const documentTitle = config.documentTitle;
 
     const subjectText = [
-      { text: "ΘΕΜΑ:", bold: true, italics: true, color: "000000" },
+      { text: "ΘΕΜΑ: ", bold: true, italics: true, color: "000000" },
       {
         text: ` ${documentTitle} ${
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
@@ -373,7 +373,10 @@ export class DocumentGenerator {
         return q != null ? cleanText(String(q)) : "";
       }
       // Handle supplementary installments - show short form
-      if (typeof installment === "string" && installment.includes("συμπληρωματική")) {
+      if (
+        typeof installment === "string" &&
+        installment.includes("συμπληρωματική")
+      ) {
         return cleanText(installment.replace(" συμπληρωματική", " ΣΥΜ."));
       }
       return installment != null ? cleanText(String(installment)) : "";
