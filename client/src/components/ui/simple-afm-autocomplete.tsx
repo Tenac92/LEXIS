@@ -1,7 +1,22 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { User, Building2, Search, Check, ChevronsUpDown } from "lucide-react";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 import { type Employee, type Beneficiary } from "@shared/schema";
 
 // Data validation utilities
@@ -102,8 +117,8 @@ export function SimpleAFMAutocomplete({
   userUnit = "",
   projectNa853 = ""
 }: SimpleAFMAutocompleteProps) {
+  const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
-  const [showDropdown, setShowDropdown] = useState(false);
   
   // Update search term when value prop changes
   useEffect(() => {
@@ -119,33 +134,31 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 7) return [];
+      if (!searchTerm || searchTerm.length < 2) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 7,
+    enabled: useEmployeeData && searchTerm.length >= 2,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 7) return [];
+      if (!searchTerm || searchTerm.length < 2) return [];
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}&includeFinancial=true`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 7,
+    enabled: !useEmployeeData && searchTerm.length >= 2,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
   const searchResults = useEmployeeData ? employees : beneficiaries;
 
-  // OLD LOGIC REMOVED - Using new installment logic only
-  
   // Fixed installment logic based on user requirements
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
     if (import.meta.env.NODE_ENV === 'development') {
@@ -291,14 +304,14 @@ export function SimpleAFMAutocomplete({
   }, []);
 
   const handleSelect = useCallback((person: Employee | Beneficiary) => {
-    console.log('[SmartAutocomplete] Person selected:', person);
-    console.log('[SmartAutocomplete] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
+    console.log('[SimpleAFM] Person selected:', person);
+    console.log('[SimpleAFM] Context:', { expenditureType, userUnit, projectNa853, useEmployeeData });
     
     // For beneficiaries, add smart installment selection
     if (!useEmployeeData && 'oikonomika' in person) {
-      console.log('[SmartAutocomplete] Processing beneficiary with oikonomika:', person.oikonomika);
+      console.log('[SimpleAFM] Processing beneficiary with oikonomika:', person.oikonomika);
       const smartData = getSmartInstallmentData(person, expenditureType, userUnit, projectNa853);
-      console.log('[SmartAutocomplete] Smart data result:', smartData);
+      console.log('[SimpleAFM] Smart data result:', smartData);
       
       const enhancedPerson = {
         ...person,
@@ -307,79 +320,136 @@ export function SimpleAFMAutocomplete({
         suggestedInstallments: smartData.suggestedInstallments,
         suggestedInstallmentAmounts: smartData.installmentAmounts
       };
-      console.log('[SmartAutocomplete] Enhanced person data:', enhancedPerson);
+      console.log('[SimpleAFM] Enhanced person data:', enhancedPerson);
       onSelectPerson(enhancedPerson);
     } else {
-      console.log('[SmartAutocomplete] No smart processing - using basic selection');
+      console.log('[SimpleAFM] No smart processing - using basic selection');
       onSelectPerson(person);
     }
     
-    setShowDropdown(false);
+    setOpen(false);
     setSearchTerm(String(person.afm || ""));
   }, [onSelectPerson, useEmployeeData, expenditureType, userUnit, projectNa853, getSmartInstallmentData]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    
+  const handleInputChange = (newValue: string) => {
     // Only allow numeric input and limit to 9 digits
-    const numericValue = value.replace(/\D/g, '').slice(0, 9);
+    const numericValue = newValue.replace(/\D/g, '').slice(0, 9);
     
     setSearchTerm(numericValue);
-    setShowDropdown(numericValue.length >= 7);
     
     // Notify parent component when user types
     onChange?.(numericValue);
+    
+    // Auto-open dropdown when typing
+    if (numericValue.length >= 2 && !open) {
+      setOpen(true);
+    }
   };
 
+  // Find selected person for display
+  const selectedPerson = searchResults.find((p: Employee | Beneficiary) => 
+    String(p.afm) === searchTerm
+  );
+
+  const displayValue = selectedPerson
+    ? `${selectedPerson.surname} ${selectedPerson.name} (${selectedPerson.afm})`
+    : searchTerm
+    ? `ΑΦΜ: ${searchTerm}`
+    : placeholder;
+
   return (
-    <div className={cn("relative", className)}>
-      <Input
-        type="text"
-        placeholder={placeholder}
-        value={searchTerm}
-        onChange={handleInputChange}
-        disabled={disabled}
-        className="w-full"
-        onFocus={() => searchTerm.length >= 7 && setShowDropdown(true)}
-        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
-      />
-      
-      {/* Simple dropdown results */}
-      {showDropdown && searchTerm.length >= 7 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-3">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span className="ml-2 text-sm">Αναζήτηση...</span>
-            </div>
-          ) : searchResults.length === 0 ? (
-            <div className="p-3 text-sm text-gray-500 text-center">
-              Δεν βρέθηκαν αποτελέσματα
-            </div>
-          ) : (
-            <div>
-              {searchResults.map((person: Employee | Beneficiary) => (
-                <div
-                  key={person.id}
-                  className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSelect(person);
-                  }}
-                >
-                  <div className="font-medium">
-                    {person.surname} {person.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    ΑΦΜ: {person.afm}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn("w-full justify-between", className)}
+          disabled={disabled}
+          data-testid="button-afm-search"
+        >
+          <div className="flex items-center gap-2 truncate">
+            {useEmployeeData ? (
+              <User className="h-4 w-4 shrink-0" />
+            ) : (
+              <Building2 className="h-4 w-4 shrink-0" />
+            )}
+            <span className="truncate">{displayValue}</span>
+          </div>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command shouldFilter={false}>
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput
+              placeholder="Πληκτρολογήστε ΑΦΜ..."
+              value={searchTerm}
+              onValueChange={handleInputChange}
+              className="border-0 focus:ring-0"
+              data-testid="input-afm-search"
+            />
+          </div>
+          <CommandList>
+            <CommandEmpty>
+              {isLoading ? (
+                <div className="py-6 text-center text-sm">
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    Αναζήτηση...
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+              ) : searchTerm.length < 2 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Πληκτρολογήστε τουλάχιστον 2 χαρακτήρες
+                </div>
+              ) : (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Δεν βρέθηκαν αποτελέσματα
+                </div>
+              )}
+            </CommandEmpty>
+            {searchResults.length > 0 && (
+              <CommandGroup>
+                {searchResults.map((person: Employee | Beneficiary) => {
+                  const isSelected = selectedPerson?.id === person.id;
+                  
+                  return (
+                    <CommandItem
+                      key={person.id}
+                      value={String(person.afm)}
+                      onSelect={() => handleSelect(person)}
+                      className="cursor-pointer"
+                      data-testid={`item-afm-${person.afm}`}
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {useEmployeeData ? (
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium">
+                            {person.surname} {person.name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            ΑΦΜ: {person.afm}
+                            {person.fathername && ` • ${person.fathername}`}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <Check className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
