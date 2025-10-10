@@ -3009,16 +3009,23 @@ export function CreateDocumentDialog({
 
                               // Set as final selected region for document (last hierarchy choice)
                               if (unitCode) {
-                                const selectedUnitName =
-                                  availableUnits.find(
-                                    (u: any) => u.code === unitCode,
-                                  )?.name || "";
-                                form.setValue("region", selectedUnitName);
-                                setSelectedMunicipalityId(""); // Clear municipality selection
-                                console.log(
-                                  "[Geographic] Selected regional unit as final choice:",
-                                  selectedUnitName,
+                                const selectedUnit = availableUnits.find(
+                                  (u: any) => u.code === unitCode,
                                 );
+                                
+                                if (selectedUnit) {
+                                  // Auto-complete: Fill region filter
+                                  if (selectedUnit.region_code) {
+                                    setSelectedRegionFilter(selectedUnit.region_code);
+                                  }
+                                  
+                                  form.setValue("region", selectedUnit.name);
+                                  setSelectedMunicipalityId(""); // Clear municipality selection
+                                  console.log(
+                                    "[Geographic] Selected regional unit as final choice:",
+                                    selectedUnit.name,
+                                  );
+                                }
                               } else if (!selectedRegionFilter) {
                                 form.setValue("region", "");
                                 setSelectedMunicipalityId("");
@@ -3066,6 +3073,21 @@ export function CreateDocumentDialog({
                                   (m: any) => m.id === value,
                                 );
                               if (selectedMunicipality) {
+                                // Auto-complete: Find the parent unit and region
+                                const parentUnit = ((projectGeographicAreas as any)?.availableUnits || []).find(
+                                  (u: any) => u.code === selectedMunicipality.unit_code
+                                );
+                                
+                                if (parentUnit) {
+                                  // Auto-fill regional unit filter
+                                  setSelectedUnitFilter(parentUnit.code);
+                                  
+                                  // Auto-fill region filter
+                                  if (parentUnit.region_code) {
+                                    setSelectedRegionFilter(parentUnit.region_code);
+                                  }
+                                }
+                                
                                 form.setValue(
                                   "region",
                                   selectedMunicipality.name,
@@ -3113,13 +3135,12 @@ export function CreateDocumentDialog({
                         </div>
                       )}
 
-                      {/* Show current filters */}
-                      {(selectedRegionFilter || selectedUnitFilter) && (
+                      {/* Show current selection path */}
+                      {(selectedRegionFilter || selectedUnitFilter || selectedMunicipalityId) && (
                         <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                          Ενεργά φίλτρα:
+                          <span className="text-gray-600">Επιλεγμένη γεωγραφική περιοχή:</span>
                           {selectedRegionFilter && (
                             <span className="ml-1 font-medium">
-                              Περιφέρεια:{" "}
                               {
                                 availableRegions.find(
                                   (r: any) => r.code === selectedRegionFilter,
@@ -3129,11 +3150,20 @@ export function CreateDocumentDialog({
                           )}
                           {selectedUnitFilter && (
                             <span className="ml-1 font-medium">
-                              {selectedRegionFilter && " • "}
-                              Π.Ε.:{" "}
+                              {selectedRegionFilter && " › "}
                               {
                                 availableUnits.find(
                                   (u: any) => u.code === selectedUnitFilter,
+                                )?.name
+                              }
+                            </span>
+                          )}
+                          {selectedMunicipalityId && (
+                            <span className="ml-1 font-medium">
+                              {(selectedRegionFilter || selectedUnitFilter) && " › "}
+                              {
+                                availableMunicipalities.find(
+                                  (m: any) => m.id === selectedMunicipalityId,
                                 )?.name
                               }
                             </span>
