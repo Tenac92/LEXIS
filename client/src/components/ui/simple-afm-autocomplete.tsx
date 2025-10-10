@@ -1,22 +1,8 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { User, Building2, Search, Check, ChevronsUpDown } from "lucide-react";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { User, Building2, Search, Loader2 } from "lucide-react";
 import { type Employee, type Beneficiary } from "@shared/schema";
 
 // Data validation utilities
@@ -64,24 +50,6 @@ const safeParseAmount = (value: any, defaultValue: number = 0): number => {
   return defaultValue;
 };
 
-// Currency formatting utilities
-const formatCurrency = (amount: number, locale: string = 'el-GR'): string => {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
-
-// Simple number formatting (without currency symbol)  
-const formatAmount = (amount: number, locale: string = 'el-GR'): string => {
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
-
 const validateInstallments = (installments: any): string[] => {
   if (!installments) return [];
   
@@ -117,8 +85,10 @@ export function SimpleAFMAutocomplete({
   userUnit = "",
   projectNa853 = ""
 }: SimpleAFMAutocompleteProps) {
-  const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Update search term when value prop changes
   useEffect(() => {
@@ -126,6 +96,21 @@ export function SimpleAFMAutocomplete({
       setSearchTerm(value);
     }
   }, [value]);
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
+          inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
   
   // Determine if we should use employee or beneficiary data
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
@@ -327,11 +312,13 @@ export function SimpleAFMAutocomplete({
       onSelectPerson(person);
     }
     
-    setOpen(false);
+    setShowDropdown(false);
     setSearchTerm(String(person.afm || ""));
   }, [onSelectPerson, useEmployeeData, expenditureType, userUnit, projectNa853, getSmartInstallmentData]);
 
-  const handleInputChange = (newValue: string) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    
     // Only allow numeric input and limit to 9 digits
     const numericValue = newValue.replace(/\D/g, '').slice(0, 9);
     
@@ -340,116 +327,87 @@ export function SimpleAFMAutocomplete({
     // Notify parent component when user types
     onChange?.(numericValue);
     
-    // Auto-open dropdown when typing
-    if (numericValue.length >= 2 && !open) {
-      setOpen(true);
+    // Show dropdown when user types at least 2 characters
+    if (numericValue.length >= 2) {
+      setShowDropdown(true);
+    } else {
+      setShowDropdown(false);
     }
   };
 
-  // Find selected person for display
-  const selectedPerson = searchResults.find((p: Employee | Beneficiary) => 
-    String(p.afm) === searchTerm
-  );
-
-  const displayValue = selectedPerson
-    ? `${selectedPerson.surname} ${selectedPerson.name} (${selectedPerson.afm})`
-    : searchTerm
-    ? `ΑΦΜ: ${searchTerm}`
-    : placeholder;
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+    <div className={cn("relative", className)}>
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          type="text"
+          placeholder={placeholder}
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => searchTerm.length >= 2 && setShowDropdown(true)}
           disabled={disabled}
-          data-testid="button-afm-search"
+          className="w-full pr-8"
+          data-testid="input-afm-search"
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : useEmployeeData ? (
+            <User className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      </div>
+      
+      {/* Dropdown results */}
+      {showDropdown && searchTerm.length >= 2 && (
+        <div 
+          ref={dropdownRef}
+          className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto"
         >
-          <div className="flex items-center gap-2 truncate">
-            {useEmployeeData ? (
-              <User className="h-4 w-4 shrink-0" />
-            ) : (
-              <Building2 className="h-4 w-4 shrink-0" />
-            )}
-            <span className="truncate">{displayValue}</span>
-          </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
-        <Command shouldFilter={false}>
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput
-              placeholder="Πληκτρολογήστε ΑΦΜ..."
-              value={searchTerm}
-              onValueChange={handleInputChange}
-              className="border-0 focus:ring-0"
-              data-testid="input-afm-search"
-            />
-          </div>
-          <CommandList>
-            <CommandEmpty>
-              {isLoading ? (
-                <div className="py-6 text-center text-sm">
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    Αναζήτηση...
+          {isLoading ? (
+            <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Αναζήτηση...
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {searchTerm.length < 2 ? (
+                "Πληκτρολογήστε τουλάχιστον 2 χαρακτήρες"
+              ) : (
+                "Δεν βρέθηκαν αποτελέσματα"
+              )}
+            </div>
+          ) : (
+            <div>
+              {searchResults.map((person: Employee | Beneficiary) => (
+                <div
+                  key={person.id}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent cursor-pointer border-b border-border last:border-b-0 transition-colors"
+                  onClick={() => handleSelect(person)}
+                  data-testid={`item-afm-${person.afm}`}
+                >
+                  {useEmployeeData ? (
+                    <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">
+                      {person.surname} {person.name}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      ΑΦΜ: {person.afm}
+                      {person.fathername && ` • ${person.fathername}`}
+                    </div>
                   </div>
                 </div>
-              ) : searchTerm.length < 2 ? (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Πληκτρολογήστε τουλάχιστον 2 χαρακτήρες
-                </div>
-              ) : (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  Δεν βρέθηκαν αποτελέσματα
-                </div>
-              )}
-            </CommandEmpty>
-            {searchResults.length > 0 && (
-              <CommandGroup>
-                {searchResults.map((person: Employee | Beneficiary) => {
-                  const isSelected = selectedPerson?.id === person.id;
-                  
-                  return (
-                    <CommandItem
-                      key={person.id}
-                      value={String(person.afm)}
-                      onSelect={() => handleSelect(person)}
-                      className="cursor-pointer"
-                      data-testid={`item-afm-${person.afm}`}
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        {useEmployeeData ? (
-                          <User className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <div className="flex-1">
-                          <div className="font-medium">
-                            {person.surname} {person.name}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            ΑΦΜ: {person.afm}
-                            {person.fathername && ` • ${person.fathername}`}
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <Check className="h-4 w-4 text-primary" />
-                        )}
-                      </div>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
