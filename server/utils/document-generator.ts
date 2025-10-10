@@ -203,7 +203,6 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -216,6 +215,7 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
+              width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
               shading: {
                 fill: "C0C0C0",
                 type: ShadingType.CLEAR,
@@ -647,7 +647,6 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -752,7 +751,6 @@ export class DocumentGenerator {
     return [
       new Table({
         layout: TableLayoutType.FIXED,
-        width: { size: 10466, type: WidthType.DXA },
         borders: {
           top: { style: BorderStyle.NONE, size: 0 },
           bottom: { style: BorderStyle.NONE, size: 0 },
@@ -902,7 +900,6 @@ export class DocumentGenerator {
 
     const rightInnerTable = new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -950,7 +947,6 @@ export class DocumentGenerator {
 
     return new Table({
       layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
