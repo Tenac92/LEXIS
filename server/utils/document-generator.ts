@@ -199,11 +199,8 @@ export class DocumentGenerator {
       },
     ];
 
-    const PAGE_CONTENT_WIDTH = 10466;
-
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.SINGLE, size: 4 },
         bottom: { style: BorderStyle.SINGLE, size: 4 },
@@ -286,8 +283,7 @@ export class DocumentGenerator {
     // Fallback: minimal table if config missing
     if (!Array.isArray(columns) || columns.length === 0) {
       return new Table({
-        layout: TableLayoutType.AUTOFIT,
-        width: { size: 10466, type: WidthType.DXA },
+        width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
           top: { style: BorderStyle.SINGLE, size: 1 },
           bottom: { style: BorderStyle.SINGLE, size: 1 },
@@ -633,8 +629,7 @@ export class DocumentGenerator {
       );
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: 10466, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -647,12 +642,10 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 6500, type: WidthType.DXA },
               children: leftColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              width: { size: 3966, type: WidthType.DXA },
               children: rightColumnParagraphs,
               verticalAlign: VerticalAlign.TOP,
             }),
@@ -710,7 +703,6 @@ export class DocumentGenerator {
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 1574, type: WidthType.DXA },
             borders: {
               top: { style: BorderStyle.NONE, size: 0 },
               bottom: { style: BorderStyle.NONE, size: 0 },
@@ -724,7 +716,6 @@ export class DocumentGenerator {
             ],
           }),
           new TableCell({
-            width: { size: 8892, type: WidthType.DXA },
             borders: {
               top: { style: BorderStyle.NONE, size: 0 },
               bottom: { style: BorderStyle.NONE, size: 0 },
@@ -738,8 +729,7 @@ export class DocumentGenerator {
 
     return [
       new Table({
-        layout: TableLayoutType.FIXED,
-        width: { size: 10466, type: WidthType.DXA },
+        width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
           top: { style: BorderStyle.NONE, size: 0 },
           bottom: { style: BorderStyle.NONE, size: 0 },
@@ -791,14 +781,6 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null | undefined,
   ): Promise<Table> {
     if (!documentData) throw new Error("Document data is required");
-
-    const PAGE_CONTENT_WIDTH = 10466;
-    const LEFT_COL_WIDTH = Math.round(PAGE_CONTENT_WIDTH * 0.6);
-    const RIGHT_COL_WIDTH = PAGE_CONTENT_WIDTH - LEFT_COL_WIDTH;
-
-    const RIGHT_INNER_WIDTH = RIGHT_COL_WIDTH;
-    const PROS_LABEL_COL = Math.round(RIGHT_INNER_WIDTH * 0.2);
-    const PROS_TEXT_COL = RIGHT_INNER_WIDTH - PROS_LABEL_COL;
 
     const p = (text: string, opts?: { bold?: boolean }) =>
       new Paragraph({
@@ -888,8 +870,7 @@ export class DocumentGenerator {
     ].map(cleanText);
 
     const rightInnerTable = new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: RIGHT_INNER_WIDTH, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -902,7 +883,6 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: PROS_LABEL_COL, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [t("ΠΡΟΣ:", { bold: true, size: 20 })],
@@ -913,7 +893,6 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              width: { size: PROS_TEXT_COL, type: WidthType.DXA },
               children: [
                 new Paragraph({
                   children: [t(toLines[0], { size: 20 })],
@@ -936,8 +915,7 @@ export class DocumentGenerator {
     });
 
     return new Table({
-      layout: TableLayoutType.FIXED,
-      width: { size: PAGE_CONTENT_WIDTH, type: WidthType.DXA },
+      width: { size: 100, type: WidthType.PERCENTAGE },
       borders: {
         top: { style: BorderStyle.NONE, size: 0 },
         bottom: { style: BorderStyle.NONE, size: 0 },
@@ -950,7 +928,6 @@ export class DocumentGenerator {
         new TableRow({
           children: [
             new TableCell({
-              width: { size: LEFT_COL_WIDTH, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE, size: 0 },
                 bottom: { style: BorderStyle.NONE, size: 0 },
@@ -961,7 +938,6 @@ export class DocumentGenerator {
               verticalAlign: VerticalAlign.TOP,
             }),
             new TableCell({
-              width: { size: RIGHT_COL_WIDTH, type: WidthType.DXA },
               borders: {
                 top: { style: BorderStyle.NONE, size: 0 },
                 bottom: { style: BorderStyle.NONE, size: 0 },
