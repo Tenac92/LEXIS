@@ -1017,44 +1017,38 @@ export function CreateDocumentDialog({
     if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
       return false;
 
-    // Separate regular and supplementary installments
-    const regularInstallments = installments.filter((i) => 
-      i !== "ΕΦΑΠΑΞ" && !i.includes("συμπληρωματική")
-    );
-    const supplementaryInstallments = installments.filter((i) => 
-      i.includes("συμπληρωματική")
-    );
-
-    // Check that each supplementary installment has its regular counterpart
-    for (const suppInst of supplementaryInstallments) {
-      const baseInstallment = suppInst.replace(" συμπληρωματική", "");
-      if (!installments.includes(baseInstallment)) {
-        return false; // Supplementary requires regular
+    // Check for conflicts: can't have both regular and supplementary of same letter
+    const baseLetters = ["Α", "Β", "Γ"];
+    for (const letter of baseLetters) {
+      const hasRegular = installments.includes(letter);
+      const hasSupplementary = installments.includes(`${letter} συμπληρωματική`);
+      if (hasRegular && hasSupplementary) {
+        return false; // Can't have both Α and Α συμπληρωματική
       }
     }
 
-    // If there are regular installments, check they are consecutive
-    if (regularInstallments.length > 1) {
-      // Create a map of letter to index for regular installments only
-      const baseLetters = ["Α", "Β", "Γ"];
-      const letterOrder = baseLetters.reduce<Record<string, number>>(
-        (acc, letter, idx) => {
-          acc[letter] = idx;
-          return acc;
-        },
-        {},
-      );
+    // Collect all installment letters (both regular and supplementary)
+    const letterOrder: Record<string, number> = { "Α": 0, "Β": 1, "Γ": 2 };
+    const usedLetters = new Set<string>();
+    
+    for (const inst of installments) {
+      if (inst === "ΕΦΑΠΑΞ") continue;
+      const letter = inst.replace(" συμπληρωματική", "");
+      if (letterOrder[letter] !== undefined) {
+        usedLetters.add(letter);
+      }
+    }
 
-      // Sort regular installments
-      const sortedLetters = [...regularInstallments].sort(
-        (a, b) => letterOrder[a] - letterOrder[b],
-      );
-
-      // Check if the letters are consecutive
-      for (let i = 1; i < sortedLetters.length; i++) {
-        const prevIdx = letterOrder[sortedLetters[i - 1]];
-        const currIdx = letterOrder[sortedLetters[i]];
-        if (currIdx - prevIdx !== 1) return false;
+    // Check if used letters are consecutive
+    if (usedLetters.size > 1) {
+      const sortedIndices = Array.from(usedLetters)
+        .map(l => letterOrder[l])
+        .sort((a, b) => a - b);
+      
+      for (let i = 1; i < sortedIndices.length; i++) {
+        if (sortedIndices[i] - sortedIndices[i - 1] !== 1) {
+          return false; // Not consecutive
+        }
       }
     }
 
@@ -1166,22 +1160,26 @@ export function CreateDocumentDialog({
 
           // 4. Validate installments are in sequence
           if (!areInstallmentsInSequence(newInstallments, expenditureType)) {
-            // Check if the issue is a missing regular installment for supplementary
-            const supplementary = newInstallments.find((i) => i.includes("συμπληρωματική"));
-            if (supplementary) {
-              const baseInstallment = supplementary.replace(" συμπληρωματική", "");
-              if (!newInstallments.includes(baseInstallment)) {
+            // Check for specific conflict types
+            const baseLetters = ["Α", "Β", "Γ"];
+            let conflictFound = false;
+            
+            // Check for regular + supplementary conflict
+            for (const letter of baseLetters) {
+              const hasRegular = newInstallments.includes(letter);
+              const hasSupplementary = newInstallments.includes(`${letter} συμπληρωματική`);
+              if (hasRegular && hasSupplementary) {
                 toast({
                   title: "Μη έγκυρη επιλογή",
-                  description: `Για να επιλέξετε "${supplementary}", πρέπει πρώτα να επιλέξετε "${baseInstallment}"`,
+                  description: `Δεν μπορείτε να έχετε και "${letter}" και "${letter} συμπληρωματική" στο ίδιο έγγραφο`,
                   variant: "destructive",
                 });
-                return;
+                conflictFound = true;
+                break;
               }
             }
             
-            // Only show the consecutive error if there are multiple regular installments
-            if (newInstallments.length > 1) {
+            if (!conflictFound && newInstallments.length > 1) {
               toast({
                 title: "Μη έγκυρες δόσεις",
                 description:
@@ -1448,59 +1446,69 @@ export function CreateDocumentDialog({
               )}
             </div>
           ) : (
-            // Standard installment selection with supplementary row
-            <div className="space-y-2">
+            // Standard installment selection with toggle-based supplementary option
+            <div className="space-y-3">
               {/* Primary installments row */}
               <div className="flex flex-row gap-1 flex-wrap">
                 {availableInstallments
                   .filter((inst) => !inst.includes("συμπληρωματική"))
-                  .map((installment) => (
-                    <Button
-                      key={installment}
-                      type="button"
-                      variant={
-                        selectedInstallments.includes(installment)
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleInstallmentToggle(installment)}
-                      className="h-7 px-2 min-w-[32px]"
-                    >
-                      {installment}
-                    </Button>
-                  ))}
-              </div>
-              
-              {/* Supplementary installments row (only for ΔΚΑ types) */}
-              {DKA_TYPES.includes(expenditureType) && (
-                <div className="flex flex-row gap-1 flex-wrap pl-2 border-l-2 border-muted">
-                  <span className="text-xs text-muted-foreground mr-2 self-center">
-                    Συμπληρωματικές:
-                  </span>
-                  {availableInstallments
-                    .filter((inst) => inst.includes("συμπληρωματική"))
-                    .map((installment) => {
-                      const shortLabel = installment.replace(" συμπληρωματική", " ΣΥΜ.");
-                      return (
+                  .map((installment) => {
+                    const isSelected = selectedInstallments.includes(installment);
+                    const supplementaryVersion = `${installment} συμπληρωματική`;
+                    const hasSupplementary = selectedInstallments.includes(supplementaryVersion);
+                    const isDKA = DKA_TYPES.includes(expenditureType);
+                    const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
+                    
+                    return (
+                      <div key={installment} className="flex flex-col gap-1">
                         <Button
-                          key={installment}
                           type="button"
                           variant={
-                            selectedInstallments.includes(installment)
+                            (isSelected || hasSupplementary)
                               ? "default"
                               : "outline"
                           }
                           size="sm"
-                          onClick={() => handleInstallmentToggle(installment)}
-                          className="h-7 px-2 min-w-[60px] text-xs"
+                          onClick={() => {
+                            if (hasSupplementary) {
+                              // If supplementary is selected, switch to regular
+                              handleInstallmentToggle(supplementaryVersion);
+                              handleInstallmentToggle(installment);
+                            } else {
+                              handleInstallmentToggle(installment);
+                            }
+                          }}
+                          className="h-8 px-3 min-w-[50px]"
                         >
-                          {shortLabel}
+                          {installment}
+                          {hasSupplementary && (
+                            <span className="ml-1 text-[10px] opacity-80">ΣΥΜ</span>
+                          )}
                         </Button>
-                      );
-                    })}
-                </div>
-              )}
+                        {canHaveSupplementary && (isSelected || hasSupplementary) && (
+                          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer px-1">
+                            <Checkbox
+                              checked={hasSupplementary}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  // Switch from regular to supplementary
+                                  handleInstallmentToggle(installment);
+                                  handleInstallmentToggle(supplementaryVersion);
+                                } else {
+                                  // Switch from supplementary to regular
+                                  handleInstallmentToggle(supplementaryVersion);
+                                  handleInstallmentToggle(installment);
+                                }
+                              }}
+                              className="h-3 w-3"
+                            />
+                            <span>Συμπλ.</span>
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
           )}
         </div>
