@@ -2924,18 +2924,62 @@ export function CreateDocumentDialog({
                     )}
                   />
 
+                  {currentStep === 1 && selectedProject && (
+                    <FormField
+                      control={form.control}
+                      name="expenditure_type"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Τύπος Δαπάνης</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            disabled={!selectedProjectId}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {selectedProject?.expenditure_types?.length >
+                              0 ? (
+                                selectedProject.expenditure_types.map(
+                                  (type: string) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ),
+                                )
+                              ) : (
+                                <SelectItem
+                                  key="no-expenditure-types"
+                                  value="no-expenditure-types"
+                                  disabled
+                                >
+                                  Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                   {/* Smart Hierarchical Geographic Selection */}
                   {(availableRegions.length > 0 ||
                     availableUnits.length > 0 ||
                     availableMunicipalities.length > 0) && (
-                    <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-                      <h3 className="text-sm font-medium text-gray-700">
+                    <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
+                      <h3 className="text-xs font-medium text-gray-700">
                         Γεωγραφική Περιοχή Διαβιβαστίκου
                       </h3>
 
                       {/* Filter by Region */}
                       {availableRegions.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <label className="text-xs font-medium text-gray-600">
                             Φίλτρο Περιφέρειας
                           </label>
@@ -2986,7 +3030,7 @@ export function CreateDocumentDialog({
 
                       {/* Filter by Regional Unit */}
                       {availableUnits.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <label className="text-xs font-medium text-gray-600">
                             Φίλτρο Περιφερειακής Ενότητας
                             {selectedRegionFilter && (
@@ -3054,11 +3098,11 @@ export function CreateDocumentDialog({
 
                       {/* Final Municipality Selection */}
                       {availableMunicipalities.length > 0 && (
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium">
                             Τελική Επιλογή Δήμου/Κοινότητας
                             {(selectedRegionFilter || selectedUnitFilter) && (
-                              <span className="text-sm text-gray-500 ml-2">
+                              <span className="text-xs text-gray-500 ml-2">
                                 ({availableMunicipalities.length} διαθέσιμες
                                 επιλογές)
                               </span>
@@ -3101,7 +3145,7 @@ export function CreateDocumentDialog({
                             }}
                             disabled={regionsLoading}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-8">
                               <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
                             </SelectTrigger>
                             <SelectContent className="max-h-60">
@@ -3137,8 +3181,8 @@ export function CreateDocumentDialog({
 
                       {/* Show current selection path */}
                       {(selectedRegionFilter || selectedUnitFilter || selectedMunicipalityId) && (
-                        <div className="text-xs text-gray-500 bg-blue-50 p-2 rounded">
-                          <span className="text-gray-600">Επιλεγμένη γεωγραφική περιοχή:</span>
+                        <div className="text-xs text-gray-500 bg-blue-50 p-1.5 rounded mt-1">
+                          <span className="text-gray-600">Επιλεγμένη περιοχή:</span>
                           {selectedRegionFilter && (
                             <span className="ml-1 font-medium">
                               {
@@ -3171,49 +3215,6 @@ export function CreateDocumentDialog({
                         </div>
                       )}
                     </div>
-                  )}
-                  {currentStep === 1 && selectedProject && (
-                    <FormField
-                      control={form.control}
-                      name="expenditure_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Τύπος Δαπάνης</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={!selectedProjectId}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {selectedProject?.expenditure_types?.length >
-                              0 ? (
-                                selectedProject.expenditure_types.map(
-                                  (type: string) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ),
-                                )
-                              ) : (
-                                <SelectItem
-                                  key="no-expenditure-types"
-                                  value="no-expenditure-types"
-                                  disabled
-                                >
-                                  Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   )}
                 </div>
               </div>
