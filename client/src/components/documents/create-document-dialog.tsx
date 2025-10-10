@@ -1447,7 +1447,7 @@ export function CreateDocumentDialog({
             </div>
           ) : (
             // Segmented control for installment selection
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 grid-flow-col gap-2">
               {availableInstallments
                 .filter((inst) => !inst.includes("συμπληρωματική"))
                 .map((installment) => {
