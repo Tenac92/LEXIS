@@ -1446,69 +1446,88 @@ export function CreateDocumentDialog({
               )}
             </div>
           ) : (
-            // Standard installment selection with toggle-based supplementary option
-            <div className="space-y-3">
-              {/* Primary installments row */}
-              <div className="flex flex-row gap-1 flex-wrap">
-                {availableInstallments
-                  .filter((inst) => !inst.includes("συμπληρωματική"))
-                  .map((installment) => {
-                    const isSelected = selectedInstallments.includes(installment);
-                    const supplementaryVersion = `${installment} συμπληρωματική`;
-                    const hasSupplementary = selectedInstallments.includes(supplementaryVersion);
-                    const isDKA = DKA_TYPES.includes(expenditureType);
-                    const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
-                    
+            // Segmented control for installment selection
+            <div className="flex flex-row gap-2 flex-wrap">
+              {availableInstallments
+                .filter((inst) => !inst.includes("συμπληρωματική"))
+                .map((installment) => {
+                  const isRegularSelected = selectedInstallments.includes(installment);
+                  const supplementaryVersion = `${installment} συμπληρωματική`;
+                  const isSupplementarySelected = selectedInstallments.includes(supplementaryVersion);
+                  const isDKA = DKA_TYPES.includes(expenditureType);
+                  const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
+                  
+                  // For ΕΦΑΠΑΞ or non-DKA types, show single button
+                  if (!canHaveSupplementary) {
                     return (
-                      <div key={installment} className="flex flex-col gap-1">
-                        <Button
-                          type="button"
-                          variant={
-                            (isSelected || hasSupplementary)
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() => {
-                            if (hasSupplementary) {
-                              // If supplementary is selected, switch to regular
-                              handleInstallmentToggle(supplementaryVersion);
-                              handleInstallmentToggle(installment);
-                            } else {
-                              handleInstallmentToggle(installment);
-                            }
-                          }}
-                          className="h-8 px-3 min-w-[50px]"
-                        >
-                          {installment}
-                          {hasSupplementary && (
-                            <span className="ml-1 text-[10px] opacity-80">ΣΥΜ</span>
-                          )}
-                        </Button>
-                        {canHaveSupplementary && (isSelected || hasSupplementary) && (
-                          <label className="flex items-center gap-1 text-xs text-muted-foreground cursor-pointer px-1">
-                            <Checkbox
-                              checked={hasSupplementary}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  // Switch from regular to supplementary
-                                  handleInstallmentToggle(installment);
-                                  handleInstallmentToggle(supplementaryVersion);
-                                } else {
-                                  // Switch from supplementary to regular
-                                  handleInstallmentToggle(supplementaryVersion);
-                                  handleInstallmentToggle(installment);
-                                }
-                              }}
-                              className="h-3 w-3"
-                            />
-                            <span>Συμπλ.</span>
-                          </label>
-                        )}
-                      </div>
+                      <Button
+                        key={installment}
+                        type="button"
+                        variant={isRegularSelected ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleInstallmentToggle(installment)}
+                        className="h-8 px-3"
+                        data-testid={`installment-${installment}`}
+                      >
+                        {installment}
+                      </Button>
                     );
-                  })}
-              </div>
+                  }
+                  
+                  // For DKA installments, show segmented control
+                  return (
+                    <div 
+                      key={installment} 
+                      className="inline-flex rounded-md border border-input"
+                      role="group"
+                    >
+                      <Button
+                        type="button"
+                        variant={isRegularSelected ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => {
+                          if (isSupplementarySelected) {
+                            // Switch from supplementary to regular
+                            handleInstallmentToggle(supplementaryVersion);
+                            handleInstallmentToggle(installment);
+                          } else {
+                            handleInstallmentToggle(installment);
+                          }
+                        }}
+                        className={`h-8 px-3 rounded-r-none border-r ${
+                          isRegularSelected 
+                            ? "" 
+                            : "border-transparent hover:bg-accent"
+                        }`}
+                        data-testid={`installment-regular-${installment}`}
+                      >
+                        {installment}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={isSupplementarySelected ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => {
+                          if (isRegularSelected) {
+                            // Switch from regular to supplementary
+                            handleInstallmentToggle(installment);
+                            handleInstallmentToggle(supplementaryVersion);
+                          } else {
+                            handleInstallmentToggle(supplementaryVersion);
+                          }
+                        }}
+                        className={`h-8 px-2 rounded-l-none text-xs ${
+                          isSupplementarySelected 
+                            ? "" 
+                            : "border-transparent hover:bg-accent"
+                        }`}
+                        data-testid={`installment-supplementary-${installment}`}
+                      >
+                        {installment} ΣΥΜ.
+                      </Button>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
