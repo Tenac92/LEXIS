@@ -50,6 +50,10 @@ export class SecondaryDocumentFormatter {
     ];
   }
 
+  /**
+   * IMPORTANT: Uses TableLayoutType.FIXED with cell-level widths only (no table-level width).
+   * This prevents docx grid corruption where table width + cell widths generate invalid tblGrid elements.
+   */
   private static createRecipientsTable(
     recipients: any[],
     expenditureType: string,

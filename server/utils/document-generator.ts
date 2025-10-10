@@ -177,6 +177,10 @@ export class DocumentGenerator {
 
   /**
    * Subject (boxed, shaded) — all borders inlined
+   * 
+   * IMPORTANT: TableLayoutType.FIXED tables must NOT have table-level width when cells have explicit widths.
+   * Specifying both causes docx to generate incorrect tblGrid elements (all gridCol set to 100 DXA),
+   * which Word detects as corruption. Always use cell-level widths only for FIXED layout tables.
    */
   private static createDocumentSubject(
     documentData: DocumentData,
@@ -276,6 +280,9 @@ export class DocumentGenerator {
 
   /**
    * Payment table — all borders inlined
+   * 
+   * IMPORTANT: Uses TableLayoutType.FIXED with cell-level widths only (no table-level width).
+   * This prevents docx grid corruption where table width + cell widths generate invalid tblGrid elements.
    */
   private static createPaymentTable(
     recipients: any[],
