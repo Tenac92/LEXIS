@@ -309,6 +309,7 @@ export class DocumentGenerator {
             children: [
               new TableCell({
                 width: { size: PAGE_DXA, type: WidthType.DXA },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
                 children: [new Paragraph({ children: [t(" ")] })],
               }),
             ],
@@ -336,6 +337,7 @@ export class DocumentGenerator {
     const makeCell = (text: string, bold = false, colIndex: number) =>
       new TableCell({
         width: { size: colWidths[colIndex], type: WidthType.DXA },
+        borders: DocumentUtilities.BORDERS.STANDARD_CELL,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -362,6 +364,7 @@ export class DocumentGenerator {
 
       return new TableCell({
         width: { size: colWidths[colIndex], type: WidthType.DXA },
+        borders: DocumentUtilities.BORDERS.STANDARD_CELL,
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
@@ -488,12 +491,14 @@ export class DocumentGenerator {
           if (idx < totalLabelCellIndex) {
             return new TableCell({
               width: { size: colWidths[idx], type: WidthType.DXA },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
               children: [new Paragraph({ children: [t("")] })],
             });
           }
           if (idx === totalLabelCellIndex) {
             return new TableCell({
               width: { size: colWidths[idx], type: WidthType.DXA },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
               children: [
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -505,6 +510,7 @@ export class DocumentGenerator {
           }
           return new TableCell({
             width: { size: colWidths[idx], type: WidthType.DXA },
+            borders: DocumentUtilities.BORDERS.STANDARD_CELL,
             children: [
               new Paragraph({
                 alignment: AlignmentType.CENTER,
@@ -519,10 +525,11 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table with fixed column widths
+    // Final table with fixed column widths and borders matching secondary document
     return new Table({
       layout: TableLayoutType.FIXED,
       columnWidths: colWidths,
+      borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
   }
