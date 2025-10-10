@@ -372,6 +372,10 @@ export class DocumentGenerator {
             : installment;
         return q != null ? cleanText(String(q)) : "";
       }
+      // Handle supplementary installments - show short form
+      if (typeof installment === "string" && installment.includes("συμπληρωματική")) {
+        return cleanText(installment.replace(" συμπληρωματική", " ΣΥΜ."));
+      }
       return installment != null ? cleanText(String(installment)) : "";
     };
 

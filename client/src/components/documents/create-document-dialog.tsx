@@ -1017,28 +1017,45 @@ export function CreateDocumentDialog({
     if (installments.includes("ΕΦΑΠΑΞ") && installments.length > 1)
       return false;
 
-    // Filter out ΕΦΑΠΑΞ and get only the Greek letter installments
-    const letters = installments.filter((i) => i !== "ΕΦΑΠΑΞ");
-
-    // Create a map of letter to index
-    const letterOrder = ALL_INSTALLMENTS.reduce<Record<string, number>>(
-      (acc, letter, idx) => {
-        acc[letter] = idx;
-        return acc;
-      },
-      {},
+    // Separate regular and supplementary installments
+    const regularInstallments = installments.filter((i) => 
+      i !== "ΕΦΑΠΑΞ" && !i.includes("συμπληρωματική")
+    );
+    const supplementaryInstallments = installments.filter((i) => 
+      i.includes("συμπληρωματική")
     );
 
-    // Sort by the order of letters in ALL_INSTALLMENTS
-    const sortedLetters = [...letters].sort(
-      (a, b) => letterOrder[a] - letterOrder[b],
-    );
+    // Check that each supplementary installment has its regular counterpart
+    for (const suppInst of supplementaryInstallments) {
+      const baseInstallment = suppInst.replace(" συμπληρωματική", "");
+      if (!installments.includes(baseInstallment)) {
+        return false; // Supplementary requires regular
+      }
+    }
 
-    // Check if the letters are consecutive in ALL_INSTALLMENTS
-    for (let i = 1; i < sortedLetters.length; i++) {
-      const prevIdx = letterOrder[sortedLetters[i - 1]];
-      const currIdx = letterOrder[sortedLetters[i]];
-      if (currIdx - prevIdx !== 1) return false;
+    // If there are regular installments, check they are consecutive
+    if (regularInstallments.length > 1) {
+      // Create a map of letter to index for regular installments only
+      const baseLetters = ["Α", "Β", "Γ"];
+      const letterOrder = baseLetters.reduce<Record<string, number>>(
+        (acc, letter, idx) => {
+          acc[letter] = idx;
+          return acc;
+        },
+        {},
+      );
+
+      // Sort regular installments
+      const sortedLetters = [...regularInstallments].sort(
+        (a, b) => letterOrder[a] - letterOrder[b],
+      );
+
+      // Check if the letters are consecutive
+      for (let i = 1; i < sortedLetters.length; i++) {
+        const prevIdx = letterOrder[sortedLetters[i - 1]];
+        const currIdx = letterOrder[sortedLetters[i]];
+        if (currIdx - prevIdx !== 1) return false;
+      }
     }
 
     return true;
@@ -1148,16 +1165,30 @@ export function CreateDocumentDialog({
           }
 
           // 4. Validate installments are in sequence
-          if (
-            !areInstallmentsInSequence(newInstallments, expenditureType) &&
-            newInstallments.length > 1
-          ) {
-            toast({
-              title: "Μη έγκυρες δόσεις",
-              description:
-                "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
-              variant: "destructive",
-            });
+          if (!areInstallmentsInSequence(newInstallments, expenditureType)) {
+            // Check if the issue is a missing regular installment for supplementary
+            const supplementary = newInstallments.find((i) => i.includes("συμπληρωματική"));
+            if (supplementary) {
+              const baseInstallment = supplementary.replace(" συμπληρωματική", "");
+              if (!newInstallments.includes(baseInstallment)) {
+                toast({
+                  title: "Μη έγκυρη επιλογή",
+                  description: `Για να επιλέξετε "${supplementary}", πρέπει πρώτα να επιλέξετε "${baseInstallment}"`,
+                  variant: "destructive",
+                });
+                return;
+              }
+            }
+            
+            // Only show the consecutive error if there are multiple regular installments
+            if (newInstallments.length > 1) {
+              toast({
+                title: "Μη έγκυρες δόσεις",
+                description:
+                  "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+                variant: "destructive",
+              });
+            }
             return;
           }
         }
@@ -1172,13 +1203,19 @@ export function CreateDocumentDialog({
           return aNum - bNum;
         });
       } else {
-        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Β, Γ
+        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Β, Γ, then supplementary
         newInstallments.sort((a, b) => {
-          const order = { Α: 1, Β: 2, Γ: 3, ΕΦΑΠΑΞ: 0 };
-          return (
-            (order[a as keyof typeof order] || 99) -
-            (order[b as keyof typeof order] || 99)
-          );
+          const getOrder = (inst: string) => {
+            if (inst === "ΕΦΑΠΑΞ") return 0;
+            if (inst === "Α") return 1;
+            if (inst === "Β") return 2;
+            if (inst === "Γ") return 3;
+            if (inst === "Α συμπληρωματική") return 4;
+            if (inst === "Β συμπληρωματική") return 5;
+            if (inst === "Γ συμπληρωματική") return 6;
+            return 99;
+          };
+          return getOrder(a) - getOrder(b);
         });
       }
 
@@ -1411,24 +1448,59 @@ export function CreateDocumentDialog({
               )}
             </div>
           ) : (
-            // Standard installment selection
-            <div className="flex flex-row gap-1 flex-wrap">
-              {availableInstallments.map((installment) => (
-                <Button
-                  key={installment}
-                  type="button"
-                  variant={
-                    selectedInstallments.includes(installment)
-                      ? "default"
-                      : "outline"
-                  }
-                  size="sm"
-                  onClick={() => handleInstallmentToggle(installment)}
-                  className="h-7 px-2 min-w-[32px]"
-                >
-                  {installment}
-                </Button>
-              ))}
+            // Standard installment selection with supplementary row
+            <div className="space-y-2">
+              {/* Primary installments row */}
+              <div className="flex flex-row gap-1 flex-wrap">
+                {availableInstallments
+                  .filter((inst) => !inst.includes("συμπληρωματική"))
+                  .map((installment) => (
+                    <Button
+                      key={installment}
+                      type="button"
+                      variant={
+                        selectedInstallments.includes(installment)
+                          ? "default"
+                          : "outline"
+                      }
+                      size="sm"
+                      onClick={() => handleInstallmentToggle(installment)}
+                      className="h-7 px-2 min-w-[32px]"
+                    >
+                      {installment}
+                    </Button>
+                  ))}
+              </div>
+              
+              {/* Supplementary installments row (only for ΔΚΑ types) */}
+              {DKA_TYPES.includes(expenditureType) && (
+                <div className="flex flex-row gap-1 flex-wrap pl-2 border-l-2 border-muted">
+                  <span className="text-xs text-muted-foreground mr-2 self-center">
+                    Συμπληρωματικές:
+                  </span>
+                  {availableInstallments
+                    .filter((inst) => inst.includes("συμπληρωματική"))
+                    .map((installment) => {
+                      const shortLabel = installment.replace(" συμπληρωματική", " ΣΥΜ.");
+                      return (
+                        <Button
+                          key={installment}
+                          type="button"
+                          variant={
+                            selectedInstallments.includes(installment)
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() => handleInstallmentToggle(installment)}
+                          className="h-7 px-2 min-w-[60px] text-xs"
+                        >
+                          {shortLabel}
+                        </Button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -1441,6 +1513,8 @@ export function CreateDocumentDialog({
                   <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
                     {expenditureType === HOUSING_ALLOWANCE_TYPE
                       ? installment.replace("ΤΡΙΜΗΝΟ ", "Τ")
+                      : installment.includes("συμπληρωματική")
+                      ? installment.replace(" συμπληρωματική", " ΣΥΜ.")
                       : installment}
                   </div>
                   <div className="relative flex-1">
