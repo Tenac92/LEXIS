@@ -1201,15 +1201,15 @@ export function CreateDocumentDialog({
           return aNum - bNum;
         });
       } else {
-        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Β, Γ, then supplementary
+        // Sort standard installments: ΕΦΑΠΑΞ first, then Α, Α ΣΥΜ, Β, Β ΣΥΜ, Γ, Γ ΣΥΜ
         newInstallments.sort((a, b) => {
           const getOrder = (inst: string) => {
             if (inst === "ΕΦΑΠΑΞ") return 0;
             if (inst === "Α") return 1;
-            if (inst === "Β") return 2;
-            if (inst === "Γ") return 3;
-            if (inst === "Α συμπληρωματική") return 4;
-            if (inst === "Β συμπληρωματική") return 5;
+            if (inst === "Α συμπληρωματική") return 2;
+            if (inst === "Β") return 3;
+            if (inst === "Β συμπληρωματική") return 4;
+            if (inst === "Γ") return 5;
             if (inst === "Γ συμπληρωματική") return 6;
             return 99;
           };

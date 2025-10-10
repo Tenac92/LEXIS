@@ -405,6 +405,25 @@ export class DocumentGenerator {
             ? [cleanText(recipient.installment)]
             : ["ΕΦΑΠΑΞ"];
 
+      // Sort installments in proper hierarchy: Α, Α ΣΥΜ, Β, Β ΣΥΜ, Γ, Γ ΣΥΜ
+      installments.sort((a, b) => {
+        const getOrder = (inst: string) => {
+          if (inst === "ΕΦΑΠΑΞ") return 0;
+          if (inst === "Α") return 1;
+          if (inst === "Α συμπληρωματική") return 2;
+          if (inst === "Β") return 3;
+          if (inst === "Β συμπληρωματική") return 4;
+          if (inst === "Γ") return 5;
+          if (inst === "Γ συμπληρωματική") return 6;
+          // For quarters, extract number and sort
+          if (inst.startsWith("ΤΡΙΜΗΝΟ ")) {
+            return 100 + parseInt(inst.replace("ΤΡΙΜΗΝΟ ", ""));
+          }
+          return 99;
+        };
+        return getOrder(a) - getOrder(b);
+      });
+
       const installmentAmounts: Record<string, number> =
         recipient?.installmentAmounts || {};
 
