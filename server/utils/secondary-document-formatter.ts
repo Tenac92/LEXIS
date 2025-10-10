@@ -316,20 +316,24 @@ export class SecondaryDocumentFormatter {
         documentData.director_signature,
       );
 
+    // Page width is 10466 DXA, split equally for two columns
+    const PAGE_WIDTH = 10466;
+    const COLUMN_WIDTH = Math.floor(PAGE_WIDTH / 2);
+    
     return new Table({
       layout: TableLayoutType.FIXED,
-      columnWidths: [7000, 7000],
+      columnWidths: [COLUMN_WIDTH, PAGE_WIDTH - COLUMN_WIDTH],
       borders: DocumentUtilities.BORDERS.NO_BORDER_TABLE,
       rows: [
         new TableRow({
           children: [
             new TableCell({
-              width: { size: 7000, type: WidthType.DXA },
+              width: { size: COLUMN_WIDTH, type: WidthType.DXA },
               children: leftColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
             new TableCell({
-              width: { size: 7000, type: WidthType.DXA },
+              width: { size: PAGE_WIDTH - COLUMN_WIDTH, type: WidthType.DXA },
               children: rightColumnParagraphs,
               borders: DocumentUtilities.BORDERS.NO_BORDER_CELL,
             }),
