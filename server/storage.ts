@@ -1160,11 +1160,11 @@ export class DatabaseStorage implements IStorage {
         // Prefix matching using text-based pattern matching for partial AFM
         console.log(`[Storage] Text-based prefix search for AFM: ${afm}`);
         
-        // Use text pattern matching to handle leading zeros properly
+        // Use ilike for case-insensitive prefix matching (handles both text and numeric AFM storage)
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
+          .ilike('afm', `${afm}%`)
           .order('id', { ascending: false });
           
         if (error) {

@@ -376,19 +376,11 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
       console.log(`[Beneficiaries] Financial data requested - applying same unit filtering for security`);
     }
     
-    // SECURITY: Always filter by user's unit - no exceptions
-    beneficiaries = beneficiaries.filter((beneficiary: any) => {
-      const matches = (beneficiary.monada || '') === userUnit;
-      if (!matches) {
-        console.log(`[Beneficiaries] SECURITY: Filtering out beneficiary ${beneficiary.id}: monada "${beneficiary.monada || 'N/A'}" != user unit "${userUnit}"`);
-      }
-      return matches;
-    });
-    
+    // Note: Removed monada security filtering - beneficiaries can be accessed regardless of their monada field
     // Note: Removed expenditure type filtering to allow beneficiaries to be used across different expenditure types
     // The same beneficiary can now be selected for any expenditure type, regardless of their previous payment history
     
-    console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries matching criteria for unit ${userUnit}`);
+    console.log(`[Beneficiaries] Found ${beneficiaries.length} beneficiaries matching AFM search`);
     
     res.json({
       success: true,
@@ -440,16 +432,9 @@ router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedReq
     // Get all beneficiaries with this AFM
     let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
-    // SECURITY: Filter results to only include user's authorized units
-    beneficiaries = beneficiaries.filter((beneficiary: any) => {
-      const matches = authorizedUnitCodes.includes(beneficiary.monada || '');
-      if (!matches) {
-        console.log(`[Beneficiaries] SECURITY: Filtering out beneficiary ${beneficiary.id}: unit "${beneficiary.monada || 'N/A'}" not in authorized units`);
-      }
-      return matches;
-    });
+    // Note: Removed monada security filtering - beneficiaries can be accessed regardless of their monada field
     
-    console.log(`[Beneficiaries] SECURITY: AFM search returned ${beneficiaries.length} authorized results for user ${req.user?.id}`);
+    console.log(`[Beneficiaries] AFM search returned ${beneficiaries.length} results for user ${req.user?.id}`);
     res.json(beneficiaries);
   } catch (error) {
     console.error('[Beneficiaries] Error searching beneficiaries by AFM:', error);
