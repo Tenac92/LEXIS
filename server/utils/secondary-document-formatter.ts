@@ -235,6 +235,7 @@ export class SecondaryDocumentFormatter {
 
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: grid,
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });

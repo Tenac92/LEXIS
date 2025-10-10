@@ -517,9 +517,10 @@ export class DocumentGenerator {
       }),
     );
 
-    // Final table with fixed column widths - no table-level width to avoid grid mismatch
+    // Final table with fixed column widths
     return new Table({
       layout: TableLayoutType.FIXED,
+      columnWidths: colWidths,
       rows,
     });
   }
