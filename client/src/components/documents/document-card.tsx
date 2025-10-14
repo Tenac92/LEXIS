@@ -668,20 +668,41 @@ const DocumentCard = memo(function DocumentCard({
                   <span className="text-orange-700 font-medium text-sm">
                     Δικαιούχοι ({recipients?.length || 0}):
                   </span>
-                  <div className="mt-1 max-h-32 overflow-y-auto space-y-1">
+                  <div className="mt-1 max-h-32 overflow-y-auto space-y-2">
                     {recipients?.slice(0, 3).map((recipient, index) => (
-                      <div key={index} className="text-sm text-orange-900 flex justify-between items-center">
-                        <span className="truncate">
-                          {recipient.lastname} {recipient.firstname}
-                        </span>
-                        <span className="text-orange-700 font-medium ml-2 flex-shrink-0">
-                          {recipient.amount?.toLocaleString("el-GR", {
-                            style: "currency",
-                            currency: "EUR",
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
+                      <div key={index} className="text-sm text-orange-900">
+                        <div className="flex justify-between items-center">
+                          <span className="truncate">
+                            {recipient.lastname} {recipient.firstname}
+                          </span>
+                          <span className="text-orange-700 font-medium ml-2 flex-shrink-0">
+                            {recipient.amount?.toLocaleString("el-GR", {
+                              style: "currency",
+                              currency: "EUR",
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                          </span>
+                        </div>
+                        {/* ΕΚΤΟΣ ΕΔΡΑΣ details */}
+                        {recipient.month && (
+                          <div className="mt-1 text-xs text-orange-700 space-y-0.5 pl-2 border-l-2 border-orange-300">
+                            <div>Μήνας: {recipient.month}</div>
+                            {recipient.days && <div>Ημέρες: {recipient.days}</div>}
+                            {recipient.daily_compensation && (
+                              <div>Ημερ. Αποζ.: {recipient.daily_compensation.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                            )}
+                            {recipient.accommodation_expenses && (
+                              <div>Διαμονή: {recipient.accommodation_expenses.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                            )}
+                            {recipient.kilometers_traveled && (
+                              <div>Χιλιόμετρα: {recipient.kilometers_traveled} km</div>
+                            )}
+                            {recipient.tickets_tolls_rental && (
+                              <div>Εισιτήρια/Διόδια: {recipient.tickets_tolls_rental.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                     {recipients?.length > 3 && (
