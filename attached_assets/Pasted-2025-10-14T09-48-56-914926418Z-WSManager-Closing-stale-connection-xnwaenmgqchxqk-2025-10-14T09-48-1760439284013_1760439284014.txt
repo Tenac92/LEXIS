@@ -1,0 +1,502 @@
+2025-10-14T09:48:56.914926418Z [WSManager] Closing stale connection xnwaenmgqchxqk
+2025-10-14T09:48:56.914985469Z [WSManager] Removed connection xnwaenmgqchxqk, total: 2
+2025-10-14T09:48:56.914992649Z [WSManager] Closing stale connection tww51cmgqchy1n
+2025-10-14T09:48:56.91505454Z [WSManager] Removed connection tww51cmgqchy1n, total: 1
+2025-10-14T09:48:56.91506051Z [WSManager] Closing stale connection glfjx9mgqchybu
+2025-10-14T09:48:56.915124042Z [WSManager] Removed connection glfjx9mgqchybu, total: 0
+2025-10-14T09:48:56.915131272Z [WSManager] Cleaned up 4 stale connections
+2025-10-14T09:48:56.988626283Z [WebSocket] Client disconnected: {
+2025-10-14T09:48:56.988643383Z   clientId: 'xnwaenmgqchxqk',
+2025-10-14T09:48:56.988647263Z   address: '10.201.230.69',
+2025-10-14T09:48:56.988651033Z   code: 1000,
+2025-10-14T09:48:56.988654583Z   reason: 'No reason provided',
+2025-10-14T09:48:56.988658383Z   timestamp: '2025-10-14T09:48:56.988Z'
+2025-10-14T09:48:56.988661803Z }
+2025-10-14T09:48:56.989900639Z [WebSocket] Client disconnected: {
+2025-10-14T09:48:56.989917269Z   clientId: '4kn69cmgqchxg0',
+2025-10-14T09:48:56.98992146Z   address: '10.201.139.5',
+2025-10-14T09:48:56.98992528Z   code: 1000,
+2025-10-14T09:48:56.9899288Z   reason: 'No reason provided',
+2025-10-14T09:48:56.9899325Z   timestamp: '2025-10-14T09:48:56.989Z'
+2025-10-14T09:48:56.98995001Z }
+2025-10-14T09:48:56.990075173Z [WebSocket] Client disconnected: {
+2025-10-14T09:48:56.990082493Z   clientId: 'glfjx9mgqchybu',
+2025-10-14T09:48:56.990085003Z   address: '10.201.230.69',
+2025-10-14T09:48:56.990087333Z   code: 1000,
+2025-10-14T09:48:56.990089543Z   reason: 'No reason provided',
+2025-10-14T09:48:56.990091723Z   timestamp: '2025-10-14T09:48:56.989Z'
+2025-10-14T09:48:56.990093833Z }
+2025-10-14T09:48:56.99041433Z [WebSocket] Client disconnected: {
+2025-10-14T09:48:56.99042225Z   clientId: 'tww51cmgqchy1n',
+2025-10-14T09:48:56.99042404Z   address: '10.201.139.5',
+2025-10-14T09:48:56.99042579Z   code: 1000,
+2025-10-14T09:48:56.99042754Z   reason: 'No reason provided',
+2025-10-14T09:48:56.99042924Z   timestamp: '2025-10-14T09:48:56.990Z'
+2025-10-14T09:48:56.99043088Z }
+2025-10-14T09:48:57.283038305Z [Database] Running scheduled database health check...
+2025-10-14T09:48:57.283051095Z [DB] Testing database connection (2 retries left)...
+2025-10-14T09:48:57.416612959Z [DB] Connection marked as successful
+2025-10-14T09:48:57.416632119Z [DB] Connection test successful
+2025-10-14T09:48:57.416635519Z [Database] Scheduled health check: Database connection healthy
+2025-10-14T09:48:59.928059688Z [WebSocket] New client connected: 34aw8kmgqdqxsn from 10.201.233.67
+2025-10-14T09:48:59.928092329Z [WSManager] Added connection 34aw8kmgqdqxsn, total: 1
+2025-10-14T09:48:59.928096179Z [WebSocket] Connection 34aw8kmgqdqxsn registered with manager
+2025-10-14T09:49:00.015696742Z [WebSocket] Received message from 34aw8kmgqdqxsn: { type: 'connect', timestamp: '2025-10-14T09:49:04.184Z' }
+2025-10-14T09:49:00.294539912Z [WebSocket] New client connected: o8i2gmgqdqy2u from 10.201.139.68
+2025-10-14T09:49:00.294559092Z [WSManager] Added connection o8i2gmgqdqy2u, total: 2
+2025-10-14T09:49:00.294561352Z [WebSocket] Connection o8i2gmgqdqy2u registered with manager
+2025-10-14T09:49:00.3756406Z [WebSocket] Received message from o8i2gmgqdqy2u: { type: 'connect', timestamp: '2025-10-14T09:49:04.549Z' }
+2025-10-14T09:49:00.689447064Z [WebSocket] New client connected: l80z5mgqdqydt from 10.201.159.193
+2025-10-14T09:49:00.689467534Z [WSManager] Added connection l80z5mgqdqydt, total: 3
+2025-10-14T09:49:00.689470604Z [WebSocket] Connection l80z5mgqdqydt registered with manager
+2025-10-14T09:49:00.771073273Z [WebSocket] Received message from l80z5mgqdqydt: { type: 'connect', timestamp: '2025-10-14T09:49:04.946Z' }
+2025-10-14T09:49:01.045533112Z [WebSocket] New client connected: ohu2ffmgqdqynp from 10.201.230.69
+2025-10-14T09:49:01.045552323Z [WSManager] Added connection ohu2ffmgqdqynp, total: 4
+2025-10-14T09:49:01.045555333Z [WebSocket] Connection ohu2ffmgqdqynp registered with manager
+2025-10-14T09:49:01.121545855Z [WebSocket] Received message from ohu2ffmgqdqynp: { type: 'connect', timestamp: '2025-10-14T09:49:05.296Z' }
+2025-10-14T09:49:28.140366166Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:49:58.139896656Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:50:28.14068876Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:50:58.140707938Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:51:28.141785457Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:51:58.142852855Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:52:28.142847071Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:52:58.143543731Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:53:28.143806413Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:53:58.143857899Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:54:28.144218233Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:54:58.144115367Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:55:28.144088684Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:55:58.144783157Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:56:28.144866264Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:56:58.144925897Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:57:28.145104586Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:57:58.144881503Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:58:28.144932471Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:58:58.14574295Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:59:28.146353341Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T09:59:58.145961727Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:00:28.146244344Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:00:58.146006546Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:01:28.145952048Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:01:58.144896686Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:02:28.145890674Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:02:58.146169523Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:03:28.147180456Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:03:57.283529645Z [Database] Running scheduled database health check...
+2025-10-14T10:03:57.283554096Z [DB] Testing database connection (2 retries left)...
+2025-10-14T10:03:57.397887343Z [DB] Connection marked as successful
+2025-10-14T10:03:57.397910923Z [DB] Connection test successful
+2025-10-14T10:03:57.397916693Z [Database] Scheduled health check: Database connection healthy
+2025-10-14T10:03:58.147272056Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:04:04.127840291Z 10:04:04 AM [cors] [CORS] Processing sdegdaefk.gr request without valid origin:
+2025-10-14T10:04:04.127912812Z 10:04:04 AM [cors] [CORS] Referer: https://sdegdaefk.gr/documents, Host: sdegdaefk.gr
+2025-10-14T10:04:04.128060195Z 10:04:04 AM [cors] [CORS] Applied fallback CORS headers for sdegdaefk.gr request
+2025-10-14T10:04:04.128196678Z 10:04:04 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+2025-10-14T10:04:04.128680278Z [Auth] Returning current user: {
+2025-10-14T10:04:04.128691768Z   id: 88,
+2025-10-14T10:04:04.128697828Z   name: 'Άννα Μαρία Γεωργίου',
+2025-10-14T10:04:04.128702479Z   email: 'amgeorgiou@civilprotection.gr',
+2025-10-14T10:04:04.128706999Z   role: 'user',
+2025-10-14T10:04:04.128711939Z   unit_id: [ 3 ],
+2025-10-14T10:04:04.128716349Z   sessionID: '1b788KCOh1TbPVswY2LMX6AtBJJRgBv1'
+2025-10-14T10:04:04.128720789Z }
+2025-10-14T10:04:28.147819134Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:04:58.148658644Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:05:28.148467201Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:05:58.148648225Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:06:28.148825756Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:06:58.149761912Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:07:28.149802257Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:07:58.150611897Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:08:28.15063979Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:08:58.150637081Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:09:28.150353666Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:09:58.151033119Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:10:28.151337455Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:10:58.151018327Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:11:28.151690899Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:11:58.151129606Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:12:28.151472281Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:12:58.151156713Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:13:28.15106599Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:13:58.154380776Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:14:28.15170128Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:14:58.151655969Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:15:28.152043998Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:15:58.152876748Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:16:28.153570586Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:16:58.153565Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:17:28.154006196Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:17:58.154922092Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:18:28.155438722Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:18:57.284021541Z [Database] Running scheduled database health check...
+2025-10-14T10:18:57.284039732Z [DB] Testing database connection (2 retries left)...
+2025-10-14T10:18:57.583843042Z [DB] Connection marked as successful
+2025-10-14T10:18:57.583868562Z [DB] Connection test successful
+2025-10-14T10:18:57.583873533Z [Database] Scheduled health check: Database connection healthy
+2025-10-14T10:18:58.156158798Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:19:02.14688401Z 10:19:02 AM [cors] [CORS] Processing sdegdaefk.gr request without valid origin:
+2025-10-14T10:19:02.146973192Z 10:19:02 AM [cors] [CORS] Referer: https://sdegdaefk.gr/documents, Host: sdegdaefk.gr
+2025-10-14T10:19:02.147125605Z 10:19:02 AM [cors] [CORS] Applied fallback CORS headers for sdegdaefk.gr request
+2025-10-14T10:19:02.147232837Z 10:19:02 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+2025-10-14T10:19:02.147773469Z [Auth] Returning current user: {
+2025-10-14T10:19:02.147780639Z   id: 88,
+2025-10-14T10:19:02.147784339Z   name: 'Άννα Μαρία Γεωργίου',
+2025-10-14T10:19:02.147787279Z   email: 'amgeorgiou@civilprotection.gr',
+2025-10-14T10:19:02.147790119Z   role: 'user',
+2025-10-14T10:19:02.147793549Z   unit_id: [ 3 ],
+2025-10-14T10:19:02.147796599Z   sessionID: '1b788KCOh1TbPVswY2LMX6AtBJJRgBv1'
+2025-10-14T10:19:02.147799319Z }
+2025-10-14T10:19:28.156792564Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:19:58.158360442Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:20:28.1588207Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:20:58.159955434Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:21:28.160721391Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:21:58.160794328Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:22:28.161824617Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:22:58.162595434Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:23:28.16268526Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:23:56.917385659Z [WSManager] Closing stale connection 34aw8kmgqdqxsn
+2025-10-14T10:23:56.917507611Z [WSManager] Removed connection 34aw8kmgqdqxsn, total: 3
+2025-10-14T10:23:56.917514201Z [WSManager] Closing stale connection o8i2gmgqdqy2u
+2025-10-14T10:23:56.917581323Z [WSManager] Removed connection o8i2gmgqdqy2u, total: 2
+2025-10-14T10:23:56.917586833Z [WSManager] Closing stale connection l80z5mgqdqydt
+2025-10-14T10:23:56.917671205Z [WSManager] Removed connection l80z5mgqdqydt, total: 1
+2025-10-14T10:23:56.917682635Z [WSManager] Closing stale connection ohu2ffmgqdqynp
+2025-10-14T10:23:56.917738146Z [WSManager] Removed connection ohu2ffmgqdqynp, total: 0
+2025-10-14T10:23:56.917744956Z [WSManager] Cleaned up 4 stale connections
+2025-10-14T10:23:56.990369798Z [WebSocket] Client disconnected: {
+2025-10-14T10:23:56.990394598Z   clientId: 'ohu2ffmgqdqynp',
+2025-10-14T10:23:56.990400758Z   address: '10.201.230.69',
+2025-10-14T10:23:56.990405729Z   code: 1000,
+2025-10-14T10:23:56.990410589Z   reason: 'No reason provided',
+2025-10-14T10:23:56.990415609Z   timestamp: '2025-10-14T10:23:56.990Z'
+2025-10-14T10:23:56.990420979Z }
+2025-10-14T10:23:56.990658734Z [WebSocket] Client disconnected: {
+2025-10-14T10:23:56.990671744Z   clientId: 'o8i2gmgqdqy2u',
+2025-10-14T10:23:56.990676174Z   address: '10.201.139.68',
+2025-10-14T10:23:56.990680114Z   code: 1000,
+2025-10-14T10:23:56.990683714Z   reason: 'No reason provided',
+2025-10-14T10:23:56.990687234Z   timestamp: '2025-10-14T10:23:56.990Z'
+2025-10-14T10:23:56.990690834Z }
+2025-10-14T10:23:56.990808767Z [WebSocket] Client disconnected: {
+2025-10-14T10:23:56.990817817Z   clientId: 'l80z5mgqdqydt',
+2025-10-14T10:23:56.990821677Z   address: '10.201.159.193',
+2025-10-14T10:23:56.990825677Z   code: 1000,
+2025-10-14T10:23:56.990829707Z   reason: 'No reason provided',
+2025-10-14T10:23:56.990833737Z   timestamp: '2025-10-14T10:23:56.990Z'
+2025-10-14T10:23:56.990837457Z }
+2025-10-14T10:23:56.991682055Z [WebSocket] Client disconnected: {
+2025-10-14T10:23:56.991694195Z   clientId: '34aw8kmgqdqxsn',
+2025-10-14T10:23:56.991698505Z   address: '10.201.233.67',
+2025-10-14T10:23:56.991702225Z   code: 1000,
+2025-10-14T10:23:56.991706155Z   reason: 'No reason provided',
+2025-10-14T10:23:56.991710165Z   timestamp: '2025-10-14T10:23:56.991Z'
+2025-10-14T10:23:56.991713925Z }
+2025-10-14T10:23:59.906417818Z [WebSocket] New client connected: 0hmz6emgqezy5e from 10.201.237.5
+2025-10-14T10:23:59.906438898Z [WSManager] Added connection 0hmz6emgqezy5e, total: 1
+2025-10-14T10:23:59.906443178Z [WebSocket] Connection 0hmz6emgqezy5e registered with manager
+2025-10-14T10:23:59.984132914Z [WebSocket] Received message from 0hmz6emgqezy5e: { type: 'connect', timestamp: '2025-10-14T10:24:04.154Z' }
+2025-10-14T10:24:00.273227092Z [WebSocket] New client connected: l32rncmgqezyfl from 10.201.159.193
+2025-10-14T10:24:00.273246582Z [WSManager] Added connection l32rncmgqezyfl, total: 2
+2025-10-14T10:24:00.273250002Z [WebSocket] Connection l32rncmgqezyfl registered with manager
+2025-10-14T10:24:00.349776874Z [WebSocket] Received message from l32rncmgqezyfl: { type: 'connect', timestamp: '2025-10-14T10:24:04.519Z' }
+2025-10-14T10:24:00.642259081Z [WebSocket] New client connected: 8efh4rmgqezypu from 10.201.139.68
+2025-10-14T10:24:00.642282732Z [WSManager] Added connection 8efh4rmgqezypu, total: 3
+2025-10-14T10:24:00.642286252Z [WebSocket] Connection 8efh4rmgqezypu registered with manager
+2025-10-14T10:24:00.721641113Z [WebSocket] Received message from 8efh4rmgqezypu: { type: 'connect', timestamp: '2025-10-14T10:24:04.891Z' }
+2025-10-14T10:24:01.002699514Z [WebSocket] New client connected: k3jq3pmgqezyzu from 10.201.237.5
+2025-10-14T10:24:01.002721574Z [WSManager] Added connection k3jq3pmgqezyzu, total: 4
+2025-10-14T10:24:01.002725694Z [WebSocket] Connection k3jq3pmgqezyzu registered with manager
+2025-10-14T10:24:01.078215205Z [WebSocket] Received message from k3jq3pmgqezyzu: { type: 'connect', timestamp: '2025-10-14T10:24:05.248Z' }
+2025-10-14T10:24:28.164656296Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:24:58.165691511Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:25:28.166694018Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:25:58.167606198Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:26:00.816838705Z [WebSocket] New client connected: j4f13mmgqf2jg0 from 10.201.139.68
+2025-10-14T10:26:00.816862026Z [WSManager] Added connection j4f13mmgqf2jg0, total: 5
+2025-10-14T10:26:00.816866976Z [WebSocket] Connection j4f13mmgqf2jg0 registered with manager
+2025-10-14T10:26:00.874427256Z [WebSocket] Received message from j4f13mmgqf2jg0: { type: 'connect', timestamp: '2025-10-14T10:26:05.050Z' }
+2025-10-14T10:26:01.102151654Z [WebSocket] New client connected: m6wmefmgqf2jnx from 10.201.233.67
+2025-10-14T10:26:01.102178644Z [WSManager] Added connection m6wmefmgqf2jnx, total: 6
+2025-10-14T10:26:01.102182924Z [WebSocket] Connection m6wmefmgqf2jnx registered with manager
+2025-10-14T10:26:01.159819436Z [WebSocket] Received message from m6wmefmgqf2jnx: { type: 'connect', timestamp: '2025-10-14T10:26:05.334Z' }
+2025-10-14T10:26:01.380372335Z [WebSocket] New client connected: u16o3mmgqf2jvo from 10.201.233.67
+2025-10-14T10:26:01.380391396Z [WSManager] Added connection u16o3mmgqf2jvo, total: 7
+2025-10-14T10:26:01.380396626Z [WebSocket] Connection u16o3mmgqf2jvo registered with manager
+2025-10-14T10:26:01.439907946Z [WebSocket] Received message from u16o3mmgqf2jvo: { type: 'connect', timestamp: '2025-10-14T10:26:05.615Z' }
+2025-10-14T10:26:01.642523875Z [WebSocket] New client connected: drxa6imgqf2k2y from 10.201.2.4
+2025-10-14T10:26:01.642549246Z [WSManager] Added connection drxa6imgqf2k2y, total: 8
+2025-10-14T10:26:01.642553846Z [WebSocket] Connection drxa6imgqf2k2y registered with manager
+2025-10-14T10:26:01.700191907Z [WebSocket] Received message from drxa6imgqf2k2y: { type: 'connect', timestamp: '2025-10-14T10:26:05.875Z' }
+2025-10-14T10:26:28.16750474Z [WebSocket] Terminating inactive connection: 0hmz6emgqezy5e
+2025-10-14T10:26:28.167599712Z [WebSocket] Terminating inactive connection: l32rncmgqezyfl
+2025-10-14T10:26:28.167660313Z [WebSocket] Terminating inactive connection: 8efh4rmgqezypu
+2025-10-14T10:26:28.167712944Z [WebSocket] Terminating inactive connection: k3jq3pmgqezyzu
+2025-10-14T10:26:28.167911378Z [WebSocket] Heartbeat - Clients: 8 (4 active, 4 terminated)
+2025-10-14T10:26:28.168073171Z [WebSocket] Client disconnected: {
+2025-10-14T10:26:28.168081332Z   clientId: 'k3jq3pmgqezyzu',
+2025-10-14T10:26:28.168086852Z   address: '10.201.237.5',
+2025-10-14T10:26:28.168092452Z   code: 1006,
+2025-10-14T10:26:28.168097832Z   reason: 'No reason provided',
+2025-10-14T10:26:28.168123723Z   timestamp: '2025-10-14T10:26:28.167Z'
+2025-10-14T10:26:28.168128163Z }
+2025-10-14T10:26:28.168131973Z [WSManager] Removed connection k3jq3pmgqezyzu, total: 7
+2025-10-14T10:26:28.168140513Z [WebSocket] Client disconnected: {
+2025-10-14T10:26:28.168145843Z   clientId: '8efh4rmgqezypu',
+2025-10-14T10:26:28.168149283Z   address: '10.201.139.68',
+2025-10-14T10:26:28.168153203Z   code: 1006,
+2025-10-14T10:26:28.168155693Z   reason: 'No reason provided',
+2025-10-14T10:26:28.168157933Z   timestamp: '2025-10-14T10:26:28.168Z'
+2025-10-14T10:26:28.168160333Z }
+2025-10-14T10:26:28.168162764Z [WSManager] Removed connection 8efh4rmgqezypu, total: 6
+2025-10-14T10:26:28.168185834Z [WebSocket] Client disconnected: {
+2025-10-14T10:26:28.168188354Z   clientId: 'l32rncmgqezyfl',
+2025-10-14T10:26:28.168190424Z   address: '10.201.159.193',
+2025-10-14T10:26:28.168192514Z   code: 1006,
+2025-10-14T10:26:28.168195364Z   reason: 'No reason provided',
+2025-10-14T10:26:28.168198794Z   timestamp: '2025-10-14T10:26:28.168Z'
+2025-10-14T10:26:28.168202864Z }
+2025-10-14T10:26:28.168206444Z [WSManager] Removed connection l32rncmgqezyfl, total: 5
+2025-10-14T10:26:28.168250335Z [WebSocket] Client disconnected: {
+2025-10-14T10:26:28.168255055Z   clientId: '0hmz6emgqezy5e',
+2025-10-14T10:26:28.168258775Z   address: '10.201.237.5',
+2025-10-14T10:26:28.168262075Z   code: 1006,
+2025-10-14T10:26:28.168265295Z   reason: 'No reason provided',
+2025-10-14T10:26:28.168268826Z   timestamp: '2025-10-14T10:26:28.168Z'
+2025-10-14T10:26:28.168272146Z }
+2025-10-14T10:26:28.168275916Z [WSManager] Removed connection 0hmz6emgqezy5e, total: 4
+2025-10-14T10:26:58.168707903Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:27:28.168737614Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:27:58.16970361Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:28:28.170758552Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:28:58.171275886Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:29:00.894165538Z [WebSocket] New client connected: ufet75mgqf6ee6 from 10.201.237.5
+2025-10-14T10:29:00.894187878Z [WSManager] Added connection ufet75mgqf6ee6, total: 5
+2025-10-14T10:29:00.894192279Z [WebSocket] Connection ufet75mgqf6ee6 registered with manager
+2025-10-14T10:29:00.970731151Z [WebSocket] Received message from ufet75mgqf6ee6: { type: 'connect', timestamp: '2025-10-14T10:29:05.146Z' }
+2025-10-14T10:29:01.239377773Z [WebSocket] New client connected: gid5icmgqf6enr from 10.201.237.5
+2025-10-14T10:29:01.239394194Z [WSManager] Added connection gid5icmgqf6enr, total: 6
+2025-10-14T10:29:01.239397594Z [WebSocket] Connection gid5icmgqf6enr registered with manager
+2025-10-14T10:29:01.314155829Z [WebSocket] Received message from gid5icmgqf6enr: { type: 'connect', timestamp: '2025-10-14T10:29:05.489Z' }
+2025-10-14T10:29:01.579095106Z [WebSocket] New client connected: 7ez6hsmgqf6ex6 from 10.201.154.133
+2025-10-14T10:29:01.579120706Z [WSManager] Added connection 7ez6hsmgqf6ex6, total: 7
+2025-10-14T10:29:01.579124996Z [WebSocket] Connection 7ez6hsmgqf6ex6 registered with manager
+2025-10-14T10:29:01.659974817Z [WebSocket] Received message from 7ez6hsmgqf6ex6: { type: 'connect', timestamp: '2025-10-14T10:29:05.835Z' }
+2025-10-14T10:29:01.935820759Z [WebSocket] New client connected: x94rwimgqf6f73 from 10.201.139.68
+2025-10-14T10:29:01.935851909Z [WSManager] Added connection x94rwimgqf6f73, total: 8
+2025-10-14T10:29:01.93585652Z [WebSocket] Connection x94rwimgqf6f73 registered with manager
+2025-10-14T10:29:02.015283082Z [WebSocket] Received message from x94rwimgqf6f73: { type: 'connect', timestamp: '2025-10-14T10:29:06.190Z' }
+2025-10-14T10:29:28.17149992Z [WebSocket] Terminating inactive connection: j4f13mmgqf2jg0
+2025-10-14T10:29:28.171634823Z [WebSocket] Terminating inactive connection: m6wmefmgqf2jnx
+2025-10-14T10:29:28.171656603Z [WebSocket] Terminating inactive connection: u16o3mmgqf2jvo
+2025-10-14T10:29:28.171753295Z [WebSocket] Terminating inactive connection: drxa6imgqf2k2y
+2025-10-14T10:29:28.172050671Z [WebSocket] Heartbeat - Clients: 8 (4 active, 4 terminated)
+2025-10-14T10:29:28.172122143Z [WebSocket] Client disconnected: {
+2025-10-14T10:29:28.172129043Z   clientId: 'drxa6imgqf2k2y',
+2025-10-14T10:29:28.172133783Z   address: '10.201.2.4',
+2025-10-14T10:29:28.172137253Z   code: 1006,
+2025-10-14T10:29:28.172141083Z   reason: 'No reason provided',
+2025-10-14T10:29:28.172144623Z   timestamp: '2025-10-14T10:29:28.172Z'
+2025-10-14T10:29:28.172148043Z }
+2025-10-14T10:29:28.172156263Z [WSManager] Removed connection drxa6imgqf2k2y, total: 7
+2025-10-14T10:29:28.172226885Z [WebSocket] Client disconnected: {
+2025-10-14T10:29:28.172232675Z   clientId: 'u16o3mmgqf2jvo',
+2025-10-14T10:29:28.172236315Z   address: '10.201.233.67',
+2025-10-14T10:29:28.172239745Z   code: 1006,
+2025-10-14T10:29:28.172243165Z   reason: 'No reason provided',
+2025-10-14T10:29:28.172246565Z   timestamp: '2025-10-14T10:29:28.172Z'
+2025-10-14T10:29:28.172250055Z }
+2025-10-14T10:29:28.172253656Z [WSManager] Removed connection u16o3mmgqf2jvo, total: 6
+2025-10-14T10:29:28.172289396Z [WebSocket] Client disconnected: {
+2025-10-14T10:29:28.172295656Z   clientId: 'm6wmefmgqf2jnx',
+2025-10-14T10:29:28.172322387Z   address: '10.201.233.67',
+2025-10-14T10:29:28.172328257Z   code: 1006,
+2025-10-14T10:29:28.172332227Z   reason: 'No reason provided',
+2025-10-14T10:29:28.172335837Z   timestamp: '2025-10-14T10:29:28.172Z'
+2025-10-14T10:29:28.172339317Z }
+2025-10-14T10:29:28.172350567Z [WSManager] Removed connection m6wmefmgqf2jnx, total: 5
+2025-10-14T10:29:28.172443009Z [WebSocket] Client disconnected: {
+2025-10-14T10:29:28.17245525Z   clientId: 'j4f13mmgqf2jg0',
+2025-10-14T10:29:28.17245981Z   address: '10.201.139.68',
+2025-10-14T10:29:28.17246358Z   code: 1006,
+2025-10-14T10:29:28.17246708Z   reason: 'No reason provided',
+2025-10-14T10:29:28.17247088Z   timestamp: '2025-10-14T10:29:28.172Z'
+2025-10-14T10:29:28.17247435Z }
+2025-10-14T10:29:28.17247807Z [WSManager] Removed connection j4f13mmgqf2jg0, total: 4
+2025-10-14T10:29:58.172513225Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:30:28.171807088Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:30:58.171889188Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:31:28.171907354Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:31:58.172723047Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:32:28.173849326Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:32:58.174823401Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:33:28.175271976Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:33:57.284066583Z [Database] Running scheduled database health check...
+2025-10-14T10:33:57.284087903Z [DB] Testing database connection (2 retries left)...
+2025-10-14T10:33:57.652343734Z [DB] Connection marked as successful
+2025-10-14T10:33:57.652365075Z [DB] Connection test successful
+2025-10-14T10:33:57.652370005Z [Database] Scheduled health check: Database connection healthy
+2025-10-14T10:33:58.175745342Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:34:28.176006204Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:34:58.176646122Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:35:28.176230841Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:35:58.176142566Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:36:28.175970369Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:36:58.175925017Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:37:28.175946155Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:37:58.175846912Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:38:28.175899853Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:38:58.175918554Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:39:28.176018668Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:39:58.175875278Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:40:28.175928951Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:40:58.176763674Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:41:28.177106666Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:41:58.177747297Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:42:28.177834266Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:42:58.177970158Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:43:28.178414858Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:43:58.178210496Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:44:04.209264372Z 10:44:04 AM [cors] [CORS] Processing sdegdaefk.gr request without valid origin:
+2025-10-14T10:44:04.209351243Z 10:44:04 AM [cors] [CORS] Referer: https://sdegdaefk.gr/documents, Host: sdegdaefk.gr
+2025-10-14T10:44:04.209482616Z 10:44:04 AM [cors] [CORS] Applied fallback CORS headers for sdegdaefk.gr request
+2025-10-14T10:44:04.209567548Z 10:44:04 AM [geoip] [GeoIP] Exempt path /api/auth/me bypassing geo-restrictions
+2025-10-14T10:44:04.209991007Z [Auth] Returning current user: {
+2025-10-14T10:44:04.209997017Z   id: 88,
+2025-10-14T10:44:04.210000847Z   name: 'Άννα Μαρία Γεωργίου',
+2025-10-14T10:44:04.210003797Z   email: 'amgeorgiou@civilprotection.gr',
+2025-10-14T10:44:04.210006637Z   role: 'user',
+2025-10-14T10:44:04.210010127Z   unit_id: [ 3 ],
+2025-10-14T10:44:04.210012937Z   sessionID: '1b788KCOh1TbPVswY2LMX6AtBJJRgBv1'
+2025-10-14T10:44:04.210017887Z }
+2025-10-14T10:44:28.178646019Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:44:58.178788218Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:45:28.179063371Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:45:58.180690363Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:46:28.180942358Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:46:58.180710866Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:47:00.816011953Z [WebSocket] New client connected: yze3r7mgqftjnz from 10.201.139.68
+2025-10-14T10:47:00.816046043Z [WSManager] Added connection yze3r7mgqftjnz, total: 5
+2025-10-14T10:47:00.816053124Z [WebSocket] Connection yze3r7mgqftjnz registered with manager
+2025-10-14T10:47:00.87879151Z [WebSocket] Received message from yze3r7mgqftjnz: { type: 'connect', timestamp: '2025-10-14T10:47:05.054Z' }
+2025-10-14T10:47:01.110737532Z [WebSocket] New client connected: y9ta9pmgqftjw6 from 10.201.159.193
+2025-10-14T10:47:01.110754812Z [WSManager] Added connection y9ta9pmgqftjw6, total: 6
+2025-10-14T10:47:01.110757062Z [WebSocket] Connection y9ta9pmgqftjw6 registered with manager
+2025-10-14T10:47:01.171522568Z [WebSocket] Received message from y9ta9pmgqftjw6: { type: 'connect', timestamp: '2025-10-14T10:47:05.346Z' }
+2025-10-14T10:47:01.404065102Z [WebSocket] New client connected: j25t2fmgqftk4b from 10.201.159.193
+2025-10-14T10:47:01.404086193Z [WSManager] Added connection j25t2fmgqftk4b, total: 7
+2025-10-14T10:47:01.404089353Z [WebSocket] Connection j25t2fmgqftk4b registered with manager
+2025-10-14T10:47:01.467962312Z [WebSocket] Received message from j25t2fmgqftk4b: { type: 'connect', timestamp: '2025-10-14T10:47:05.641Z' }
+2025-10-14T10:47:01.681065185Z [WebSocket] New client connected: 0ngw5imgqftkc0 from 10.201.139.68
+2025-10-14T10:47:01.681087566Z [WSManager] Added connection 0ngw5imgqftkc0, total: 8
+2025-10-14T10:47:01.681091796Z [WebSocket] Connection 0ngw5imgqftkc0 registered with manager
+2025-10-14T10:47:01.73744687Z [WebSocket] Received message from 0ngw5imgqftkc0: { type: 'connect', timestamp: '2025-10-14T10:47:05.915Z' }
+2025-10-14T10:47:28.180810211Z [WebSocket] Terminating inactive connection: ufet75mgqf6ee6
+2025-10-14T10:47:28.180944854Z [WebSocket] Terminating inactive connection: gid5icmgqf6enr
+2025-10-14T10:47:28.180963734Z [WebSocket] Terminating inactive connection: 7ez6hsmgqf6ex6
+2025-10-14T10:47:28.181041576Z [WebSocket] Terminating inactive connection: x94rwimgqf6f73
+2025-10-14T10:47:28.18122468Z [WebSocket] Heartbeat - Clients: 8 (4 active, 4 terminated)
+2025-10-14T10:47:28.181411354Z [WebSocket] Client disconnected: {
+2025-10-14T10:47:28.181421034Z   clientId: 'x94rwimgqf6f73',
+2025-10-14T10:47:28.181427274Z   address: '10.201.139.68',
+2025-10-14T10:47:28.181432714Z   code: 1006,
+2025-10-14T10:47:28.181438584Z   reason: 'No reason provided',
+2025-10-14T10:47:28.181444514Z   timestamp: '2025-10-14T10:47:28.181Z'
+2025-10-14T10:47:28.181449614Z }
+2025-10-14T10:47:28.181455424Z [WSManager] Removed connection x94rwimgqf6f73, total: 7
+2025-10-14T10:47:28.181478215Z [WebSocket] Client disconnected: {
+2025-10-14T10:47:28.181488935Z   clientId: '7ez6hsmgqf6ex6',
+2025-10-14T10:47:28.181492255Z   address: '10.201.154.133',
+2025-10-14T10:47:28.181495255Z   code: 1006,
+2025-10-14T10:47:28.181498525Z   reason: 'No reason provided',
+2025-10-14T10:47:28.181501396Z   timestamp: '2025-10-14T10:47:28.181Z'
+2025-10-14T10:47:28.181504156Z }
+2025-10-14T10:47:28.181507245Z [WSManager] Removed connection 7ez6hsmgqf6ex6, total: 6
+2025-10-14T10:47:28.181554857Z [WebSocket] Client disconnected: {
+2025-10-14T10:47:28.181563967Z   clientId: 'gid5icmgqf6enr',
+2025-10-14T10:47:28.181567757Z   address: '10.201.237.5',
+2025-10-14T10:47:28.181571247Z   code: 1006,
+2025-10-14T10:47:28.181574877Z   reason: 'No reason provided',
+2025-10-14T10:47:28.181578427Z   timestamp: '2025-10-14T10:47:28.181Z'
+2025-10-14T10:47:28.181581847Z }
+2025-10-14T10:47:28.181585607Z [WSManager] Removed connection gid5icmgqf6enr, total: 5
+2025-10-14T10:47:28.181591567Z [WebSocket] Client disconnected: {
+2025-10-14T10:47:28.181596837Z   clientId: 'ufet75mgqf6ee6',
+2025-10-14T10:47:28.181599827Z   address: '10.201.237.5',
+2025-10-14T10:47:28.181602578Z   code: 1006,
+2025-10-14T10:47:28.181605338Z   reason: 'No reason provided',
+2025-10-14T10:47:28.181608168Z   timestamp: '2025-10-14T10:47:28.181Z'
+2025-10-14T10:47:28.181610928Z }
+2025-10-14T10:47:28.181624668Z [WSManager] Removed connection ufet75mgqf6ee6, total: 4
+2025-10-14T10:47:58.181746927Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:48:28.181934169Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:48:57.28443012Z [Database] Running scheduled database health check...
+2025-10-14T10:48:57.28444955Z [DB] Testing database connection (2 retries left)...
+2025-10-14T10:48:57.384629351Z [DB] Connection marked as successful
+2025-10-14T10:48:57.384653692Z [DB] Connection test successful
+2025-10-14T10:48:57.384660842Z [Database] Scheduled health check: Database connection healthy
+2025-10-14T10:48:58.182592451Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:49:28.182720289Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:49:58.182761104Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:50:28.183322858Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:50:30.89188712Z [WebSocket] New client connected: yn7ktmgqfy1rf from 10.201.2.4
+2025-10-14T10:50:30.8919128Z [WSManager] Added connection yn7ktmgqfy1rf, total: 5
+2025-10-14T10:50:30.891918901Z [WebSocket] Connection yn7ktmgqfy1rf registered with manager
+2025-10-14T10:50:30.970104667Z [WebSocket] Received message from yn7ktmgqfy1rf: { type: 'connect', timestamp: '2025-10-14T10:50:35.147Z' }
+2025-10-14T10:50:31.27590954Z [WebSocket] New client connected: rk5d4mgqfy223 from 10.201.237.5
+2025-10-14T10:50:31.275931331Z [WSManager] Added connection rk5d4mgqfy223, total: 6
+2025-10-14T10:50:31.275934871Z [WebSocket] Connection rk5d4mgqfy223 registered with manager
+2025-10-14T10:50:31.353642357Z [WebSocket] Received message from rk5d4mgqfy223: { type: 'connect', timestamp: '2025-10-14T10:50:35.532Z' }
+2025-10-14T10:50:31.635725999Z [WebSocket] New client connected: 719o7mmgqfy2c3 from 10.201.139.5
+2025-10-14T10:50:31.63575471Z [WSManager] Added connection 719o7mmgqfy2c3, total: 7
+2025-10-14T10:50:31.63575937Z [WebSocket] Connection 719o7mmgqfy2c3 registered with manager
+2025-10-14T10:50:31.717071021Z [WebSocket] Received message from 719o7mmgqfy2c3: { type: 'connect', timestamp: '2025-10-14T10:50:35.894Z' }
+2025-10-14T10:50:32.013881888Z [WebSocket] New client connected: 6savmmgqfy2ml from 10.201.116.129
+2025-10-14T10:50:32.013903369Z [WSManager] Added connection 6savmmgqfy2ml, total: 8
+2025-10-14T10:50:32.013908769Z [WebSocket] Connection 6savmmgqfy2ml registered with manager
+2025-10-14T10:50:32.091619305Z [WebSocket] Received message from 6savmmgqfy2ml: { type: 'connect', timestamp: '2025-10-14T10:50:36.268Z' }
+2025-10-14T10:50:58.18334334Z [WebSocket] Terminating inactive connection: yze3r7mgqftjnz
+2025-10-14T10:50:58.183437342Z [WebSocket] Terminating inactive connection: y9ta9pmgqftjw6
+2025-10-14T10:50:58.183527914Z [WebSocket] Terminating inactive connection: j25t2fmgqftk4b
+2025-10-14T10:50:58.183599205Z [WebSocket] Terminating inactive connection: 0ngw5imgqftkc0
+2025-10-14T10:50:58.18381155Z [WebSocket] Heartbeat - Clients: 8 (4 active, 4 terminated)
+2025-10-14T10:50:58.183959033Z [WebSocket] Client disconnected: {
+2025-10-14T10:50:58.183965683Z   clientId: '0ngw5imgqftkc0',
+2025-10-14T10:50:58.183969503Z   address: '10.201.139.68',
+2025-10-14T10:50:58.183973403Z   code: 1006,
+2025-10-14T10:50:58.183976853Z   reason: 'No reason provided',
+2025-10-14T10:50:58.183980333Z   timestamp: '2025-10-14T10:50:58.183Z'
+2025-10-14T10:50:58.183984563Z }
+2025-10-14T10:50:58.183990453Z [WSManager] Removed connection 0ngw5imgqftkc0, total: 7
+2025-10-14T10:50:58.184068315Z [WebSocket] Client disconnected: {
+2025-10-14T10:50:58.184081995Z   clientId: 'j25t2fmgqftk4b',
+2025-10-14T10:50:58.184101665Z   address: '10.201.159.193',
+2025-10-14T10:50:58.184105186Z   code: 1006,
+2025-10-14T10:50:58.184108036Z   reason: 'No reason provided',
+2025-10-14T10:50:58.184110836Z   timestamp: '2025-10-14T10:50:58.183Z'
+2025-10-14T10:50:58.184113536Z }
+2025-10-14T10:50:58.184117016Z [WSManager] Removed connection j25t2fmgqftk4b, total: 6
+2025-10-14T10:50:58.184126306Z [WebSocket] Client disconnected: {
+2025-10-14T10:50:58.184129476Z   clientId: 'y9ta9pmgqftjw6',
+2025-10-14T10:50:58.184132526Z   address: '10.201.159.193',
+2025-10-14T10:50:58.184135546Z   code: 1006,
+2025-10-14T10:50:58.184137996Z   reason: 'No reason provided',
+2025-10-14T10:50:58.184140816Z   timestamp: '2025-10-14T10:50:58.184Z'
+2025-10-14T10:50:58.184143757Z }
+2025-10-14T10:50:58.184146637Z [WSManager] Removed connection y9ta9pmgqftjw6, total: 5
+2025-10-14T10:50:58.184189997Z [WebSocket] Client disconnected: {
+2025-10-14T10:50:58.184193898Z   clientId: 'yze3r7mgqftjnz',
+2025-10-14T10:50:58.184196098Z   address: '10.201.139.68',
+2025-10-14T10:50:58.184198178Z   code: 1006,
+2025-10-14T10:50:58.184200278Z   reason: 'No reason provided',
+2025-10-14T10:50:58.184202368Z   timestamp: '2025-10-14T10:50:58.184Z'
+2025-10-14T10:50:58.184204498Z }
+2025-10-14T10:50:58.184206918Z [WSManager] Removed connection yze3r7mgqftjnz, total: 4
+2025-10-14T10:51:28.18287499Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:51:58.182774007Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:52:28.182951408Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:52:58.183100098Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:53:28.182989303Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
+2025-10-14T10:53:58.183273563Z [WebSocket] Heartbeat - Clients: 4 (4 active, 0 terminated)
