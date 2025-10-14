@@ -106,7 +106,7 @@ router.post(
       }
 
       // SECURITY: Resolve unit string to numeric ID and verify authorization
-      let numericUnitId;
+      let numericUnitId: number;
       try {
         const { data: unitData, error: unitError } = await supabase
           .from("Monada")
@@ -143,9 +143,9 @@ router.post(
       }
 
       // SECURITY: Verify user is authorized to create documents for this unit
-      const userUnits = Array.isArray(req.user.unit_id)
+      const userUnits: number[] = Array.isArray(req.user.unit_id)
         ? req.user.unit_id
-        : [req.user.unit_id];
+        : req.user.unit_id ? [req.user.unit_id] : [];
       if (!userUnits.includes(numericUnitId)) {
         console.error(
           "[DocumentsController] V1 Authorization failed: user units",
@@ -362,7 +362,7 @@ router.post(
 
       // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
       // Let's resolve this by looking up the unit from the Monada table
-      let numericUnitId = null;
+      let numericUnitId: number;
       try {
         const { data: unitData, error: unitError } = await supabase
           .from("Monada")
@@ -399,9 +399,9 @@ router.post(
       }
 
       // SECURITY: Verify user is authorized to create documents for this unit
-      const userUnits = Array.isArray(req.user.unit_id)
+      const userUnits: number[] = Array.isArray(req.user.unit_id)
         ? req.user.unit_id
-        : [req.user.unit_id];
+        : req.user.unit_id ? [req.user.unit_id] : [];
       if (!userUnits.includes(numericUnitId)) {
         console.error(
           "[DocumentsController] V2 Authorization failed: user units",
