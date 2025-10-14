@@ -208,45 +208,50 @@ const signatureSchema = z.object({
   prepose: z.string().optional().default(""),
 });
 
-const createDocumentSchema = z.object({
-  unit: z.union([z.string(), z.number()]).transform((val) => String(val)),
-  project_id: z
-    .union([z.string(), z.number()])
-    .transform((val) => String(val))
-    .refine((val) => val && val.trim().length > 0, "Το έργο είναι υποχρεωτικό"),
-  subproject_id: z.string().optional(),
-  region: z.string().optional(),
-  expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
-  recipients: z.array(recipientSchema).optional().default([]),
-  total_amount: z.number().optional(),
-  status: z.string().default("draft"),
-  selectedAttachments: z.array(z.string()).optional().default([]),
-  esdian_fields: z.array(z.string()).optional().default([""]),
-  // Keep old fields for backward compatibility during transition
-  esdian_field1: z.string().optional().default(""),
-  esdian_field2: z.string().optional().default(""),
-  director_signature: signatureSchema.optional(),
-}).superRefine((data, ctx) => {
-  // Validate ΕΚΤΟΣ ΕΔΡΑΣ recipients have required fields
-  if (data.expenditure_type === EKTOS_EDRAS_TYPE && data.recipients) {
-    data.recipients.forEach((recipient, index) => {
-      if (!recipient.month) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
-          path: ["recipients", index, "month"],
-        });
-      }
-      if (!recipient.net_payable || recipient.net_payable <= 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Το καθαρό πληρωτέο ποσό πρέπει να είναι μεγαλύτερο από 0",
-          path: ["recipients", index, "net_payable"],
-        });
-      }
-    });
-  }
-});
+const createDocumentSchema = z
+  .object({
+    unit: z.union([z.string(), z.number()]).transform((val) => String(val)),
+    project_id: z
+      .union([z.string(), z.number()])
+      .transform((val) => String(val))
+      .refine(
+        (val) => val && val.trim().length > 0,
+        "Το έργο είναι υποχρεωτικό",
+      ),
+    subproject_id: z.string().optional(),
+    region: z.string().optional(),
+    expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
+    recipients: z.array(recipientSchema).optional().default([]),
+    total_amount: z.number().optional(),
+    status: z.string().default("draft"),
+    selectedAttachments: z.array(z.string()).optional().default([]),
+    esdian_fields: z.array(z.string()).optional().default([""]),
+    // Keep old fields for backward compatibility during transition
+    esdian_field1: z.string().optional().default(""),
+    esdian_field2: z.string().optional().default(""),
+    director_signature: signatureSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Validate ΕΚΤΟΣ ΕΔΡΑΣ recipients have required fields
+    if (data.expenditure_type === EKTOS_EDRAS_TYPE && data.recipients) {
+      data.recipients.forEach((recipient, index) => {
+        if (!recipient.month) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
+            path: ["recipients", index, "month"],
+          });
+        }
+        if (!recipient.net_payable || recipient.net_payable <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Το καθαρό πληρωτέο ποσό πρέπει να είναι μεγαλύτερο από 0",
+            path: ["recipients", index, "net_payable"],
+          });
+        }
+      });
+    }
+  });
 
 // Main component
 export function CreateDocumentDialog({
@@ -1058,16 +1063,18 @@ export function CreateDocumentDialog({
     const baseLetters = ["Α", "Β", "Γ"];
     for (const letter of baseLetters) {
       const hasRegular = installments.includes(letter);
-      const hasSupplementary = installments.includes(`${letter} συμπληρωματική`);
+      const hasSupplementary = installments.includes(
+        `${letter} συμπληρωματική`,
+      );
       if (hasRegular && hasSupplementary) {
         return false; // Can't have both Α and Α συμπληρωματική
       }
     }
 
     // Collect all installment letters (both regular and supplementary)
-    const letterOrder: Record<string, number> = { "Α": 0, "Β": 1, "Γ": 2 };
+    const letterOrder: Record<string, number> = { Α: 0, Β: 1, Γ: 2 };
     const usedLetters = new Set<string>();
-    
+
     for (const inst of installments) {
       if (inst === "ΕΦΑΠΑΞ") continue;
       const letter = inst.replace(" συμπληρωματική", "");
@@ -1079,9 +1086,9 @@ export function CreateDocumentDialog({
     // Check if used letters are consecutive
     if (usedLetters.size > 1) {
       const sortedIndices = Array.from(usedLetters)
-        .map(l => letterOrder[l])
+        .map((l) => letterOrder[l])
         .sort((a, b) => a - b);
-      
+
       for (let i = 1; i < sortedIndices.length; i++) {
         if (sortedIndices[i] - sortedIndices[i - 1] !== 1) {
           return false; // Not consecutive
@@ -1200,11 +1207,13 @@ export function CreateDocumentDialog({
             // Check for specific conflict types
             const baseLetters = ["Α", "Β", "Γ"];
             let conflictFound = false;
-            
+
             // Check for regular + supplementary conflict
             for (const letter of baseLetters) {
               const hasRegular = newInstallments.includes(letter);
-              const hasSupplementary = newInstallments.includes(`${letter} συμπληρωματική`);
+              const hasSupplementary = newInstallments.includes(
+                `${letter} συμπληρωματική`,
+              );
               if (hasRegular && hasSupplementary) {
                 toast({
                   title: "Μη έγκυρη επιλογή",
@@ -1215,7 +1224,7 @@ export function CreateDocumentDialog({
                 break;
               }
             }
-            
+
             if (!conflictFound && newInstallments.length > 1) {
               toast({
                 title: "Μη έγκυρες δόσεις",
@@ -1488,12 +1497,15 @@ export function CreateDocumentDialog({
               {availableInstallments
                 .filter((inst) => !inst.includes("συμπληρωματική"))
                 .map((installment) => {
-                  const isRegularSelected = selectedInstallments.includes(installment);
+                  const isRegularSelected =
+                    selectedInstallments.includes(installment);
                   const supplementaryVersion = `${installment} συμπληρωματική`;
-                  const isSupplementarySelected = selectedInstallments.includes(supplementaryVersion);
+                  const isSupplementarySelected =
+                    selectedInstallments.includes(supplementaryVersion);
                   const isDKA = DKA_TYPES.includes(expenditureType);
-                  const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
-                  
+                  const canHaveSupplementary =
+                    isDKA && installment !== "ΕΦΑΠΑΞ";
+
                   // For ΕΦΑΠΑΞ or non-DKA types, show single button
                   if (!canHaveSupplementary) {
                     return (
@@ -1510,11 +1522,11 @@ export function CreateDocumentDialog({
                       </Button>
                     );
                   }
-                  
+
                   // For DKA installments, show segmented control
                   return (
-                    <div 
-                      key={installment} 
+                    <div
+                      key={installment}
                       className="inline-flex rounded-md border border-input"
                       role="group"
                     >
@@ -1532,8 +1544,8 @@ export function CreateDocumentDialog({
                           }
                         }}
                         className={`h-8 px-3 rounded-r-none border-r ${
-                          isRegularSelected 
-                            ? "" 
+                          isRegularSelected
+                            ? ""
                             : "border-transparent hover:bg-accent"
                         }`}
                         data-testid={`installment-regular-${installment}`}
@@ -1554,8 +1566,8 @@ export function CreateDocumentDialog({
                           }
                         }}
                         className={`h-8 px-2 rounded-l-none text-xs ${
-                          isSupplementarySelected 
-                            ? "" 
+                          isSupplementarySelected
+                            ? ""
                             : "border-transparent hover:bg-accent"
                         }`}
                         data-testid={`installment-supplementary-${installment}`}
@@ -1578,8 +1590,8 @@ export function CreateDocumentDialog({
                     {expenditureType === HOUSING_ALLOWANCE_TYPE
                       ? installment.replace("ΤΡΙΜΗΝΟ ", "Τ")
                       : installment.includes("συμπληρωματική")
-                      ? installment.replace(" συμπληρωματική", " ΣΥΜ.")
-                      : installment}
+                        ? installment.replace(" συμπληρωματική", " ΣΥΜ.")
+                        : installment}
                   </div>
                   <div className="relative flex-1">
                     <NumberInput
@@ -3055,22 +3067,22 @@ export function CreateDocumentDialog({
                               }}
                             >
                               <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Όλες οι περιφέρειες" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">
-                                Όλες οι περιφέρειες
-                              </SelectItem>
-                              {availableRegions.map((region: any) => (
-                                <SelectItem
-                                  key={`region-${region.code}`}
-                                  value={region.code}
-                                >
-                                  {region.name}
+                                <SelectValue placeholder="Όλες οι περιφέρειες" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  Όλες οι περιφέρειες
                                 </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                {availableRegions.map((region: any) => (
+                                  <SelectItem
+                                    key={`region-${region.code}`}
+                                    value={region.code}
+                                  >
+                                    {region.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       )}
@@ -3094,53 +3106,55 @@ export function CreateDocumentDialog({
                           </label>
                           <div className="flex-1">
                             <Select
-                            value={selectedUnitFilter}
-                            onValueChange={(value) => {
-                              const unitCode = value === "all" ? "" : value;
-                              setSelectedUnitFilter(unitCode);
+                              value={selectedUnitFilter}
+                              onValueChange={(value) => {
+                                const unitCode = value === "all" ? "" : value;
+                                setSelectedUnitFilter(unitCode);
 
-                              // Set as final selected region for document (last hierarchy choice)
-                              if (unitCode) {
-                                const selectedUnit = availableUnits.find(
-                                  (u: any) => u.code === unitCode,
-                                );
-                                
-                                if (selectedUnit) {
-                                  // Auto-complete: Fill region filter
-                                  if (selectedUnit.region_code) {
-                                    setSelectedRegionFilter(selectedUnit.region_code);
-                                  }
-                                  
-                                  form.setValue("region", selectedUnit.name);
-                                  setSelectedMunicipalityId(""); // Clear municipality selection
-                                  console.log(
-                                    "[Geographic] Selected regional unit as final choice:",
-                                    selectedUnit.name,
+                                // Set as final selected region for document (last hierarchy choice)
+                                if (unitCode) {
+                                  const selectedUnit = availableUnits.find(
+                                    (u: any) => u.code === unitCode,
                                   );
+
+                                  if (selectedUnit) {
+                                    // Auto-complete: Fill region filter
+                                    if (selectedUnit.region_code) {
+                                      setSelectedRegionFilter(
+                                        selectedUnit.region_code,
+                                      );
+                                    }
+
+                                    form.setValue("region", selectedUnit.name);
+                                    setSelectedMunicipalityId(""); // Clear municipality selection
+                                    console.log(
+                                      "[Geographic] Selected regional unit as final choice:",
+                                      selectedUnit.name,
+                                    );
+                                  }
+                                } else if (!selectedRegionFilter) {
+                                  form.setValue("region", "");
+                                  setSelectedMunicipalityId("");
                                 }
-                              } else if (!selectedRegionFilter) {
-                                form.setValue("region", "");
-                                setSelectedMunicipalityId("");
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">
-                                Όλες οι περιφερειακές ενότητες
-                              </SelectItem>
-                              {availableUnits.map((unit: any) => (
-                                <SelectItem
-                                  key={`unit-${unit.code}`}
-                                  value={unit.code}
-                                >
-                                  {unit.name}
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  Όλες οι περιφερειακές ενότητες
                                 </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                                {availableUnits.map((unit: any) => (
+                                  <SelectItem
+                                    key={`unit-${unit.code}`}
+                                    value={unit.code}
+                                  >
+                                    {unit.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       )}
@@ -3159,81 +3173,94 @@ export function CreateDocumentDialog({
                           </label>
                           <div className="flex-1">
                             <Select
-                            value={selectedMunicipalityId}
-                            onValueChange={(value) => {
-                              // Set as final selected region for document (last hierarchy choice - municipality)
-                              const selectedMunicipality =
-                                availableMunicipalities.find(
-                                  (m: any) => m.id === value,
-                                );
-                              if (selectedMunicipality) {
-                                // Auto-complete: Find the parent unit and region
-                                const parentUnit = ((projectGeographicAreas as any)?.availableUnits || []).find(
-                                  (u: any) => u.code === selectedMunicipality.unit_code
-                                );
-                                
-                                if (parentUnit) {
-                                  // Auto-fill regional unit filter
-                                  setSelectedUnitFilter(parentUnit.code);
-                                  
-                                  // Auto-fill region filter
-                                  if (parentUnit.region_code) {
-                                    setSelectedRegionFilter(parentUnit.region_code);
+                              value={selectedMunicipalityId}
+                              onValueChange={(value) => {
+                                // Set as final selected region for document (last hierarchy choice - municipality)
+                                const selectedMunicipality =
+                                  availableMunicipalities.find(
+                                    (m: any) => m.id === value,
+                                  );
+                                if (selectedMunicipality) {
+                                  // Auto-complete: Find the parent unit and region
+                                  const parentUnit = (
+                                    (projectGeographicAreas as any)
+                                      ?.availableUnits || []
+                                  ).find(
+                                    (u: any) =>
+                                      u.code === selectedMunicipality.unit_code,
+                                  );
+
+                                  if (parentUnit) {
+                                    // Auto-fill regional unit filter
+                                    setSelectedUnitFilter(parentUnit.code);
+
+                                    // Auto-fill region filter
+                                    if (parentUnit.region_code) {
+                                      setSelectedRegionFilter(
+                                        parentUnit.region_code,
+                                      );
+                                    }
                                   }
+
+                                  form.setValue(
+                                    "region",
+                                    selectedMunicipality.name,
+                                  );
+                                  setSelectedMunicipalityId(value); // Store ID for dropdown
+                                  console.log(
+                                    "[Geographic] Selected municipality as final choice:",
+                                    selectedMunicipality.name,
+                                  );
                                 }
-                                
-                                form.setValue(
-                                  "region",
-                                  selectedMunicipality.name,
-                                );
-                                setSelectedMunicipalityId(value); // Store ID for dropdown
-                                console.log(
-                                  "[Geographic] Selected municipality as final choice:",
-                                  selectedMunicipality.name,
-                                );
-                              }
-                            }}
-                            disabled={regionsLoading}
-                          >
-                            <SelectTrigger className="h-8">
-                              <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
-                            </SelectTrigger>
-                            <SelectContent className="max-h-60">
-                              {availableMunicipalities
-                                .filter(
-                                  (municipality: any) =>
-                                    municipality.code && municipality.name,
-                                )
-                                .map((municipality: any) => (
+                              }}
+                              disabled={regionsLoading}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                {availableMunicipalities
+                                  .filter(
+                                    (municipality: any) =>
+                                      municipality.code && municipality.name,
+                                  )
+                                  .map((municipality: any) => (
+                                    <SelectItem
+                                      key={`municipality-${municipality.code}`}
+                                      value={municipality.id}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {municipality.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          Δήμος/Κοινότητα
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                {availableMunicipalities.length === 0 && (
                                   <SelectItem
-                                    key={`municipality-${municipality.code}`}
-                                    value={municipality.id}
+                                    value="no-municipalities"
+                                    disabled
                                   >
-                                    <div className="flex flex-col">
-                                      <span className="font-medium">
-                                        {municipality.name}
-                                      </span>
-                                      <span className="text-xs text-gray-500">
-                                        Δήμος/Κοινότητα
-                                      </span>
-                                    </div>
+                                    Δεν υπάρχουν διαθέσιμοι δήμοι
                                   </SelectItem>
-                                ))}
-                              {availableMunicipalities.length === 0 && (
-                                <SelectItem value="no-municipalities" disabled>
-                                  Δεν υπάρχουν διαθέσιμοι δήμοι
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                                )}
+                              </SelectContent>
+                            </Select>
                           </div>
                         </div>
                       )}
 
                       {/* Show current selection path */}
-                      {(selectedRegionFilter || selectedUnitFilter || selectedMunicipalityId) && (
+                      {(selectedRegionFilter ||
+                        selectedUnitFilter ||
+                        selectedMunicipalityId) && (
                         <div className="text-xs text-gray-500 bg-blue-50 p-1.5 rounded mt-1">
-                          <span className="text-gray-600">Επιλεγμένη περιοχή:</span>
+                          <span className="text-gray-600">
+                            Επιλεγμένη περιοχή:
+                          </span>
                           {selectedRegionFilter && (
                             <span className="ml-1 font-medium">
                               {
@@ -3255,7 +3282,8 @@ export function CreateDocumentDialog({
                           )}
                           {selectedMunicipalityId && (
                             <span className="ml-1 font-medium">
-                              {(selectedRegionFilter || selectedUnitFilter) && " › "}
+                              {(selectedRegionFilter || selectedUnitFilter) &&
+                                " › "}
                               {
                                 availableMunicipalities.find(
                                   (m: any) => m.id === selectedMunicipalityId,
@@ -3369,19 +3397,19 @@ export function CreateDocumentDialog({
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
                             <SimpleAFMAutocomplete
-                                expenditureType={
-                                  form.getValues("expenditure_type") || ""
-                                }
-                                value={
-                                  form.watch(`recipients.${index}.afm`) || ""
-                                }
-                                userUnit={selectedUnit || ""}
-                                projectNa853={selectedProject?.mis || ""}
-                                onChange={(value) => {
-                                  // Update the AFM field in the form when user types
-                                  form.setValue(`recipients.${index}.afm`, value);
-                                }}
-                                onSelectPerson={(personData) => {
+                              expenditureType={
+                                form.getValues("expenditure_type") || ""
+                              }
+                              value={
+                                form.watch(`recipients.${index}.afm`) || ""
+                              }
+                              userUnit={selectedUnit || ""}
+                              projectNa853={selectedProject?.mis || ""}
+                              onChange={(value) => {
+                                // Update the AFM field in the form when user types
+                                form.setValue(`recipients.${index}.afm`, value);
+                              }}
+                              onSelectPerson={(personData) => {
                                 if (personData) {
                                   console.log(
                                     "[AFMAutocomplete] Selection made for index:",
@@ -3397,8 +3425,10 @@ export function CreateDocumentDialog({
                                   setIsFormSyncing(true);
 
                                   // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (employee) vs beneficiary
-                                  const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
-                                  
+                                  const isEktosEdras =
+                                    form.getValues("expenditure_type") ===
+                                    EKTOS_EDRAS_TYPE;
+
                                   // Use smart autocomplete data if available from enhanced AFM component
                                   const enhancedData = personData as any;
                                   let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
@@ -3417,134 +3447,139 @@ export function CreateDocumentDialog({
 
                                   // For ΕΚΤΟΣ ΕΔΡΑΣ (employees), skip installment logic entirely
                                   if (!isEktosEdras) {
-                                  // Check if we have smart autocomplete suggestions
-                                  if (
-                                    enhancedData.suggestedInstallments &&
-                                    enhancedData.suggestedInstallmentAmounts
-                                  ) {
-                                    installmentsList =
-                                      enhancedData.suggestedInstallments;
-                                    installmentAmounts =
-                                      enhancedData.suggestedInstallmentAmounts;
-                                    totalAmount =
-                                      enhancedData.suggestedAmount || 0;
-                                  }
-                                  // Fallback to legacy structure if no smart suggestions
-                                  else if (
-                                    enhancedData.oikonomika &&
-                                    typeof enhancedData.oikonomika === "object"
-                                  ) {
-                                    console.log(
-                                      "[AFMAutocomplete] Fallback to legacy extraction from JSONB oikonomika",
-                                    );
+                                    // Check if we have smart autocomplete suggestions
+                                    if (
+                                      enhancedData.suggestedInstallments &&
+                                      enhancedData.suggestedInstallmentAmounts
+                                    ) {
+                                      installmentsList =
+                                        enhancedData.suggestedInstallments;
+                                      installmentAmounts =
+                                        enhancedData.suggestedInstallmentAmounts;
+                                      totalAmount =
+                                        enhancedData.suggestedAmount || 0;
+                                    }
+                                    // Fallback to legacy structure if no smart suggestions
+                                    else if (
+                                      enhancedData.oikonomika &&
+                                      typeof enhancedData.oikonomika ===
+                                        "object"
+                                    ) {
+                                      console.log(
+                                        "[AFMAutocomplete] Fallback to legacy extraction from JSONB oikonomika",
+                                      );
 
-                                    // Get the current expenditure type to match against oikonomika keys
-                                    const currentExpenditureType =
-                                      form.getValues("expenditure_type");
+                                      // Get the current expenditure type to match against oikonomika keys
+                                      const currentExpenditureType =
+                                        form.getValues("expenditure_type");
 
-                                    // Find matching expenditure type in oikonomika
-                                    for (const [
-                                      expType,
-                                      paymentsList,
-                                    ] of Object.entries(
-                                      enhancedData.oikonomika,
-                                    )) {
-                                      if (
-                                        Array.isArray(paymentsList) &&
-                                        paymentsList.length > 0
-                                      ) {
-                                        const firstPayment = paymentsList[0];
-
+                                      // Find matching expenditure type in oikonomika
+                                      for (const [
+                                        expType,
+                                        paymentsList,
+                                      ] of Object.entries(
+                                        enhancedData.oikonomika,
+                                      )) {
                                         if (
-                                          firstPayment &&
-                                          typeof firstPayment === "object"
+                                          Array.isArray(paymentsList) &&
+                                          paymentsList.length > 0
                                         ) {
-                                          // Extract amount (handle Greek number formatting)
-                                          let amountStr = String(
-                                            firstPayment.amount || "0",
-                                          );
+                                          const firstPayment = paymentsList[0];
 
-                                          // Handle Greek formatting (periods as thousands separators)
                                           if (
-                                            amountStr.includes(".") &&
-                                            amountStr.split(".").length === 3
+                                            firstPayment &&
+                                            typeof firstPayment === "object"
                                           ) {
-                                            const parts = amountStr.split(".");
-                                            amountStr =
-                                              parts[0] +
-                                              parts[1] +
-                                              "." +
-                                              parts[2];
-                                          } else if (amountStr.includes(",")) {
-                                            amountStr = amountStr.replace(
-                                              ",",
-                                              ".",
+                                            // Extract amount (handle Greek number formatting)
+                                            let amountStr = String(
+                                              firstPayment.amount || "0",
                                             );
-                                          }
 
-                                          const amount =
-                                            parseFloat(amountStr) || 0;
-                                          const installments =
-                                            firstPayment.installment || [
-                                              "ΕΦΑΠΑΞ",
-                                            ];
-
-                                          if (
-                                            Array.isArray(installments) &&
-                                            installments.length > 0
-                                          ) {
-                                            installmentsList = installments;
-                                            totalAmount = amount;
-
-                                            // Create installment amounts object
-                                            installmentAmounts = {};
-                                            if (installments.length === 1) {
-                                              installmentAmounts[
-                                                installments[0]
-                                              ] = amount;
-                                            } else {
-                                              const amountPerInstallment =
-                                                amount / installments.length;
-                                              installments.forEach((inst) => {
-                                                installmentAmounts[inst] =
-                                                  amountPerInstallment;
-                                              });
+                                            // Handle Greek formatting (periods as thousands separators)
+                                            if (
+                                              amountStr.includes(".") &&
+                                              amountStr.split(".").length === 3
+                                            ) {
+                                              const parts =
+                                                amountStr.split(".");
+                                              amountStr =
+                                                parts[0] +
+                                                parts[1] +
+                                                "." +
+                                                parts[2];
+                                            } else if (
+                                              amountStr.includes(",")
+                                            ) {
+                                              amountStr = amountStr.replace(
+                                                ",",
+                                                ".",
+                                              );
                                             }
 
-                                            console.log(
-                                              "[AFMAutocomplete] Legacy extraction:",
-                                              installmentsList,
-                                              "amounts:",
-                                              installmentAmounts,
-                                            );
-                                            break;
+                                            const amount =
+                                              parseFloat(amountStr) || 0;
+                                            const installments =
+                                              firstPayment.installment || [
+                                                "ΕΦΑΠΑΞ",
+                                              ];
+
+                                            if (
+                                              Array.isArray(installments) &&
+                                              installments.length > 0
+                                            ) {
+                                              installmentsList = installments;
+                                              totalAmount = amount;
+
+                                              // Create installment amounts object
+                                              installmentAmounts = {};
+                                              if (installments.length === 1) {
+                                                installmentAmounts[
+                                                  installments[0]
+                                                ] = amount;
+                                              } else {
+                                                const amountPerInstallment =
+                                                  amount / installments.length;
+                                                installments.forEach((inst) => {
+                                                  installmentAmounts[inst] =
+                                                    amountPerInstallment;
+                                                });
+                                              }
+
+                                              console.log(
+                                                "[AFMAutocomplete] Legacy extraction:",
+                                                installmentsList,
+                                                "amounts:",
+                                                installmentAmounts,
+                                              );
+                                              break;
+                                            }
                                           }
                                         }
                                       }
                                     }
-                                  }
-                                  // Fallback to old structure for employees
-                                  else {
-                                    const installmentValue =
-                                      enhancedData.installment || "";
-                                    const amountValue =
-                                      parseFloat(enhancedData.amount || "0") ||
-                                      0;
+                                    // Fallback to old structure for employees
+                                    else {
+                                      const installmentValue =
+                                        enhancedData.installment || "";
+                                      const amountValue =
+                                        parseFloat(
+                                          enhancedData.amount || "0",
+                                        ) || 0;
 
-                                    if (installmentValue && amountValue) {
-                                      installmentsList = [installmentValue];
-                                      installmentAmounts = {
-                                        [installmentValue]: amountValue,
-                                      };
-                                      totalAmount = amountValue;
+                                      if (installmentValue && amountValue) {
+                                        installmentsList = [installmentValue];
+                                        installmentAmounts = {
+                                          [installmentValue]: amountValue,
+                                        };
+                                        totalAmount = amountValue;
+                                      }
                                     }
-                                  }
                                   } // End of if (!isEktosEdras) - installment logic
 
                                   // Update the recipient data directly in the current form state
                                   const currentRecipients =
                                     form.getValues("recipients");
-                                  
+
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
                                     firstname: personData.name || "",
@@ -3558,7 +3593,9 @@ export function CreateDocumentDialog({
                                     amount: totalAmount,
                                     installments: installmentsList,
                                     installmentAmounts: installmentAmounts,
-                                    ...(isEktosEdras && { employee_id: (personData as any).id }),
+                                    ...(isEktosEdras && {
+                                      employee_id: (personData as any).id,
+                                    }),
                                   };
 
                                   // Use setValue and trigger validation to ensure form recognizes the changes
@@ -3594,7 +3631,8 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
-                          {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE && (
+                          {form.getValues("expenditure_type") ===
+                            EKTOS_EDRAS_TYPE && (
                             <>
                               {/* Month + Year Selector */}
                               <div className="md:col-span-3 grid grid-cols-2 gap-2">
@@ -3603,49 +3641,70 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.month`}
                                   render={({ field }) => {
                                     const currentValue = field.value || "";
-                                    const [selectedMonth, selectedYear] = currentValue.includes(" ") 
-                                      ? currentValue.split(" ")
-                                      : ["", ""];
-                                    
+                                    const [selectedMonth, selectedYear] =
+                                      currentValue.includes(" ")
+                                        ? currentValue.split(" ")
+                                        : ["", ""];
+
                                     return (
                                       <FormItem className="col-span-2">
                                         <div className="grid grid-cols-2 gap-2">
                                           <Select
                                             onValueChange={(month) => {
-                                              const year = selectedYear || new Date().getFullYear().toString();
-                                              field.onChange(`${month} ${year}`);
+                                              const year =
+                                                selectedYear ||
+                                                new Date()
+                                                  .getFullYear()
+                                                  .toString();
+                                              field.onChange(
+                                                `${month} ${year}`,
+                                              );
                                             }}
                                             value={selectedMonth}
                                           >
                                             <FormControl>
-                                              <SelectTrigger data-testid={`select-recipient-${index}-month`}>
+                                              <SelectTrigger
+                                                data-testid={`select-recipient-${index}-month`}
+                                              >
                                                 <SelectValue placeholder="Μήνας" />
                                               </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                               {GREEK_MONTHS.map((month) => (
-                                                <SelectItem key={month} value={month}>
+                                                <SelectItem
+                                                  key={month}
+                                                  value={month}
+                                                >
                                                   {month}
                                                 </SelectItem>
                                               ))}
                                             </SelectContent>
                                           </Select>
-                                          
+
                                           <Select
                                             onValueChange={(year) => {
-                                              const month = selectedMonth || GREEK_MONTHS[0];
-                                              field.onChange(`${month} ${year}`);
+                                              const month =
+                                                selectedMonth ||
+                                                GREEK_MONTHS[0];
+                                              field.onChange(
+                                                `${month} ${year}`,
+                                              );
                                             }}
                                             value={selectedYear}
                                           >
                                             <FormControl>
-                                              <SelectTrigger data-testid={`select-recipient-${index}-year`}>
+                                              <SelectTrigger
+                                                data-testid={`select-recipient-${index}-year`}
+                                              >
                                                 <SelectValue placeholder="Έτος" />
                                               </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                               {AVAILABLE_YEARS.map((year) => (
-                                                <SelectItem key={year} value={year.toString()}>
+                                                <SelectItem
+                                                  key={year}
+                                                  value={year.toString()}
+                                                >
                                                   {year}
                                                 </SelectItem>
                                               ))}
@@ -3667,13 +3726,23 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.days`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">Αριθμός Ημερών</FormLabel>
+                                      <FormLabel className="text-sm">
+                                        Αριθμός Ημερών
+                                      </FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => field.onChange(value)}
+                                          onChange={(value) => {
+                                            if (value === "" || value === null || value === undefined) {
+                                              field.onChange(1);
+                                              return;
+                                            }
+                                            const numValue = Number(value);
+                                            field.onChange(Number.isFinite(numValue) ? Math.floor(numValue) : 1);
+                                          }}
                                           min={1}
-                                          placeholder="0"
+                                          step={1}
+                                          placeholder="1"
                                           data-testid={`input-recipient-${index}-days`}
                                         />
                                       </FormControl>
@@ -3688,25 +3757,66 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.daily_compensation`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">Ημερήσια Αποζημίωση</FormLabel>
+                                      <FormLabel className="text-sm">
+                                        Ημερήσια Αποζημίωση
+                                      </FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => {
-                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            const numValue =
+                                              typeof value === "number"
+                                                ? value
+                                                : parseFloat(value) || 0;
                                             field.onChange(numValue);
                                             // Trigger recalculation
-                                            const recipient = form.getValues(`recipients.${index}`);
-                                            const totalExpense = numValue + 
-                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
-                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
-                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
-                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
-                                            const netPayable = totalExpense - deduction;
-                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
-                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
-                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
-                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                            const recipient = form.getValues(
+                                              `recipients.${index}`,
+                                            );
+                                            const totalExpense =
+                                              numValue +
+                                              (typeof recipient.accommodation_expenses ===
+                                              "number"
+                                                ? recipient.accommodation_expenses
+                                                : parseFloat(
+                                                    recipient.accommodation_expenses as string,
+                                                  ) || 0) +
+                                              (typeof recipient.kilometers_traveled ===
+                                              "number"
+                                                ? recipient.kilometers_traveled
+                                                : parseFloat(
+                                                    recipient.kilometers_traveled as string,
+                                                  ) || 0) *
+                                                (recipient.price_per_km ||
+                                                  DEFAULT_PRICE_PER_KM) +
+                                              (typeof recipient.tickets_tolls_rental ===
+                                              "number"
+                                                ? recipient.tickets_tolls_rental
+                                                : parseFloat(
+                                                    recipient.tickets_tolls_rental as string,
+                                                  ) || 0);
+                                            const deduction =
+                                              recipient.has_2_percent_deduction
+                                                ? totalExpense * 0.02
+                                                : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+                                            form.setValue(
+                                              `recipients.${index}.total_expense`,
+                                              totalExpense,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent`,
+                                              deduction,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable`,
+                                              netPayable,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount`,
+                                              netPayable,
+                                            );
                                           }}
                                           min={0}
                                           step={0.01}
@@ -3725,25 +3835,66 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.accommodation_expenses`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">Δαπάνες Διαμονής</FormLabel>
+                                      <FormLabel className="text-sm">
+                                        Δαπάνες Διαμονής
+                                      </FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => {
-                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            const numValue =
+                                              typeof value === "number"
+                                                ? value
+                                                : parseFloat(value) || 0;
                                             field.onChange(numValue);
                                             // Trigger recalculation
-                                            const recipient = form.getValues(`recipients.${index}`);
-                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
-                                              numValue + 
-                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
-                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
-                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
-                                            const netPayable = totalExpense - deduction;
-                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
-                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
-                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
-                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                            const recipient = form.getValues(
+                                              `recipients.${index}`,
+                                            );
+                                            const totalExpense =
+                                              (typeof recipient.daily_compensation ===
+                                              "number"
+                                                ? recipient.daily_compensation
+                                                : parseFloat(
+                                                    recipient.daily_compensation as string,
+                                                  ) || 0) +
+                                              numValue +
+                                              (typeof recipient.kilometers_traveled ===
+                                              "number"
+                                                ? recipient.kilometers_traveled
+                                                : parseFloat(
+                                                    recipient.kilometers_traveled as string,
+                                                  ) || 0) *
+                                                (recipient.price_per_km ||
+                                                  DEFAULT_PRICE_PER_KM) +
+                                              (typeof recipient.tickets_tolls_rental ===
+                                              "number"
+                                                ? recipient.tickets_tolls_rental
+                                                : parseFloat(
+                                                    recipient.tickets_tolls_rental as string,
+                                                  ) || 0);
+                                            const deduction =
+                                              recipient.has_2_percent_deduction
+                                                ? totalExpense * 0.02
+                                                : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+                                            form.setValue(
+                                              `recipients.${index}.total_expense`,
+                                              totalExpense,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent`,
+                                              deduction,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable`,
+                                              netPayable,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount`,
+                                              netPayable,
+                                            );
                                           }}
                                           min={0}
                                           step={0.01}
@@ -3762,25 +3913,66 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.kilometers_traveled`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">Χιλιόμετρα (€{DEFAULT_PRICE_PER_KM}/χλμ)</FormLabel>
+                                      <FormLabel className="text-sm">
+                                        Χιλιόμετρα (€{DEFAULT_PRICE_PER_KM}/χλμ)
+                                      </FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => {
-                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            const numValue =
+                                              typeof value === "number"
+                                                ? value
+                                                : parseFloat(value) || 0;
                                             field.onChange(numValue);
                                             // Trigger recalculation
-                                            const recipient = form.getValues(`recipients.${index}`);
-                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
-                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
-                                              (numValue * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
-                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
-                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
-                                            const netPayable = totalExpense - deduction;
-                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
-                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
-                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
-                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                            const recipient = form.getValues(
+                                              `recipients.${index}`,
+                                            );
+                                            const totalExpense =
+                                              (typeof recipient.daily_compensation ===
+                                              "number"
+                                                ? recipient.daily_compensation
+                                                : parseFloat(
+                                                    recipient.daily_compensation as string,
+                                                  ) || 0) +
+                                              (typeof recipient.accommodation_expenses ===
+                                              "number"
+                                                ? recipient.accommodation_expenses
+                                                : parseFloat(
+                                                    recipient.accommodation_expenses as string,
+                                                  ) || 0) +
+                                              numValue *
+                                                (recipient.price_per_km ||
+                                                  DEFAULT_PRICE_PER_KM) +
+                                              (typeof recipient.tickets_tolls_rental ===
+                                              "number"
+                                                ? recipient.tickets_tolls_rental
+                                                : parseFloat(
+                                                    recipient.tickets_tolls_rental as string,
+                                                  ) || 0);
+                                            const deduction =
+                                              recipient.has_2_percent_deduction
+                                                ? totalExpense * 0.02
+                                                : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+                                            form.setValue(
+                                              `recipients.${index}.total_expense`,
+                                              totalExpense,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent`,
+                                              deduction,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable`,
+                                              netPayable,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount`,
+                                              netPayable,
+                                            );
                                           }}
                                           min={0}
                                           placeholder="0"
@@ -3798,25 +3990,66 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.tickets_tolls_rental`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">Εισιτήρια/Διόδια/Ενοικίαση</FormLabel>
+                                      <FormLabel className="text-sm">
+                                        Εισιτήρια/Διόδια/Ενοικίαση
+                                      </FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => {
-                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            const numValue =
+                                              typeof value === "number"
+                                                ? value
+                                                : parseFloat(value) || 0;
                                             field.onChange(numValue);
                                             // Trigger recalculation
-                                            const recipient = form.getValues(`recipients.${index}`);
-                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
-                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
-                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                            const recipient = form.getValues(
+                                              `recipients.${index}`,
+                                            );
+                                            const totalExpense =
+                                              (typeof recipient.daily_compensation ===
+                                              "number"
+                                                ? recipient.daily_compensation
+                                                : parseFloat(
+                                                    recipient.daily_compensation as string,
+                                                  ) || 0) +
+                                              (typeof recipient.accommodation_expenses ===
+                                              "number"
+                                                ? recipient.accommodation_expenses
+                                                : parseFloat(
+                                                    recipient.accommodation_expenses as string,
+                                                  ) || 0) +
+                                              (typeof recipient.kilometers_traveled ===
+                                              "number"
+                                                ? recipient.kilometers_traveled
+                                                : parseFloat(
+                                                    recipient.kilometers_traveled as string,
+                                                  ) || 0) *
+                                                (recipient.price_per_km ||
+                                                  DEFAULT_PRICE_PER_KM) +
                                               numValue;
-                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
-                                            const netPayable = totalExpense - deduction;
-                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
-                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
-                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
-                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                            const deduction =
+                                              recipient.has_2_percent_deduction
+                                                ? totalExpense * 0.02
+                                                : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+                                            form.setValue(
+                                              `recipients.${index}.total_expense`,
+                                              totalExpense,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent`,
+                                              deduction,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable`,
+                                              netPayable,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount`,
+                                              netPayable,
+                                            );
                                           }}
                                           min={0}
                                           step={0.01}
@@ -3843,16 +4076,53 @@ export function CreateDocumentDialog({
                                           onCheckedChange={(checked) => {
                                             field.onChange(checked);
                                             // Trigger recalculation
-                                            const recipient = form.getValues(`recipients.${index}`);
-                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
-                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
-                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
-                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
-                                            const deduction = checked ? totalExpense * 0.02 : 0;
-                                            const netPayable = totalExpense - deduction;
-                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
-                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
-                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                            const recipient = form.getValues(
+                                              `recipients.${index}`,
+                                            );
+                                            const totalExpense =
+                                              (typeof recipient.daily_compensation ===
+                                              "number"
+                                                ? recipient.daily_compensation
+                                                : parseFloat(
+                                                    recipient.daily_compensation as string,
+                                                  ) || 0) +
+                                              (typeof recipient.accommodation_expenses ===
+                                              "number"
+                                                ? recipient.accommodation_expenses
+                                                : parseFloat(
+                                                    recipient.accommodation_expenses as string,
+                                                  ) || 0) +
+                                              (typeof recipient.kilometers_traveled ===
+                                              "number"
+                                                ? recipient.kilometers_traveled
+                                                : parseFloat(
+                                                    recipient.kilometers_traveled as string,
+                                                  ) || 0) *
+                                                (recipient.price_per_km ||
+                                                  DEFAULT_PRICE_PER_KM) +
+                                              (typeof recipient.tickets_tolls_rental ===
+                                              "number"
+                                                ? recipient.tickets_tolls_rental
+                                                : parseFloat(
+                                                    recipient.tickets_tolls_rental as string,
+                                                  ) || 0);
+                                            const deduction = checked
+                                              ? totalExpense * 0.02
+                                              : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent`,
+                                              deduction,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable`,
+                                              netPayable,
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount`,
+                                              netPayable,
+                                            );
                                           }}
                                           data-testid={`checkbox-recipient-${index}-2-percent-deduction`}
                                         />
@@ -3868,23 +4138,55 @@ export function CreateDocumentDialog({
                               {/* Calculated Fields Display */}
                               <div className="md:col-span-12 space-y-2 p-4 bg-muted/50 rounded-md">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium">ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ:</span>
-                                  <span className="text-sm font-semibold" data-testid={`text-recipient-${index}-total-expense`}>
-                                    €{(form.watch(`recipients.${index}.total_expense`) || 0).toFixed(2)}
+                                  <span className="text-sm font-medium">
+                                    ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ:
+                                  </span>
+                                  <span
+                                    className="text-sm font-semibold"
+                                    data-testid={`text-recipient-${index}-total-expense`}
+                                  >
+                                    €
+                                    {(
+                                      form.watch(
+                                        `recipients.${index}.total_expense`,
+                                      ) || 0
+                                    ).toFixed(2)}
                                   </span>
                                 </div>
-                                {form.watch(`recipients.${index}.has_2_percent_deduction`) && (
+                                {form.watch(
+                                  `recipients.${index}.has_2_percent_deduction`,
+                                ) && (
                                   <div className="flex justify-between items-center text-destructive">
-                                    <span className="text-sm">Παρακράτηση 2%:</span>
-                                    <span className="text-sm" data-testid={`text-recipient-${index}-deduction`}>
-                                      -€{(form.watch(`recipients.${index}.deduction_2_percent`) || 0).toFixed(2)}
+                                    <span className="text-sm">
+                                      Παρακράτηση 2%:
+                                    </span>
+                                    <span
+                                      className="text-sm"
+                                      data-testid={`text-recipient-${index}-deduction`}
+                                    >
+                                      -€
+                                      {(
+                                        form.watch(
+                                          `recipients.${index}.deduction_2_percent`,
+                                        ) || 0
+                                      ).toFixed(2)}
                                     </span>
                                   </div>
                                 )}
                                 <div className="flex justify-between items-center pt-2 border-t">
-                                  <span className="font-semibold">ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ:</span>
-                                  <span className="font-bold text-lg" data-testid={`text-recipient-${index}-net-payable`}>
-                                    €{(form.watch(`recipients.${index}.net_payable`) || 0).toFixed(2)}
+                                  <span className="font-semibold">
+                                    ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ:
+                                  </span>
+                                  <span
+                                    className="font-bold text-lg"
+                                    data-testid={`text-recipient-${index}-net-payable`}
+                                  >
+                                    €
+                                    {(
+                                      form.watch(
+                                        `recipients.${index}.net_payable`,
+                                      ) || 0
+                                    ).toFixed(2)}
                                   </span>
                                 </div>
                               </div>
@@ -3892,7 +4194,8 @@ export function CreateDocumentDialog({
                           )}
 
                           {/* renderRecipientInstallments(index) - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
-                          {form.getValues("expenditure_type") !== EKTOS_EDRAS_TYPE && (
+                          {form.getValues("expenditure_type") !==
+                            EKTOS_EDRAS_TYPE && (
                             <div className="md:col-span-3 md:row-span-2 flex items-start">
                               <div className="flex-1">
                                 {renderRecipientInstallments(index)}
@@ -3914,7 +4217,8 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
-                          {form.getValues("expenditure_type") !== EKTOS_EDRAS_TYPE && (
+                          {form.getValues("expenditure_type") !==
+                            EKTOS_EDRAS_TYPE && (
                             <Input
                               {...form.register(
                                 `recipients.${index}.secondary_text`,
