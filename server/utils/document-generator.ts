@@ -31,6 +31,7 @@ const __dirname = path.dirname(__filename);
 import { DocumentUtilities } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
+import { supabase } from "../config/db";
 
 const logger = createLogger("DocumentGenerator");
 
@@ -162,9 +163,10 @@ export class DocumentGenerator {
           documentData,
           documentData.expenditure_type,
         ),
-        this.createPaymentTable(
+        await this.createPaymentTable(
           documentData.recipients || [],
           documentData.expenditure_type,
+          documentData.id,
         ),
         DocumentGenerator.createFinalRequest(),
         this.createFooter(documentData, unitDetails),
@@ -282,10 +284,16 @@ export class DocumentGenerator {
   }
 
   /** Payment table (DXA width + column grid + per-cell widths) */
-  private static createPaymentTable(
+  private static async createPaymentTable(
     recipients: any[],
     expenditureType: string,
-  ): Table {
+    documentId?: number,
+  ): Promise<Table> {
+    // Special handling for ΕΚΤΟΣ ΕΔΡΑΣ - show month-grouped summary
+    if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" && documentId) {
+      return await this.createEktosEdrasMonthlyTable(documentId);
+    }
+
     const { columns } = DocumentUtilities.getExpenditureConfig(expenditureType);
 
     // Minimal fallback if config missing
@@ -515,6 +523,248 @@ export class DocumentGenerator {
       columnWidths: colGrid,
       rows,
     });
+  }
+
+  /** Create monthly summary table for ΕΚΤΟΣ ΕΔΡΑΣ payments */
+  private static async createEktosEdrasMonthlyTable(
+    documentId: number,
+  ): Promise<Table> {
+    const FONT = { size: FONT_BODY.size, font: FONT_BODY.font };
+    const fullWidth = contentWidthTwip();
+    
+    // Define column structure: Month (40%), ΣΤΟΥΣ ΔΙΚΑΙΟΥΧΟΥΣ (20%), ΥΠΕΡ ΜΤΠΥ (20%), ΣΥΝΟΛΟ (20%)
+    const columnPercents = [40, 20, 20, 20];
+    const colGrid = gridFromPercents(columnPercents);
+    
+    // Column headers
+    const columns = [
+      "ΜΗΝΑΣ",
+      "ΣΤΟΥΣ ΔΙΚΑΙΟΥΧΟΥΣ (€)",
+      "ΥΠΕΡ ΜΤΠΥ (€)",
+      "ΣΥΝΟΛΟ (€)",
+    ];
+
+    try {
+      // Fetch EmployeePayments from database
+      const { data: payments, error } = await supabase
+        .from("EmployeePayments")
+        .select("month, net_payable, deduction_2_percent, total_expense")
+        .eq("document_id", documentId);
+
+      if (error) {
+        logger.error("Error fetching employee payments:", error);
+        throw error;
+      }
+
+      // Group payments by month and sum amounts
+      const monthlyData: Record<
+        string,
+        {
+          netPayable: number;
+          deduction: number;
+          total: number;
+        }
+      > = {};
+
+      (payments || []).forEach((payment: any) => {
+        const month = cleanText(payment.month);
+        const netPayable = Number(payment.net_payable) || 0;
+        const deduction = Number(payment.deduction_2_percent) || 0;
+        const total = Number(payment.total_expense) || 0;
+
+        if (!monthlyData[month]) {
+          monthlyData[month] = { netPayable: 0, deduction: 0, total: 0 };
+        }
+
+        monthlyData[month].netPayable += netPayable;
+        monthlyData[month].deduction += deduction;
+        monthlyData[month].total += total;
+      });
+
+      // Create table rows
+      const rows: TableRow[] = [];
+
+      // Header row
+      rows.push(
+        new TableRow({
+          children: columns.map(
+            (col, idx) =>
+              new TableCell({
+                width: { type: WidthType.DXA, size: colGrid[idx] },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 0 },
+                    children: [t(col, { bold: true, ...FONT })],
+                  }),
+                ],
+              }),
+          ),
+        }),
+      );
+
+      // Data rows - sorted by month
+      const sortedMonths = Object.keys(monthlyData).sort();
+      let grandTotalNetPayable = 0;
+      let grandTotalDeduction = 0;
+      let grandTotalExpense = 0;
+
+      sortedMonths.forEach((month) => {
+        const data = monthlyData[month];
+        grandTotalNetPayable += data.netPayable;
+        grandTotalDeduction += data.deduction;
+        grandTotalExpense += data.total;
+
+        rows.push(
+          new TableRow({
+            height: { value: 360, rule: HeightRule.ATLEAST },
+            children: [
+              new TableCell({
+                width: { type: WidthType.DXA, size: colGrid[0] },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 0 },
+                    children: [t(month, { ...FONT })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { type: WidthType.DXA, size: colGrid[1] },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 0 },
+                    children: [t(safeCurrency(data.netPayable), { ...FONT })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { type: WidthType.DXA, size: colGrid[2] },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 0 },
+                    children: [t(safeCurrency(data.deduction), { ...FONT })],
+                  }),
+                ],
+              }),
+              new TableCell({
+                width: { type: WidthType.DXA, size: colGrid[3] },
+                borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+                verticalAlign: VerticalAlign.CENTER,
+                children: [
+                  new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 0 },
+                    children: [t(safeCurrency(data.total), { ...FONT })],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        );
+      });
+
+      // Total row
+      rows.push(
+        new TableRow({
+          children: [
+            new TableCell({
+              width: { type: WidthType.DXA, size: colGrid[0] },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 0 },
+                  children: [t("ΣΥΝΟΛΟ:", { ...FONT, bold: true })],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { type: WidthType.DXA, size: colGrid[1] },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 0 },
+                  children: [
+                    t(safeCurrency(grandTotalNetPayable), { ...FONT, bold: true }),
+                  ],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { type: WidthType.DXA, size: colGrid[2] },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 0 },
+                  children: [
+                    t(safeCurrency(grandTotalDeduction), { ...FONT, bold: true }),
+                  ],
+                }),
+              ],
+            }),
+            new TableCell({
+              width: { type: WidthType.DXA, size: colGrid[3] },
+              borders: DocumentUtilities.BORDERS.STANDARD_CELL,
+              verticalAlign: VerticalAlign.CENTER,
+              children: [
+                new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 0 },
+                  children: [
+                    t(safeCurrency(grandTotalExpense), { ...FONT, bold: true }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+
+      return new Table({
+        width: { type: WidthType.DXA, size: fullWidth },
+        layout: TableLayoutType.FIXED,
+        columnWidths: colGrid,
+        rows,
+      });
+    } catch (error) {
+      logger.error("Error creating ΕΚΤΟΣ ΕΔΡΑΣ monthly table:", error);
+      
+      // Return empty table on error
+      return new Table({
+        width: { type: WidthType.DXA, size: fullWidth },
+        layout: TableLayoutType.FIXED,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { type: WidthType.DXA, size: fullWidth },
+                children: [
+                  new Paragraph({
+                    children: [t("Σφάλμα κατά τη φόρτωση των δεδομένων")],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+    }
   }
 
   /** Footer with signature (DXA width) */

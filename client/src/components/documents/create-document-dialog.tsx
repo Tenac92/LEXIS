@@ -59,6 +59,7 @@ const devLog = (label: string, ...args: any[]) => {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
+import { EmployeeAutocomplete } from "@/components/ui/employee-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -85,6 +86,9 @@ import {
   HOUSING_ALLOWANCE_TYPE,
   HOUSING_QUARTERS,
   STANDARD_QUARTER_AMOUNT,
+  EKTOS_EDRAS_TYPE,
+  GREEK_MONTHS,
+  DEFAULT_PRICE_PER_KM,
   STEPS,
   STEP_TITLES,
 } from "./constants";
@@ -181,6 +185,19 @@ const recipientSchema = z.object({
     .min(1, "Πρέπει να επιλέξετε τουλάχιστον μία δόση"),
   // Installment amounts map - keys are installment names (e.g., "Α", "Β", "ΕΦΑΠΑΞ"), values are amounts
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
+  // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields (all optional, only used for ΕΚΤΟΣ ΕΔΡΑΣ)
+  employee_id: z.number().optional(),
+  month: z.string().optional(),
+  days: z.number().optional().default(1),
+  daily_compensation: z.number().optional().default(0),
+  accommodation_expenses: z.number().optional().default(0),
+  kilometers_traveled: z.number().optional().default(0),
+  price_per_km: z.number().optional().default(DEFAULT_PRICE_PER_KM),
+  tickets_tolls_rental: z.number().optional().default(0),
+  has_2_percent_deduction: z.boolean().optional().default(false),
+  total_expense: z.number().optional(),
+  deduction_2_percent: z.number().optional(),
+  net_payable: z.number().optional(),
 });
 
 const signatureSchema = z.object({
@@ -209,6 +226,26 @@ const createDocumentSchema = z.object({
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
   director_signature: signatureSchema.optional(),
+}).superRefine((data, ctx) => {
+  // Validate ΕΚΤΟΣ ΕΔΡΑΣ recipients have required fields
+  if (data.expenditure_type === EKTOS_EDRAS_TYPE && data.recipients) {
+    data.recipients.forEach((recipient, index) => {
+      if (!recipient.month) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
+          path: ["recipients", index, "month"],
+        });
+      }
+      if (!recipient.net_payable || recipient.net_payable <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Το καθαρό πληρωτέο ποσό πρέπει να είναι μεγαλύτερο από 0",
+          path: ["recipients", index, "net_payable"],
+        });
+      }
+    });
+  }
 });
 
 // Main component
@@ -2383,6 +2420,14 @@ export function CreateDocumentDialog({
         installment: defaultInstallments[0], // Διατηρούμε το παλιό πεδίο για συμβατότητα
         installments: defaultInstallments,
         installmentAmounts: defaultInstallmentAmounts,
+        // ΕΚΤΟΣ ΕΔΡΑΣ fields with defaults
+        days: 1,
+        daily_compensation: 0,
+        accommodation_expenses: 0,
+        kilometers_traveled: 0,
+        price_per_km: DEFAULT_PRICE_PER_KM,
+        tickets_tolls_rental: 0,
+        has_2_percent_deduction: false,
       },
     ]);
   };
@@ -3321,22 +3366,62 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
+                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση ή Επιλογή Υπαλλήλου για ΕΚΤΟΣ ΕΔΡΑΣ */}
                           <div className="md:col-span-2 md:row-span-1">
-                            <SimpleAFMAutocomplete
-                              expenditureType={
-                                form.getValues("expenditure_type") || ""
-                              }
-                              value={
-                                form.watch(`recipients.${index}.afm`) || ""
-                              }
-                              userUnit={selectedUnit || ""}
-                              projectNa853={selectedProject?.mis || ""}
-                              onChange={(value) => {
-                                // Update the AFM field in the form when user types
-                                form.setValue(`recipients.${index}.afm`, value);
-                              }}
-                              onSelectPerson={(personData) => {
+                            {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? (
+                              <EmployeeAutocomplete
+                                value={form.watch(`recipients.${index}.afm`) || ""}
+                                onSelect={(employee) => {
+                                  if (employee) {
+                                    // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
+                                    setIsDialogInitializing(true);
+                                    dialogInitializationRef.current.isInitializing = false;
+                                    setIsFormSyncing(true);
+
+                                    // Update recipient data with employee information
+                                    const currentRecipients = form.getValues("recipients");
+                                    currentRecipients[index] = {
+                                      ...currentRecipients[index],
+                                      employee_id: employee.id,
+                                      firstname: employee.name || "",
+                                      lastname: employee.surname || "",
+                                      fathername: employee.fathername || "",
+                                      afm: String(employee.afm || ""),
+                                      secondary_text: employee.attribute || "",
+                                    };
+
+                                    form.setValue("recipients", currentRecipients, {
+                                      shouldDirty: true,
+                                      shouldValidate: true,
+                                    });
+
+                                    // Trigger form validation
+                                    setTimeout(async () => {
+                                      await form.trigger(`recipients.${index}`);
+                                      await form.trigger("recipients");
+                                      setIsFormSyncing(false);
+                                      setIsDialogInitializing(false);
+                                    }, 200);
+                                  }
+                                }}
+                                placeholder="Αναζήτηση υπαλλήλου με ΑΦΜ"
+                                className="w-full"
+                              />
+                            ) : (
+                              <SimpleAFMAutocomplete
+                                expenditureType={
+                                  form.getValues("expenditure_type") || ""
+                                }
+                                value={
+                                  form.watch(`recipients.${index}.afm`) || ""
+                                }
+                                userUnit={selectedUnit || ""}
+                                projectNa853={selectedProject?.mis || ""}
+                                onChange={(value) => {
+                                  // Update the AFM field in the form when user types
+                                  form.setValue(`recipients.${index}.afm`, value);
+                                }}
+                                onSelectPerson={(personData) => {
                                 if (personData) {
                                   console.log(
                                     "[AFMAutocomplete] Selection made for index:",
@@ -3536,7 +3621,276 @@ export function CreateDocumentDialog({
                               placeholder="ΑΦΜ"
                               className="w-full"
                             />
+                            )}
                           </div>
+
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
+                          {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE && (
+                            <>
+                              {/* Month Selector */}
+                              <div className="md:col-span-2">
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.month`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Μήνας</FormLabel>
+                                      <Select
+                                        onValueChange={field.onChange}
+                                        value={field.value}
+                                      >
+                                        <FormControl>
+                                          <SelectTrigger data-testid={`select-recipient-${index}-month`}>
+                                            <SelectValue placeholder="Επιλέξτε μήνα" />
+                                          </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                          {GREEK_MONTHS.map((month) => (
+                                            <SelectItem key={month} value={month}>
+                                              {month}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* Days Input */}
+                              <div className="md:col-span-2">
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.days`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Ημέρες</FormLabel>
+                                      <FormControl>
+                                        <NumberInput
+                                          {...field}
+                                          onChange={(value) => field.onChange(value)}
+                                          min={1}
+                                          placeholder="Αριθμός ημερών"
+                                          data-testid={`input-recipient-${index}-days`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* Monetary Fields Grid */}
+                              <div className="md:col-span-6 grid grid-cols-2 gap-4">
+                                {/* Daily Compensation */}
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.daily_compensation`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Ημερήσια αποζημίωση</FormLabel>
+                                      <FormControl>
+                                        <NumberInput
+                                          {...field}
+                                          onChange={(value) => {
+                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            field.onChange(numValue);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(`recipients.${index}`);
+                                            const totalExpense = numValue + 
+                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
+                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
+                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+                                            const netPayable = totalExpense - deduction;
+                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
+                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
+                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
+                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                          }}
+                                          min={0}
+                                          step={0.01}
+                                          placeholder="0.00"
+                                          data-testid={`input-recipient-${index}-daily-compensation`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                {/* Accommodation Expenses */}
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.accommodation_expenses`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Δαπάνες διαμονής</FormLabel>
+                                      <FormControl>
+                                        <NumberInput
+                                          {...field}
+                                          onChange={(value) => {
+                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            field.onChange(numValue);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(`recipients.${index}`);
+                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
+                                              numValue + 
+                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
+                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+                                            const netPayable = totalExpense - deduction;
+                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
+                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
+                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
+                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                          }}
+                                          min={0}
+                                          step={0.01}
+                                          placeholder="0.00"
+                                          data-testid={`input-recipient-${index}-accommodation`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                {/* Kilometers Traveled */}
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.kilometers_traveled`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Διανυθέντα χιλιόμετρα (€{DEFAULT_PRICE_PER_KM}/χλμ)</FormLabel>
+                                      <FormControl>
+                                        <NumberInput
+                                          {...field}
+                                          onChange={(value) => {
+                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            field.onChange(numValue);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(`recipients.${index}`);
+                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
+                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
+                                              (numValue * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
+                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+                                            const netPayable = totalExpense - deduction;
+                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
+                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
+                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
+                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                          }}
+                                          min={0}
+                                          placeholder="0"
+                                          data-testid={`input-recipient-${index}-kilometers`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+
+                                {/* Tickets/Tolls/Rental */}
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.tickets_tolls_rental`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Εισιτήρια/Διόδια/Ενοικίαση</FormLabel>
+                                      <FormControl>
+                                        <NumberInput
+                                          {...field}
+                                          onChange={(value) => {
+                                            const numValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+                                            field.onChange(numValue);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(`recipients.${index}`);
+                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
+                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
+                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                              numValue;
+                                            const deduction = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+                                            const netPayable = totalExpense - deduction;
+                                            form.setValue(`recipients.${index}.total_expense`, totalExpense);
+                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
+                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
+                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                          }}
+                                          min={0}
+                                          step={0.01}
+                                          placeholder="0.00"
+                                          data-testid={`input-recipient-${index}-tickets-tolls`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* 2% Deduction Checkbox */}
+                              <div className="md:col-span-6">
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.has_2_percent_deduction`}
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value}
+                                          onCheckedChange={(checked) => {
+                                            field.onChange(checked);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(`recipients.${index}`);
+                                            const totalExpense = (typeof recipient.daily_compensation === 'number' ? recipient.daily_compensation : parseFloat(recipient.daily_compensation as string) || 0) + 
+                                              (typeof recipient.accommodation_expenses === 'number' ? recipient.accommodation_expenses : parseFloat(recipient.accommodation_expenses as string) || 0) + 
+                                              ((typeof recipient.kilometers_traveled === 'number' ? recipient.kilometers_traveled : parseFloat(recipient.kilometers_traveled as string) || 0) * (recipient.price_per_km || DEFAULT_PRICE_PER_KM)) + 
+                                              (typeof recipient.tickets_tolls_rental === 'number' ? recipient.tickets_tolls_rental : parseFloat(recipient.tickets_tolls_rental as string) || 0);
+                                            const deduction = checked ? totalExpense * 0.02 : 0;
+                                            const netPayable = totalExpense - deduction;
+                                            form.setValue(`recipients.${index}.deduction_2_percent`, deduction);
+                                            form.setValue(`recipients.${index}.net_payable`, netPayable);
+                                            form.setValue(`recipients.${index}.amount`, netPayable);
+                                          }}
+                                          data-testid={`checkbox-recipient-${index}-2-percent-deduction`}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="font-normal">
+                                        Παρακράτηση 2%
+                                      </FormLabel>
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
+                              {/* Calculated Fields Display */}
+                              <div className="md:col-span-6 space-y-2 p-4 bg-muted/50 rounded-md">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium">ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ:</span>
+                                  <span className="text-sm font-semibold" data-testid={`text-recipient-${index}-total-expense`}>
+                                    €{(form.watch(`recipients.${index}.total_expense`) || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                                {form.watch(`recipients.${index}.has_2_percent_deduction`) && (
+                                  <div className="flex justify-between items-center text-destructive">
+                                    <span className="text-sm">Παρακράτηση 2%:</span>
+                                    <span className="text-sm" data-testid={`text-recipient-${index}-deduction`}>
+                                      -€{(form.watch(`recipients.${index}.deduction_2_percent`) || 0).toFixed(2)}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center pt-2 border-t">
+                                  <span className="font-semibold">ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ:</span>
+                                  <span className="font-bold text-lg" data-testid={`text-recipient-${index}-net-payable`}>
+                                    €{(form.watch(`recipients.${index}.net_payable`) || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          )}
 
                           {/* renderRecipientInstallments(index) */}
                           <div className="md:col-span-3 md:row-span-2 flex items-start">

@@ -8,6 +8,14 @@ export const HOUSING_ALLOWANCE_TYPE = "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ";
 export const HOUSING_QUARTERS = Array.from({ length: 24 }, (_, i) => `ΤΡΙΜΗΝΟ ${i + 1}`);
 export const STANDARD_QUARTER_AMOUNT = 900.00;
 
+// ΕΚΤΟΣ ΕΔΡΑΣ constants
+export const EKTOS_EDRAS_TYPE = "ΕΚΤΟΣ ΕΔΡΑΣ";
+export const GREEK_MONTHS = [
+  "ΙΑΝΟΥΑΡΙΟΣ", "ΦΕΒΡΟΥΑΡΙΟΣ", "ΜΑΡΤΙΟΣ", "ΑΠΡΙΛΙΟΣ", "ΜΑΪΟΣ", "ΙΟΥΝΙΟΣ",
+  "ΙΟΥΛΙΟΣ", "ΑΥΓΟΥΣΤΟΣ", "ΣΕΠΤΕΜΒΡΙΟΣ", "ΟΚΤΩΒΡΙΟΣ", "ΝΟΕΜΒΡΙΟΣ", "ΔΕΚΕΜΒΡΙΟΣ"
+];
+export const DEFAULT_PRICE_PER_KM = 0.20;
+
 // Step configuration
 export const STEPS = {
   UNIT_PROJECT: 0,

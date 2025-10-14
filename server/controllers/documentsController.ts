@@ -763,13 +763,15 @@ router.post(
         data.id,
       );
 
-      // Create beneficiary payments for each recipient using project_index_id
+      // Create beneficiary payments OR employee payments for each recipient using project_index_id
       const beneficiaryPaymentsIds = [];
+      const employeePaymentsIds = [];
       try {
         console.log(
-          "[DocumentsController] V2 Creating beneficiary payments for",
+          "[DocumentsController] V2 Creating payments for",
           formattedRecipients.length,
-          "recipients",
+          "recipients. Expenditure type:",
+          expenditure_type,
         );
 
         // Use the project_index_id already resolved for the document
@@ -778,9 +780,87 @@ router.post(
           projectIndexId,
         );
 
+        // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (out-of-office expenses)
+        const isEktosEdras = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+
         for (const recipient of formattedRecipients) {
-          // Step 1: Look up or create beneficiary
-          let beneficiaryId = null;
+          // ΕΚΤΟΣ ΕΔΡΑΣ: Create employee payment
+          if (isEktosEdras) {
+            console.log("[DocumentsController] V2 Creating employee payment for ΕΚΤΟΣ ΕΔΡΑΣ");
+            
+            // Validate required ΕΚΤΟΣ ΕΔΡΑΣ fields
+            if (!recipient.month || !recipient.month.trim()) {
+              console.error("[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: month is required");
+              return res.status(400).json({
+                message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
+              });
+            }
+            
+            // Calculate totals
+            const dailyComp = Number(recipient.daily_compensation) || 0;
+            const accommodation = Number(recipient.accommodation_expenses) || 0;
+            const kmTraveled = Number(recipient.kilometers_traveled) || 0;
+            const pricePerKm = Number(recipient.price_per_km) || 0.20;
+            const tickets = Number(recipient.tickets_tolls_rental) || 0;
+            
+            const kmCost = kmTraveled * pricePerKm;
+            const totalExpense = dailyComp + accommodation + kmCost + tickets;
+            
+            // Validate that there's at least some expense amount
+            if (totalExpense <= 0) {
+              console.error("[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: total expense must be > 0");
+              return res.status(400).json({
+                message: "Το συνολικό ποσό δαπάνης πρέπει να είναι μεγαλύτερο από 0 για ΕΚΤΟΣ ΕΔΡΑΣ",
+              });
+            }
+            
+            const deduction2Percent = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+            const netPayable = totalExpense - deduction2Percent;
+            
+            const employeePayment = {
+              employee_id: recipient.employee_id || null,
+              document_id: data.id,
+              month: recipient.month || "",
+              days: Number(recipient.days) || 1,
+              daily_compensation: dailyComp,
+              accommodation_expenses: accommodation,
+              kilometers_traveled: kmTraveled,
+              price_per_km: pricePerKm,
+              tickets_tolls_rental: tickets,
+              has_2_percent_deduction: Boolean(recipient.has_2_percent_deduction),
+              total_expense: totalExpense,
+              deduction_2_percent: deduction2Percent,
+              net_payable: netPayable,
+              status: "pending",
+              created_at: now,
+              updated_at: now,
+            };
+
+            console.log("[DocumentsController] V2 Employee payment data:", employeePayment);
+
+            const { data: empPaymentData, error: empPaymentError } = await supabase
+              .from("EmployeePayments")
+              .insert([employeePayment])
+              .select("id")
+              .single();
+
+            if (empPaymentError) {
+              console.error(
+                "[DocumentsController] V2 Error creating employee payment:",
+                empPaymentError,
+              );
+            } else {
+              employeePaymentsIds.push(empPaymentData.id);
+              console.log(
+                "[DocumentsController] V2 Created employee payment:",
+                empPaymentData.id,
+              );
+            }
+          } 
+          // Standard flow: Create beneficiary payment
+          else {
+            // Step 1: Look up or create beneficiary
+            let beneficiaryId = null;
           try {
             // Find existing beneficiary by AFM (keep as string to preserve leading zeros)
             const { data: existingBeneficiary, error: findError } =
@@ -970,6 +1050,7 @@ router.post(
               recipient.afm,
             );
           }
+          } // End of else block for standard beneficiary payments
         }
 
         // Always update document with beneficiary payments IDs, even if array is empty

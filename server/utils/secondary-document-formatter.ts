@@ -16,10 +16,47 @@ import {
 import { createLogger } from "./logger";
 import { DocumentUtilities } from "./document-utilities";
 import { UserDetails, UnitDetails, DocumentData } from "./document-types";
+import { supabase } from "../config/db";
 
 const logger = createLogger("SecondaryDocumentFormatter");
 
 export class SecondaryDocumentFormatter {
+  /**
+   * Fetch employee payments data with employee details (klados) for ΕΚΤΟΣ ΕΔΡΑΣ documents
+   */
+  private static async fetchEmployeePayments(documentId: number): Promise<any[]> {
+    try {
+      logger.debug(`Fetching employee payments for document: ${documentId}`);
+      
+      const { data, error } = await supabase
+        .from('EmployeePayments')
+        .select(`
+          *,
+          Employees:employee_id (
+            id,
+            surname,
+            name,
+            fathername,
+            afm,
+            klados
+          )
+        `)
+        .eq('document_id', documentId)
+        .order('id', { ascending: true });
+
+      if (error) {
+        logger.error('Error fetching employee payments:', error);
+        throw error;
+      }
+
+      logger.debug(`Found ${data?.length || 0} employee payments`);
+      return data || [];
+    } catch (error) {
+      logger.error('Error in fetchEmployeePayments:', error);
+      return [];
+    }
+  }
+
   private static createDocumentTitle(
     documentData: DocumentData,
     projectTitle: string | null,
@@ -50,10 +87,207 @@ export class SecondaryDocumentFormatter {
     ];
   }
 
-  private static createRecipientsTable(
+  /**
+   * Create comprehensive ΕΚΤΟΣ ΕΔΡΑΣ payment table with all expense columns
+   */
+  private static async createEktosEdrasTable(documentId: number): Promise<Table> {
+    const employeePayments = await this.fetchEmployeePayments(documentId);
+    
+    if (!employeePayments || employeePayments.length === 0) {
+      // Return empty table with headers
+      const emptyHeaders = ["Α/Α", "ΔΙΚΑΙΟΥΧΟΙ", "ΕΙΔΙΚΟΤΗΤΑ", "ΜΗΝΑΣ", "Αρ.ημ.", 
+        "Ημερήσια αποζημίωση (ΑΛΕ: 2420403001)", "ΔΑΠΑΝΕΣ ΔΙΑΜΟΝΗΣ (ΑΛΕ: 2420405001)",
+        "Διανυθ.χιλ.ΙΧ", "Αξία χιλ.", "Διανυθ.χιλ.ΙΧ αξία (ΑΛΕ: 2420404001)",
+        "Εισητήρια/Διόδια/Ενοικίαση (ΑΛΕ: 2420404001)", "ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ", "ΚΡΑΤ.2%", "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ"];
+      
+      const cellBorder = DocumentUtilities.BORDERS.STANDARD_CELL;
+      const mkCentered = (text: string, bold = false) =>
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({
+              text,
+              bold,
+              size: DocumentUtilities.DEFAULT_FONT_SIZE,
+              font: DocumentUtilities.DEFAULT_FONT,
+            }),
+          ],
+          spacing: { after: 0 },
+        });
+
+      const headerCells = emptyHeaders.map(label => 
+        new TableCell({
+          borders: cellBorder,
+          children: [mkCentered(label, true)],
+          verticalAlign: VerticalAlign.CENTER,
+        })
+      );
+      
+      return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
+        rows: [new TableRow({ children: headerCells })],
+      });
+    }
+
+    const cellBorder = DocumentUtilities.BORDERS.STANDARD_CELL;
+    const mkCentered = (text: string, bold = false) =>
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [
+          new TextRun({
+            text,
+            bold,
+            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+            font: DocumentUtilities.DEFAULT_FONT,
+          }),
+        ],
+        spacing: { after: 0 },
+      });
+
+    // Column headers
+    const headers = [
+      "Α/Α",
+      "ΔΙΚΑΙΟΥΧΟΙ",
+      "ΕΙΔΙΚΟΤΗΤΑ",
+      "ΜΗΝΑΣ",
+      "Αρ.ημ.",
+      "Ημερήσια αποζημίωση (ΑΛΕ: 2420403001)",
+      "ΔΑΠΑΝΕΣ ΔΙΑΜΟΝΗΣ (ΑΛΕ: 2420405001)",
+      "Διανυθ.χιλ.ΙΧ",
+      "Αξία χιλ.",
+      "Διανυθ.χιλ.ΙΧ αξία (ΑΛΕ: 2420404001)",
+      "Εισητήρια/Διόδια/Ενοικίαση (ΑΛΕ: 2420404001)",
+      "ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ",
+      "ΚΡΑΤ.2%",
+      "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ"
+    ];
+
+    const headerCells = headers.map(label => 
+      new TableCell({
+        borders: cellBorder,
+        children: [mkCentered(label, true)],
+        verticalAlign: VerticalAlign.CENTER,
+      })
+    );
+
+    const rows: TableRow[] = [new TableRow({ children: headerCells })];
+
+    // Totals tracking
+    let totalDailyComp = 0;
+    let totalAccommodation = 0;
+    let totalKmValue = 0;
+    let totalTickets = 0;
+    let totalExpense = 0;
+    let totalDeduction = 0;
+    let totalNetPayable = 0;
+
+    // Create data rows
+    employeePayments.forEach((payment: any, index: number) => {
+      const employee = payment.Employees || {};
+      const surname = employee.surname || '';
+      const name = employee.name || '';
+      const fathername = employee.fathername || '';
+      const fullName = fathername 
+        ? `${surname} ${name} ΤΟΥ ${fathername}`.trim()
+        : `${surname} ${name}`.trim();
+      
+      const klados = employee.klados || '';
+      const month = payment.month || '';
+      const days = payment.days || 0;
+      
+      const dailyComp = parseFloat(payment.daily_compensation || 0);
+      const accommodation = parseFloat(payment.accommodation_expenses || 0);
+      const kmTraveled = parseFloat(payment.kilometers_traveled || 0);
+      const pricePerKm = parseFloat(payment.price_per_km || 0.20);
+      const kmValue = kmTraveled * pricePerKm;
+      const tickets = parseFloat(payment.tickets_tolls_rental || 0);
+      const totalExp = parseFloat(payment.total_expense || 0);
+      const deduction = parseFloat(payment.deduction_2_percent || 0);
+      const netPayable = parseFloat(payment.net_payable || 0);
+
+      // Update totals
+      totalDailyComp += dailyComp;
+      totalAccommodation += accommodation;
+      totalKmValue += kmValue;
+      totalTickets += tickets;
+      totalExpense += totalExp;
+      totalDeduction += deduction;
+      totalNetPayable += netPayable;
+
+      const rowData = [
+        `${index + 1}.`,
+        fullName,
+        klados,
+        month,
+        String(days),
+        DocumentUtilities.formatCurrency(dailyComp),
+        DocumentUtilities.formatCurrency(accommodation),
+        kmTraveled.toFixed(2),
+        DocumentUtilities.formatCurrency(pricePerKm),
+        DocumentUtilities.formatCurrency(kmValue),
+        DocumentUtilities.formatCurrency(tickets),
+        DocumentUtilities.formatCurrency(totalExp),
+        DocumentUtilities.formatCurrency(deduction),
+        DocumentUtilities.formatCurrency(netPayable)
+      ];
+
+      const dataCells = rowData.map(value => 
+        new TableCell({
+          borders: cellBorder,
+          children: [mkCentered(value, false)],
+          verticalAlign: VerticalAlign.CENTER,
+        })
+      );
+
+      rows.push(new TableRow({ children: dataCells }));
+    });
+
+    // Add total row
+    const totalRowData = [
+      '',
+      '',
+      '',
+      '',
+      'ΣΥΝΟΛΟ:',
+      DocumentUtilities.formatCurrency(totalDailyComp),
+      DocumentUtilities.formatCurrency(totalAccommodation),
+      '',
+      '',
+      DocumentUtilities.formatCurrency(totalKmValue),
+      DocumentUtilities.formatCurrency(totalTickets),
+      DocumentUtilities.formatCurrency(totalExpense),
+      DocumentUtilities.formatCurrency(totalDeduction),
+      DocumentUtilities.formatCurrency(totalNetPayable)
+    ];
+
+    const totalCells = totalRowData.map((value, idx) => 
+      new TableCell({
+        borders: cellBorder,
+        children: [mkCentered(value, idx >= 4)],
+        verticalAlign: VerticalAlign.CENTER,
+      })
+    );
+
+    rows.push(new TableRow({ children: totalCells }));
+
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
+      rows,
+    });
+  }
+
+  private static async createRecipientsTable(
     recipients: any[],
     expenditureType: string,
-  ): Table {
+    documentId?: number,
+  ): Promise<Table> {
+    // For ΕΚΤΟΣ ΕΔΡΑΣ, use the comprehensive table with employee payments data
+    if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" && documentId) {
+      return await this.createEktosEdrasTable(documentId);
+    }
+
     const cfg = DocumentUtilities.getExpenditureConfig(expenditureType);
     const original = cfg.columns as string[];
 
@@ -145,10 +379,9 @@ export class SecondaryDocumentFormatter {
       };
 
       if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ") {
-        const days = r?.days != null ? String(r.days) : "1";
-        const amt =
-          typeof r.amount === "number" ? r.amount : Number(r.amount) || 0;
-        addOneRow(days, amt);
+        // ΕΚΤΟΣ ΕΔΡΑΣ uses a completely different table structure
+        // The comprehensive table is created separately using employee payments data
+        // This section should not be reached as we handle it before building rows
         return;
       }
 
@@ -400,6 +633,13 @@ export class SecondaryDocumentFormatter {
 
       // Create signature section first since it's async
       const signatureSection = await this.createSignatureSection(documentData);
+      
+      // Create recipients table (async for ΕΚΤΟΣ ΕΔΡΑΣ)
+      const recipientsTable = await this.createRecipientsTable(
+        documentData.recipients || [],
+        documentData.expenditure_type,
+        documentData.id,
+      );
 
       const sections = [
         {
@@ -416,10 +656,7 @@ export class SecondaryDocumentFormatter {
               projectTitle,
               projectNA853,
             ),
-            this.createRecipientsTable(
-              documentData.recipients || [],
-              documentData.expenditure_type,
-            ),
+            recipientsTable,
             DocumentUtilities.createBlankLine(30),
             this.createRetentionText(),
             DocumentUtilities.createBlankLine(240),
