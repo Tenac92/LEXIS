@@ -2483,6 +2483,8 @@ export function CreateDocumentDialog({
         installments: defaultInstallments,
         installmentAmounts: defaultInstallmentAmounts,
         // ΕΚΤΟΣ ΕΔΡΑΣ fields with defaults
+        employee_id: undefined,
+        month: "",
         days: 1,
         daily_compensation: 0,
         accommodation_expenses: 0,

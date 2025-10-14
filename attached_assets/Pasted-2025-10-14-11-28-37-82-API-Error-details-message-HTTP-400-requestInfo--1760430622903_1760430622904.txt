@@ -1,0 +1,36 @@
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+message: "Σφάλμα HTTP! κατάσταση: 400"
+requestInfo: Object
+stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
+message: "Σφάλμα HTTP! κατάσταση: 400"
+requestInfo: Object
+stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"
+2025-10-14 11:28:37.82
+[API] Error details:
+{message: "Σφάλμα HTTP! κατάσταση: 400", requestInfo: Object, stack: "Error: Σφάλμα HTTP! κατάσταση: 400 at apiRequest (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/queryClient.ts:57:31) at async handleSubmit (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/documents/create-document-dialog.tsx:1675:26) at async https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-YABUFNLM.js?v=57ee1468:1675:9"}
