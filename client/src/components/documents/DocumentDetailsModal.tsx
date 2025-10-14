@@ -39,6 +39,18 @@ interface Recipient {
   installment: string;
   installments?: string[];
   installmentAmounts?: Record<string, number>;
+  // ΕΚΤΟΣ ΕΔΡΑΣ fields
+  month?: string;
+  days?: number;
+  daily_compensation?: number;
+  accommodation_expenses?: number;
+  kilometers_traveled?: number;
+  price_per_km?: number;
+  tickets_tolls_rental?: number;
+  has_2_percent_deduction?: boolean;
+  total_expense?: number;
+  deduction_2_percent?: number;
+  net_payable?: number;
 }
 
 const getStatusDetails = (status: string, is_correction: boolean | null) => {
@@ -92,7 +104,8 @@ export function DocumentDetailsModal({
 
   if (!document) return null;
 
-  const statusDetails = getStatusDetails(document.status, null);
+  const docAny = document as any; // Type assertion for accessing additional properties
+  const statusDetails = getStatusDetails(document.status || "draft", null);
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return "€0,00";
@@ -107,14 +120,17 @@ export function DocumentDetailsModal({
   // Parse recipients data
   let recipients: Recipient[] = [];
   try {
-    if (document.recipients && typeof document.recipients === "string") {
-      recipients = JSON.parse(document.recipients);
-    } else if (document.recipients && typeof document.recipients === "object") {
-      recipients = document.recipients as Recipient[];
+    if (docAny.recipients && typeof docAny.recipients === "string") {
+      recipients = JSON.parse(docAny.recipients);
+    } else if (docAny.recipients && typeof docAny.recipients === "object") {
+      recipients = docAny.recipients as Recipient[];
     }
   } catch (error) {
     console.error("Error parsing recipients data:", error);
   }
+
+  // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document
+  const isEktosEdras = docAny.expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
 
   const totalAmount = recipients.reduce(
     (sum, recipient) => sum + (recipient.amount || 0),
@@ -179,7 +195,7 @@ export function DocumentDetailsModal({
                   Τύπος Δαπάνης
                 </label>
                 <p className="text-orange-900 bg-white px-3 py-2 rounded border">
-                  {document.expenditure_type || "Δ/Υ"}
+                  {docAny.expenditure_type || "Δ/Υ"}
                 </p>
               </div>
               <div className="space-y-1">
@@ -204,23 +220,23 @@ export function DocumentDetailsModal({
                     : "Δ/Υ"}
                 </p>
               </div>
-              {document.project_na853 && (
+              {docAny.project_na853 && (
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-orange-700">
                     ΝΑ853
                   </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border font-mono">
-                    {document.project_na853}
+                    {docAny.project_na853}
                   </p>
                 </div>
               )}
-              {document.unit && (
+              {docAny.unit && (
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-orange-700">
                     Μονάδα
                   </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border">
-                    {document.unit}
+                    {docAny.unit}
                   </p>
                 </div>
               )}
@@ -235,14 +251,14 @@ export function DocumentDetailsModal({
                   </p>
                 </div>
               )}
-              {document.project_id && (
+              {docAny.project_id && (
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-orange-700">
                     ID Έργου
                   </label>
                   <p className="text-orange-900 bg-white px-3 py-2 rounded border font-mono flex items-center gap-2">
                     <Hash className="w-4 h-4 text-orange-600" />
-                    {document.project_id}
+                    {docAny.project_id}
                   </p>
                 </div>
               )}
@@ -339,6 +355,63 @@ export function DocumentDetailsModal({
                             </div>
                           </div>
                         )}
+
+                      {/* ΕΚΤΟΣ ΕΔΡΑΣ specific fields */}
+                      {isEktosEdras && recipient.month && (
+                        <div className="md:col-span-2 lg:col-span-4 space-y-2">
+                          <label className="text-xs font-medium text-green-600 uppercase tracking-wide">
+                            Στοιχεία Μετακίνησης
+                          </label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 bg-green-50 p-3 rounded-lg border border-green-200">
+                            <div className="space-y-1">
+                              <span className="text-xs text-green-600 font-medium">Μήνας</span>
+                              <p className="text-green-900 font-semibold">{recipient.month}</p>
+                            </div>
+                            {recipient.days !== undefined && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Ημέρες</span>
+                                <p className="text-green-900 font-semibold">{recipient.days}</p>
+                              </div>
+                            )}
+                            {recipient.daily_compensation !== undefined && recipient.daily_compensation > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Ημερήσια Αποζημίωση</span>
+                                <p className="text-green-900 font-semibold">{formatCurrency(recipient.daily_compensation)}</p>
+                              </div>
+                            )}
+                            {recipient.accommodation_expenses !== undefined && recipient.accommodation_expenses > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Δαπάνες Διαμονής</span>
+                                <p className="text-green-900 font-semibold">{formatCurrency(recipient.accommodation_expenses)}</p>
+                              </div>
+                            )}
+                            {recipient.kilometers_traveled !== undefined && recipient.kilometers_traveled > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Χιλιόμετρα</span>
+                                <p className="text-green-900 font-semibold">{recipient.kilometers_traveled} km</p>
+                              </div>
+                            )}
+                            {recipient.price_per_km !== undefined && recipient.price_per_km > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Τιμή/Χλμ</span>
+                                <p className="text-green-900 font-semibold">{formatCurrency(recipient.price_per_km)}</p>
+                              </div>
+                            )}
+                            {recipient.tickets_tolls_rental !== undefined && recipient.tickets_tolls_rental > 0 && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Εισιτήρια/Διόδια/Ενοικίαση</span>
+                                <p className="text-green-900 font-semibold">{formatCurrency(recipient.tickets_tolls_rental)}</p>
+                              </div>
+                            )}
+                            {recipient.net_payable !== undefined && (
+                              <div className="space-y-1">
+                                <span className="text-xs text-green-600 font-medium">Καθαρό Πληρωτέο</span>
+                                <p className="text-green-900 font-bold text-base">{formatCurrency(recipient.net_payable)}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
