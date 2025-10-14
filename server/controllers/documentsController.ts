@@ -497,19 +497,38 @@ router.post(
       }
 
       // Format recipients data consistently
-      const formattedRecipients = recipients.map((r: any) => ({
-        firstname: String(r.firstname || "").trim(),
-        lastname: String(r.lastname || "").trim(),
-        fathername: String(r.fathername || "").trim(),
-        afm: String(r.afm || "").trim(),
-        amount: parseFloat(String(r.amount || 0)),
-        installment: String(r.installment || "Α").trim(),
-        installments: r.installments || [],
-        installmentAmounts: r.installmentAmounts || {},
-        secondary_text: r.secondary_text
-          ? String(r.secondary_text).trim()
-          : undefined,
-      }));
+      const formattedRecipients = recipients.map((r: any) => {
+        const baseRecipient = {
+          firstname: String(r.firstname || "").trim(),
+          lastname: String(r.lastname || "").trim(),
+          fathername: String(r.fathername || "").trim(),
+          afm: String(r.afm || "").trim(),
+          amount: parseFloat(String(r.amount || 0)),
+          installment: String(r.installment || "Α").trim(),
+          installments: r.installments || [],
+          installmentAmounts: r.installmentAmounts || {},
+          secondary_text: r.secondary_text
+            ? String(r.secondary_text).trim()
+            : undefined,
+        };
+
+        // Include ΕΚΤΟΣ ΕΔΡΑΣ-specific fields if this is an out-of-office expense
+        if (expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+          return {
+            ...baseRecipient,
+            employee_id: r.employee_id,
+            month: r.month,
+            days: r.days,
+            daily_compensation: r.daily_compensation,
+            accommodation_expenses: r.accommodation_expenses,
+            kilometers_traveled: r.kilometers_traveled,
+            tickets_tolls_rental: r.tickets_tolls_rental,
+            net_payable: r.net_payable,
+          };
+        }
+
+        return baseRecipient;
+      });
 
       const now = new Date().toISOString();
 
