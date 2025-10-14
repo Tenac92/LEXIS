@@ -4,6 +4,19 @@ This is a comprehensive document management system specifically designed for the
 
 # Recent Changes
 
+## October 14, 2025 - ΕΚΤΟΣ ΕΔΡΑΣ Employee Payments Integration
+- **Issue**: ΕΚΤΟΣ ΕΔΡΑΣ documents were not saving employee payment IDs, and document cards couldn't display employee payment data
+- **Solution**:
+  - Added `employee_payments_id` column to `generated_documents` table schema in `shared/schema.ts`
+  - Updated backend to conditionally save employee payment IDs for ΕΚΤΟΣ ΕΔΡΑΣ documents in `server/controllers/documentsController.ts`
+  - Modified both document fetch routes (GET /api/documents and GET /api/documents/user) to:
+    - Check for `employee_payments_id` array first
+    - Fetch employee payment data with joined employee details from EmployeePayments table
+    - Transform data to include ΕΚΤΟΣ ΕΔΡΑΣ-specific fields (month, days, daily_compensation, accommodation_expenses, kilometers_traveled, tickets_tolls_rental)
+    - Fallback to beneficiary payments if no employee payments exist
+  - Updated frontend `Recipient` interface in document cards to include ΕΚΤΟΣ ΕΔΡΑΣ fields
+- **Impact**: ΕΚΤΟΣ ΕΔΡΑΣ documents now properly link to employee payments, and document cards can display employee-specific expense data
+
 ## October 2, 2025 - Beneficiary Freetext Field Support
 - **Issue**: The `secondary_text` field from AFM autocomplete (populated from `personData.freetext` or `personData.attribute`) was not being saved to the `beneficiary_payments` table
 - **Solution**: 
