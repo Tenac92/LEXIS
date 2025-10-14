@@ -14,6 +14,7 @@ export const GREEK_MONTHS = [
   "ΙΑΝΟΥΑΡΙΟΣ", "ΦΕΒΡΟΥΑΡΙΟΣ", "ΜΑΡΤΙΟΣ", "ΑΠΡΙΛΙΟΣ", "ΜΑΪΟΣ", "ΙΟΥΝΙΟΣ",
   "ΙΟΥΛΙΟΣ", "ΑΥΓΟΥΣΤΟΣ", "ΣΕΠΤΕΜΒΡΙΟΣ", "ΟΚΤΩΒΡΙΟΣ", "ΝΟΕΜΒΡΙΟΣ", "ΔΕΚΕΜΒΡΙΟΣ"
 ];
+export const AVAILABLE_YEARS = Array.from({ length: 11 }, (_, i) => 2020 + i);
 export const DEFAULT_PRICE_PER_KM = 0.20;
 
 // Step configuration

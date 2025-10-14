@@ -59,7 +59,6 @@ const devLog = (label: string, ...args: any[]) => {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
-import { EmployeeAutocomplete } from "@/components/ui/employee-autocomplete";
 import {
   Command,
   CommandEmpty,
@@ -88,6 +87,7 @@ import {
   STANDARD_QUARTER_AMOUNT,
   EKTOS_EDRAS_TYPE,
   GREEK_MONTHS,
+  AVAILABLE_YEARS,
   DEFAULT_PRICE_PER_KM,
   STEPS,
   STEP_TITLES,
@@ -3366,49 +3366,9 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση ή Επιλογή Υπαλλήλου για ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
                           <div className="md:col-span-2 md:row-span-1">
-                            {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? (
-                              <EmployeeAutocomplete
-                                value={form.watch(`recipients.${index}.afm`) || ""}
-                                onSelect={(employee) => {
-                                  if (employee) {
-                                    // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
-                                    setIsDialogInitializing(true);
-                                    dialogInitializationRef.current.isInitializing = false;
-                                    setIsFormSyncing(true);
-
-                                    // Update recipient data with employee information
-                                    const currentRecipients = form.getValues("recipients");
-                                    currentRecipients[index] = {
-                                      ...currentRecipients[index],
-                                      employee_id: employee.id,
-                                      firstname: employee.name || "",
-                                      lastname: employee.surname || "",
-                                      fathername: employee.fathername || "",
-                                      afm: String(employee.afm || ""),
-                                      secondary_text: employee.attribute || "",
-                                    };
-
-                                    form.setValue("recipients", currentRecipients, {
-                                      shouldDirty: true,
-                                      shouldValidate: true,
-                                    });
-
-                                    // Trigger form validation
-                                    setTimeout(async () => {
-                                      await form.trigger(`recipients.${index}`);
-                                      await form.trigger("recipients");
-                                      setIsFormSyncing(false);
-                                      setIsDialogInitializing(false);
-                                    }, 200);
-                                  }
-                                }}
-                                placeholder="Αναζήτηση υπαλλήλου με ΑΦΜ"
-                                className="w-full"
-                              />
-                            ) : (
-                              <SimpleAFMAutocomplete
+                            <SimpleAFMAutocomplete
                                 expenditureType={
                                   form.getValues("expenditure_type") || ""
                                 }
@@ -3436,6 +3396,9 @@ export function CreateDocumentDialog({
                                     false;
                                   setIsFormSyncing(true);
 
+                                  // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (employee) vs beneficiary
+                                  const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                  
                                   // Use smart autocomplete data if available from enhanced AFM component
                                   const enhancedData = personData as any;
                                   let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
@@ -3448,8 +3411,12 @@ export function CreateDocumentDialog({
                                   console.log(
                                     "[AFMAutocomplete] Enhanced person data:",
                                     enhancedData,
+                                    "isEktosEdras:",
+                                    isEktosEdras,
                                   );
 
+                                  // For ΕΚΤΟΣ ΕΔΡΑΣ (employees), skip installment logic entirely
+                                  if (!isEktosEdras) {
                                   // Check if we have smart autocomplete suggestions
                                   if (
                                     enhancedData.suggestedInstallments &&
@@ -3572,10 +3539,12 @@ export function CreateDocumentDialog({
                                       totalAmount = amountValue;
                                     }
                                   }
+                                  } // End of if (!isEktosEdras) - installment logic
 
                                   // Update the recipient data directly in the current form state
                                   const currentRecipients =
                                     form.getValues("recipients");
+                                  
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
                                     firstname: personData.name || "",
@@ -3589,6 +3558,7 @@ export function CreateDocumentDialog({
                                     amount: totalAmount,
                                     installments: installmentsList,
                                     installmentAmounts: installmentAmounts,
+                                    ...(isEktosEdras && { employee_id: (personData as any).id }),
                                   };
 
                                   // Use setValue and trigger validation to ensure form recognizes the changes
@@ -3621,40 +3591,70 @@ export function CreateDocumentDialog({
                               placeholder="ΑΦΜ"
                               className="w-full"
                             />
-                            )}
                           </div>
 
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
                           {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE && (
                             <>
-                              {/* Month Selector */}
-                              <div className="md:col-span-2">
+                              {/* Month + Year Selector */}
+                              <div className="md:col-span-2 grid grid-cols-2 gap-2">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.month`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Μήνας</FormLabel>
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger data-testid={`select-recipient-${index}-month`}>
-                                            <SelectValue placeholder="Επιλέξτε μήνα" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {GREEK_MONTHS.map((month) => (
-                                            <SelectItem key={month} value={month}>
-                                              {month}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
+                                  render={({ field }) => {
+                                    const currentValue = field.value || "";
+                                    const [selectedMonth, selectedYear] = currentValue.includes(" ") 
+                                      ? currentValue.split(" ")
+                                      : [GREEK_MONTHS[0], new Date().getFullYear().toString()];
+                                    
+                                    return (
+                                      <FormItem className="col-span-2 space-y-2">
+                                        <FormLabel>Μήνας & Έτος</FormLabel>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <Select
+                                            onValueChange={(month) => {
+                                              field.onChange(`${month} ${selectedYear}`);
+                                            }}
+                                            value={selectedMonth}
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger data-testid={`select-recipient-${index}-month`}>
+                                                <SelectValue placeholder="Μήνας" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {GREEK_MONTHS.map((month) => (
+                                                <SelectItem key={month} value={month}>
+                                                  {month}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          
+                                          <Select
+                                            onValueChange={(year) => {
+                                              field.onChange(`${selectedMonth} ${year}`);
+                                            }}
+                                            value={selectedYear}
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger data-testid={`select-recipient-${index}-year`}>
+                                                <SelectValue placeholder="Έτος" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {AVAILABLE_YEARS.map((year) => (
+                                                <SelectItem key={year} value={year.toString()}>
+                                                  {year}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <FormMessage />
+                                      </FormItem>
+                                    );
+                                  }}
                                 />
                               </div>
 
@@ -3892,12 +3892,14 @@ export function CreateDocumentDialog({
                             </>
                           )}
 
-                          {/* renderRecipientInstallments(index) */}
-                          <div className="md:col-span-3 md:row-span-2 flex items-start">
-                            <div className="flex-1">
-                              {renderRecipientInstallments(index)}
+                          {/* renderRecipientInstallments(index) - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {form.getValues("expenditure_type") !== EKTOS_EDRAS_TYPE && (
+                            <div className="md:col-span-3 md:row-span-2 flex items-start">
+                              <div className="flex-1">
+                                {renderRecipientInstallments(index)}
+                              </div>
                             </div>
-                          </div>
+                          )}
 
                           {/* Delete Button - same row as the inputs */}
                           <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
@@ -3912,15 +3914,17 @@ export function CreateDocumentDialog({
                             </Button>
                           </div>
 
-                          {/* Ελεύθερο Κείμενο */}
-                          <Input
-                            {...form.register(
-                              `recipients.${index}.secondary_text`,
-                            )}
-                            placeholder="Ελεύθερο Κείμενο"
-                            className="md:col-span-8 md:row-start-2"
-                            autoComplete="off"
-                          />
+                          {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {form.getValues("expenditure_type") !== EKTOS_EDRAS_TYPE && (
+                            <Input
+                              {...form.register(
+                                `recipients.${index}.secondary_text`,
+                              )}
+                              placeholder="Ελεύθερο Κείμενο"
+                              className="md:col-span-8 md:row-start-2"
+                              autoComplete="off"
+                            />
+                          )}
                         </div>
                       </Card>
                     ))}
