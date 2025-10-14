@@ -690,16 +690,16 @@ const DocumentCard = memo(function DocumentCard({
                             <div>Μήνας: {recipient.month}</div>
                             {recipient.days && <div>Ημέρες: {recipient.days}</div>}
                             {recipient.daily_compensation && (
-                              <div>Ημερ. Αποζ.: {recipient.daily_compensation.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                              <div>Ημερήσια Αποζημίωση: {recipient.daily_compensation.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
                             )}
                             {recipient.accommodation_expenses && (
-                              <div>Διαμονή: {recipient.accommodation_expenses.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                              <div>Δαπάνες Διαμονής: {recipient.accommodation_expenses.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
                             )}
                             {recipient.kilometers_traveled && (
                               <div>Χιλιόμετρα: {recipient.kilometers_traveled} km</div>
                             )}
                             {recipient.tickets_tolls_rental && (
-                              <div>Εισιτήρια/Διόδια: {recipient.tickets_tolls_rental.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
+                              <div>Εισιτήρια/Διόδια/Ενοικίαση: {recipient.tickets_tolls_rental.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
                             )}
                           </div>
                         )}
