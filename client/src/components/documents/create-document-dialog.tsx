@@ -2194,24 +2194,6 @@ export function CreateDocumentDialog({
         region: data.region,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map((r) => {
-          // Debug: Log recipient data for ΕΚΤΟΣ ΕΔΡΑΣ
-          if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
-            console.log("[ΕΚΤΟΣ ΕΔΡΑΣ] Recipient data:", {
-              firstname: r.firstname,
-              lastname: r.lastname,
-              afm: r.afm,
-              employee_id: r.employee_id,
-              month: r.month,
-              days: r.days,
-              daily_compensation: r.daily_compensation,
-              accommodation_expenses: r.accommodation_expenses,
-              kilometers_traveled: r.kilometers_traveled,
-              tickets_tolls_rental: r.tickets_tolls_rental,
-              net_payable: r.net_payable,
-              amount: r.amount,
-            });
-          }
-
           // For housing allowance, ensure proper data structure for export
           if (
             data.expenditure_type === HOUSING_ALLOWANCE_TYPE &&
