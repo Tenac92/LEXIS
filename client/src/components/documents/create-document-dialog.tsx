@@ -1999,7 +1999,7 @@ export function CreateDocumentDialog({
       const invalidRecipients = data.recipients.some((r, index) => {
         // For ΕΚΤΟΣ ΕΔΡΑΣ, skip installments validation since it uses employee-based payments
         const isEktosEdras = data.expenditure_type === EKTOS_EDRAS_TYPE;
-        
+
         const isInvalid =
           !r.firstname ||
           !r.lastname ||
@@ -2036,7 +2036,10 @@ export function CreateDocumentDialog({
           return !isValid;
         });
 
-        console.log("[HandleSubmit] Invalid sequence found:", hasInvalidSequence);
+        console.log(
+          "[HandleSubmit] Invalid sequence found:",
+          hasInvalidSequence,
+        );
         if (hasInvalidSequence) {
           throw new Error(
             "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
@@ -2187,9 +2190,18 @@ export function CreateDocumentDialog({
         throw new Error("Μη έγκυρο ID έργου. Παρακαλώ επιλέξτε έργο.");
       }
 
-      console.log("[PAYLOAD DEBUG] expenditure_type value:", data.expenditure_type);
-      console.log("[PAYLOAD DEBUG] EKTOS_EDRAS_TYPE constant:", EKTOS_EDRAS_TYPE);
-      console.log("[PAYLOAD DEBUG] Are they equal?", data.expenditure_type === EKTOS_EDRAS_TYPE);
+      console.log(
+        "[PAYLOAD DEBUG] expenditure_type value:",
+        data.expenditure_type,
+      );
+      console.log(
+        "[PAYLOAD DEBUG] EKTOS_EDRAS_TYPE constant:",
+        EKTOS_EDRAS_TYPE,
+      );
+      console.log(
+        "[PAYLOAD DEBUG] Are they equal?",
+        data.expenditure_type === EKTOS_EDRAS_TYPE,
+      );
 
       const payload = {
         unit: data.unit,
@@ -2239,7 +2251,7 @@ export function CreateDocumentDialog({
           }
 
           // For ΕΚΤΟΣ ΕΔΡΑΣ, include employee-based payment fields
-          if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
+          if (data.expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ") {
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
@@ -2294,11 +2306,20 @@ export function CreateDocumentDialog({
 
       // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ
       if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
-        console.log("[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Full payload:", JSON.stringify(payload, null, 2));
-        console.log("[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipients array:", payload.recipients);
+        console.log(
+          "[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Full payload:",
+          JSON.stringify(payload, null, 2),
+        );
+        console.log(
+          "[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipients array:",
+          payload.recipients,
+        );
         payload.recipients.forEach((r, idx) => {
           console.log(`[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipient ${idx} month:`, r.month);
-          console.log(`[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipient ${idx} employee_id:`, r.employee_id);
+          console.log(
+            `[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipient ${idx} employee_id:`,
+            r.employee_id,
+          );
         });
       }
 
@@ -3779,12 +3800,20 @@ export function CreateDocumentDialog({
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => {
-                                            if (value === "" || value === null || value === undefined) {
+                                            if (
+                                              value === "" ||
+                                              value === null ||
+                                              value === undefined
+                                            ) {
                                               field.onChange(1);
                                               return;
                                             }
                                             const numValue = Number(value);
-                                            field.onChange(Number.isFinite(numValue) ? Math.floor(numValue) : 1);
+                                            field.onChange(
+                                              Number.isFinite(numValue)
+                                                ? Math.floor(numValue)
+                                                : 1,
+                                            );
                                           }}
                                           min={1}
                                           step={1}

@@ -1,0 +1,74 @@
+
+[DocumentsController] V2 Resolved unit string ΔΑΕΦΚ-ΚΕ to numeric ID: 2
+[DocumentsController] V2 Looking up project with numeric ID: 4
+[DocumentsController] V2 Projects query completed - found 10 projects
+[DocumentsController] V2 Found project: 5174692 NA853: 2024ΝΑ85300001
+[DocumentsController] V2 Using director signature from request
+[DocumentsController] V2 Using numeric project_id: 4
+[DocumentsController] V2 Looking up expenditure_type_id for: ΕΚΤΟΣ ΕΔΡΑΣ
+[DocumentsController] V2 Found expenditure_type_id: 5 for type: ΕΚΤΟΣ ΕΔΡΑΣ
+[DocumentsController] V2 Looking up project_index with project_id: 4 monada_id: 2 expenditure_type_id: 5
+[DocumentsController] V2 Successfully found project_index_id: 1179 for project: 4 unit: ΔΑΕΦΚ-ΚΕ expenditure_type: ΕΚΤΟΣ ΕΔΡΑΣ
+[DocumentsController] V2 Document payload prepared: {
+  unit_id: 2,
+  total_amount: 70.4,
+  generated_by: 79,
+  project_index_id: 1179,
+  attachment_id: [],
+  status: 'pending',
+  protocol_date: '2025-10-14',
+  protocol_number_input: null,
+  is_correction: false,
+  comments: 'Document created for project 4',
+  esdian: [ 'a' ],
+  director_signature: {
+    name: 'ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ',
+    order: 'ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.',
+    title: 'Ο ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΣ Δ.Α.Ε.Φ.Κ.-Κ.Ε.',
+    degree: " ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+    prepose: 'Ο'
+  },
+  beneficiary_payments_id: [],
+  created_at: '2025-10-14T08:54:34.157Z',
+  updated_at: '2025-10-14T08:54:34.157Z'
+}
+[DocumentsController] V2 Document created successfully: 256
+[DocumentsController] V2 Creating payments for 1 recipients. Expenditure type: ΕΚΤΟΣ ΕΔΡΑΣ
+[DocumentsController] V2 Using project_index_id for payments: 1179
+[DocumentsController] V2 Creating employee payment for ΕΚΤΟΣ ΕΔΡΑΣ
+[DocumentsController] V2 DEBUG - Full recipient object: {
+  "firstname": "ΜΑΡΙΑ ΙΩΑΝΝΑ",
+  "lastname": "ΑΝΑΓΝΩΣΤΟΥ",
+  "fathername": "ΧΡΗΣΤΟΣ",
+  "afm": "151036800",
+  "amount": 70.4,
+  "installment": "ΕΦΑΠΑΞ",
+  "installments": [
+    "ΕΦΑΠΑΞ"
+  ],
+  "installmentAmounts": {
+    "ΕΦΑΠΑΞ": 0
+  },
+  "secondary_text": "Μηχανικός"
+}
+[DocumentsController] V2 DEBUG - recipient.month value: undefined
+[DocumentsController] V2 DEBUG - recipient.month type: undefined
+[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: month is required
+[DocumentsController] V2 DEBUG - All recipients: [
+  {
+    "firstname": "ΜΑΡΙΑ ΙΩΑΝΝΑ",
+    "lastname": "ΑΝΑΓΝΩΣΤΟΥ",
+    "fathername": "ΧΡΗΣΤΟΣ",
+    "afm": "151036800",
+    "amount": 70.4,
+    "installment": "ΕΦΑΠΑΞ",
+    "installments": [
+      "ΕΦΑΠΑΞ"
+    ],
+    "installmentAmounts": {
+      "ΕΦΑΠΑΞ": 0
+    },
+    "secondary_text": "Μηχανικός"
+  }
+]
+8:54:34 AM [express] POST /api/documents/v2 400 in 891ms
