@@ -2234,6 +2234,32 @@ export function CreateDocumentDialog({
             };
           }
 
+          // For ΕΚΤΟΣ ΕΔΡΑΣ, include employee-based payment fields
+          if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
+            return {
+              firstname: r.firstname.trim(),
+              lastname: r.lastname.trim(),
+              fathername: r.fathername.trim(),
+              afm: r.afm.trim(),
+              employee_id: r.employee_id,
+              month: r.month,
+              days: r.days,
+              daily_compensation: r.daily_compensation || 0,
+              accommodation_expenses: r.accommodation_expenses || 0,
+              kilometers_traveled: r.kilometers_traveled || 0,
+              tickets_tolls_rental: r.tickets_tolls_rental || 0,
+              net_payable: r.net_payable || parseFloat(r.amount.toString()),
+              amount: parseFloat(r.amount.toString()),
+              secondary_text: r.secondary_text?.trim() || "",
+              installment:
+                r.installment ||
+                (r.installments && r.installments[0]) ||
+                "ΕΦΑΠΑΞ",
+              installments: r.installments,
+              installmentAmounts: r.installmentAmounts || {},
+            };
+          }
+
           // Standard structure for other expenditure types
           return {
             firstname: r.firstname.trim(),
