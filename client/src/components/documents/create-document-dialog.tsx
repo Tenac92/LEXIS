@@ -2187,6 +2187,10 @@ export function CreateDocumentDialog({
         throw new Error("Μη έγκυρο ID έργου. Παρακαλώ επιλέξτε έργο.");
       }
 
+      console.log("[PAYLOAD DEBUG] expenditure_type value:", data.expenditure_type);
+      console.log("[PAYLOAD DEBUG] EKTOS_EDRAS_TYPE constant:", EKTOS_EDRAS_TYPE);
+      console.log("[PAYLOAD DEBUG] Are they equal?", data.expenditure_type === EKTOS_EDRAS_TYPE);
+
       const payload = {
         unit: data.unit,
         project_id: projectId, // Convert to numeric ID for v2 endpoint
