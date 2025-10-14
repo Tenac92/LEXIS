@@ -136,7 +136,7 @@ export function EmployeeAutocomplete({
               {employees.map((employee: Employee) => (
                 <CommandItem
                   key={employee.id}
-                  value={employee.afm}
+                  value={employee.afm || ''}
                   onSelect={() => handleSelect(employee)}
                   className="flex items-center justify-between"
                 >

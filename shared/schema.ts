@@ -435,6 +435,70 @@ export const beneficiaryPayments = pgTable(
 );
 
 /**
+ * Employee Payments Table
+ * Stores ΕΚΤΟΣ ΕΔΡΑΣ payment information for employees
+ */
+export const employeePayments = pgTable(
+  "EmployeePayments",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    employee_id: bigint("employee_id", { mode: "number" })
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    document_id: bigint("document_id", { mode: "number" }).references(
+      () => generatedDocuments.id,
+      { onDelete: "cascade" },
+    ),
+    month: text("month").notNull(),
+    days: integer("days").notNull().default(1),
+    daily_compensation: decimal("daily_compensation", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    accommodation_expenses: decimal("accommodation_expenses", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    kilometers_traveled: decimal("kilometers_traveled", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    price_per_km: decimal("price_per_km", { precision: 10, scale: 2 }).default(
+      "0.20",
+    ),
+    tickets_tolls_rental: decimal("tickets_tolls_rental", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    has_2_percent_deduction: boolean("has_2_percent_deduction").default(false),
+    total_expense: decimal("total_expense", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    deduction_2_percent: decimal("deduction_2_percent", {
+      precision: 10,
+      scale: 2,
+    }).default("0.00"),
+    net_payable: decimal("net_payable", { precision: 10, scale: 2 }).default(
+      "0.00",
+    ),
+    status: text("status").default("pending"),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    employeeIdIndex: index("idx_employee_payments_employee_id").on(
+      table.employee_id,
+    ),
+    documentIdIndex: index("idx_employee_payments_document_id").on(
+      table.document_id,
+    ),
+    monthIndex: index("idx_employee_payments_month").on(table.month),
+    statusIndex: index("idx_employee_payments_status").on(table.status),
+  }),
+);
+
+/**
  * User Preferences Table
  * Stores user preferences including frequently used Internal Distribution options
  */
@@ -1077,6 +1141,11 @@ export const insertBeneficiaryPaymentSchema = createInsertSchema(
   },
 );
 
+export const insertEmployeePaymentSchema = createInsertSchema(employeePayments, {
+  month: z.string().min(1, "Ο μήνας είναι υποχρεωτικός"),
+  days: z.number().int().min(1, "Οι ημέρες πρέπει να είναι τουλάχιστον 1"),
+});
+
 export const insertProjectBudgetSchema = createInsertSchema(projectBudget);
 
 export const insertProjectIndexSchema = createInsertSchema(projectIndex);
@@ -1162,6 +1231,7 @@ export type Municipality = typeof municipalities.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Beneficiary = typeof beneficiaries.$inferSelect;
 export type BeneficiaryPayment = typeof beneficiaryPayments.$inferSelect;
+export type EmployeePayment = typeof employeePayments.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below
@@ -1184,6 +1254,7 @@ export type InsertBeneficiary = z.infer<typeof insertBeneficiarySchema>;
 export type InsertBeneficiaryPayment = z.infer<
   typeof insertBeneficiaryPaymentSchema
 >;
+export type InsertEmployeePayment = z.infer<typeof insertEmployeePaymentSchema>;
 export type InsertProjectBudget = z.infer<typeof insertProjectBudgetSchema>;
 export type Recipient = z.infer<typeof recipientSchema>;
 
