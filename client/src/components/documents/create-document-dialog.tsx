@@ -3659,8 +3659,9 @@ export function CreateDocumentDialog({
                                 />
                               </div>
 
-                              {/* Days Input */}
-                              <div className="md:col-span-2">
+                              {/* All Expense Fields in One Row */}
+                              <div className="md:col-span-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                                {/* Days Input */}
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.days`}
@@ -3680,10 +3681,7 @@ export function CreateDocumentDialog({
                                     </FormItem>
                                   )}
                                 />
-                              </div>
 
-                              {/* Monetary Fields - Single Row */}
-                              <div className="md:col-span-12 grid grid-cols-4 gap-3">
                                 {/* Daily Compensation */}
                                 <FormField
                                   control={form.control}
