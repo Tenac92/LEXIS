@@ -282,6 +282,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   esdian: text("esdian").array(),
   director_signature: jsonb("director_signature"),
   beneficiary_payments_id: integer("beneficiary_payments_id").array(),
+  employee_payments_id: integer("employee_payments_id").array(),
 
   // Enhanced foreign key relationships
   attachment_id: integer("attachment_id").array(), // Array of attachment IDs
