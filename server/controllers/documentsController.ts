@@ -1078,35 +1078,61 @@ router.post(
           } // End of else block for standard beneficiary payments
         }
 
-        // Always update document with beneficiary payments IDs, even if array is empty
-        console.log(
-          "[DocumentsController] V2 Updating document with beneficiary payment IDs:",
-          beneficiaryPaymentsIds,
-        );
+        // Update document with appropriate payment IDs based on expenditure type
+        const isEktosEdras = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+        
+        if (isEktosEdras) {
+          console.log(
+            "[DocumentsController] V2 Updating document with employee payment IDs:",
+            employeePaymentsIds,
+          );
 
-        const { error: updateError } = await supabase
-          .from("generated_documents")
-          .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
-          .eq("id", data.id);
+          const { error: updateError } = await supabase
+            .from("generated_documents")
+            .update({ employee_payments_id: employeePaymentsIds })
+            .eq("id", data.id);
 
-        if (updateError) {
-          console.error(
-            "[DocumentsController] V2 Error updating document with beneficiary payment IDs:",
-            updateError,
-          );
-          console.error(
-            "[DocumentsController] V2 Update error details:",
-            updateError.details,
-          );
-          console.error(
-            "[DocumentsController] V2 Update error hint:",
-            updateError.hint,
-          );
+          if (updateError) {
+            console.error(
+              "[DocumentsController] V2 Error updating document with employee payment IDs:",
+              updateError,
+            );
+          } else {
+            console.log(
+              "[DocumentsController] V2 Successfully updated document with employee payment IDs:",
+              employeePaymentsIds,
+            );
+          }
         } else {
           console.log(
-            "[DocumentsController] V2 Successfully updated document with beneficiary payment IDs:",
+            "[DocumentsController] V2 Updating document with beneficiary payment IDs:",
             beneficiaryPaymentsIds,
           );
+
+          const { error: updateError } = await supabase
+            .from("generated_documents")
+            .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
+            .eq("id", data.id);
+
+          if (updateError) {
+            console.error(
+              "[DocumentsController] V2 Error updating document with beneficiary payment IDs:",
+              updateError,
+            );
+            console.error(
+              "[DocumentsController] V2 Update error details:",
+              updateError.details,
+            );
+            console.error(
+              "[DocumentsController] V2 Update error hint:",
+              updateError.hint,
+            );
+          } else {
+            console.log(
+              "[DocumentsController] V2 Successfully updated document with beneficiary payment IDs:",
+              beneficiaryPaymentsIds,
+            );
+          }
         }
       } catch (beneficiaryError) {
         console.error(
