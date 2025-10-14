@@ -1079,8 +1079,6 @@ router.post(
         }
 
         // Update document with appropriate payment IDs based on expenditure type
-        const isEktosEdras = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
-        
         if (isEktosEdras) {
           console.log(
             "[DocumentsController] V2 Updating document with employee payment IDs:",
@@ -1244,8 +1242,73 @@ router.get("/", async (req: Request, res: Response) => {
       (documents || []).map(async (doc) => {
         let recipients: any[] = [];
 
-        // Fetch beneficiary payments for this document
+        // Fetch employee payments for ΕΚΤΟΣ ΕΔΡΑΣ documents
         if (
+          doc.employee_payments_id &&
+          Array.isArray(doc.employee_payments_id) &&
+          doc.employee_payments_id.length > 0
+        ) {
+          try {
+            const { data: empPayments, error: empPaymentsError } = await supabase
+              .from("EmployeePayments")
+              .select(
+                `
+                id,
+                amount,
+                month,
+                days,
+                daily_compensation,
+                accommodation_expenses,
+                kilometers_traveled,
+                tickets_tolls_rental,
+                status,
+                Employees (
+                  id,
+                  afm,
+                  lastname,
+                  firstname,
+                  fathername,
+                  profession
+                )
+              `,
+              )
+              .in("id", doc.employee_payments_id);
+
+            if (!empPaymentsError && empPayments) {
+              // Transform employee payments into recipients format
+              recipients = empPayments.map((payment) => {
+                const employee = Array.isArray(payment.Employees)
+                  ? payment.Employees[0]
+                  : payment.Employees;
+                return {
+                  id: employee?.id,
+                  firstname: employee?.firstname || "",
+                  lastname: employee?.lastname || "",
+                  fathername: employee?.fathername || "",
+                  afm: employee?.afm ? String(employee.afm) : "",
+                  amount: parseFloat(payment.amount) || 0,
+                  month: payment.month || "",
+                  days: payment.days || 0,
+                  daily_compensation: payment.daily_compensation || 0,
+                  accommodation_expenses: payment.accommodation_expenses || 0,
+                  kilometers_traveled: payment.kilometers_traveled || 0,
+                  tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+                  status: payment.status || "pending",
+                  secondary_text: employee?.profession || null,
+                };
+              });
+            }
+          } catch (err) {
+            console.error(
+              "Error fetching employee payments for document",
+              doc.id,
+              ":",
+              err,
+            );
+          }
+        }
+        // Fetch beneficiary payments for regular documents
+        else if (
           doc.beneficiary_payments_id &&
           Array.isArray(doc.beneficiary_payments_id) &&
           doc.beneficiary_payments_id.length > 0
@@ -1582,8 +1645,73 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
       (documents || []).map(async (doc) => {
         let recipients: any[] = [];
 
-        // Fetch beneficiary payments for this document
+        // Fetch employee payments for ΕΚΤΟΣ ΕΔΡΑΣ documents
         if (
+          doc.employee_payments_id &&
+          Array.isArray(doc.employee_payments_id) &&
+          doc.employee_payments_id.length > 0
+        ) {
+          try {
+            const { data: empPayments, error: empPaymentsError } = await supabase
+              .from("EmployeePayments")
+              .select(
+                `
+                id,
+                amount,
+                month,
+                days,
+                daily_compensation,
+                accommodation_expenses,
+                kilometers_traveled,
+                tickets_tolls_rental,
+                status,
+                Employees (
+                  id,
+                  afm,
+                  lastname,
+                  firstname,
+                  fathername,
+                  profession
+                )
+              `,
+              )
+              .in("id", doc.employee_payments_id);
+
+            if (!empPaymentsError && empPayments) {
+              // Transform employee payments into recipients format
+              recipients = empPayments.map((payment) => {
+                const employee = Array.isArray(payment.Employees)
+                  ? payment.Employees[0]
+                  : payment.Employees;
+                return {
+                  id: employee?.id,
+                  firstname: employee?.firstname || "",
+                  lastname: employee?.lastname || "",
+                  fathername: employee?.fathername || "",
+                  afm: employee?.afm ? String(employee.afm) : "",
+                  amount: parseFloat(payment.amount) || 0,
+                  month: payment.month || "",
+                  days: payment.days || 0,
+                  daily_compensation: payment.daily_compensation || 0,
+                  accommodation_expenses: payment.accommodation_expenses || 0,
+                  kilometers_traveled: payment.kilometers_traveled || 0,
+                  tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+                  status: payment.status || "pending",
+                  secondary_text: employee?.profession || null,
+                };
+              });
+            }
+          } catch (err) {
+            console.error(
+              "Error fetching employee payments for user document",
+              doc.id,
+              ":",
+              err,
+            );
+          }
+        }
+        // Fetch beneficiary payments for regular documents
+        else if (
           doc.beneficiary_payments_id &&
           Array.isArray(doc.beneficiary_payments_id) &&
           doc.beneficiary_payments_id.length > 0

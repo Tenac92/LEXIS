@@ -43,9 +43,17 @@ interface Recipient {
   fathername: string;
   afm: string;
   amount: number;
-  installment: string;
+  installment?: string;
   installments?: string[];
   installmentAmounts?: Record<string, number>;
+  // ΕΚΤΟΣ ΕΔΡΑΣ fields
+  month?: string;
+  days?: number;
+  daily_compensation?: number;
+  accommodation_expenses?: number;
+  kilometers_traveled?: number;
+  tickets_tolls_rental?: number;
+  secondary_text?: string;
 }
 
 const getStatusDetails = (
