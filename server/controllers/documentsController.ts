@@ -254,6 +254,7 @@ router.post(
           projectIndexItems.length > 0 ? projectIndexItems[0].id : null, // Foreign key to project_index table
         attachment_id: [], // Will be populated after attachment processing
         beneficiary_payments_id: [], // Will be populated after beneficiary processing
+        employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
       };
 
       // Payload logging removed for cleaner console output
@@ -751,6 +752,7 @@ router.post(
               : [],
         director_signature: directorSignature,
         beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
+        employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
         created_at: now,
         updated_at: now,
       };
