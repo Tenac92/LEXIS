@@ -2251,7 +2251,7 @@ export function CreateDocumentDialog({
           }
 
           // For ΕΚΤΟΣ ΕΔΡΑΣ, include employee-based payment fields
-          if (data.expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ") {
+          if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
