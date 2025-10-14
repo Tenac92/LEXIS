@@ -356,6 +356,8 @@ router.post(
         recipientsCount: recipients?.length,
         total_amount,
       });
+      
+      console.log("[DocumentsController] V2 DEBUG - Recipients from request:", JSON.stringify(recipients, null, 2));
 
       // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
       // Let's resolve this by looking up the unit from the Monada table
