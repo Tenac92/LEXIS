@@ -787,10 +787,14 @@ router.post(
           // ΕΚΤΟΣ ΕΔΡΑΣ: Create employee payment
           if (isEktosEdras) {
             console.log("[DocumentsController] V2 Creating employee payment for ΕΚΤΟΣ ΕΔΡΑΣ");
+            console.log("[DocumentsController] V2 DEBUG - Full recipient object:", JSON.stringify(recipient, null, 2));
+            console.log("[DocumentsController] V2 DEBUG - recipient.month value:", recipient.month);
+            console.log("[DocumentsController] V2 DEBUG - recipient.month type:", typeof recipient.month);
             
             // Validate required ΕΚΤΟΣ ΕΔΡΑΣ fields
             if (!recipient.month || !recipient.month.trim()) {
               console.error("[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: month is required");
+              console.error("[DocumentsController] V2 DEBUG - All recipients:", JSON.stringify(formattedRecipients, null, 2));
               return res.status(400).json({
                 message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
               });

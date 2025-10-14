@@ -2288,7 +2288,15 @@ export function CreateDocumentDialog({
         director_signature: data.director_signature || null,
       };
 
-      // Debug logging removed for cleaner console output
+      // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ
+      if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
+        console.log("[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Full payload:", JSON.stringify(payload, null, 2));
+        console.log("[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipients array:", payload.recipients);
+        payload.recipients.forEach((r, idx) => {
+          console.log(`[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipient ${idx} month:`, r.month);
+          console.log(`[ΕΚΤΟΣ ΕΔΡΑΣ] DEBUG - Recipient ${idx} employee_id:`, r.employee_id);
+        });
+      }
 
       // Attempt document creation with v2 API endpoint
       try {
