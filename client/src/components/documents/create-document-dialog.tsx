@@ -1997,13 +1997,15 @@ export function CreateDocumentDialog({
       }
 
       const invalidRecipients = data.recipients.some((r, index) => {
+        // For ΕΚΤΟΣ ΕΔΡΑΣ, skip installments validation since it uses employee-based payments
+        const isEktosEdras = data.expenditure_type === EKTOS_EDRAS_TYPE;
+        
         const isInvalid =
           !r.firstname ||
           !r.lastname ||
           !r.afm ||
           typeof r.amount !== "number" ||
-          !r.installments ||
-          r.installments.length === 0;
+          (!isEktosEdras && (!r.installments || r.installments.length === 0));
 
         if (isInvalid) {
           devLog("ValidationFail", `Recipient ${index} invalid fields`);
@@ -2014,68 +2016,72 @@ export function CreateDocumentDialog({
         throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
       }
 
-      // Validate that all installments are in sequence
-      console.log("[HandleSubmit] Checking installment sequences...");
-      const hasInvalidSequence = data.recipients.some((r, index) => {
-        if (r.installments.length <= 1) return false;
-        const isValid = areInstallmentsInSequence(
-          r.installments,
-          data.expenditure_type,
-        );
-        console.log(
-          `[Validation] Checking installment sequence for recipient ${index}:`,
-          {
-            installments: r.installments,
-            expenditureType: data.expenditure_type,
-            isValid: isValid,
-          },
-        );
-        return !isValid;
-      });
-
-      console.log("[HandleSubmit] Invalid sequence found:", hasInvalidSequence);
-      if (hasInvalidSequence) {
-        throw new Error(
-          "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
-        );
-      }
-
-      // Validate that all installments have amounts entered
-      console.log("[HandleSubmit] Checking installment amounts...");
-      const missingInstallmentAmounts = data.recipients.some(
-        (recipient, index) => {
+      // Validate that all installments are in sequence (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
+      if (data.expenditure_type !== EKTOS_EDRAS_TYPE) {
+        console.log("[HandleSubmit] Checking installment sequences...");
+        const hasInvalidSequence = data.recipients.some((r, index) => {
+          if (r.installments.length <= 1) return false;
+          const isValid = areInstallmentsInSequence(
+            r.installments,
+            data.expenditure_type,
+          );
           console.log(
-            `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
+            `[Validation] Checking installment sequence for recipient ${index}:`,
             {
-              installments: recipient.installments,
-              installmentAmounts: recipient.installmentAmounts,
+              installments: r.installments,
+              expenditureType: data.expenditure_type,
+              isValid: isValid,
             },
           );
-          return recipient.installments.some((installment) => {
-            const isInvalid =
-              !recipient.installmentAmounts ||
-              typeof recipient.installmentAmounts[installment] !== "number" ||
-              recipient.installmentAmounts[installment] <= 0;
+          return !isValid;
+        });
+
+        console.log("[HandleSubmit] Invalid sequence found:", hasInvalidSequence);
+        if (hasInvalidSequence) {
+          throw new Error(
+            "Οι δόσεις πρέπει να είναι διαδοχικές (π.χ. Α+Β ή Β+Γ, όχι Α+Γ)",
+          );
+        }
+      }
+
+      // Validate that all installments have amounts entered (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
+      if (data.expenditure_type !== EKTOS_EDRAS_TYPE) {
+        console.log("[HandleSubmit] Checking installment amounts...");
+        const missingInstallmentAmounts = data.recipients.some(
+          (recipient, index) => {
             console.log(
-              `[HandleSubmit] Installment ${installment} validation:`,
+              `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
               {
-                hasAmounts: !!recipient.installmentAmounts,
-                value: recipient.installmentAmounts?.[installment],
-                type: typeof recipient.installmentAmounts?.[installment],
-                isInvalid: isInvalid,
+                installments: recipient.installments,
+                installmentAmounts: recipient.installmentAmounts,
               },
             );
-            return isInvalid;
-          });
-        },
-      );
+            return recipient.installments.some((installment) => {
+              const isInvalid =
+                !recipient.installmentAmounts ||
+                typeof recipient.installmentAmounts[installment] !== "number" ||
+                recipient.installmentAmounts[installment] <= 0;
+              console.log(
+                `[HandleSubmit] Installment ${installment} validation:`,
+                {
+                  hasAmounts: !!recipient.installmentAmounts,
+                  value: recipient.installmentAmounts?.[installment],
+                  type: typeof recipient.installmentAmounts?.[installment],
+                  isInvalid: isInvalid,
+                },
+              );
+              return isInvalid;
+            });
+          },
+        );
 
-      console.log(
-        "[HandleSubmit] Missing installment amounts:",
-        missingInstallmentAmounts,
-      );
-      if (missingInstallmentAmounts) {
-        throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
+        console.log(
+          "[HandleSubmit] Missing installment amounts:",
+          missingInstallmentAmounts,
+        );
+        if (missingInstallmentAmounts) {
+          throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
+        }
       }
 
       console.log(
