@@ -3597,7 +3597,7 @@ export function CreateDocumentDialog({
                           {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE && (
                             <>
                               {/* Month + Year Selector */}
-                              <div className="md:col-span-2 grid grid-cols-2 gap-2">
+                              <div className="md:col-span-2 grid grid-cols-2 gap-1.5">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.month`}
@@ -3608,9 +3608,9 @@ export function CreateDocumentDialog({
                                       : [GREEK_MONTHS[0], new Date().getFullYear().toString()];
                                     
                                     return (
-                                      <FormItem className="col-span-2 space-y-2">
-                                        <FormLabel>Μήνας & Έτος</FormLabel>
-                                        <div className="grid grid-cols-2 gap-2">
+                                      <FormItem className="col-span-2 space-y-1">
+                                        <FormLabel className="text-xs leading-tight">Μήνας &<br/>Έτος</FormLabel>
+                                        <div className="grid grid-cols-2 gap-1.5">
                                           <Select
                                             onValueChange={(month) => {
                                               field.onChange(`${month} ${selectedYear}`);
@@ -3659,19 +3659,19 @@ export function CreateDocumentDialog({
                               </div>
 
                               {/* Days Input */}
-                              <div className="md:col-span-2">
+                              <div className="md:col-span-1 max-w-[140px]">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.days`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Ημέρες</FormLabel>
+                                    <FormItem className="space-y-1">
+                                      <FormLabel className="text-xs leading-tight">Αριθμός<br/>Ημερών</FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
                                           onChange={(value) => field.onChange(value)}
                                           min={1}
-                                          placeholder="Αριθμός ημερών"
+                                          placeholder="0"
                                           data-testid={`input-recipient-${index}-days`}
                                         />
                                       </FormControl>
@@ -3682,14 +3682,14 @@ export function CreateDocumentDialog({
                               </div>
 
                               {/* Monetary Fields Grid */}
-                              <div className="md:col-span-6 grid grid-cols-2 gap-4">
+                              <div className="md:col-span-6 grid grid-cols-2 gap-2">
                                 {/* Daily Compensation */}
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.daily_compensation`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Ημερήσια αποζημίωση</FormLabel>
+                                    <FormItem className="space-y-1 max-w-[180px]">
+                                      <FormLabel className="text-xs leading-tight">Ημερήσια<br/>Αποζημίωση</FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
@@ -3725,8 +3725,8 @@ export function CreateDocumentDialog({
                                   control={form.control}
                                   name={`recipients.${index}.accommodation_expenses`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Δαπάνες διαμονής</FormLabel>
+                                    <FormItem className="space-y-1 max-w-[180px]">
+                                      <FormLabel className="text-xs leading-tight">Δαπάνες<br/>Διαμονής</FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
@@ -3762,8 +3762,8 @@ export function CreateDocumentDialog({
                                   control={form.control}
                                   name={`recipients.${index}.kilometers_traveled`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Διανυθέντα χιλιόμετρα (€{DEFAULT_PRICE_PER_KM}/χλμ)</FormLabel>
+                                    <FormItem className="space-y-1 max-w-[180px]">
+                                      <FormLabel className="text-xs leading-tight">Χιλιόμετρα<br/>(€{DEFAULT_PRICE_PER_KM}/χλμ)</FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
@@ -3798,8 +3798,8 @@ export function CreateDocumentDialog({
                                   control={form.control}
                                   name={`recipients.${index}.tickets_tolls_rental`}
                                   render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Εισιτήρια/Διόδια/Ενοικίαση</FormLabel>
+                                    <FormItem className="space-y-1 max-w-[180px]">
+                                      <FormLabel className="text-xs leading-tight">Εισιτήρια/Διόδια/<br/>Ενοικίαση</FormLabel>
                                       <FormControl>
                                         <NumberInput
                                           {...field}
@@ -3867,24 +3867,24 @@ export function CreateDocumentDialog({
                               </div>
 
                               {/* Calculated Fields Display */}
-                              <div className="md:col-span-6 space-y-2 p-4 bg-muted/50 rounded-md">
+                              <div className="md:col-span-6 space-y-1.5 p-3 bg-muted/50 rounded-md">
                                 <div className="flex justify-between items-center">
-                                  <span className="text-sm font-medium">ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ:</span>
-                                  <span className="text-sm font-semibold" data-testid={`text-recipient-${index}-total-expense`}>
+                                  <span className="text-xs font-medium">ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ:</span>
+                                  <span className="text-xs font-semibold" data-testid={`text-recipient-${index}-total-expense`}>
                                     €{(form.watch(`recipients.${index}.total_expense`) || 0).toFixed(2)}
                                   </span>
                                 </div>
                                 {form.watch(`recipients.${index}.has_2_percent_deduction`) && (
                                   <div className="flex justify-between items-center text-destructive">
-                                    <span className="text-sm">Παρακράτηση 2%:</span>
-                                    <span className="text-sm" data-testid={`text-recipient-${index}-deduction`}>
+                                    <span className="text-xs">Παρακράτηση 2%:</span>
+                                    <span className="text-xs" data-testid={`text-recipient-${index}-deduction`}>
                                       -€{(form.watch(`recipients.${index}.deduction_2_percent`) || 0).toFixed(2)}
                                     </span>
                                   </div>
                                 )}
-                                <div className="flex justify-between items-center pt-2 border-t">
-                                  <span className="font-semibold">ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ:</span>
-                                  <span className="font-bold text-lg" data-testid={`text-recipient-${index}-net-payable`}>
+                                <div className="flex justify-between items-center pt-1.5 border-t">
+                                  <span className="text-sm font-semibold">ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ:</span>
+                                  <span className="font-bold text-base" data-testid={`text-recipient-${index}-net-payable`}>
                                     €{(form.watch(`recipients.${index}.net_payable`) || 0).toFixed(2)}
                                   </span>
                                 </div>
