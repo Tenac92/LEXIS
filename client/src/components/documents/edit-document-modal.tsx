@@ -147,18 +147,18 @@ export function EditDocumentModal({
     enabled: open,
   });
 
-  // Track selected unit for project filtering
-  const [selectedUnitForProjects, setSelectedUnitForProjects] = useState<string>("");
+  // Watch selected unit_id from form (numeric)
+  const selectedUnitId = form.watch("unit_id");
 
-  // Fetch projects based on selected unit
+  // Fetch projects based on selected unit_id
   const { data: projects = [] } = useQuery<any[]>({
-    queryKey: ['projects-working', selectedUnitForProjects],
+    queryKey: ['projects-working', selectedUnitId],
     queryFn: async () => {
-      if (!selectedUnitForProjects) return [];
-      const response = await apiRequest(`/api/projects-working/${encodeURIComponent(selectedUnitForProjects)}`);
+      if (!selectedUnitId) return [];
+      const response = await apiRequest(`/api/projects-working/${selectedUnitId}`);
       return Array.isArray(response) ? response : [];
     },
-    enabled: !!selectedUnitForProjects && open,
+    enabled: !!selectedUnitId && open,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -385,14 +385,6 @@ export function EditDocumentModal({
       };
 
       form.reset(formData);
-
-      // Set the selected unit for project filtering
-      if (document.unit_id && units && Array.isArray(units)) {
-        const unit = units.find((u: any) => u.id === Number(document.unit_id));
-        if (unit) {
-          setSelectedUnitForProjects(unit.unit || "");
-        }
-      }
 
       // Set selected project ID for geographic area queries
       if (document.project_index_id) {
@@ -739,14 +731,12 @@ export function EditDocumentModal({
                           <FormLabel>Μονάδα</FormLabel>
                           <Select 
                             onValueChange={(value) => {
-                              field.onChange(parseInt(value));
-                              // Find the unit code for project filtering
-                              const unit = units.find((u: any) => u.id === parseInt(value));
-                              if (unit) {
-                                setSelectedUnitForProjects(unit.unit || "");
-                                // Clear project selection when unit changes
-                                form.setValue("project_index_id", undefined);
-                              }
+                              const numericValue = parseInt(value);
+                              field.onChange(numericValue);
+                              // Clear project selection when unit changes
+                              form.setValue("project_index_id", undefined);
+                              // Invalidate projects query to fetch new projects
+                              queryClient.invalidateQueries({ queryKey: ['projects-working', numericValue] });
                             }} 
                             value={field.value ? field.value.toString() : undefined}
                           >
@@ -775,14 +765,18 @@ export function EditDocumentModal({
                         <FormItem>
                           <FormLabel>Έργο</FormLabel>
                           <Select 
-                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            onValueChange={(value) => {
+                              const numericValue = parseInt(value);
+                              field.onChange(numericValue);
+                              setSelectedProjectId(numericValue);
+                            }} 
                             value={field.value ? field.value.toString() : undefined}
-                            disabled={!selectedUnitForProjects}
+                            disabled={!selectedUnitId}
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-project">
                                 <SelectValue placeholder={
-                                  !selectedUnitForProjects 
+                                  !selectedUnitId 
                                     ? "Επιλέξτε πρώτα μονάδα" 
                                     : "Επιλέξτε έργο"
                                 } />
