@@ -34,8 +34,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users, AlertCircle } from "lucide-react";
+import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users, AlertCircle, MapPin } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
+import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 
 // Define recipient schema for beneficiary editing
 const recipientSchema = z.object({
@@ -67,6 +68,8 @@ const baseDocumentFormSchema = z.object({
   // Project and unit fields
   project_index_id: z.number().optional(),
   unit_id: z.number().optional(),
+  // Geographic region
+  geographic_region: z.string().optional(),
 });
 
 // Correction mode requires only correction reason (protocol will be set via modal after save)
@@ -120,6 +123,7 @@ export function EditDocumentModal({
       original_protocol_date: "",
       correction_reason: "",
       recipients: [],
+      geographic_region: "",
     },
   });
 
@@ -227,6 +231,7 @@ export function EditDocumentModal({
         recipients: recipients.length > 0 ? recipients : [],
         project_index_id: document.project_index_id || undefined,
         unit_id: document.unit_id ? Number(document.unit_id) : undefined,
+        geographic_region: (document as any).region || (document as any).geographic_region || "",
       };
 
       form.reset(formData);
@@ -260,6 +265,7 @@ export function EditDocumentModal({
           recipients: data.recipients,
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
+          geographic_region: data.geographic_region || null,
         };
 
         return await apiRequest(`/api/documents/${document.id}/correction`, {
@@ -282,6 +288,7 @@ export function EditDocumentModal({
           updated_at: new Date().toISOString(),
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
+          geographic_region: data.geographic_region || null,
         };
 
         // Update document first
@@ -714,6 +721,35 @@ export function EditDocumentModal({
                 </CardContent>
               </Card>
 
+              {/* Geographic Region Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    Γεωγραφική Περιοχή
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="geographic_region"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Περιοχή</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="π.χ. Αττική, Θεσσαλονίκη..."
+                            {...field}
+                            data-testid="input-geographic-region"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+
               {/* Beneficiaries Management Card */}
               <Card>
                 <CardHeader>
@@ -725,7 +761,7 @@ export function EditDocumentModal({
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-muted-foreground">
-                      Επεξεργασία των στοιχείων των δικαιούχων
+                      Επεξεργασία των στοιχείων των δικαιούχων ({form.watch("recipients")?.length || 0})
                     </p>
                     <Button
                       type="button"
@@ -740,6 +776,14 @@ export function EditDocumentModal({
                   </div>
 
                   <Separator />
+
+                  {(!form.watch("recipients") || form.watch("recipients")?.length === 0) && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p>Δεν υπάρχουν δικαιούχοι</p>
+                      <p className="text-sm">Πατήστε "Προσθήκη Δικαιούχου" για να προσθέσετε</p>
+                    </div>
+                  )}
 
                   {form.watch("recipients")?.map((recipient, index) => (
                     <Card key={index} className="border-2">
