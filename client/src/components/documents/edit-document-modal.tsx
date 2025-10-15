@@ -49,6 +49,7 @@ const recipientSchema = z.object({
   amount: z.number().min(0, "Το ποσό δεν μπορεί να είναι αρνητικό"),
   installment: z.string().default("ΕΦΑΠΑΞ"),
   status: z.string().optional(),
+  secondary_text: z.string().optional().default(""),
 });
 
 // Define the base form schema
@@ -161,6 +162,154 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Track selected project from document
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  // Smart cascading geographic selection state
+  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
+  const [selectedUnitFilter, setSelectedUnitFilter] = useState<string>("");
+  const [selectedMunicipalityId, setSelectedMunicipalityId] = useState<string>("");
+
+  // Geographic data query using the new normalized structure
+  const { data: geographicData, isLoading: geographicDataLoading } = useQuery({
+    queryKey: ["geographic-data"],
+    queryFn: async () => {
+      const response = await apiRequest("/api/geographic-data");
+      console.log("[EditDocument] Geographic data loaded:", response);
+      return response;
+    },
+    enabled: open,
+  });
+
+  // Project-specific geographic areas
+  const { data: projectGeographicAreas = [], isLoading: regionsLoading } = useQuery({
+    queryKey: ["project-geographic-areas", selectedProjectId],
+    queryFn: async () => {
+      if (!selectedProjectId) {
+        return [];
+      }
+
+      try {
+        // Find the project to get its MIS
+        const project = projects.find((p) => p.id === selectedProjectId);
+        if (!project) {
+          console.error("Project not found:", selectedProjectId);
+          return [];
+        }
+
+        console.log("Fetching geographic areas for project:", {
+          id: selectedProjectId,
+          mis: project.mis,
+        });
+
+        // Fetch project complete data which includes geographic relationships
+        const response = await apiRequest(
+          `/api/projects/${encodeURIComponent(project.mis || "")}/complete`,
+        );
+
+        if (!response || !geographicData) {
+          return [];
+        }
+
+        // Extract project-specific geographic areas
+        const projectRegions = (response as any)?.projectGeographicData?.regions || [];
+        const projectUnits = (response as any)?.projectGeographicData?.regionalUnits || [];
+        const projectMunicipalities = (response as any)?.projectGeographicData?.municipalities || [];
+
+        console.log("[EditDocument] Project-specific geographic data:", {
+          regions: projectRegions.length,
+          units: projectUnits.length,
+          municipalities: projectMunicipalities.length,
+        });
+
+        // Remove duplicates by using a Set based on code
+        const uniqueRegions = Array.from(
+          new Map(
+            projectRegions.map((item: any) => [
+              item.region_code || item.regions?.code,
+              item,
+            ]),
+          ).values(),
+        );
+
+        const uniqueUnits = Array.from(
+          new Map(
+            projectUnits.map((item: any) => [
+              item.unit_code || item.regional_units?.code,
+              item,
+            ]),
+          ).values(),
+        );
+
+        const uniqueMunicipalities = Array.from(
+          new Map(
+            projectMunicipalities.map((item: any) => [
+              item.muni_code || item.municipalities?.code,
+              item,
+            ]),
+          ).values(),
+        );
+
+        const smartGeographicData = {
+          availableRegions: uniqueRegions.map((item: any) => ({
+            id: `region-${item.region_code || item.regions?.code}`,
+            code: item.region_code || item.regions?.code,
+            name: item.regions?.name || item.name,
+            type: "region",
+          })),
+          availableUnits: uniqueUnits.map((item: any) => ({
+            id: `unit-${item.unit_code || item.regional_units?.code}`,
+            code: item.unit_code || item.regional_units?.code,
+            name: item.regional_units?.name || item.name,
+            type: "regional_unit",
+            region_code: item.regional_units?.region_code,
+          })),
+          availableMunicipalities: uniqueMunicipalities.map((item: any) => ({
+            id: `municipality-${item.muni_code || item.municipalities?.code}`,
+            code: item.muni_code || item.municipalities?.code,
+            name: item.municipalities?.name || item.name,
+            type: "municipality",
+            unit_code: item.municipalities?.unit_code,
+          })),
+        };
+
+        console.log("[EditDocument] Smart geographic data:", smartGeographicData);
+        return smartGeographicData;
+      } catch (error) {
+        console.error("Error fetching project geographic areas:", error);
+        toast({
+          title: "Σφάλμα",
+          description: "Αποτυχία φόρτωσης περιοχών",
+          variant: "destructive",
+        });
+        return [];
+      }
+    },
+    enabled: Boolean(selectedProjectId) && projects.length > 0 && !!geographicData && open,
+  });
+
+  // Computed available options based on current selections
+  const availableRegions = (projectGeographicAreas as any)?.availableRegions || [];
+  const availableUnits = selectedRegionFilter
+    ? ((projectGeographicAreas as any)?.availableUnits || []).filter(
+        (unit: any) => unit.region_code === selectedRegionFilter,
+      )
+    : (projectGeographicAreas as any)?.availableUnits || [];
+  const availableMunicipalities = selectedUnitFilter
+    ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
+        (municipality: any) => municipality.unit_code === selectedUnitFilter,
+      )
+    : selectedRegionFilter
+      ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
+          (municipality: any) => {
+            const unit = ((projectGeographicAreas as any)?.availableUnits || []).find(
+              (u: any) => u.code === municipality.unit_code
+            );
+            return unit?.region_code === selectedRegionFilter;
+          },
+        )
+      : (projectGeographicAreas as any)?.availableMunicipalities || [];
+
   // Convert beneficiary payments to recipients format for the form
   const recipients = useMemo(() => {
     if (!beneficiaryPayments || !Array.isArray(beneficiaryPayments) || beneficiaryPayments.length === 0) return [];
@@ -175,6 +324,7 @@ export function EditDocumentModal({
       amount: parseFloat(payment.amount) || 0,
       installment: payment.installment || 'ΕΦΑΠΑΞ',
       status: payment.status || 'pending',
+      secondary_text: payment.freetext || '',
     }));
   }, [beneficiaryPayments]);
 
@@ -242,6 +392,11 @@ export function EditDocumentModal({
         if (unit) {
           setSelectedUnitForProjects(unit.unit || "");
         }
+      }
+
+      // Set selected project ID for geographic area queries
+      if (document.project_index_id) {
+        setSelectedProjectId(document.project_index_id);
       }
     }
   }, [document, open, form, calculatedTotal, recipients, isCorrection, units]);
@@ -378,7 +533,8 @@ export function EditDocumentModal({
         fathername: "", 
         afm: "", 
         amount: 0, 
-        installment: "ΕΦΑΠΑΞ" 
+        installment: "ΕΦΑΠΑΞ",
+        secondary_text: ""
       }
     ]);
   };
@@ -730,23 +886,256 @@ export function EditDocumentModal({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <FormField
-                    control={form.control}
-                    name="geographic_region"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Περιοχή</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="π.χ. Αττική, Θεσσαλονίκη..."
-                            {...field}
-                            data-testid="input-geographic-region"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {/* Smart Hierarchical Geographic Selection */}
+                  {(availableRegions.length > 0 ||
+                    availableUnits.length > 0 ||
+                    availableMunicipalities.length > 0) ? (
+                    <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
+                      <h3 className="text-xs font-medium text-gray-700">
+                        Γεωγραφική Περιοχή Διαβιβαστίκου
+                      </h3>
+
+                      {/* Filter by Region */}
+                      {availableRegions.length > 0 && (
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
+                            Φίλτρο Περιφέρειας
+                          </label>
+                          <div className="flex-1">
+                            <Select
+                              value={selectedRegionFilter}
+                              onValueChange={(value) => {
+                                const regionCode = value === "all" ? "" : value;
+                                setSelectedRegionFilter(regionCode);
+                                setSelectedUnitFilter("");
+
+                                if (regionCode) {
+                                  const selectedRegionName =
+                                    availableRegions.find(
+                                      (r: any) => r.code === regionCode,
+                                    )?.name || "";
+                                  form.setValue("geographic_region", selectedRegionName);
+                                  setSelectedMunicipalityId("");
+                                  console.log(
+                                    "[EditDocument] Selected region as final choice:",
+                                    selectedRegionName,
+                                  );
+                                } else {
+                                  form.setValue("geographic_region", "");
+                                  setSelectedMunicipalityId("");
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Όλες οι περιφέρειες" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  Όλες οι περιφέρειες
+                                </SelectItem>
+                                {availableRegions.map((region: any) => (
+                                  <SelectItem
+                                    key={`region-${region.code}`}
+                                    value={region.code}
+                                  >
+                                    {region.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Filter by Regional Unit */}
+                      {availableUnits.length > 0 && (
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
+                            Φίλτρο Περιφερειακής Ενότητας
+                            {selectedRegionFilter && (
+                              <span className="text-gray-500">
+                                (στην{" "}
+                                {
+                                  availableRegions.find(
+                                    (r: any) => r.code === selectedRegionFilter,
+                                  )?.name
+                                }
+                                )
+                              </span>
+                            )}
+                          </label>
+                          <div className="flex-1">
+                            <Select
+                              value={selectedUnitFilter}
+                              onValueChange={(value) => {
+                                const unitCode = value === "all" ? "" : value;
+                                setSelectedUnitFilter(unitCode);
+
+                                if (unitCode) {
+                                  const selectedUnit = availableUnits.find(
+                                    (u: any) => u.code === unitCode,
+                                  );
+
+                                  if (selectedUnit) {
+                                    if (selectedUnit.region_code) {
+                                      setSelectedRegionFilter(
+                                        selectedUnit.region_code,
+                                      );
+                                    }
+
+                                    form.setValue("geographic_region", selectedUnit.name);
+                                    setSelectedMunicipalityId("");
+                                    console.log(
+                                      "[EditDocument] Selected regional unit as final choice:",
+                                      selectedUnit.name,
+                                    );
+                                  }
+                                } else if (!selectedRegionFilter) {
+                                  form.setValue("geographic_region", "");
+                                  setSelectedMunicipalityId("");
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">
+                                  Όλες οι περιφερειακές ενότητες
+                                </SelectItem>
+                                {availableUnits.map((unit: any) => (
+                                  <SelectItem
+                                    key={`unit-${unit.code}`}
+                                    value={unit.code}
+                                  >
+                                    {unit.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Final Municipality Selection */}
+                      {availableMunicipalities.length > 0 && (
+                        <div className="flex items-center gap-3">
+                          <label className="text-xs font-medium whitespace-nowrap min-w-[140px]">
+                            Τελική Επιλογή Δήμου/Κοινότητας
+                            {(selectedRegionFilter || selectedUnitFilter) && (
+                              <span className="text-xs text-gray-500 ml-2">
+                                ({availableMunicipalities.length} διαθέσιμες
+                                επιλογές)
+                              </span>
+                            )}
+                          </label>
+                          <div className="flex-1">
+                            <Select
+                              value={selectedMunicipalityId}
+                              onValueChange={(value) => {
+                                const selectedMunicipality =
+                                  availableMunicipalities.find(
+                                    (m: any) => m.id === value,
+                                  );
+                                if (selectedMunicipality) {
+                                  const parentUnit = (
+                                    (projectGeographicAreas as any)
+                                      ?.availableUnits || []
+                                  ).find(
+                                    (u: any) =>
+                                      u.code === selectedMunicipality.unit_code,
+                                  );
+
+                                  if (parentUnit) {
+                                    setSelectedUnitFilter(parentUnit.code);
+
+                                    if (parentUnit.region_code) {
+                                      setSelectedRegionFilter(
+                                        parentUnit.region_code,
+                                      );
+                                    }
+                                  }
+
+                                  form.setValue(
+                                    "geographic_region",
+                                    selectedMunicipality.name,
+                                  );
+                                  setSelectedMunicipalityId(value);
+                                  console.log(
+                                    "[EditDocument] Selected municipality as final choice:",
+                                    selectedMunicipality.name,
+                                  );
+                                }
+                              }}
+                              disabled={regionsLoading}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                {availableMunicipalities
+                                  .filter(
+                                    (municipality: any) =>
+                                      municipality.code && municipality.name,
+                                  )
+                                  .map((municipality: any) => (
+                                    <SelectItem
+                                      key={`municipality-${municipality.code}`}
+                                      value={municipality.id}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className="font-medium">
+                                          {municipality.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">
+                                          Δήμος/Κοινότητα
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                {availableMunicipalities.length === 0 && (
+                                  <SelectItem
+                                    value="no-municipalities"
+                                    disabled
+                                  >
+                                    Δεν υπάρχουν διαθέσιμοι δήμοι
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show current selection path */}
+                      {(selectedRegionFilter ||
+                        selectedUnitFilter ||
+                        selectedMunicipalityId) && (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                          <strong>Επιλεγμένη γεωγραφική περιοχή:</strong>{" "}
+                          {form.watch("geographic_region") || "Καμία επιλογή"}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="geographic_region"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Περιοχή (Χειροκίνητη Εισαγωγή)</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="π.χ. Αττική, Θεσσαλονίκη..."
+                              {...field}
+                              data-testid="input-geographic-region"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </CardContent>
               </Card>
 
@@ -860,23 +1249,38 @@ export function EditDocumentModal({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`recipients.${index}.afm`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>ΑΦΜ *</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    maxLength={9}
-                                    data-testid={`input-recipient-afm-${index}`}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
+                          <div>
+                            <FormLabel>ΑΦΜ *</FormLabel>
+                            <SimpleAFMAutocomplete
+                              expenditureType=""
+                              value={form.watch(`recipients.${index}.afm`) || ""}
+                              onChange={(afm) => {
+                                form.setValue(`recipients.${index}.afm`, afm);
+                              }}
+                              onSelectPerson={(personData) => {
+                                if (personData) {
+                                  form.setValue(`recipients.${index}.firstname`, personData.name || "");
+                                  form.setValue(`recipients.${index}.lastname`, personData.surname || "");
+                                  form.setValue(`recipients.${index}.fathername`, personData.fathername || "");
+                                  const secondaryText = (personData as any).freetext || (personData as any).attribute || "";
+                                  if (secondaryText) {
+                                    form.setValue(`recipients.${index}.secondary_text`, secondaryText);
+                                  }
+                                }
+                              }}
+                              placeholder="Αναζήτηση με ΑΦΜ..."
+                              className="w-full"
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.afm`}
+                              render={() => (
+                                <FormItem>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
                           <FormField
                             control={form.control}

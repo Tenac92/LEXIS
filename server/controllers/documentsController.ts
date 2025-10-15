@@ -2981,6 +2981,7 @@ router.get(
         installment,
         status,
         payment_date,
+        freetext,
         beneficiaries (
           id,
           afm,
