@@ -1259,7 +1259,7 @@ router.get("/", async (req: Request, res: Response) => {
               .select(
                 `
                 id,
-                amount,
+                net_payable,
                 month,
                 days,
                 daily_compensation,
@@ -1681,7 +1681,7 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
               .select(
                 `
                 id,
-                amount,
+                net_payable,
                 month,
                 days,
                 daily_compensation,
