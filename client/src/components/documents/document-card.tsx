@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
 import { DocumentDetailsModal } from "./DocumentDetailsModal";
+import { ViewDocumentModal } from "./document-modals";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -111,6 +112,7 @@ const DocumentCard = memo(function DocumentCard({
   const [isLoading, setIsLoading] = useState(false);
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showProtocolModal, setShowProtocolModal] = useState(false);
   const [projectNa853, setProjectNa853] = useState<string>(
     (doc as any).project_na853 || "",
   );
@@ -771,12 +773,22 @@ const DocumentCard = memo(function DocumentCard({
         onOpenChange={setShowCorrectionModal}
         document={doc}
         mode="correction"
+        onCorrectionSuccess={() => {
+          // After successful correction, open the protocol modal
+          setShowProtocolModal(true);
+        }}
       />
 
       <DocumentDetailsModal
         document={doc}
         open={showDetailsModal}
         onOpenChange={setShowDetailsModal}
+      />
+
+      <ViewDocumentModal
+        isOpen={showProtocolModal}
+        onClose={() => setShowProtocolModal(false)}
+        document={doc}
       />
     </>
   );

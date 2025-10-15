@@ -69,10 +69,8 @@ const baseDocumentFormSchema = z.object({
   unit_id: z.number().optional(),
 });
 
-// Correction mode requires protocol info and reason
+// Correction mode requires only correction reason (protocol will be set via modal after save)
 const correctionFormSchema = baseDocumentFormSchema.extend({
-  protocol_number_input: z.string().min(1, "Ο νέος αριθμός πρωτοκόλλου είναι υποχρεωτικός"),
-  protocol_date: z.string().min(1, "Η νέα ημερομηνία πρωτοκόλλου είναι υποχρεωτική"),
   correction_reason: z.string().min(1, "Ο λόγος διόρθωσης είναι υποχρεωτικός"),
 });
 
@@ -83,6 +81,7 @@ interface EditDocumentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode?: 'edit' | 'correction';
+  onCorrectionSuccess?: (documentId: number) => void; // Callback to open protocol modal after correction
 }
 
 const STATUS_OPTIONS = [
@@ -97,7 +96,8 @@ export function EditDocumentModal({
   document, 
   open, 
   onOpenChange,
-  mode = 'edit' 
+  mode = 'edit',
+  onCorrectionSuccess
 }: EditDocumentModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -312,7 +312,7 @@ export function EditDocumentModal({
       toast({
         title: "Επιτυχία",
         description: isCorrection 
-          ? "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς" 
+          ? "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς. Προσθέστε τώρα το νέο πρωτόκολλο." 
           : "Το έγγραφο ενημερώθηκε επιτυχώς",
       });
       
@@ -321,6 +321,11 @@ export function EditDocumentModal({
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
       queryClient.invalidateQueries({ queryKey: ['/api/documents', document?.id, 'beneficiaries'] });
       refetchPayments();
+      
+      // For corrections, trigger the protocol modal callback before closing
+      if (isCorrection && onCorrectionSuccess && document?.id) {
+        onCorrectionSuccess(document.id);
+      }
       
       onOpenChange(false);
     },
@@ -452,47 +457,46 @@ export function EditDocumentModal({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="protocol_number_input"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {isCorrection ? "Νέος Αριθμός Πρωτοκόλλου" : "Αριθμός Πρωτοκόλλου"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="π.χ. 12345/2025"
-                              {...field}
-                              data-testid="input-protocol-number"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  {/* Protocol fields: Only show in edit mode, not in correction mode */}
+                  {!isCorrection && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="protocol_number_input"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="π.χ. 12345/2025"
+                                {...field}
+                                data-testid="input-protocol-number"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="protocol_date"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {isCorrection ? "Νέα Ημερομηνία Πρωτοκόλλου" : "Ημερομηνία Πρωτοκόλλου"}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="date"
-                              {...field}
-                              data-testid="input-protocol-date"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                      <FormField
+                        control={form.control}
+                        name="protocol_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ημερομηνία Πρωτοκόλλου</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="date"
+                                {...field}
+                                data-testid="input-protocol-date"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
@@ -581,7 +585,7 @@ export function EditDocumentModal({
                                 form.setValue("project_index_id", undefined);
                               }
                             }} 
-                            value={field.value?.toString()}
+                            value={field.value ? field.value.toString() : undefined}
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-unit">
@@ -609,7 +613,7 @@ export function EditDocumentModal({
                           <FormLabel>Έργο</FormLabel>
                           <Select 
                             onValueChange={(value) => field.onChange(parseInt(value))} 
-                            value={field.value?.toString()}
+                            value={field.value ? field.value.toString() : undefined}
                             disabled={!selectedUnitForProjects}
                           >
                             <FormControl>
