@@ -393,6 +393,61 @@ export function EditDocumentModal({
     }
   }, [document, open, form, calculatedTotal, recipients, isCorrection, units]);
 
+  // Initialize geographic selection dropdowns from document's geographic_region
+  useEffect(() => {
+    const geographicRegion = (document as any)?.region || (document as any)?.geographic_region;
+    if (!document || !open || !projectGeographicAreas || !geographicRegion) return;
+    if (!geographicRegion) return;
+
+    const areas = projectGeographicAreas as any;
+    
+    // Try to find matching region
+    const matchingRegion = areas.availableRegions?.find((r: any) => 
+      r.name === geographicRegion
+    );
+    
+    if (matchingRegion) {
+      setSelectedRegionFilter(matchingRegion.code);
+      setSelectedUnitFilter("");
+      setSelectedMunicipalityId("");
+      return;
+    }
+
+    // Try to find matching regional unit
+    const matchingUnit = areas.availableUnits?.find((u: any) => 
+      u.name === geographicRegion
+    );
+    
+    if (matchingUnit) {
+      setSelectedUnitFilter(matchingUnit.code);
+      if (matchingUnit.region_code) {
+        setSelectedRegionFilter(matchingUnit.region_code);
+      }
+      setSelectedMunicipalityId("");
+      return;
+    }
+
+    // Try to find matching municipality
+    const matchingMunicipality = areas.availableMunicipalities?.find((m: any) => 
+      m.name === geographicRegion
+    );
+    
+    if (matchingMunicipality) {
+      // Use code for Select value, not id
+      setSelectedMunicipalityId(matchingMunicipality.code);
+      if (matchingMunicipality.unit_code) {
+        setSelectedUnitFilter(matchingMunicipality.unit_code);
+      }
+      // Find the region for this municipality
+      const parentUnit = areas.availableUnits?.find((u: any) => 
+        u.code === matchingMunicipality.unit_code
+      );
+      if (parentUnit?.region_code) {
+        setSelectedRegionFilter(parentUnit.region_code);
+      }
+    }
+  }, [document, open, projectGeographicAreas]);
+
   // Update or create correction mutation
   const updateMutation = useMutation({
     mutationFn: async (data: DocumentForm) => {
