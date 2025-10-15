@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, memo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
-import { OrthiEpanalipsiModal } from "./orthi-epanalipsi-modal";
+import { EditDocumentModal } from "./edit-document-modal";
 import { DocumentDetailsModal } from "./DocumentDetailsModal";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -766,10 +766,11 @@ const DocumentCard = memo(function DocumentCard({
         </div>
       </div>
 
-      <OrthiEpanalipsiModal
-        isOpen={showCorrectionModal}
-        onClose={() => setShowCorrectionModal(false)}
+      <EditDocumentModal
+        open={showCorrectionModal}
+        onOpenChange={setShowCorrectionModal}
         document={doc}
+        mode="correction"
       />
 
       <DocumentDetailsModal

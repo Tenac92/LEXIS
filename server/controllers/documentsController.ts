@@ -2209,6 +2209,154 @@ router.patch(
   },
 );
 
+// Create correction (Orthi Epanalipsi) for a document
+router.post("/:id/correction", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      correction_reason,
+      protocol_number_input,
+      protocol_date,
+      status,
+      comments,
+      total_amount,
+      esdian,
+      recipients,
+    } = req.body;
+
+    if (!req.user?.id) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    if (!correction_reason) {
+      return res.status(400).json({
+        message: "Correction reason is required",
+      });
+    }
+
+    // Get the original document
+    const { data: originalDoc, error: fetchError } = await supabase
+      .from("generated_documents")
+      .select("*")
+      .eq("id", parseInt(id))
+      .single();
+
+    if (fetchError || !originalDoc) {
+      return res.status(404).json({
+        message: "Original document not found",
+        error: fetchError?.message,
+      });
+    }
+
+    // Update the original document to mark it as corrected
+    const { error: updateError } = await supabase
+      .from("generated_documents")
+      .update({
+        is_correction: true,
+        original_protocol_number: originalDoc.protocol_number_input,
+        original_protocol_date: originalDoc.protocol_date,
+        protocol_number_input: protocol_number_input || null,
+        protocol_date: protocol_date || null,
+        status: status || originalDoc.status,
+        comments: `${comments || originalDoc.comments || ''}\n\nΛόγος Διόρθωσης: ${correction_reason}`,
+        total_amount: total_amount || originalDoc.total_amount,
+        esdian: esdian || originalDoc.esdian,
+        updated_at: new Date().toISOString(),
+        updated_by: req.user.id.toString(),
+      })
+      .eq("id", parseInt(id));
+
+    if (updateError) {
+      console.error("Correction update error:", updateError);
+      return res.status(500).json({
+        message: "Failed to create correction",
+        error: updateError.message,
+      });
+    }
+
+    // Update beneficiaries if provided
+    if (recipients && recipients.length > 0) {
+      // Delete existing beneficiary payments
+      await supabase
+        .from("beneficiary_payments")
+        .delete()
+        .eq("document_id", parseInt(id));
+
+      // Create new beneficiary payments
+      for (const recipient of recipients) {
+        // First, try to find or create beneficiary
+        let beneficiaryId: number | null = null;
+
+        if (recipient.afm) {
+          const { data: existingBeneficiary } = await supabase
+            .from("beneficiaries")
+            .select("id")
+            .eq("afm", recipient.afm)
+            .single();
+
+          if (existingBeneficiary) {
+            beneficiaryId = existingBeneficiary.id;
+          } else {
+            // Create new beneficiary
+            const { data: newBeneficiary } = await supabase
+              .from("beneficiaries")
+              .insert({
+                afm: recipient.afm,
+                name: recipient.firstname,
+                surname: recipient.lastname,
+                fathername: recipient.fathername || null,
+              })
+              .select("id")
+              .single();
+
+            if (newBeneficiary) {
+              beneficiaryId = newBeneficiary.id;
+            }
+          }
+        }
+
+        // Create beneficiary payment
+        if (beneficiaryId) {
+          await supabase
+            .from("beneficiary_payments")
+            .insert({
+              beneficiary_id: beneficiaryId,
+              document_id: parseInt(id),
+              installment: recipient.installment || "ΕΦΑΠΑΞ",
+              amount: recipient.amount,
+              status: recipient.status || "pending",
+              project_index_id: originalDoc.project_index_id,
+              unit_id: originalDoc.unit_id,
+            });
+        }
+      }
+    }
+
+    // Broadcast correction update
+    broadcastDocumentUpdate({
+      type: "DOCUMENT_UPDATE",
+      documentId: parseInt(id),
+      data: {
+        id: parseInt(id),
+        is_correction: true,
+        correction_reason,
+      },
+    });
+
+    return res.json({
+      success: true,
+      message: "Correction created successfully",
+      documentId: parseInt(id),
+    });
+  } catch (error) {
+    console.error("Correction creation error:", error);
+    return res.status(500).json({
+      message: "Failed to create correction",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
 // Create new document
 router.post("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
