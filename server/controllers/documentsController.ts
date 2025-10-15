@@ -1213,9 +1213,10 @@ router.get("/", async (req: Request, res: Response) => {
     };
 
     // Get documents from database directly, ordered by most recent first
+    // Explicitly select all columns including payment ID arrays
     let query = supabase
       .from("generated_documents")
-      .select("*")
+      .select("*, employee_payments_id, beneficiary_payments_id")
       .order("created_at", { ascending: false });
 
     // Apply filters only if they exist
@@ -1251,6 +1252,8 @@ router.get("/", async (req: Request, res: Response) => {
           doc.employee_payments_id.length > 0
         ) {
           try {
+            console.log(`[DocumentsController] Fetching employee payments for document ${doc.id} with IDs:`, doc.employee_payments_id);
+            
             const { data: empPayments, error: empPaymentsError } = await supabase
               .from("EmployeePayments")
               .select(
@@ -1267,14 +1270,19 @@ router.get("/", async (req: Request, res: Response) => {
                 Employees (
                   id,
                   afm,
-                  lastname,
-                  firstname,
+                  surname,
+                  name,
                   fathername,
-                  profession
+                  klados
                 )
               `,
               )
               .in("id", doc.employee_payments_id);
+
+            console.log(`[DocumentsController] Employee payments query result for doc ${doc.id}:`, {
+              error: empPaymentsError,
+              paymentsCount: empPayments?.length || 0
+            });
 
             if (!empPaymentsError && empPayments) {
               // Transform employee payments into recipients format
@@ -1284,8 +1292,8 @@ router.get("/", async (req: Request, res: Response) => {
                   : payment.Employees;
                 return {
                   id: employee?.id,
-                  firstname: employee?.firstname || "",
-                  lastname: employee?.lastname || "",
+                  firstname: employee?.name || "",
+                  lastname: employee?.surname || "",
                   fathername: employee?.fathername || "",
                   afm: employee?.afm ? String(employee.afm) : "",
                   amount: parseFloat(payment.amount) || 0,
@@ -1296,9 +1304,12 @@ router.get("/", async (req: Request, res: Response) => {
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
                   status: payment.status || "pending",
-                  secondary_text: employee?.profession || null,
+                  secondary_text: employee?.klados || null,
                 };
               });
+              console.log(`[DocumentsController] Transformed ${recipients.length} employee payments into recipients for doc ${doc.id}`);
+            } else if (empPaymentsError) {
+              console.error(`[DocumentsController] Error fetching employee payments for doc ${doc.id}:`, empPaymentsError);
             }
           } catch (err) {
             console.error(
@@ -1550,6 +1561,15 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
+    // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ documents
+    filteredDocuments.forEach(doc => {
+      if (doc.employee_payments_id && doc.employee_payments_id.length > 0) {
+        console.log(`[DocumentsController] Document ${doc.id} - employee_payments_id:`, doc.employee_payments_id);
+        console.log(`[DocumentsController] Document ${doc.id} - recipients count:`, doc.recipients?.length || 0);
+        console.log(`[DocumentsController] Document ${doc.id} - recipients data:`, JSON.stringify(doc.recipients).substring(0, 200));
+      }
+    });
+
     return res.json(filteredDocuments);
   } catch (error) {
     console.error("Error fetching documents:", error);
@@ -1654,6 +1674,8 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
           doc.employee_payments_id.length > 0
         ) {
           try {
+            console.log(`[DocumentsController] Fetching employee payments for document ${doc.id} with IDs:`, doc.employee_payments_id);
+            
             const { data: empPayments, error: empPaymentsError } = await supabase
               .from("EmployeePayments")
               .select(
@@ -1670,14 +1692,19 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                 Employees (
                   id,
                   afm,
-                  lastname,
-                  firstname,
+                  surname,
+                  name,
                   fathername,
-                  profession
+                  klados
                 )
               `,
               )
               .in("id", doc.employee_payments_id);
+
+            console.log(`[DocumentsController] Employee payments query result for doc ${doc.id}:`, {
+              error: empPaymentsError,
+              paymentsCount: empPayments?.length || 0
+            });
 
             if (!empPaymentsError && empPayments) {
               // Transform employee payments into recipients format
@@ -1687,8 +1714,8 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   : payment.Employees;
                 return {
                   id: employee?.id,
-                  firstname: employee?.firstname || "",
-                  lastname: employee?.lastname || "",
+                  firstname: employee?.name || "",
+                  lastname: employee?.surname || "",
                   fathername: employee?.fathername || "",
                   afm: employee?.afm ? String(employee.afm) : "",
                   amount: parseFloat(payment.amount) || 0,
@@ -1699,9 +1726,12 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
                   status: payment.status || "pending",
-                  secondary_text: employee?.profession || null,
+                  secondary_text: employee?.klados || null,
                 };
               });
+              console.log(`[DocumentsController] Transformed ${recipients.length} employee payments into recipients for doc ${doc.id}`);
+            } else if (empPaymentsError) {
+              console.error(`[DocumentsController] Error fetching employee payments for doc ${doc.id}:`, empPaymentsError);
             }
           } catch (err) {
             console.error(
