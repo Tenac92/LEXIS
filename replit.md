@@ -4,6 +4,28 @@ This is a comprehensive document management system specifically designed for the
 
 # Recent Changes
 
+## October 15, 2025 - Full Document Editing with Budget Reconciliation
+- **Feature**: Extended document editing capabilities to include all document fields with automatic budget reconciliation
+- **Frontend Changes** (`client/src/components/documents/edit-document-modal.tsx`):
+  - Added `project_index_id` and `unit_id` fields to form schema
+  - Added queries to fetch units (`/api/public/units`) and projects (`/api/projects-working/${unit}`)
+  - Implemented cascading unit → project selection with proper state management
+  - Added UI fields in new "Έργο & Μονάδα" card section between document info and ESDIAN fields
+  - Updated form reset and mutation payloads to include project and unit
+- **Backend - Budget Reconciliation Service** (`server/storage.ts`):
+  - Created `reconcileBudgetOnDocumentEdit()` function to handle budget updates when documents are edited
+  - Handles 4 scenarios: project changed, amount changed, both changed, project added/removed
+  - Implements compensating transaction logic: if adding to new project fails, restores old project budget before throwing error
+  - Prevents budget inconsistencies with CRITICAL logging for double-failure scenarios
+- **Backend - Document Endpoints** (`server/controllers/documentsController.ts`):
+  - PATCH `/:id`: Fetches old project/amount, updates document, reconciles budget, broadcasts update
+  - POST `/:id/correction`: Now supports project/unit/amount changes with budget reconciliation
+  - Both endpoints handle budget errors gracefully without failing document updates
+  - Added `storage` import for budget reconciliation access
+- **Budget History**: All budget changes from document edits are logged with proper audit trail
+- **WebSocket Updates**: Budget changes broadcast in real-time after reconciliation completes
+- **Impact**: Users can now fully edit all document fields (project, unit, amounts, recipients, protocol info) with automatic budget tracking and reconciliation. Budget integrity is maintained even during errors through compensating transactions.
+
 ## October 14, 2025 - ΕΚΤΟΣ ΕΔΡΑΣ Employee Payments Integration
 - **Issue**: ΕΚΤΟΣ ΕΔΡΑΣ documents were not saving employee payment IDs, and document cards couldn't display employee payment data
 - **Solution**:
