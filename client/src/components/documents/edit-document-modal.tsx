@@ -174,12 +174,22 @@ export function EditDocumentModal({
     }));
   }, [beneficiaryPayments]);
 
+  // Watch recipients and auto-calculate total
+  const watchedRecipients = form.watch("recipients") || [];
+  
   // Calculate total amount from recipients
   const calculatedTotal = useMemo(() => {
-    return recipients.reduce((sum: number, recipient: any) => {
+    return watchedRecipients.reduce((sum: number, recipient: any) => {
       return sum + (parseFloat(recipient.amount) || 0);
     }, 0);
-  }, [recipients]);
+  }, [watchedRecipients]);
+
+  // Auto-update total_amount when recipients change
+  useEffect(() => {
+    if (calculatedTotal !== form.getValues("total_amount")) {
+      form.setValue("total_amount", calculatedTotal);
+    }
+  }, [calculatedTotal, form]);
 
   // Reset form when document changes
   useEffect(() => {
@@ -525,19 +535,20 @@ export function EditDocumentModal({
                         <FormItem>
                           <FormLabel className="flex items-center gap-2">
                             <Euro className="w-4 h-4" />
-                            Συνολικό Ποσό
+                            Συνολικό Ποσό (Αυτόματος Υπολογισμός)
                           </FormLabel>
                           <FormControl>
                             <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                              type="text"
+                              value={`€ ${field.value.toFixed(2)}`}
+                              readOnly
+                              className="bg-gray-100 font-semibold"
                               data-testid="input-total-amount"
                             />
                           </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Υπολογίζεται αυτόματα από τα ποσά των δικαιούχων
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
