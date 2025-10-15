@@ -64,6 +64,9 @@ const baseDocumentFormSchema = z.object({
   original_protocol_date: z.string().optional(),
   correction_reason: z.string().optional(),
   recipients: z.array(recipientSchema).default([]),
+  // Project and unit fields
+  project_index_id: z.number().optional(),
+  unit_id: z.number().optional(),
 });
 
 // Correction mode requires protocol info and reason
@@ -132,6 +135,28 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch units for dropdown
+  const { data: units = [] } = useQuery<any[]>({
+    queryKey: ['/api/public/units'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache
+    enabled: open,
+  });
+
+  // Track selected unit for project filtering
+  const [selectedUnitForProjects, setSelectedUnitForProjects] = useState<string>("");
+
+  // Fetch projects based on selected unit
+  const { data: projects = [] } = useQuery<any[]>({
+    queryKey: ['projects-working', selectedUnitForProjects],
+    queryFn: async () => {
+      if (!selectedUnitForProjects) return [];
+      const response = await apiRequest(`/api/projects-working/${encodeURIComponent(selectedUnitForProjects)}`);
+      return Array.isArray(response) ? response : [];
+    },
+    enabled: !!selectedUnitForProjects && open,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Convert beneficiary payments to recipients format for the form
   const recipients = useMemo(() => {
     if (!beneficiaryPayments || !Array.isArray(beneficiaryPayments) || beneficiaryPayments.length === 0) return [];
@@ -190,11 +215,21 @@ export function EditDocumentModal({
         original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
         correction_reason: "",
         recipients: recipients.length > 0 ? recipients : [],
+        project_index_id: document.project_index_id || undefined,
+        unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       };
 
       form.reset(formData);
+
+      // Set the selected unit for project filtering
+      if (document.unit_id && units && Array.isArray(units)) {
+        const unit = units.find((u: any) => u.id === Number(document.unit_id));
+        if (unit) {
+          setSelectedUnitForProjects(unit.unit || "");
+        }
+      }
     }
-  }, [document, open, form, calculatedTotal, recipients, isCorrection]);
+  }, [document, open, form, calculatedTotal, recipients, isCorrection, units]);
 
   // Update or create correction mutation
   const updateMutation = useMutation({
@@ -213,6 +248,8 @@ export function EditDocumentModal({
           total_amount: data.total_amount,
           esdian: [data.esdian_field1, data.esdian_field2].filter(Boolean),
           recipients: data.recipients,
+          project_index_id: data.project_index_id,
+          unit_id: data.unit_id,
         };
 
         return await apiRequest(`/api/documents/${document.id}/correction`, {
@@ -233,6 +270,8 @@ export function EditDocumentModal({
           original_protocol_number: data.original_protocol_number || null,
           original_protocol_date: data.original_protocol_date || null,
           updated_at: new Date().toISOString(),
+          project_index_id: data.project_index_id,
+          unit_id: data.unit_id,
         };
 
         // Update document first
@@ -499,6 +538,86 @@ export function EditDocumentModal({
                               data-testid="input-total-amount"
                             />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Project and Unit Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Έργο & Μονάδα</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="unit_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Μονάδα</FormLabel>
+                          <Select 
+                            onValueChange={(value) => {
+                              field.onChange(parseInt(value));
+                              // Find the unit code for project filtering
+                              const unit = units.find((u: any) => u.id === parseInt(value));
+                              if (unit) {
+                                setSelectedUnitForProjects(unit.unit || "");
+                                // Clear project selection when unit changes
+                                form.setValue("project_index_id", undefined);
+                              }
+                            }} 
+                            value={field.value?.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-unit">
+                                <SelectValue placeholder="Επιλέξτε μονάδα" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {units && Array.isArray(units) && units.map((unit: any) => (
+                                <SelectItem key={unit.id} value={unit.id.toString()}>
+                                  {unit.name || unit.unit || unit.id}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="project_index_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Έργο</FormLabel>
+                          <Select 
+                            onValueChange={(value) => field.onChange(parseInt(value))} 
+                            value={field.value?.toString()}
+                            disabled={!selectedUnitForProjects}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-project">
+                                <SelectValue placeholder={
+                                  !selectedUnitForProjects 
+                                    ? "Επιλέξτε πρώτα μονάδα" 
+                                    : "Επιλέξτε έργο"
+                                } />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {projects && Array.isArray(projects) && projects.map((project: any) => (
+                                <SelectItem key={project.id} value={project.id.toString()}>
+                                  {project.project_name || project.name || project.mis}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}

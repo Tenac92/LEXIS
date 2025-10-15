@@ -11,6 +11,14 @@ export interface IStorage {
   getBudgetData(mis: string): Promise<ProjectBudget | null>;
   createBudgetHistoryEntry(entry: InsertBudgetHistory): Promise<void>;
   updateProjectBudgetSpending(projectId: number, amount: number, documentId: number, userId?: number): Promise<void>;
+  reconcileBudgetOnDocumentEdit(
+    documentId: number,
+    oldProjectId: number | null,
+    newProjectId: number | null,
+    oldAmount: number,
+    newAmount: number,
+    userId?: number
+  ): Promise<void>;
   getBudgetHistory(
     mis?: string, 
     page?: number, 
@@ -339,6 +347,79 @@ export class DatabaseStorage implements IStorage {
       
     } catch (error) {
       console.error('[Storage] Error in updateProjectBudgetSpending:', error);
+      throw error;
+    }
+  }
+
+  async reconcileBudgetOnDocumentEdit(
+    documentId: number,
+    oldProjectId: number | null,
+    newProjectId: number | null,
+    oldAmount: number,
+    newAmount: number,
+    userId?: number
+  ): Promise<void> {
+    try {
+      console.log(`[Storage] Reconciling budget for document ${documentId}:`, {
+        oldProjectId,
+        newProjectId,
+        oldAmount,
+        newAmount,
+      });
+
+      // Case 1: Project changed (with or without amount change)
+      if (oldProjectId && newProjectId && oldProjectId !== newProjectId) {
+        console.log(`[Storage] Project changed from ${oldProjectId} to ${newProjectId}`);
+        
+        try {
+          // Remove old amount from old project
+          await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
+          
+          // Add new amount to new project (if this fails, restore the old project)
+          try {
+            await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
+          } catch (newProjectError) {
+            // Compensating transaction: restore the old project's budget
+            console.error(`[Storage] Failed to add to new project ${newProjectId}, restoring old project ${oldProjectId}`);
+            try {
+              await this.updateProjectBudgetSpending(oldProjectId, oldAmount, documentId, userId);
+            } catch (restoreError) {
+              console.error(`[Storage] CRITICAL: Failed to restore old project budget:`, restoreError);
+            }
+            throw newProjectError;
+          }
+        } catch (error) {
+          console.error(`[Storage] Error in project change reconciliation:`, error);
+          throw error;
+        }
+        
+      } 
+      // Case 2: Only amount changed (same project)
+      else if (oldProjectId && oldProjectId === newProjectId && oldAmount !== newAmount) {
+        console.log(`[Storage] Amount changed from ${oldAmount} to ${newAmount} for project ${oldProjectId}`);
+        
+        const amountDifference = newAmount - oldAmount;
+        await this.updateProjectBudgetSpending(oldProjectId, amountDifference, documentId, userId);
+        
+      }
+      // Case 3: Project added (document didn't have a project before)
+      else if (!oldProjectId && newProjectId) {
+        console.log(`[Storage] Project added: ${newProjectId}`);
+        
+        await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
+        
+      }
+      // Case 4: Project removed (document had a project, now doesn't)
+      else if (oldProjectId && !newProjectId) {
+        console.log(`[Storage] Project removed: ${oldProjectId}`);
+        
+        await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
+      }
+      
+      console.log(`[Storage] Successfully reconciled budget for document ${documentId}`);
+      
+    } catch (error) {
+      console.error('[Storage] Error in reconcileBudgetOnDocumentEdit:', error);
       throw error;
     }
   }

@@ -7,6 +7,7 @@ import { authenticateSession } from "../authentication";
 import { DocumentGenerator } from "../utils/document-generator";
 import { broadcastDocumentUpdate } from "../services/websocketService";
 import { createLogger } from "../utils/logger";
+import { storage } from "../storage";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
@@ -1966,6 +1967,18 @@ router.patch(
         return res.status(401).json({ message: "Authentication required" });
       }
 
+      // Fetch the old document for budget reconciliation
+      const { data: oldDocument, error: fetchError } = await supabase
+        .from("generated_documents")
+        .select("project_index_id, total_amount")
+        .eq("id", documentId)
+        .single();
+
+      if (fetchError || !oldDocument) {
+        console.error("Error fetching old document:", fetchError);
+        return res.status(404).json({ message: "Document not found" });
+      }
+
       const updateData = {
         ...req.body,
         updated_at: new Date().toISOString(),
@@ -1989,6 +2002,40 @@ router.patch(
       if (!data) {
         return res.status(404).json({ message: "Document not found" });
       }
+
+      // Reconcile budget if project or amount changed
+      const oldProjectId = oldDocument.project_index_id;
+      const newProjectId = updateData.project_index_id ?? oldProjectId;
+      const oldAmount = parseFloat(String(oldDocument.total_amount || 0));
+      const newAmount = parseFloat(String(updateData.total_amount ?? oldAmount));
+
+      if (oldProjectId !== newProjectId || oldAmount !== newAmount) {
+        try {
+          await storage.reconcileBudgetOnDocumentEdit(
+            documentId,
+            oldProjectId,
+            newProjectId,
+            oldAmount,
+            newAmount,
+            req.user.id
+          );
+          console.log(`[DocumentsController] Budget reconciled for document ${documentId}`);
+        } catch (budgetError) {
+          console.error("[DocumentsController] Error reconciling budget:", budgetError);
+          // Don't fail the update if budget reconciliation fails, but log it
+        }
+      }
+
+      // Broadcast document update
+      broadcastDocumentUpdate({
+        type: "DOCUMENT_UPDATE",
+        documentId,
+        data: {
+          id: documentId,
+          project_index_id: newProjectId,
+          total_amount: newAmount,
+        },
+      });
 
       res.json(data);
     } catch (error) {
@@ -2234,7 +2281,7 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
       });
     }
 
-    // Get the original document
+    // Get the original document (with old values for budget reconciliation)
     const { data: originalDoc, error: fetchError } = await supabase
       .from("generated_documents")
       .select("*")
@@ -2248,6 +2295,11 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
       });
     }
 
+    // Get new values with fallbacks
+    const newProjectIndexId = req.body.project_index_id ?? originalDoc.project_index_id;
+    const newUnitId = req.body.unit_id ?? originalDoc.unit_id;
+    const newTotalAmount = total_amount ?? originalDoc.total_amount;
+
     // Update the original document to mark it as corrected
     const { error: updateError } = await supabase
       .from("generated_documents")
@@ -2259,8 +2311,10 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
         protocol_date: protocol_date || null,
         status: status || originalDoc.status,
         comments: `${comments || originalDoc.comments || ''}\n\nΛόγος Διόρθωσης: ${correction_reason}`,
-        total_amount: total_amount || originalDoc.total_amount,
+        total_amount: newTotalAmount,
         esdian: esdian || originalDoc.esdian,
+        project_index_id: newProjectIndexId,
+        unit_id: newUnitId,
         updated_at: new Date().toISOString(),
         updated_by: req.user.id.toString(),
       })
@@ -2272,6 +2326,28 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
         message: "Failed to create correction",
         error: updateError.message,
       });
+    }
+
+    // Reconcile budget if project or amount changed
+    const oldProjectId = originalDoc.project_index_id;
+    const oldAmount = parseFloat(String(originalDoc.total_amount || 0));
+    const newAmount = parseFloat(String(newTotalAmount || 0));
+
+    if (oldProjectId !== newProjectIndexId || oldAmount !== newAmount) {
+      try {
+        await storage.reconcileBudgetOnDocumentEdit(
+          parseInt(id),
+          oldProjectId,
+          newProjectIndexId,
+          oldAmount,
+          newAmount,
+          req.user.id
+        );
+        console.log(`[DocumentsController] Budget reconciled for correction ${id}`);
+      } catch (budgetError) {
+        console.error("[DocumentsController] Error reconciling budget:", budgetError);
+        // Don't fail the correction if budget reconciliation fails, but log it
+      }
     }
 
     // Update beneficiaries if provided
