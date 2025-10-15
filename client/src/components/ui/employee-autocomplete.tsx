@@ -46,12 +46,12 @@ export function EmployeeAutocomplete({
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 2) return [];
+      if (!searchTerm || searchTerm.length < 1) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
       const data = await response.json();
       return data.success ? data.data : [];
     },
-    enabled: searchTerm.length >= 2,
+    enabled: searchTerm.length >= 1,
   });
 
   // Find selected employee
@@ -105,9 +105,9 @@ export function EmployeeAutocomplete({
                     Αναζήτηση...
                   </div>
                 </div>
-              ) : searchTerm.length < 2 ? (
+              ) : searchTerm.length < 1 ? (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  Πληκτρολογήστε τουλάχιστον 2 χαρακτήρες
+                  Πληκτρολογήστε τουλάχιστον 1 χαρακτήρα
                 </div>
               ) : (
                 <div className="py-6 text-center text-sm text-muted-foreground">
