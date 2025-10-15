@@ -397,8 +397,8 @@ export function EditDocumentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-2">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2 shrink-0">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {isCorrection ? (
               <>
@@ -420,7 +420,7 @@ export function EditDocumentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6">
+        <div className="flex-1 overflow-y-auto px-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4">
               
@@ -987,9 +987,9 @@ export function EditDocumentModal({
               )}
             </form>
           </Form>
-        </ScrollArea>
+        </div>
 
-        <div className="p-6 pt-2 border-t flex justify-end gap-2">
+        <div className="p-6 pt-2 border-t flex justify-end gap-2 shrink-0">
           <Button
             type="button"
             variant="outline"
