@@ -40,6 +40,8 @@ import type { GeneratedDocument } from "@shared/schema";
 import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 
+// Use editDocumentSchema as base type - includes all fields with optional correction_reason
+// The zodResolver enforces correct validation based on mode (edit vs correction)
 type DocumentForm = z.infer<typeof editDocumentSchema>;
 
 interface EditDocumentModalProps {
