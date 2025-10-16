@@ -195,6 +195,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           project_title: project.project_title || project.event_description,
           event_description: project.event_description,
           expenditure_type: expenditureType?.expenditure_types,
+          expenditure_types: expenditureType?.expenditure_types ? [expenditureType.expenditure_types] : [],
           event_type: eventType?.name,
           monada_id: projectIndexItem.monada_id,
           created_at: project.created_at,
