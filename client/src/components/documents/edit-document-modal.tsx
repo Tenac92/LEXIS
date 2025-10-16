@@ -186,8 +186,9 @@ export function EditDocumentModal({
     return projectIndexData.expenditure_type_id;
   }, [projectIndexData]);
 
-  // Track selected project from document
+  // Track selected project and expenditure type from document
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedExpenditureTypeId, setSelectedExpenditureTypeId] = useState<number | null>(null);
 
   // Track if form has been initialized to prevent re-resetting on user changes
   const formInitializedRef = useRef(false);
@@ -489,10 +490,15 @@ export function EditDocumentModal({
     console.log('[EditDocument] NOTE: Form stores project_index.id:', document.project_index_id, 'but dropdown will display using project.id:', actualProjectId);
     form.reset(formData);
 
-    // Set selectedProjectId for geographic area queries AND dropdown display using resolved project.id
+    // Set selectedProjectId and selectedExpenditureTypeId for dropdowns and queries
     if (actualProjectId) {
       setSelectedProjectId(actualProjectId);
       console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries and dropdown display');
+    }
+    
+    if (documentExpenditureTypeId) {
+      setSelectedExpenditureTypeId(documentExpenditureTypeId);
+      console.log('[EditDocument] Set selectedExpenditureTypeId:', documentExpenditureTypeId);
     }
 
     // Mark as initialized to prevent re-resetting on user changes

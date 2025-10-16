@@ -106,6 +106,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Find project_index entry by matching project_id, unit_id, and expenditure_type_id
+  app.get('/api/project-index/find/:projectId/:unitId/:expenditureTypeId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { projectId, unitId, expenditureTypeId } = req.params;
+      
+      if (!projectId || !unitId || !expenditureTypeId) {
+        return res.status(400).json({ error: 'Project ID, Unit ID, and Expenditure Type ID are required' });
+      }
+      
+      const projectIdNum = parseInt(projectId, 10);
+      const unitIdNum = parseInt(unitId, 10);
+      const expenditureTypeIdNum = parseInt(expenditureTypeId, 10);
+      
+      if (isNaN(projectIdNum) || isNaN(unitIdNum) || isNaN(expenditureTypeIdNum)) {
+        return res.status(400).json({ error: 'All IDs must be valid numbers' });
+      }
+      
+      log(`[ProjectIndex] Finding project_index: project=${projectIdNum}, unit=${unitIdNum}, expenditure_type=${expenditureTypeIdNum}`);
+      
+      // Find matching project_index entry
+      const { data, error } = await supabase
+        .from('project_index')
+        .select('id, project_id, monada_id, expenditure_type_id')
+        .eq('project_id', projectIdNum)
+        .eq('monada_id', unitIdNum)
+        .eq('expenditure_type_id', expenditureTypeIdNum)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No matching entry found
+          log(`[ProjectIndex] No matching entry found for project=${projectIdNum}, unit=${unitIdNum}, expenditure_type=${expenditureTypeIdNum}`);
+          return res.status(404).json({ 
+            error: 'No matching project index entry found',
+            details: 'This combination of project, unit, and expenditure type does not exist'
+          });
+        }
+        log(`[ProjectIndex] Database error: ${error.message}`);
+        return res.status(500).json({ error: 'Failed to find project index entry' });
+      }
+      
+      log(`[ProjectIndex] Found matching project_index: id=${data.id}`);
+      return res.json(data);
+    } catch (error) {
+      console.error('[ProjectIndex] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
   // Projects by unit endpoint for document creation
   app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
     try {
