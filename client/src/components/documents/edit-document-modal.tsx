@@ -187,7 +187,7 @@ export function EditDocumentModal({
       }
       
       // Extract unique expenditure_type_id values
-      const expenditureTypeIds = [...new Set(response.map((pi: any) => pi.expenditure_type_id))];
+      const expenditureTypeIds = Array.from(new Set(response.map((pi: any) => pi.expenditure_type_id)));
       console.log('[EditDocument] Valid expenditure_type_ids from project_index:', expenditureTypeIds);
       
       // Filter allExpenditureTypes to only include valid ones from project_index
