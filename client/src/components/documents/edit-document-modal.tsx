@@ -153,7 +153,7 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch ALL expenditure types (for reference)
+  // Fetch ALL expenditure types (for lookup reference)
   const { data: allExpenditureTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/public/expenditure-types'],
     staleTime: 60 * 60 * 1000,
@@ -161,7 +161,8 @@ export function EditDocumentModal({
   });
 
   // Fetch valid expenditure types for the selected project from project_index
-  const { data: validExpenditureTypes = [] } = useQuery<any[]>({
+  // This is the ONLY source for the dropdown - no fallback to all types
+  const { data: expenditureTypes = [] } = useQuery<any[]>({
     queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId],
     queryFn: async () => {
       if (!selectedProjectId || !selectedUnitId) return [];
@@ -174,15 +175,12 @@ export function EditDocumentModal({
       // Extract unique expenditure_type_id values
       const expenditureTypeIds = [...new Set(response.map((pi: any) => pi.expenditure_type_id))];
       
-      // Filter allExpenditureTypes to only include valid ones
+      // Filter allExpenditureTypes to only include valid ones from project_index
       return allExpenditureTypes.filter((type: any) => expenditureTypeIds.includes(type.id));
     },
     enabled: !!selectedProjectId && !!selectedUnitId && open && allExpenditureTypes.length > 0,
     staleTime: 5 * 60 * 1000,
   });
-
-  // Use valid expenditure types if available, otherwise show all
-  const expenditureTypes = validExpenditureTypes.length > 0 ? validExpenditureTypes : allExpenditureTypes;
 
   // Fetch project_index record to resolve actual project_id from project_index_id
   const { data: projectIndexData, isLoading: projectIndexLoading } = useQuery<any>({
