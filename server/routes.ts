@@ -178,6 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
       
       // Group project_index items by project to aggregate expenditure types
+      // IMPORTANT: Only aggregate expenditure types for THIS UNIT to avoid showing invalid options
       const projectMap = new Map();
       
       projectIndexItems.forEach(projectIndexItem => {
@@ -192,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           projectMap.set(project.id, {
             id: project.id,  // Use project.id for dropdown binding
             project_id: project.id,
-            project_index_ids: [projectIndexItem.id],  // Track all project_index IDs
+            project_index_ids: [projectIndexItem.id],  // Track all project_index IDs for this unit
             mis: project.mis,
             na853: project.na853,
             project_name: project.project_title || project.event_description,
@@ -205,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updated_at: project.updated_at
           });
         } else {
-          // Project already exists - add expenditure type and project_index_id if not already present
+          // Project already exists - add expenditure type only if it's for this unit
           const existingProject = projectMap.get(project.id);
           if (expenditureType?.expenditure_types && !existingProject.expenditure_types.includes(expenditureType.expenditure_types)) {
             existingProject.expenditure_types.push(expenditureType.expenditure_types);
@@ -217,6 +218,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const enhancedProjects = Array.from(projectMap.values());
+      
+      log(`[Projects Working] Returning ${enhancedProjects.length} unique projects with unit-specific expenditure types`);
       
       res.json(enhancedProjects);
       
