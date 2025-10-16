@@ -1076,12 +1076,7 @@ export function EditDocumentModal({
                             await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
                           }
                         }} 
-                        value={
-                          selectedExpenditureTypeId && 
-                          expenditureTypes.some((type: any) => type.id === selectedExpenditureTypeId)
-                            ? selectedExpenditureTypeId.toString() 
-                            : undefined
-                        }
+                        value={selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined}
                         disabled={!selectedProjectId}
                       >
                         <SelectTrigger data-testid="select-expenditure-type">
@@ -1359,7 +1354,7 @@ export function EditDocumentModal({
                                 
                                 const selectedMunicipality =
                                   availableMunicipalities.find(
-                                    (m: any) => m.id === value,
+                                    (m: any) => String(m.code) === value,
                                   );
                                 if (selectedMunicipality) {
                                   const parentUnit = (
@@ -1410,7 +1405,7 @@ export function EditDocumentModal({
                                   .map((municipality: any) => (
                                     <SelectItem
                                       key={`municipality-${municipality.code}`}
-                                      value={municipality.id}
+                                      value={String(municipality.code)}
                                     >
                                       <div className="flex flex-col">
                                         <span className="font-medium">
