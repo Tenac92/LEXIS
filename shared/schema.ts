@@ -1119,6 +1119,37 @@ export const extendedGeneratedDocumentSchema =
     director_signature: signatureSchema.optional(),
   });
 
+// Schema for editing documents - more permissive validation than creation
+export const editDocumentSchema = insertGeneratedDocumentSchema
+  .omit({ 
+    id: true,
+    created_at: true, 
+    updated_at: true,
+  })
+  .extend({
+    protocol_number_input: z.string().optional(),
+    protocol_date: z.string().optional(),
+    status: z.enum(["draft", "pending", "approved", "rejected", "completed"]).optional(),
+    comments: z.string().optional(),
+    total_amount: z.number().min(0).optional(),
+    esdian_field1: z.string().optional(),
+    esdian_field2: z.string().optional(),
+    is_correction: z.boolean().default(false),
+    original_protocol_number: z.string().optional(),
+    original_protocol_date: z.string().optional(),
+    correction_reason: z.string().optional(),
+    recipients: z.array(recipientSchema).default([]),
+    project_index_id: z.number().optional(),
+    unit_id: z.number().optional(),
+    geographic_region: z.string().optional(),
+  });
+
+// Schema for correction mode - requires correction reason
+export const correctionDocumentSchema = editDocumentSchema.extend({
+  is_correction: z.literal(true),
+  correction_reason: z.string().min(1, "Ο λόγος διόρθωσης είναι υποχρεωτικός"),
+});
+
 export const insertBudgetHistorySchema = createInsertSchema(budgetHistory);
 
 export const insertProjectHistorySchema = createInsertSchema(projectHistory);
