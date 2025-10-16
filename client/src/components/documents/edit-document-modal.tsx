@@ -685,9 +685,14 @@ export function EditDocumentModal({
   };
 
   const handleSubmit = (data: DocumentForm) => {
+    console.log('[EditDocument] ========== FORM SUBMIT ATTEMPT ==========');
     console.log('[EditDocument] Form validation errors:', form.formState.errors);
     console.log('[EditDocument] Form isValid:', form.formState.isValid);
+    console.log('[EditDocument] Form isDirty:', form.formState.isDirty);
+    console.log('[EditDocument] Form isSubmitting:', form.formState.isSubmitting);
     console.log('[EditDocument] Submitting data:', data);
+    console.log('[EditDocument] project_index_id in data:', data.project_index_id);
+    console.log('[EditDocument] =============================================');
     setIsLoading(true);
     updateMutation.mutate(data);
   };
@@ -1648,38 +1653,38 @@ export function EditDocumentModal({
                   </CardContent>
                 </Card>
               )}
+
+              <div className="p-6 pt-2 border-t flex justify-end gap-2 shrink-0 -mx-6 -mb-6 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={isLoading}
+                  data-testid="button-cancel"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Ακύρωση
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  data-testid="button-save"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Αποθήκευση...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      {isCorrection ? "Δημιουργία Ορθής Επανάληψης" : "Αποθήκευση Αλλαγών"}
+                    </>
+                  )}
+                </Button>
+              </div>
             </form>
           </Form>
-        </div>
-
-        <div className="p-6 pt-2 border-t flex justify-end gap-2 shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-            data-testid="button-cancel"
-          >
-            <X className="w-4 h-4 mr-2" />
-            Ακύρωση
-          </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-            data-testid="button-save"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Αποθήκευση...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                {isCorrection ? "Δημιουργία Ορθής Επανάληψης" : "Αποθήκευση Αλλαγών"}
-              </>
-            )}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
