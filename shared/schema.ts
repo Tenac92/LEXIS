@@ -1141,7 +1141,7 @@ export const editDocumentSchema = insertGeneratedDocumentSchema
     recipients: z.array(recipientSchema).default([]),
     project_index_id: z.number().optional(),
     unit_id: z.number().optional(),
-    geographic_region: z.string().optional(),
+    region: z.string().optional(),
   });
 
 // Schema for correction mode - requires correction reason
