@@ -153,6 +153,11 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Track selected project and expenditure type from document
+  // MUST be declared before queries that use these values
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [selectedExpenditureTypeId, setSelectedExpenditureTypeId] = useState<number | null>(null);
+
   // Fetch ALL expenditure types (for lookup reference)
   const { data: allExpenditureTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/public/expenditure-types'],
@@ -207,10 +212,6 @@ export function EditDocumentModal({
     if (!projectIndexData) return null;
     return projectIndexData.expenditure_type_id;
   }, [projectIndexData]);
-
-  // Track selected project and expenditure type from document
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [selectedExpenditureTypeId, setSelectedExpenditureTypeId] = useState<number | null>(null);
 
   // Track if form has been initialized to prevent re-resetting on user changes
   const formInitializedRef = useRef(false);
