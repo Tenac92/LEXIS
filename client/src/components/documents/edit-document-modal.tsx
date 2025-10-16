@@ -95,7 +95,7 @@ export function EditDocumentModal({
       original_protocol_date: "",
       correction_reason: "",
       recipients: [],
-      region: "",
+      region: undefined,
     },
   });
 
@@ -468,7 +468,7 @@ export function EditDocumentModal({
       recipients: initialRecipients,
       project_index_id: document.project_index_id || undefined,
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
-      region: (document as any).region || "",
+      region: (document as any).region || undefined,
     };
 
     console.log('[EditDocument] Form data:', formData);
@@ -486,62 +486,26 @@ export function EditDocumentModal({
     formInitializedRef.current = true;
   }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments]);
 
-  // Initialize geographic selection dropdowns from document's region
+  // Initialize geographic selection dropdowns from document's region JSONB
   useEffect(() => {
     // Skip if user has manually interacted with geographic dropdowns
     if (geoUserInteractedRef.current) {
       return;
     }
     
-    const geographicRegion = (document as any)?.region;
-    if (!document || !open || !projectGeographicAreas || !geographicRegion) return;
-    if (!geographicRegion) return;
+    const regionData = (document as any)?.region;
+    if (!document || !open || !projectGeographicAreas || !regionData) return;
 
-    const areas = projectGeographicAreas as any;
-    
-    // Try to find matching region
-    const matchingRegion = areas.availableRegions?.find((r: any) => 
-      r.name === geographicRegion
-    );
-    
-    if (matchingRegion) {
-      setSelectedRegionFilter(matchingRegion.code);
-      setSelectedUnitFilter("");
-      setSelectedMunicipalityId("");
-      return;
-    }
-
-    // Try to find matching regional unit
-    const matchingUnit = areas.availableUnits?.find((u: any) => 
-      u.name === geographicRegion
-    );
-    
-    if (matchingUnit) {
-      setSelectedUnitFilter(matchingUnit.code);
-      if (matchingUnit.region_code) {
-        setSelectedRegionFilter(matchingUnit.region_code);
+    // If region is a JSONB object with codes, use those directly
+    if (typeof regionData === 'object' && regionData !== null) {
+      if (regionData.region_code) {
+        setSelectedRegionFilter(String(regionData.region_code));
       }
-      setSelectedMunicipalityId("");
-      return;
-    }
-
-    // Try to find matching municipality
-    const matchingMunicipality = areas.availableMunicipalities?.find((m: any) => 
-      m.name === geographicRegion
-    );
-    
-    if (matchingMunicipality) {
-      // Use code for Select value, not id
-      setSelectedMunicipalityId(matchingMunicipality.code);
-      if (matchingMunicipality.unit_code) {
-        setSelectedUnitFilter(matchingMunicipality.unit_code);
+      if (regionData.unit_code) {
+        setSelectedUnitFilter(String(regionData.unit_code));
       }
-      // Find the region for this municipality
-      const parentUnit = areas.availableUnits?.find((u: any) => 
-        u.code === matchingMunicipality.unit_code
-      );
-      if (parentUnit?.region_code) {
-        setSelectedRegionFilter(parentUnit.region_code);
+      if (regionData.municipality_code) {
+        setSelectedMunicipalityId(String(regionData.municipality_code));
       }
     }
   }, [document, open, projectGeographicAreas]);
@@ -550,6 +514,31 @@ export function EditDocumentModal({
   const updateMutation = useMutation({
     mutationFn: async (data: DocumentForm) => {
       if (!document?.id) throw new Error("No document ID");
+
+      // Build region object from geographic selections or preserve existing
+      const regionData = (() => {
+        const areas = projectGeographicAreas as any;
+        if (!areas) return data.region || null;
+
+        const region = areas.availableRegions?.find((r: any) => r.code === Number(selectedRegionFilter));
+        const unit = areas.availableUnits?.find((u: any) => u.code === Number(selectedUnitFilter));
+        const municipality = areas.availableMunicipalities?.find((m: any) => m.code === Number(selectedMunicipalityId));
+
+        // If no selections made, preserve existing region data
+        if (!region && !unit && !municipality) {
+          return data.region || null;
+        }
+
+        // Build new region object from selections
+        return {
+          region_code: region?.code,
+          region_name: region?.name,
+          unit_code: unit?.code,
+          unit_name: unit?.name,
+          municipality_code: municipality?.code,
+          municipality_name: municipality?.name,
+        };
+      })();
 
       if (isCorrection) {
         // Correction mode: Create new corrected document
@@ -565,7 +554,7 @@ export function EditDocumentModal({
           recipients: data.recipients,
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
-          region: data.region || null,
+          region: regionData,
         };
 
         return await apiRequest(`/api/documents/${document.id}/correction`, {
@@ -588,7 +577,7 @@ export function EditDocumentModal({
           updated_at: new Date().toISOString(),
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
-          region: data.region || null,
+          region: regionData,
         };
 
         // Update document first
@@ -1295,28 +1284,30 @@ export function EditDocumentModal({
                         selectedMunicipalityId) && (
                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
                           <strong>Επιλεγμένη γεωγραφική περιοχή:</strong>{" "}
-                          {form.watch("region") || "Καμία επιλογή"}
+                          {(() => {
+                            const areas = projectGeographicAreas as any;
+                            const parts = [];
+                            if (selectedRegionFilter) {
+                              const region = areas?.availableRegions?.find((r: any) => r.code === Number(selectedRegionFilter));
+                              if (region) parts.push(region.name);
+                            }
+                            if (selectedUnitFilter) {
+                              const unit = areas?.availableUnits?.find((u: any) => u.code === Number(selectedUnitFilter));
+                              if (unit) parts.push(unit.name);
+                            }
+                            if (selectedMunicipalityId) {
+                              const municipality = areas?.availableMunicipalities?.find((m: any) => m.code === Number(selectedMunicipalityId));
+                              if (municipality) parts.push(municipality.name);
+                            }
+                            return parts.length > 0 ? parts.join(' → ') : 'Καμία επιλογή';
+                          })()}
                         </div>
                       )}
                     </div>
                   ) : (
-                    <FormField
-                      control={form.control}
-                      name="region"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Περιοχή (Χειροκίνητη Εισαγωγή)</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="π.χ. Αττική, Θεσσαλονίκη..."
-                              {...field}
-                              data-testid="input-geographic-region"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="text-sm text-muted-foreground">
+                      Δεν υπάρχουν διαθέσιμες γεωγραφικές περιοχές για αυτό το έργο
+                    </div>
                   )}
                 </CardContent>
               </Card>
