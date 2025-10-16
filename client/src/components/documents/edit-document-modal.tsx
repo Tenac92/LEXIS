@@ -655,6 +655,35 @@ export function EditDocumentModal({
     },
   });
 
+  // Function to find matching project_index entry and update form
+  const findAndUpdateProjectIndex = async (projectId: number, unitId: number, expenditureTypeId: number) => {
+    try {
+      console.log('[EditDocument] Finding project_index for:', { projectId, unitId, expenditureTypeId });
+      
+      const response = await apiRequest(`/api/project-index/find/${projectId}/${unitId}/${expenditureTypeId}`) as { id: number; project_id: number; monada_id: number; expenditure_type_id: number };
+      
+      if (response && response.id) {
+        console.log('[EditDocument] Found matching project_index:', response.id);
+        form.setValue('project_index_id', response.id);
+        return response.id;
+      } else {
+        // Clear project_index_id if no match found
+        form.setValue('project_index_id', undefined);
+        return null;
+      }
+    } catch (error: any) {
+      console.error('[EditDocument] Error finding project_index:', error);
+      // Clear project_index_id to prevent saving with stale data
+      form.setValue('project_index_id', undefined);
+      toast({
+        title: "Σφάλμα",
+        description: error?.details || "Δεν βρέθηκε αντίστοιχο έργο για αυτόν τον συνδυασμό. Επιλέξτε άλλο έργο ή τύπο δαπάνης.",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleSubmit = (data: DocumentForm) => {
     console.log('[EditDocument] Form validation errors:', form.formState.errors);
     console.log('[EditDocument] Form isValid:', form.formState.isValid);
@@ -888,7 +917,7 @@ export function EditDocumentModal({
                   <CardTitle className="text-lg">Έργο & Μονάδα</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="unit_id"
@@ -899,8 +928,10 @@ export function EditDocumentModal({
                             onValueChange={(value) => {
                               const numericValue = parseInt(value);
                               field.onChange(numericValue);
-                              // Clear project selection when unit changes
+                              // Clear project and expenditure type selection when unit changes
                               form.setValue("project_index_id", undefined);
+                              setSelectedProjectId(null);
+                              setSelectedExpenditureTypeId(null);
                               // Invalidate projects query to fetch new projects
                               queryClient.invalidateQueries({ queryKey: ['projects-working', numericValue] });
                             }} 
@@ -931,17 +962,22 @@ export function EditDocumentModal({
                         <FormItem>
                           <FormLabel>Έργο</FormLabel>
                           <Select 
-                            onValueChange={(value) => {
-                              // Project changes are disabled in edit mode to prevent budget inconsistencies
-                              // Users must create a new document if they need a different project
-                              console.warn('[EditDocument] Project changes disabled in edit mode');
+                            onValueChange={async (value) => {
+                              const projectId = parseInt(value);
+                              setSelectedProjectId(projectId);
+                              
+                              // Find and update project_index_id if we have all required values
+                              const unitId = form.getValues('unit_id');
+                              if (projectId && unitId && selectedExpenditureTypeId) {
+                                await findAndUpdateProjectIndex(projectId, unitId, selectedExpenditureTypeId);
+                              }
                             }} 
                             value={selectedProjectId ? selectedProjectId.toString() : undefined}
-                            disabled={true}  // Always disabled in edit mode
+                            disabled={!selectedUnitId}
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-project" className="opacity-60">
-                                <SelectValue placeholder="Έργο (δεν μπορεί να αλλάξει)" />
+                              <SelectTrigger data-testid="select-project">
+                                <SelectValue placeholder={!selectedUnitId ? "Επιλέξτε πρώτα μονάδα" : "Επιλέξτε έργο"} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -956,6 +992,38 @@ export function EditDocumentModal({
                         </FormItem>
                       )}
                     />
+
+                    <FormItem>
+                      <FormLabel>Τύπος Δαπάνης</FormLabel>
+                      <Select 
+                        onValueChange={async (value) => {
+                          const expenditureTypeId = parseInt(value);
+                          setSelectedExpenditureTypeId(expenditureTypeId);
+                          
+                          // Find and update project_index_id if we have all required values
+                          const unitId = form.getValues('unit_id');
+                          if (selectedProjectId && unitId && expenditureTypeId) {
+                            await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
+                          }
+                        }} 
+                        value={selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined}
+                        disabled={!selectedProjectId}
+                      >
+                        <SelectTrigger data-testid="select-expenditure-type">
+                          <SelectValue placeholder={!selectedProjectId ? "Επιλέξτε πρώτα έργο" : "Επιλέξτε τύπο δαπάνης"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {expenditureTypes && Array.isArray(expenditureTypes) && expenditureTypes.map((type: any) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                              {type.description || type.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Επιλέξτε τον τύπο δαπάνης για το έργο
+                      </p>
+                    </FormItem>
                   </div>
                 </CardContent>
               </Card>
