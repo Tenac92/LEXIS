@@ -424,21 +424,42 @@ export function EditDocumentModal({
       esdianField2 = document.esdian[1] || "";
     }
 
+    // Calculate initial recipients from beneficiary payments
+    const initialRecipients = (Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []).map((payment: any) => ({
+      id: payment.id,
+      beneficiary_id: payment.beneficiary_id,
+      firstname: payment.beneficiaries?.name || '',
+      lastname: payment.beneficiaries?.surname || '',
+      fathername: payment.beneficiaries?.fathername || '',
+      afm: payment.beneficiaries?.afm || '',
+      amount: parseFloat(payment.amount) || 0,
+      installment: payment.installment || 'ΕΦΑΠΑΞ',
+      installments: [payment.installment || 'ΕΦΑΠΑΞ'],
+      installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
+      status: payment.status || 'pending',
+      secondary_text: payment.freetext || '',
+    }));
+
+    // Calculate initial total from recipients or document
+    const initialTotal = initialRecipients.length > 0
+      ? initialRecipients.reduce((sum: number, r: any) => sum + (parseFloat(r.amount) || 0), 0)
+      : parseFloat(document.total_amount?.toString() || "0") || 0;
+
     // For correction mode, prepare to archive current protocol info
     const formData: Partial<DocumentForm> = {
       protocol_number_input: isCorrection ? "" : (document.protocol_number_input || ""),
       protocol_date: isCorrection ? "" : protocolDate,
       status: (document.status as any) || "draft",
       comments: document.comments || "",
-      total_amount: calculatedTotal || parseFloat(document.total_amount?.toString() || "0") || 0,
+      total_amount: initialTotal,
       esdian_field1: esdianField1,
       esdian_field2: esdianField2,
       is_correction: isCorrection ? true : Boolean(document.is_correction),
       original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
       correction_reason: "",
-      recipients: recipients.length > 0 ? recipients : [],
-      project_index_id: document.project_index_id || undefined,  // Keep original project_index_id for submission
+      recipients: initialRecipients,
+      project_index_id: document.project_index_id || undefined,
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       geographic_region: (document as any).region || (document as any).geographic_region || "",
     };
@@ -456,7 +477,7 @@ export function EditDocumentModal({
 
     // Mark as initialized to prevent re-resetting on user changes
     formInitializedRef.current = true;
-  }, [document, open, form, calculatedTotal, recipients, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId]);
+  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments]);
 
   // Initialize geographic selection dropdowns from document's geographic_region
   useEffect(() => {
@@ -869,8 +890,8 @@ export function EditDocumentModal({
                             </FormControl>
                             <SelectContent>
                               {units && Array.isArray(units) && units.map((unit: any) => (
-                                <SelectItem key={unit.id} value={unit.id.toString()}>
-                                  {unit.name || unit.unit || unit.id}
+                                <SelectItem key={unit.unit} value={unit.unit.toString()}>
+                                  {unit.name || unit.unit}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1037,7 +1058,7 @@ export function EditDocumentModal({
                                     selectedRegionName,
                                   );
                                 } else {
-                                  form.setValue("geographic_region", "");
+                                  // Don't clear geographic_region when selecting "all" - just reset filter state
                                   setSelectedMunicipalityId("");
                                 }
                               }}
@@ -1106,8 +1127,8 @@ export function EditDocumentModal({
                                       selectedUnit.name,
                                     );
                                   }
-                                } else if (!selectedRegionFilter) {
-                                  form.setValue("geographic_region", "");
+                                } else {
+                                  // Don't clear geographic_region when selecting "all" - just reset filter state
                                   setSelectedMunicipalityId("");
                                 }
                               }}
