@@ -1142,6 +1142,7 @@ export const editDocumentSchema = insertGeneratedDocumentSchema
     recipients: z.array(recipientSchema).default([]),
     project_index_id: z.number().optional(),
     unit_id: z.number().optional(),
+    expenditure_type_id: z.number().optional(),
     region: z.object({
       region_code: z.number().optional(),
       region_name: z.string().optional(),

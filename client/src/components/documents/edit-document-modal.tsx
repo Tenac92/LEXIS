@@ -524,6 +524,7 @@ export function EditDocumentModal({
       project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       region: (document as any).region || undefined,
+      expenditure_type_id: documentExpenditureTypeId || undefined,  // Set expenditure type for dropdown display
     };
 
     console.log('[EditDocument] Form data:', formData);
@@ -551,6 +552,12 @@ export function EditDocumentModal({
     // Skip if user has manually interacted with geographic dropdowns
     if (geoUserInteractedRef.current) {
       console.log('[EditDocument] Skipping geographic init - user has interacted');
+      return;
+    }
+    
+    // Skip if form hasn't been initialized yet
+    if (!formInitializedRef.current) {
+      console.log('[EditDocument] Skipping geographic init - form not initialized yet');
       return;
     }
     
@@ -585,7 +592,7 @@ export function EditDocumentModal({
         console.log('[EditDocument] Set selectedMunicipalityId to:', munCode);
       }
     }
-  }, [document, open, projectGeographicAreas, formInitializedRef.current]);
+  }, [document, open, projectGeographicAreas]);
 
   // Update or create correction mutation
   const updateMutation = useMutation({
