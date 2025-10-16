@@ -33,6 +33,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users, AlertCircle, MapPin } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
@@ -104,9 +105,16 @@ export function EditDocumentModal({
   onCorrectionSuccess
 }: EditDocumentModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const isCorrection = mode === 'correction';
+
+  // Memoize user unit IDs for filtering units dropdown
+  const userUnitIds = useMemo(
+    () => (user?.unit_id ?? []).map(String),
+    [user?.unit_id],
+  );
 
   // Initialize form with document data using the appropriate schema
   const form = useForm<DocumentForm>({
@@ -140,12 +148,29 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch units for dropdown
-  const { data: units = [], isLoading: unitsLoading } = useQuery<any[]>({
+  // Fetch units for dropdown (filtered to user's assigned units)
+  const { data: rawUnits = [], isLoading: unitsLoading } = useQuery<any[]>({
     queryKey: ['/api/public/units'],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     enabled: open,
   });
+
+  // Filter units to only show user's assigned units (matching create dialog behavior)
+  const units = useMemo(() => {
+    if (!rawUnits || rawUnits.length === 0) return [];
+    
+    // Filter units based on user's assigned unit_id array
+    const userAllowedUnits = userUnitIds;
+    
+    const filteredUnits = rawUnits.filter((item: any) => {
+      // Check if the unit ID matches any of the user's allowed units
+      // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
+      const unitId = String(item.unit);
+      return userAllowedUnits.includes(unitId);
+    });
+    
+    return filteredUnits;
+  }, [rawUnits, userUnitIds]);
 
   // Watch selected unit_id from form (numeric)
   const selectedUnitId = form.watch("unit_id");

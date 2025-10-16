@@ -63,6 +63,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Standalone subprojects routes
   app.use('/api/subprojects', subprojectsRouter);
   
+  // Project Index endpoint - get project_index record by ID
+  app.get('/api/project-index/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: 'Valid project index ID is required' });
+      }
+      
+      const projectIndexId = parseInt(id, 10);
+      
+      log(`[ProjectIndex] Fetching project_index record with ID: ${projectIndexId}`);
+      
+      // Fetch project_index record with related project and monada data
+      const { data, error } = await supabase
+        .from('project_index')
+        .select(`
+          *,
+          Projects!inner(id, mis, na853, budget_na853, project_name),
+          Monada!inner(id, unit)
+        `)
+        .eq('id', projectIndexId)
+        .single();
+      
+      if (error) {
+        log(`[ProjectIndex] Database error:`, error);
+        return res.status(500).json({ error: 'Failed to fetch project index record' });
+      }
+      
+      if (!data) {
+        log(`[ProjectIndex] Project index record not found: ${projectIndexId}`);
+        return res.status(404).json({ error: 'Project index record not found' });
+      }
+      
+      log(`[ProjectIndex] Found project_index record:`, {
+        id: data.id,
+        project_id: data.project_id,
+        monada_id: data.monada_id
+      });
+      
+      return res.json(data);
+    } catch (error) {
+      console.error('[ProjectIndex] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
   // Projects by unit endpoint for document creation
   app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
     try {
