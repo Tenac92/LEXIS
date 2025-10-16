@@ -181,6 +181,9 @@ export function EditDocumentModal({
   
   // Track if user has manually interacted with geographic dropdowns
   const geoUserInteractedRef = useRef(false);
+  
+  // Track if we're making programmatic updates (to prevent cascade overwrites)
+  const isProgrammaticUpdateRef = useRef(false);
 
   // Smart cascading geographic selection state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
@@ -1051,6 +1054,12 @@ export function EditDocumentModal({
                             <Select
                               value={selectedRegionFilter}
                               onValueChange={(value) => {
+                                // Skip if this is a programmatic update (cascade from municipality/unit selection)
+                                if (isProgrammaticUpdateRef.current) {
+                                  console.log("[EditDocument] Region handler: Skipping programmatic update");
+                                  return;
+                                }
+                                
                                 // Mark that user has interacted
                                 geoUserInteractedRef.current = true;
                                 
@@ -1117,6 +1126,12 @@ export function EditDocumentModal({
                             <Select
                               value={selectedUnitFilter}
                               onValueChange={(value) => {
+                                // Skip if this is a programmatic update (cascade from municipality selection)
+                                if (isProgrammaticUpdateRef.current) {
+                                  console.log("[EditDocument] Unit handler: Skipping programmatic update");
+                                  return;
+                                }
+                                
                                 // Mark that user has interacted
                                 geoUserInteractedRef.current = true;
                                 
@@ -1129,10 +1144,14 @@ export function EditDocumentModal({
                                   );
 
                                   if (selectedUnit) {
+                                    // Set parent region filter programmatically
                                     if (selectedUnit.region_code) {
-                                      setSelectedRegionFilter(
-                                        selectedUnit.region_code,
-                                      );
+                                      isProgrammaticUpdateRef.current = true;
+                                      setSelectedRegionFilter(selectedUnit.region_code);
+                                      // Reset flag after state update completes
+                                      setTimeout(() => {
+                                        isProgrammaticUpdateRef.current = false;
+                                      }, 0);
                                     }
 
                                     form.setValue("region", selectedUnit.name);
@@ -1202,6 +1221,9 @@ export function EditDocumentModal({
                                   );
 
                                   if (parentUnit) {
+                                    // Set flag to prevent cascading handlers from overwriting our selection
+                                    isProgrammaticUpdateRef.current = true;
+                                    
                                     setSelectedUnitFilter(parentUnit.code);
 
                                     if (parentUnit.region_code) {
@@ -1209,6 +1231,11 @@ export function EditDocumentModal({
                                         parentUnit.region_code,
                                       );
                                     }
+                                    
+                                    // Reset flag after state updates complete
+                                    setTimeout(() => {
+                                      isProgrammaticUpdateRef.current = false;
+                                    }, 0);
                                   }
 
                                   form.setValue(
