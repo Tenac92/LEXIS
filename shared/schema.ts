@@ -290,6 +290,7 @@ export const generatedDocuments = pgTable("generated_documents", {
     () => projectIndex.id,
   ),
   unit_id: bigint("unit_id", { mode: "number" }).references(() => monada.id),
+  region: jsonb("region"), // Geographic region data (region, unit, municipality)
 });
 
 /**
@@ -1141,7 +1142,14 @@ export const editDocumentSchema = insertGeneratedDocumentSchema
     recipients: z.array(recipientSchema).default([]),
     project_index_id: z.number().optional(),
     unit_id: z.number().optional(),
-    region: z.string().optional(),
+    region: z.object({
+      region_code: z.number().optional(),
+      region_name: z.string().optional(),
+      unit_code: z.number().optional(),
+      unit_name: z.string().optional(),
+      municipality_code: z.number().optional(),
+      municipality_name: z.string().optional(),
+    }).optional(),
   });
 
 // Schema for correction mode - requires correction reason
