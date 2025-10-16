@@ -153,6 +153,13 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch expenditure types to find matching project_index entries
+  const { data: expenditureTypes = [] } = useQuery<any[]>({
+    queryKey: ['/api/public/expenditure-types'],
+    staleTime: 60 * 60 * 1000,
+    enabled: open,
+  });
+
   // Fetch project_index record to resolve actual project_id from project_index_id
   const { data: projectIndexData, isLoading: projectIndexLoading } = useQuery<any>({
     queryKey: ['project-index', document?.project_index_id],
@@ -167,10 +174,16 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Extract actual project_id from project_index data
+  // Extract actual project_id and expenditure_type_id from project_index data
   const actualProjectId = useMemo(() => {
     if (!projectIndexData) return null;
     return projectIndexData.project_id;
+  }, [projectIndexData]);
+
+  // Track the expenditure_type_id from the document's project_index
+  const documentExpenditureTypeId = useMemo(() => {
+    if (!projectIndexData) return null;
+    return projectIndexData.expenditure_type_id;
   }, [projectIndexData]);
 
   // Track selected project from document
@@ -466,19 +479,20 @@ export function EditDocumentModal({
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
       correction_reason: "",
       recipients: initialRecipients,
-      project_index_id: actualProjectId || undefined,  // Use resolved project.id from project_index lookup
+      project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       region: (document as any).region || undefined,
     };
 
     console.log('[EditDocument] Form data:', formData);
     console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
+    console.log('[EditDocument] NOTE: Form stores project_index.id:', document.project_index_id, 'but dropdown will display using project.id:', actualProjectId);
     form.reset(formData);
 
-    // Set selectedProjectId for geographic area queries using the resolved project.id
+    // Set selectedProjectId for geographic area queries AND dropdown display using resolved project.id
     if (actualProjectId) {
       setSelectedProjectId(actualProjectId);
-      console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries');
+      console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries and dropdown display');
     }
 
     // Mark as initialized to prevent re-resetting on user changes
@@ -912,20 +926,16 @@ export function EditDocumentModal({
                           <FormLabel>Έργο</FormLabel>
                           <Select 
                             onValueChange={(value) => {
-                              const numericValue = parseInt(value);
-                              field.onChange(numericValue);
-                              setSelectedProjectId(numericValue);
+                              // Project changes are disabled in edit mode to prevent budget inconsistencies
+                              // Users must create a new document if they need a different project
+                              console.warn('[EditDocument] Project changes disabled in edit mode');
                             }} 
-                            value={field.value ? field.value.toString() : undefined}
-                            disabled={!selectedUnitId}
+                            value={selectedProjectId ? selectedProjectId.toString() : undefined}
+                            disabled={true}  // Always disabled in edit mode
                           >
                             <FormControl>
-                              <SelectTrigger data-testid="select-project">
-                                <SelectValue placeholder={
-                                  !selectedUnitId 
-                                    ? "Επιλέξτε πρώτα μονάδα" 
-                                    : "Επιλέξτε έργο"
-                                } />
+                              <SelectTrigger data-testid="select-project" className="opacity-60">
+                                <SelectValue placeholder="Έργο (δεν μπορεί να αλλάξει)" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
