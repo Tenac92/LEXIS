@@ -95,7 +95,7 @@ export function EditDocumentModal({
       original_protocol_date: "",
       correction_reason: "",
       recipients: [],
-      geographic_region: "",
+      region: "",
     },
   });
 
@@ -465,7 +465,7 @@ export function EditDocumentModal({
       recipients: initialRecipients,
       project_index_id: document.project_index_id || undefined,
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
-      geographic_region: (document as any).region || (document as any).geographic_region || "",
+      region: (document as any).region || "",
     };
 
     console.log('[EditDocument] Form data:', formData);
@@ -483,14 +483,14 @@ export function EditDocumentModal({
     formInitializedRef.current = true;
   }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments]);
 
-  // Initialize geographic selection dropdowns from document's geographic_region
+  // Initialize geographic selection dropdowns from document's region
   useEffect(() => {
     // Skip if user has manually interacted with geographic dropdowns
     if (geoUserInteractedRef.current) {
       return;
     }
     
-    const geographicRegion = (document as any)?.region || (document as any)?.geographic_region;
+    const geographicRegion = (document as any)?.region;
     if (!document || !open || !projectGeographicAreas || !geographicRegion) return;
     if (!geographicRegion) return;
 
@@ -562,7 +562,7 @@ export function EditDocumentModal({
           recipients: data.recipients,
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
-          geographic_region: data.geographic_region || null,
+          region: data.region || null,
         };
 
         return await apiRequest(`/api/documents/${document.id}/correction`, {
@@ -585,7 +585,7 @@ export function EditDocumentModal({
           updated_at: new Date().toISOString(),
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
-          geographic_region: data.geographic_region || null,
+          region: data.region || null,
         };
 
         // Update document first
@@ -1063,7 +1063,7 @@ export function EditDocumentModal({
                                     availableRegions.find(
                                       (r: any) => r.code === regionCode,
                                     )?.name || "";
-                                  form.setValue("geographic_region", selectedRegionName);
+                                  form.setValue("region", selectedRegionName);
                                   setSelectedMunicipalityId("");
                                   console.log(
                                     "[EditDocument] Selected region as final choice:",
@@ -1135,7 +1135,7 @@ export function EditDocumentModal({
                                       );
                                     }
 
-                                    form.setValue("geographic_region", selectedUnit.name);
+                                    form.setValue("region", selectedUnit.name);
                                     setSelectedMunicipalityId("");
                                     console.log(
                                       "[EditDocument] Selected regional unit as final choice:",
@@ -1143,7 +1143,7 @@ export function EditDocumentModal({
                                     );
                                   }
                                 } else {
-                                  // Don't clear geographic_region when selecting "all" - just reset filter state
+                                  // Don't clear region when selecting "all" - just reset filter state
                                   setSelectedMunicipalityId("");
                                 }
                               }}
@@ -1212,7 +1212,7 @@ export function EditDocumentModal({
                                   }
 
                                   form.setValue(
-                                    "geographic_region",
+                                    "region",
                                     selectedMunicipality.name,
                                   );
                                   setSelectedMunicipalityId(value);
@@ -1268,14 +1268,14 @@ export function EditDocumentModal({
                         selectedMunicipalityId) && (
                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
                           <strong>Επιλεγμένη γεωγραφική περιοχή:</strong>{" "}
-                          {form.watch("geographic_region") || "Καμία επιλογή"}
+                          {form.watch("region") || "Καμία επιλογή"}
                         </div>
                       )}
                     </div>
                   ) : (
                     <FormField
                       control={form.control}
-                      name="geographic_region"
+                      name="region"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Περιοχή (Χειροκίνητη Εισαγωγή)</FormLabel>
