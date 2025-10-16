@@ -178,6 +178,9 @@ export function EditDocumentModal({
 
   // Track if form has been initialized to prevent re-resetting on user changes
   const formInitializedRef = useRef(false);
+  
+  // Track if user has manually interacted with geographic dropdowns
+  const geoUserInteractedRef = useRef(false);
 
   // Smart cascading geographic selection state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
@@ -365,6 +368,7 @@ export function EditDocumentModal({
   useEffect(() => {
     // Reset when modal closes OR when document ID changes
     formInitializedRef.current = false;
+    geoUserInteractedRef.current = false; // Also reset geographic interaction flag
     console.log('[EditDocument] Resetting initialization flag:', { 
       open, 
       documentId: document?.id 
@@ -481,6 +485,11 @@ export function EditDocumentModal({
 
   // Initialize geographic selection dropdowns from document's geographic_region
   useEffect(() => {
+    // Skip if user has manually interacted with geographic dropdowns
+    if (geoUserInteractedRef.current) {
+      return;
+    }
+    
     const geographicRegion = (document as any)?.region || (document as any)?.geographic_region;
     if (!document || !open || !projectGeographicAreas || !geographicRegion) return;
     if (!geographicRegion) return;
@@ -1042,6 +1051,9 @@ export function EditDocumentModal({
                             <Select
                               value={selectedRegionFilter}
                               onValueChange={(value) => {
+                                // Mark that user has interacted
+                                geoUserInteractedRef.current = true;
+                                
                                 const regionCode = value === "all" ? "" : value;
                                 setSelectedRegionFilter(regionCode);
                                 setSelectedUnitFilter("");
@@ -1105,6 +1117,9 @@ export function EditDocumentModal({
                             <Select
                               value={selectedUnitFilter}
                               onValueChange={(value) => {
+                                // Mark that user has interacted
+                                geoUserInteractedRef.current = true;
+                                
                                 const unitCode = value === "all" ? "" : value;
                                 setSelectedUnitFilter(unitCode);
 
@@ -1170,6 +1185,9 @@ export function EditDocumentModal({
                             <Select
                               value={selectedMunicipalityId}
                               onValueChange={(value) => {
+                                // Mark that user has interacted
+                                geoUserInteractedRef.current = true;
+                                
                                 const selectedMunicipality =
                                   availableMunicipalities.find(
                                     (m: any) => m.id === value,
