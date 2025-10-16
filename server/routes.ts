@@ -177,31 +177,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
       
-      // Return project_index records with enriched project data
-      // IMPORTANT: id field is project_index.id for proper form binding
-      const enhancedProjects = projectIndexItems.map(projectIndexItem => {
+      // Group project_index items by project to aggregate expenditure types
+      const projectMap = new Map();
+      
+      projectIndexItems.forEach(projectIndexItem => {
         const project = allProjects.find(p => p.id === projectIndexItem.project_id);
-        if (!project) return null;
+        if (!project) return;
         
         const expenditureType = expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
         const eventType = eventTypes.find(et => et.id === projectIndexItem.event_types_id);
         
-        return {
-          id: projectIndexItem.id,  // Use project_index.id for dropdown binding
-          project_id: project.id,    // Include actual project_id for reference
-          mis: project.mis,
-          na853: project.na853,
-          project_name: project.project_title || project.event_description,
-          project_title: project.project_title || project.event_description,
-          event_description: project.event_description,
-          expenditure_type: expenditureType?.expenditure_types,
-          expenditure_types: expenditureType?.expenditure_types ? [expenditureType.expenditure_types] : [],
-          event_type: eventType?.name,
-          monada_id: projectIndexItem.monada_id,
-          created_at: project.created_at,
-          updated_at: project.updated_at
-        };
-      }).filter(p => p !== null);
+        if (!projectMap.has(project.id)) {
+          // First time seeing this project - create entry
+          projectMap.set(project.id, {
+            id: project.id,  // Use project.id for dropdown binding
+            project_id: project.id,
+            project_index_ids: [projectIndexItem.id],  // Track all project_index IDs
+            mis: project.mis,
+            na853: project.na853,
+            project_name: project.project_title || project.event_description,
+            project_title: project.project_title || project.event_description,
+            event_description: project.event_description,
+            expenditure_types: expenditureType?.expenditure_types ? [expenditureType.expenditure_types] : [],
+            event_type: eventType?.name,
+            monada_id: projectIndexItem.monada_id,
+            created_at: project.created_at,
+            updated_at: project.updated_at
+          });
+        } else {
+          // Project already exists - add expenditure type and project_index_id if not already present
+          const existingProject = projectMap.get(project.id);
+          if (expenditureType?.expenditure_types && !existingProject.expenditure_types.includes(expenditureType.expenditure_types)) {
+            existingProject.expenditure_types.push(expenditureType.expenditure_types);
+          }
+          if (!existingProject.project_index_ids.includes(projectIndexItem.id)) {
+            existingProject.project_index_ids.push(projectIndexItem.id);
+          }
+        }
+      });
+      
+      const enhancedProjects = Array.from(projectMap.values());
       
       res.json(enhancedProjects);
       

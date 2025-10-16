@@ -196,28 +196,40 @@ router.post(
       const projectIndexItems = indexData.filter(
         (idx) => idx.project_id === projectData.id,
       );
-      const eventType =
-        projectIndexItems.length > 0
-          ? eventTypes.find(
-              (et) => et.id === projectIndexItems[0].event_types_id,
-            )
-          : null;
-      const expenditureTypeData =
-        projectIndexItems.length > 0
-          ? expenditureTypes.find(
-              (et) => et.id === projectIndexItems[0].expenditure_type_id,
-            )
-          : null;
-      const monadaItem =
-        projectIndexItems.length > 0
-          ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
-          : null;
-      const kallikratisItem =
-        projectIndexItems.length > 0
-          ? kallikratisData.find(
-              (k) => k.id === projectIndexItems[0].kallikratis_id,
-            )
-          : null;
+      
+      // Find the specific project_index item that matches the selected expenditure_type
+      let selectedProjectIndexItem = projectIndexItems[0]; // Default to first if no match found
+      
+      if (expenditure_type && projectIndexItems.length > 0) {
+        // Find expenditure type ID from name
+        const selectedExpenditureTypeData = expenditureTypes.find(
+          (et) => et.expenditure_types === expenditure_type
+        );
+        
+        if (selectedExpenditureTypeData) {
+          // Find project_index item with this expenditure_type_id
+          const matchingItem = projectIndexItems.find(
+            (idx) => idx.expenditure_type_id === selectedExpenditureTypeData.id
+          );
+          if (matchingItem) {
+            selectedProjectIndexItem = matchingItem;
+            console.log('[DocumentsController] V1 Found matching project_index for expenditure type:', expenditure_type);
+          }
+        }
+      }
+      
+      const eventType = selectedProjectIndexItem
+        ? eventTypes.find((et) => et.id === selectedProjectIndexItem.event_types_id)
+        : null;
+      const expenditureTypeData = selectedProjectIndexItem
+        ? expenditureTypes.find((et) => et.id === selectedProjectIndexItem.expenditure_type_id)
+        : null;
+      const monadaItem = selectedProjectIndexItem
+        ? monadaData.find((m) => m.id === selectedProjectIndexItem.monada_id)
+        : null;
+      const kallikratisItem = selectedProjectIndexItem
+        ? kallikratisData.find((k) => k.id === selectedProjectIndexItem.kallikratis_id)
+        : null;
 
       // Project data logging removed for cleaner console output
 
@@ -251,8 +263,7 @@ router.post(
         // Enhanced foreign key relationships
         generated_by: req.user.id,
         unit_id: numericUnitId, // Properly resolved foreign key to monada table
-        project_index_id:
-          projectIndexItems.length > 0 ? projectIndexItems[0].id : null, // Foreign key to project_index table
+        project_index_id: selectedProjectIndexItem ? selectedProjectIndexItem.id : null, // Foreign key to correct project_index entry
         attachment_id: [], // Will be populated after attachment processing
         beneficiary_payments_id: [], // Will be populated after beneficiary processing
         employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
