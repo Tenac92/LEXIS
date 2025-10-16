@@ -37,49 +37,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users, AlertCircle, MapPin } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
+import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 
-// Define recipient schema for beneficiary editing
-const recipientSchema = z.object({
-  id: z.number().optional(), // For existing beneficiary payments
-  beneficiary_id: z.number().optional(), // For linking to beneficiaries table
-  firstname: z.string().min(1, "Το όνομα είναι υποχρεωτικό"),
-  lastname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
-  fathername: z.string().optional(),
-  afm: z.string().length(9, "Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία"),
-  amount: z.number().min(0, "Το ποσό δεν μπορεί να είναι αρνητικό"),
-  installment: z.string().default("ΕΦΑΠΑΞ"),
-  status: z.string().optional(),
-  secondary_text: z.string().optional().default(""),
-});
-
-// Define the base form schema
-const baseDocumentFormSchema = z.object({
-  protocol_number_input: z.string().optional(),
-  protocol_date: z.string().optional(),
-  status: z.enum(["draft", "pending", "approved", "rejected", "completed"]),
-  comments: z.string().optional(),
-  total_amount: z.number().min(0),
-  esdian_field1: z.string().optional(),
-  esdian_field2: z.string().optional(),
-  is_correction: z.boolean().default(false),
-  original_protocol_number: z.string().optional(),
-  original_protocol_date: z.string().optional(),
-  correction_reason: z.string().optional(),
-  recipients: z.array(recipientSchema).default([]),
-  // Project and unit fields
-  project_index_id: z.number().optional(),
-  unit_id: z.number().optional(),
-  // Geographic region
-  geographic_region: z.string().optional(),
-});
-
-// Correction mode requires only correction reason (protocol will be set via modal after save)
-const correctionFormSchema = baseDocumentFormSchema.extend({
-  correction_reason: z.string().min(1, "Ο λόγος διόρθωσης είναι υποχρεωτικός"),
-});
-
-type DocumentForm = z.infer<typeof baseDocumentFormSchema>;
+type DocumentForm = z.infer<typeof editDocumentSchema>;
 
 interface EditDocumentModalProps {
   document: GeneratedDocument | null;
@@ -118,7 +79,7 @@ export function EditDocumentModal({
 
   // Initialize form with document data using the appropriate schema
   const form = useForm<DocumentForm>({
-    resolver: zodResolver(isCorrection ? correctionFormSchema : baseDocumentFormSchema),
+    resolver: zodResolver(isCorrection ? correctionDocumentSchema : editDocumentSchema),
     defaultValues: {
       protocol_number_input: "",
       protocol_date: "",
@@ -374,6 +335,8 @@ export function EditDocumentModal({
       afm: payment.beneficiaries?.afm || '',
       amount: parseFloat(payment.amount) || 0,
       installment: payment.installment || 'ΕΦΑΠΑΞ',
+      installments: [payment.installment || 'ΕΦΑΠΑΞ'],
+      installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
       status: payment.status || 'pending',
       secondary_text: payment.freetext || '',
     }));
@@ -681,6 +644,8 @@ export function EditDocumentModal({
         afm: "", 
         amount: 0, 
         installment: "ΕΦΑΠΑΞ",
+        installments: ["ΕΦΑΠΑΞ"],
+        installmentAmounts: { ΕΦΑΠΑΞ: 0 },
         secondary_text: ""
       }
     ]);
@@ -854,7 +819,7 @@ export function EditDocumentModal({
                           <FormControl>
                             <Input
                               type="text"
-                              value={`€ ${field.value.toFixed(2)}`}
+                              value={`€ ${(field.value || 0).toFixed(2)}`}
                               readOnly
                               className="bg-gray-100 font-semibold"
                               data-testid="input-total-amount"
