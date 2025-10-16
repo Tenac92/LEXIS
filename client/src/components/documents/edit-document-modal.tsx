@@ -466,7 +466,7 @@ export function EditDocumentModal({
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
       correction_reason: "",
       recipients: initialRecipients,
-      project_index_id: document.project_index_id || undefined,
+      project_index_id: actualProjectId || undefined,  // Use resolved project.id from project_index lookup
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       region: (document as any).region || undefined,
     };
@@ -475,11 +475,10 @@ export function EditDocumentModal({
     console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
     form.reset(formData);
 
-    // Set selectedProjectId for geographic area queries
-    // Since projects now have id=project_index.id, use document.project_index_id
-    if (document.project_index_id) {
-      setSelectedProjectId(document.project_index_id);
-      console.log('[EditDocument] Set selectedProjectId to project_index_id:', document.project_index_id, 'for geographic queries');
+    // Set selectedProjectId for geographic area queries using the resolved project.id
+    if (actualProjectId) {
+      setSelectedProjectId(actualProjectId);
+      console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries');
     }
 
     // Mark as initialized to prevent re-resetting on user changes
