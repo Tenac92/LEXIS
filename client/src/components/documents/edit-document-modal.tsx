@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -129,7 +129,7 @@ export function EditDocumentModal({
   });
 
   // Fetch beneficiary payments for this document
-  const { data: beneficiaryPayments, refetch: refetchPayments } = useQuery({
+  const { data: beneficiaryPayments, refetch: refetchPayments, isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/documents', document?.id, 'beneficiaries'],
     queryFn: async () => {
       if (!document?.id) return [];
@@ -141,7 +141,7 @@ export function EditDocumentModal({
   });
 
   // Fetch units for dropdown
-  const { data: units = [] } = useQuery<any[]>({
+  const { data: units = [], isLoading: unitsLoading } = useQuery<any[]>({
     queryKey: ['/api/public/units'],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     enabled: open,
@@ -149,21 +149,27 @@ export function EditDocumentModal({
 
   // Watch selected unit_id from form (numeric)
   const selectedUnitId = form.watch("unit_id");
+  
+  // For initial load, use document's unit_id; after form is populated, use form value
+  const unitIdForProjectsQuery = selectedUnitId || document?.unit_id;
 
-  // Fetch projects based on selected unit_id
-  const { data: projects = [] } = useQuery<any[]>({
-    queryKey: ['projects-working', selectedUnitId],
+  // Fetch projects based on document or form unit_id
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<any[]>({
+    queryKey: ['projects-working', unitIdForProjectsQuery],
     queryFn: async () => {
-      if (!selectedUnitId) return [];
-      const response = await apiRequest(`/api/projects-working/${selectedUnitId}`);
+      if (!unitIdForProjectsQuery) return [];
+      const response = await apiRequest(`/api/projects-working/${unitIdForProjectsQuery}`);
       return Array.isArray(response) ? response : [];
     },
-    enabled: !!selectedUnitId && open,
+    enabled: !!unitIdForProjectsQuery && open,
     staleTime: 5 * 60 * 1000,
   });
 
   // Track selected project from document
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  // Track if form has been initialized to prevent re-resetting on user changes
+  const formInitializedRef = useRef(false);
 
   // Smart cascading geographic selection state
   const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
@@ -345,53 +351,93 @@ export function EditDocumentModal({
     }
   }, [calculatedTotal, form]);
 
-  // Reset form when document changes
+  // Reset initialization flag when modal closes or document changes
   useEffect(() => {
-    if (document && open) {
-      const protocolDate = document.protocol_date 
-        ? new Date(document.protocol_date).toISOString().split('T')[0] 
-        : "";
+    // Reset when modal closes OR when document ID changes
+    formInitializedRef.current = false;
+    console.log('[EditDocument] Resetting initialization flag:', { 
+      open, 
+      documentId: document?.id 
+    });
+  }, [open, document?.id]);
 
-      const originalProtocolDate = document.original_protocol_date
-        ? new Date(document.original_protocol_date).toISOString().split('T')[0]
-        : "";
-
-      // Extract ESDIAN fields
-      let esdianField1 = "";
-      let esdianField2 = "";
-      
-      if (document.esdian && Array.isArray(document.esdian)) {
-        esdianField1 = document.esdian[0] || "";
-        esdianField2 = document.esdian[1] || "";
-      }
-
-      // For correction mode, prepare to archive current protocol info
-      const formData: Partial<DocumentForm> = {
-        protocol_number_input: isCorrection ? "" : (document.protocol_number_input || ""),
-        protocol_date: isCorrection ? "" : protocolDate,
-        status: (document.status as any) || "draft",
-        comments: document.comments || "",
-        total_amount: calculatedTotal || parseFloat(document.total_amount?.toString() || "0") || 0,
-        esdian_field1: esdianField1,
-        esdian_field2: esdianField2,
-        is_correction: isCorrection ? true : Boolean(document.is_correction),
-        original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
-        original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
-        correction_reason: "",
-        recipients: recipients.length > 0 ? recipients : [],
-        project_index_id: document.project_index_id || undefined,
-        unit_id: document.unit_id ? Number(document.unit_id) : undefined,
-        geographic_region: (document as any).region || (document as any).geographic_region || "",
-      };
-
-      form.reset(formData);
-
-      // Set selected project ID for geographic area queries
-      if (document.project_index_id) {
-        setSelectedProjectId(document.project_index_id);
-      }
+  // Reset form when document changes - WITH LOADING GATES (ONLY ONCE)
+  useEffect(() => {
+    if (!document || !open) return;
+    
+    // Don't reset if already initialized (prevents overwriting user changes)
+    if (formInitializedRef.current) {
+      console.log('[EditDocument] Form already initialized, skipping reset');
+      return;
     }
-  }, [document, open, form, calculatedTotal, recipients, isCorrection, units]);
+    
+    // CRITICAL: Wait for all required data to load before populating form
+    // This ensures dropdowns have their options available when values are set
+    
+    // Check if queries are still loading
+    if (unitsLoading || beneficiariesLoading) {
+      console.log('[EditDocument] Still loading basic data:', {
+        unitsLoading,
+        beneficiariesLoading
+      });
+      return;
+    }
+    
+    // If document has unit_id, also wait for projects to load
+    if (document.unit_id && projectsLoading) {
+      console.log('[EditDocument] Still loading projects for unit:', document.unit_id);
+      return;
+    }
+
+    console.log('[EditDocument] All data loaded, resetting form ONCE');
+
+    const protocolDate = document.protocol_date 
+      ? new Date(document.protocol_date).toISOString().split('T')[0] 
+      : "";
+
+    const originalProtocolDate = document.original_protocol_date
+      ? new Date(document.original_protocol_date).toISOString().split('T')[0]
+      : "";
+
+    // Extract ESDIAN fields
+    let esdianField1 = "";
+    let esdianField2 = "";
+    
+    if (document.esdian && Array.isArray(document.esdian)) {
+      esdianField1 = document.esdian[0] || "";
+      esdianField2 = document.esdian[1] || "";
+    }
+
+    // For correction mode, prepare to archive current protocol info
+    const formData: Partial<DocumentForm> = {
+      protocol_number_input: isCorrection ? "" : (document.protocol_number_input || ""),
+      protocol_date: isCorrection ? "" : protocolDate,
+      status: (document.status as any) || "draft",
+      comments: document.comments || "",
+      total_amount: calculatedTotal || parseFloat(document.total_amount?.toString() || "0") || 0,
+      esdian_field1: esdianField1,
+      esdian_field2: esdianField2,
+      is_correction: isCorrection ? true : Boolean(document.is_correction),
+      original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
+      original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
+      correction_reason: "",
+      recipients: recipients.length > 0 ? recipients : [],
+      project_index_id: document.project_index_id || undefined,
+      unit_id: document.unit_id ? Number(document.unit_id) : undefined,
+      geographic_region: (document as any).region || (document as any).geographic_region || "",
+    };
+
+    console.log('[EditDocument] Form data:', formData);
+    form.reset(formData);
+
+    // Set selected project ID for geographic area queries
+    if (document.project_index_id) {
+      setSelectedProjectId(document.project_index_id);
+    }
+
+    // Mark as initialized to prevent re-resetting on user changes
+    formInitializedRef.current = true;
+  }, [document, open, form, calculatedTotal, recipients, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading]);
 
   // Initialize geographic selection dropdowns from document's geographic_region
   useEffect(() => {
