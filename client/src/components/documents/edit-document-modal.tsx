@@ -31,11 +31,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Save, X, User, Euro, Hash, FileText, Calendar, Plus, Trash2, Users, AlertCircle, MapPin } from "lucide-react";
+import { Loader2, Save, X, User, Euro, Hash, FileText, Plus, Trash2, Users, AlertCircle, MapPin } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
 import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
@@ -168,7 +167,7 @@ export function EditDocumentModal({
   // Fetch valid expenditure types for the selected project from project_index
   // This is the ONLY source for the dropdown - no fallback to all types
   const { data: expenditureTypes = [] } = useQuery<any[]>({
-    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId, allExpenditureTypes],
+    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId, allExpenditureTypes?.length ?? 0],
     queryFn: async () => {
       if (!selectedProjectId || !selectedUnitId) return [];
       
@@ -362,20 +361,20 @@ export function EditDocumentModal({
   const availableRegions = (projectGeographicAreas as any)?.availableRegions || [];
   const availableUnits = selectedRegionFilter
     ? ((projectGeographicAreas as any)?.availableUnits || []).filter(
-        (unit: any) => unit.region_code === selectedRegionFilter,
+        (unit: any) => String(unit.region_code) === selectedRegionFilter,
       )
     : (projectGeographicAreas as any)?.availableUnits || [];
   const availableMunicipalities = selectedUnitFilter
     ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
-        (municipality: any) => municipality.unit_code === selectedUnitFilter,
+        (municipality: any) => String(municipality.unit_code) === selectedUnitFilter,
       )
     : selectedRegionFilter
       ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
           (municipality: any) => {
             const unit = ((projectGeographicAreas as any)?.availableUnits || []).find(
-              (u: any) => u.code === municipality.unit_code
+              (u: any) => String(u.code) === String(municipality.unit_code)
             );
-            return unit?.region_code === selectedRegionFilter;
+            return String(unit?.region_code) === selectedRegionFilter;
           },
         )
       : (projectGeographicAreas as any)?.availableMunicipalities || [];
@@ -605,9 +604,9 @@ export function EditDocumentModal({
         const areas = projectGeographicAreas as any;
         if (!areas) return data.region || null;
 
-        const region = areas.availableRegions?.find((r: any) => r.code === Number(selectedRegionFilter));
-        const unit = areas.availableUnits?.find((u: any) => u.code === Number(selectedUnitFilter));
-        const municipality = areas.availableMunicipalities?.find((m: any) => m.code === Number(selectedMunicipalityId));
+        const region = areas.availableRegions?.find((r: any) => String(r.code) === selectedRegionFilter);
+        const unit = areas.availableUnits?.find((u: any) => String(u.code) === selectedUnitFilter);
+        const municipality = areas.availableMunicipalities?.find((m: any) => String(m.code) === selectedMunicipalityId);
 
         // If no selections made, preserve existing region data
         if (!region && !unit && !municipality) {
@@ -941,7 +940,7 @@ export function EditDocumentModal({
                             <SelectContent>
                               {STATUS_OPTIONS.map((option) => (
                                 <SelectItem key={option.value} value={option.value}>
-                                  <Badge className={statusOption?.color}>
+                                  <Badge className={option.color}>
                                     {option.label}
                                   </Badge>
                                 </SelectItem>
@@ -1223,7 +1222,7 @@ export function EditDocumentModal({
                                     availableRegions.find(
                                       (r: any) => String(r.code) === regionCode,
                                     )?.name || "";
-                                  form.setValue("region", selectedRegionName);
+                                  // Don't set form region here - it will be built as JSON in mutation
                                   setSelectedMunicipalityId("");
                                   console.log(
                                     "[EditDocument] Selected region as final choice:",
@@ -1305,7 +1304,7 @@ export function EditDocumentModal({
                                       }, 0);
                                     }
 
-                                    form.setValue("region", selectedUnit.name);
+                                    // Don't set form region here - it will be built as JSON in mutation
                                     setSelectedMunicipalityId("");
                                     console.log(
                                       "[EditDocument] Selected regional unit as final choice:",
@@ -1368,7 +1367,7 @@ export function EditDocumentModal({
                                       ?.availableUnits || []
                                   ).find(
                                     (u: any) =>
-                                      u.code === selectedMunicipality.unit_code,
+                                      String(u.code) === String(selectedMunicipality.unit_code),
                                   );
 
                                   if (parentUnit) {
@@ -1389,10 +1388,7 @@ export function EditDocumentModal({
                                     }, 0);
                                   }
 
-                                  form.setValue(
-                                    "region",
-                                    selectedMunicipality.name,
-                                  );
+                                  // Don't set form region here - it will be built as JSON in mutation
                                   setSelectedMunicipalityId(value);
                                   console.log(
                                     "[EditDocument] Selected municipality as final choice:",
@@ -1450,15 +1446,15 @@ export function EditDocumentModal({
                             const areas = projectGeographicAreas as any;
                             const parts = [];
                             if (selectedRegionFilter) {
-                              const region = areas?.availableRegions?.find((r: any) => r.code === Number(selectedRegionFilter));
+                              const region = areas?.availableRegions?.find((r: any) => String(r.code) === selectedRegionFilter);
                               if (region) parts.push(region.name);
                             }
                             if (selectedUnitFilter) {
-                              const unit = areas?.availableUnits?.find((u: any) => u.code === Number(selectedUnitFilter));
+                              const unit = areas?.availableUnits?.find((u: any) => String(u.code) === selectedUnitFilter);
                               if (unit) parts.push(unit.name);
                             }
                             if (selectedMunicipalityId) {
-                              const municipality = areas?.availableMunicipalities?.find((m: any) => m.code === Number(selectedMunicipalityId));
+                              const municipality = areas?.availableMunicipalities?.find((m: any) => String(m.code) === selectedMunicipalityId);
                               if (municipality) parts.push(municipality.name);
                             }
                             return parts.length > 0 ? parts.join(' → ') : 'Καμία επιλογή';
@@ -1661,14 +1657,6 @@ export function EditDocumentModal({
                       </CardContent>
                     </Card>
                   ))}
-
-                  {(!form.watch("recipients") || form.watch("recipients").length === 0) && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p>Δεν υπάρχουν δικαιούχοι</p>
-                      <p className="text-sm">Κάντε κλικ στο κουμπί "Προσθήκη Δικαιούχου" για να προσθέσετε</p>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 
