@@ -190,6 +190,26 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Fetch project_index record to resolve actual project_id from project_index_id
+  const { data: projectIndexData, isLoading: projectIndexLoading } = useQuery<any>({
+    queryKey: ['project-index', document?.project_index_id],
+    queryFn: async () => {
+      if (!document?.project_index_id) return null;
+      console.log('[EditDocument] Fetching project_index record:', document.project_index_id);
+      const response = await apiRequest(`/api/project-index/${document.project_index_id}`);
+      console.log('[EditDocument] Project_index data:', response);
+      return response;
+    },
+    enabled: !!document?.project_index_id && open,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Extract actual project_id from project_index data
+  const actualProjectId = useMemo(() => {
+    if (!projectIndexData) return null;
+    return projectIndexData.project_id;
+  }, [projectIndexData]);
+
   // Track selected project from document
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
 
@@ -413,6 +433,12 @@ export function EditDocumentModal({
       console.log('[EditDocument] Still loading projects for unit:', document.unit_id);
       return;
     }
+    
+    // If document has project_index_id, wait for project_index data to load
+    if (document.project_index_id && projectIndexLoading) {
+      console.log('[EditDocument] Still loading project_index data:', document.project_index_id);
+      return;
+    }
 
     console.log('[EditDocument] All data loaded, resetting form ONCE');
 
@@ -447,22 +473,25 @@ export function EditDocumentModal({
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
       correction_reason: "",
       recipients: recipients.length > 0 ? recipients : [],
-      project_index_id: document.project_index_id || undefined,
+      project_index_id: document.project_index_id || undefined,  // Keep original project_index_id for submission
       unit_id: document.unit_id ? Number(document.unit_id) : undefined,
       geographic_region: (document as any).region || (document as any).geographic_region || "",
     };
 
     console.log('[EditDocument] Form data:', formData);
+    console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
     form.reset(formData);
 
-    // Set selected project ID for geographic area queries
+    // Set selectedProjectId for geographic area queries
+    // Since projects now have id=project_index.id, use document.project_index_id
     if (document.project_index_id) {
       setSelectedProjectId(document.project_index_id);
+      console.log('[EditDocument] Set selectedProjectId to project_index_id:', document.project_index_id, 'for geographic queries');
     }
 
     // Mark as initialized to prevent re-resetting on user changes
     formInitializedRef.current = true;
-  }, [document, open, form, calculatedTotal, recipients, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading]);
+  }, [document, open, form, calculatedTotal, recipients, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId]);
 
   // Initialize geographic selection dropdowns from document's geographic_region
   useEffect(() => {

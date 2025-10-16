@@ -81,14 +81,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from('project_index')
         .select(`
           *,
-          Projects!inner(id, mis, na853, budget_na853, project_name),
+          Projects!inner(id, mis, na853, budget_na853, project_title, event_description),
           Monada!inner(id, unit)
         `)
         .eq('id', projectIndexId)
         .single();
       
       if (error) {
-        log(`[ProjectIndex] Database error:`, error);
+        log(`[ProjectIndex] Database error: ${error.message}`);
         return res.status(500).json({ error: 'Failed to fetch project index record' });
       }
       
@@ -97,11 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Project index record not found' });
       }
       
-      log(`[ProjectIndex] Found project_index record:`, {
-        id: data.id,
-        project_id: data.project_id,
-        monada_id: data.monada_id
-      });
+      log(`[ProjectIndex] Found project_index record: id=${data.id}, project_id=${data.project_id}, monada_id=${data.monada_id}`);
       
       return res.json(data);
     } catch (error) {
@@ -181,38 +177,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
       
-      // Enhance each project with related data
-      const enhancedProjects = unitProjects.map(project => {
-        const projectIndexForProject = projectIndexItems.filter(idx => idx.project_id === project.id);
+      // Return project_index records with enriched project data
+      // IMPORTANT: id field is project_index.id for proper form binding
+      const enhancedProjects = projectIndexItems.map(projectIndexItem => {
+        const project = allProjects.find(p => p.id === projectIndexItem.project_id);
+        if (!project) return null;
         
-        // Get expenditure types for this project
-        const projectExpenditureTypes = projectIndexForProject
-          .map(idx => expenditureTypes.find(et => et.id === idx.expenditure_type_id))
-          .filter(et => et !== null && et !== undefined)
-          .map(et => et.expenditure_types);
-        
-        const uniqueExpenditureTypes = Array.from(new Set(projectExpenditureTypes));
-        
-        // Get event types for this project
-        const projectEventTypes = projectIndexForProject
-          .map(idx => eventTypes.find(et => et.id === idx.event_types_id))
-          .filter(et => et !== null && et !== undefined)
-          .map(et => et.name);
-        
-        const uniqueEventTypes = Array.from(new Set(projectEventTypes));
+        const expenditureType = expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
+        const eventType = eventTypes.find(et => et.id === projectIndexItem.event_types_id);
         
         return {
-          id: project.id,
+          id: projectIndexItem.id,  // Use project_index.id for dropdown binding
+          project_id: project.id,    // Include actual project_id for reference
           mis: project.mis,
-          na853: project.na853, // Include NA853 field from database
+          na853: project.na853,
+          project_name: project.project_title || project.event_description,
           project_title: project.project_title || project.event_description,
           event_description: project.event_description,
-          expenditure_types: uniqueExpenditureTypes,
-          event_types: uniqueEventTypes,
+          expenditure_type: expenditureType?.expenditure_types,
+          event_type: eventType?.name,
+          monada_id: projectIndexItem.monada_id,
           created_at: project.created_at,
           updated_at: project.updated_at
         };
-      });
+      }).filter(p => p !== null);
       
       res.json(enhancedProjects);
       
