@@ -153,12 +153,36 @@ export function EditDocumentModal({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch expenditure types to find matching project_index entries
-  const { data: expenditureTypes = [] } = useQuery<any[]>({
+  // Fetch ALL expenditure types (for reference)
+  const { data: allExpenditureTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/public/expenditure-types'],
     staleTime: 60 * 60 * 1000,
     enabled: open,
   });
+
+  // Fetch valid expenditure types for the selected project from project_index
+  const { data: validExpenditureTypes = [] } = useQuery<any[]>({
+    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId],
+    queryFn: async () => {
+      if (!selectedProjectId || !selectedUnitId) return [];
+      
+      // Fetch all project_index entries for this project+unit combination
+      const response = await apiRequest(`/api/project-index/project/${selectedProjectId}/${selectedUnitId}`);
+      
+      if (!response || !Array.isArray(response)) return [];
+      
+      // Extract unique expenditure_type_id values
+      const expenditureTypeIds = [...new Set(response.map((pi: any) => pi.expenditure_type_id))];
+      
+      // Filter allExpenditureTypes to only include valid ones
+      return allExpenditureTypes.filter((type: any) => expenditureTypeIds.includes(type.id));
+    },
+    enabled: !!selectedProjectId && !!selectedUnitId && open && allExpenditureTypes.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Use valid expenditure types if available, otherwise show all
+  const expenditureTypes = validExpenditureTypes.length > 0 ? validExpenditureTypes : allExpenditureTypes;
 
   // Fetch project_index record to resolve actual project_id from project_index_id
   const { data: projectIndexData, isLoading: projectIndexLoading } = useQuery<any>({
@@ -365,21 +389,27 @@ export function EditDocumentModal({
   }, [beneficiaryPayments]);
 
   // Watch recipients and auto-calculate total
-  const watchedRecipients = form.watch("recipients") || [];
-  
-  // Calculate total amount from recipients
-  const calculatedTotal = useMemo(() => {
-    return watchedRecipients.reduce((sum: number, recipient: any) => {
-      return sum + (parseFloat(recipient.amount) || 0);
-    }, 0);
-  }, [watchedRecipients]);
-
-  // Auto-update total_amount when recipients change
+  // Use subscription-based watch for deep reactivity
   useEffect(() => {
-    if (calculatedTotal !== form.getValues("total_amount")) {
-      form.setValue("total_amount", calculatedTotal);
-    }
-  }, [calculatedTotal, form]);
+    const subscription = form.watch((value, { name }) => {
+      // Check if any recipient amount changed
+      if (name?.startsWith('recipients.') && name?.endsWith('.amount')) {
+        const recipients = value.recipients || [];
+        const total = recipients.reduce((sum: number, recipient: any) => {
+          return sum + (parseFloat(recipient.amount) || 0);
+        }, 0);
+        
+        // Only update if total has changed to prevent infinite loops
+        const currentTotal = form.getValues("total_amount");
+        if (total !== currentTotal) {
+          console.log('[EditDocument] Auto-updating total_amount:', { from: currentTotal, to: total });
+          form.setValue("total_amount", total, { shouldValidate: false });
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Reset initialization flag when modal closes or document changes
   useEffect(() => {

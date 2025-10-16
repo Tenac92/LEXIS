@@ -106,6 +106,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get all project_index entries for a project+unit combination (for finding valid expenditure types)
+  app.get('/api/project-index/project/:projectId/:unitId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { projectId, unitId } = req.params;
+      
+      if (!projectId || !unitId) {
+        return res.status(400).json({ error: 'Project ID and Unit ID are required' });
+      }
+      
+      const projectIdNum = parseInt(projectId, 10);
+      const unitIdNum = parseInt(unitId, 10);
+      
+      if (isNaN(projectIdNum) || isNaN(unitIdNum)) {
+        return res.status(400).json({ error: 'IDs must be valid numbers' });
+      }
+      
+      log(`[ProjectIndex] Fetching all project_index entries for project=${projectIdNum}, unit=${unitIdNum}`);
+      
+      // Fetch all matching project_index entries
+      const { data, error } = await supabase
+        .from('project_index')
+        .select('id, project_id, monada_id, expenditure_type_id')
+        .eq('project_id', projectIdNum)
+        .eq('monada_id', unitIdNum);
+      
+      if (error) {
+        log(`[ProjectIndex] Database error: ${error.message}`);
+        return res.status(500).json({ error: 'Failed to fetch project index entries' });
+      }
+      
+      log(`[ProjectIndex] Found ${data?.length || 0} project_index entries`);
+      
+      return res.json(data || []);
+    } catch (error) {
+      console.error('[ProjectIndex] Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
   // Find project_index entry by matching project_id, unit_id, and expenditure_type_id
   app.get('/api/project-index/find/:projectId/:unitId/:expenditureTypeId', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
