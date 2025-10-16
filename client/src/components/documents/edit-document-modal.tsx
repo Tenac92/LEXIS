@@ -637,6 +637,9 @@ export function EditDocumentModal({
   });
 
   const handleSubmit = (data: DocumentForm) => {
+    console.log('[EditDocument] Form validation errors:', form.formState.errors);
+    console.log('[EditDocument] Form isValid:', form.formState.isValid);
+    console.log('[EditDocument] Submitting data:', data);
     setIsLoading(true);
     updateMutation.mutate(data);
   };
@@ -1579,7 +1582,6 @@ export function EditDocumentModal({
           </Button>
           <Button
             type="submit"
-            onClick={form.handleSubmit(handleSubmit)}
             disabled={isLoading}
             data-testid="button-save"
           >
