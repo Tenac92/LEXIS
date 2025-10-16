@@ -226,7 +226,8 @@ export function EditDocumentModal({
   }, [projectIndexData]);
 
   // Track if form has been initialized to prevent re-resetting on user changes
-  const formInitializedRef = useRef(false);
+  // Using STATE instead of ref so changes trigger re-renders for geographic init
+  const [formInitialized, setFormInitialized] = useState(false);
   
   // Track if user has manually interacted with geographic dropdowns
   const geoUserInteractedRef = useRef(false);
@@ -425,7 +426,7 @@ export function EditDocumentModal({
   // Reset initialization flag when modal closes or document changes
   useEffect(() => {
     // Reset when modal closes OR when document ID changes
-    formInitializedRef.current = false;
+    setFormInitialized(false);
     geoUserInteractedRef.current = false; // Also reset geographic interaction flag
     console.log('[EditDocument] Resetting initialization flag:', { 
       open, 
@@ -438,7 +439,7 @@ export function EditDocumentModal({
     if (!document || !open) return;
     
     // Don't reset if already initialized (prevents overwriting user changes)
-    if (formInitializedRef.current) {
+    if (formInitialized) {
       console.log('[EditDocument] Form already initialized, skipping reset');
       return;
     }
@@ -544,7 +545,7 @@ export function EditDocumentModal({
     }
 
     // Mark as initialized to prevent re-resetting on user changes
-    formInitializedRef.current = true;
+    setFormInitialized(true);
   }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments]);
 
   // Initialize geographic selection dropdowns from document's region JSONB
@@ -556,7 +557,7 @@ export function EditDocumentModal({
     }
     
     // Skip if form hasn't been initialized yet
-    if (!formInitializedRef.current) {
+    if (!formInitialized) {
       console.log('[EditDocument] Skipping geographic init - form not initialized yet');
       return;
     }
@@ -592,7 +593,7 @@ export function EditDocumentModal({
         console.log('[EditDocument] Set selectedMunicipalityId to:', munCode);
       }
     }
-  }, [document, open, projectGeographicAreas]);
+  }, [document, open, projectGeographicAreas, formInitialized]);
 
   // Update or create correction mutation
   const updateMutation = useMutation({
@@ -1076,7 +1077,12 @@ export function EditDocumentModal({
                             await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
                           }
                         }} 
-                        value={selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined}
+                        value={
+                          selectedExpenditureTypeId && 
+                          expenditureTypes.some((type: any) => type.id === selectedExpenditureTypeId)
+                            ? selectedExpenditureTypeId.toString() 
+                            : undefined
+                        }
                         disabled={!selectedProjectId}
                       >
                         <SelectTrigger data-testid="select-expenditure-type">
