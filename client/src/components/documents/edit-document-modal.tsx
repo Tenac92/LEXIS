@@ -168,22 +168,34 @@ export function EditDocumentModal({
   // Fetch valid expenditure types for the selected project from project_index
   // This is the ONLY source for the dropdown - no fallback to all types
   const { data: expenditureTypes = [] } = useQuery<any[]>({
-    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId],
+    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId, allExpenditureTypes],
     queryFn: async () => {
       if (!selectedProjectId || !selectedUnitId) return [];
+      
+      // Wait for allExpenditureTypes to be available
+      if (!allExpenditureTypes || allExpenditureTypes.length === 0) {
+        console.log('[EditDocument] Waiting for allExpenditureTypes to load...');
+        return [];
+      }
       
       // Fetch all project_index entries for this project+unit combination
       const response = await apiRequest(`/api/project-index/project/${selectedProjectId}/${selectedUnitId}`);
       
-      if (!response || !Array.isArray(response)) return [];
+      if (!response || !Array.isArray(response)) {
+        console.log('[EditDocument] No project_index entries found for project:', selectedProjectId, 'unit:', selectedUnitId);
+        return [];
+      }
       
       // Extract unique expenditure_type_id values
       const expenditureTypeIds = [...new Set(response.map((pi: any) => pi.expenditure_type_id))];
+      console.log('[EditDocument] Valid expenditure_type_ids from project_index:', expenditureTypeIds);
       
       // Filter allExpenditureTypes to only include valid ones from project_index
-      return allExpenditureTypes.filter((type: any) => expenditureTypeIds.includes(type.id));
+      const filtered = allExpenditureTypes.filter((type: any) => expenditureTypeIds.includes(type.id));
+      console.log('[EditDocument] Filtered expenditure types:', filtered.length, 'types');
+      return filtered;
     },
-    enabled: !!selectedProjectId && !!selectedUnitId && open && allExpenditureTypes.length > 0,
+    enabled: !!selectedProjectId && !!selectedUnitId && open,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -538,25 +550,42 @@ export function EditDocumentModal({
   useEffect(() => {
     // Skip if user has manually interacted with geographic dropdowns
     if (geoUserInteractedRef.current) {
+      console.log('[EditDocument] Skipping geographic init - user has interacted');
       return;
     }
     
     const regionData = (document as any)?.region;
-    if (!document || !open || !projectGeographicAreas || !regionData) return;
+    if (!document || !open || !projectGeographicAreas || !regionData) {
+      console.log('[EditDocument] Geographic init skipped - missing data:', { 
+        hasDocument: !!document, 
+        open, 
+        hasProjectGeoAreas: !!projectGeographicAreas, 
+        hasRegionData: !!regionData 
+      });
+      return;
+    }
 
     // If region is a JSONB object with codes, use those directly
     if (typeof regionData === 'object' && regionData !== null) {
+      console.log('[EditDocument] Initializing geographic filters from region data:', regionData);
+      
       if (regionData.region_code) {
-        setSelectedRegionFilter(String(regionData.region_code));
+        const regionCode = String(regionData.region_code);
+        setSelectedRegionFilter(regionCode);
+        console.log('[EditDocument] Set selectedRegionFilter to:', regionCode);
       }
       if (regionData.unit_code) {
-        setSelectedUnitFilter(String(regionData.unit_code));
+        const unitCode = String(regionData.unit_code);
+        setSelectedUnitFilter(unitCode);
+        console.log('[EditDocument] Set selectedUnitFilter to:', unitCode);
       }
       if (regionData.municipality_code) {
-        setSelectedMunicipalityId(String(regionData.municipality_code));
+        const munCode = String(regionData.municipality_code);
+        setSelectedMunicipalityId(munCode);
+        console.log('[EditDocument] Set selectedMunicipalityId to:', munCode);
       }
     }
-  }, [document, open, projectGeographicAreas]);
+  }, [document, open, projectGeographicAreas, formInitializedRef.current]);
 
   // Update or create correction mutation
   const updateMutation = useMutation({
@@ -1179,7 +1208,7 @@ export function EditDocumentModal({
                                 if (regionCode) {
                                   const selectedRegionName =
                                     availableRegions.find(
-                                      (r: any) => r.code === regionCode,
+                                      (r: any) => String(r.code) === regionCode,
                                     )?.name || "";
                                   form.setValue("region", selectedRegionName);
                                   setSelectedMunicipalityId("");
@@ -1203,7 +1232,7 @@ export function EditDocumentModal({
                                 {availableRegions.map((region: any) => (
                                   <SelectItem
                                     key={`region-${region.code}`}
-                                    value={region.code}
+                                    value={String(region.code)}
                                   >
                                     {region.name}
                                   </SelectItem>
@@ -1224,7 +1253,7 @@ export function EditDocumentModal({
                                 (στην{" "}
                                 {
                                   availableRegions.find(
-                                    (r: any) => r.code === selectedRegionFilter,
+                                    (r: any) => String(r.code) === selectedRegionFilter,
                                   )?.name
                                 }
                                 )
@@ -1249,14 +1278,14 @@ export function EditDocumentModal({
 
                                 if (unitCode) {
                                   const selectedUnit = availableUnits.find(
-                                    (u: any) => u.code === unitCode,
+                                    (u: any) => String(u.code) === unitCode,
                                   );
 
                                   if (selectedUnit) {
                                     // Set parent region filter programmatically
                                     if (selectedUnit.region_code) {
                                       isProgrammaticUpdateRef.current = true;
-                                      setSelectedRegionFilter(selectedUnit.region_code);
+                                      setSelectedRegionFilter(String(selectedUnit.region_code));
                                       // Reset flag after state update completes
                                       setTimeout(() => {
                                         isProgrammaticUpdateRef.current = false;
@@ -1286,7 +1315,7 @@ export function EditDocumentModal({
                                 {availableUnits.map((unit: any) => (
                                   <SelectItem
                                     key={`unit-${unit.code}`}
-                                    value={unit.code}
+                                    value={String(unit.code)}
                                   >
                                     {unit.name}
                                   </SelectItem>
@@ -1333,11 +1362,11 @@ export function EditDocumentModal({
                                     // Set flag to prevent cascading handlers from overwriting our selection
                                     isProgrammaticUpdateRef.current = true;
                                     
-                                    setSelectedUnitFilter(parentUnit.code);
+                                    setSelectedUnitFilter(String(parentUnit.code));
 
                                     if (parentUnit.region_code) {
                                       setSelectedRegionFilter(
-                                        parentUnit.region_code,
+                                        String(parentUnit.region_code),
                                       );
                                     }
                                     
