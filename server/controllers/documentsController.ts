@@ -2027,22 +2027,62 @@ router.patch(
       }
 
       // Reconcile budget if project or amount changed
-      const oldProjectId = oldDocument.project_index_id;
-      const newProjectId = updateData.project_index_id ?? oldProjectId;
+      const oldProjectIndexId = oldDocument.project_index_id;
+      const newProjectIndexId = updateData.project_index_id ?? oldProjectIndexId;
       const oldAmount = parseFloat(String(oldDocument.total_amount || 0));
       const newAmount = parseFloat(String(updateData.total_amount ?? oldAmount));
 
-      if (oldProjectId !== newProjectId || oldAmount !== newAmount) {
+      if (oldProjectIndexId !== newProjectIndexId || oldAmount !== newAmount) {
         try {
-          await storage.reconcileBudgetOnDocumentEdit(
-            documentId,
-            oldProjectId,
-            newProjectId,
-            oldAmount,
-            newAmount,
-            req.user.id
-          );
-          console.log(`[DocumentsController] Budget reconciled for document ${documentId}`);
+          // Get actual project IDs from project_index records
+          let oldProjectId = null;
+          let newProjectId = null;
+
+          if (oldProjectIndexId) {
+            const { data: oldProjectIndex, error: oldProjectError } = await supabase
+              .from("project_index")
+              .select("project_id")
+              .eq("id", oldProjectIndexId)
+              .single();
+            
+            if (oldProjectError) {
+              console.error(`[DocumentsController] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, oldProjectError);
+            } else if (!oldProjectIndex?.project_id) {
+              console.error(`[DocumentsController] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+            } else {
+              oldProjectId = oldProjectIndex.project_id;
+            }
+          }
+
+          if (newProjectIndexId) {
+            const { data: newProjectIndex, error: newProjectError } = await supabase
+              .from("project_index")
+              .select("project_id")
+              .eq("id", newProjectIndexId)
+              .single();
+            
+            if (newProjectError) {
+              console.error(`[DocumentsController] ERROR: Failed to fetch project_index ${newProjectIndexId}:`, newProjectError);
+            } else if (!newProjectIndex?.project_id) {
+              console.error(`[DocumentsController] ERROR: project_index ${newProjectIndexId} has no project_id`);
+            } else {
+              newProjectId = newProjectIndex.project_id;
+            }
+          }
+
+          if (oldProjectId || newProjectId) {
+            await storage.reconcileBudgetOnDocumentEdit(
+              documentId,
+              oldProjectId,
+              newProjectId,
+              oldAmount,
+              newAmount,
+              req.user.id
+            );
+            console.log(`[DocumentsController] Budget reconciled for document ${documentId}`);
+          } else {
+            console.error(`[DocumentsController] WARNING: Skipping budget reconciliation for document ${documentId} - no valid project IDs found (oldProjectIndexId: ${oldProjectIndexId}, newProjectIndexId: ${newProjectIndexId})`);
+          }
         } catch (budgetError) {
           console.error("[DocumentsController] Error reconciling budget:", budgetError);
           // Don't fail the update if budget reconciliation fails, but log it
@@ -2352,23 +2392,63 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
     }
 
     // Reconcile budget if project or amount changed
-    const oldProjectId = originalDoc.project_index_id;
+    const oldProjectIndexId = originalDoc.project_index_id;
     const oldAmount = parseFloat(String(originalDoc.total_amount || 0));
     const newAmount = parseFloat(String(newTotalAmount || 0));
 
-    if (oldProjectId !== newProjectIndexId || oldAmount !== newAmount) {
+    if (oldProjectIndexId !== newProjectIndexId || oldAmount !== newAmount) {
       try {
-        await storage.reconcileBudgetOnDocumentEdit(
-          parseInt(id),
-          oldProjectId,
-          newProjectIndexId,
-          oldAmount,
-          newAmount,
-          req.user.id
-        );
-        console.log(`[DocumentsController] Budget reconciled for correction ${id}`);
+        // Get actual project IDs from project_index records
+        let oldProjectId = null;
+        let newProjectId = null;
+
+        if (oldProjectIndexId) {
+          const { data: oldProjectIndex, error: oldProjectError } = await supabase
+            .from("project_index")
+            .select("project_id")
+            .eq("id", oldProjectIndexId)
+            .single();
+          
+          if (oldProjectError) {
+            console.error(`[Correction] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, oldProjectError);
+          } else if (!oldProjectIndex?.project_id) {
+            console.error(`[Correction] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+          } else {
+            oldProjectId = oldProjectIndex.project_id;
+          }
+        }
+
+        if (newProjectIndexId) {
+          const { data: newProjectIndex, error: newProjectError } = await supabase
+            .from("project_index")
+            .select("project_id")
+            .eq("id", newProjectIndexId)
+            .single();
+          
+          if (newProjectError) {
+            console.error(`[Correction] ERROR: Failed to fetch project_index ${newProjectIndexId}:`, newProjectError);
+          } else if (!newProjectIndex?.project_id) {
+            console.error(`[Correction] ERROR: project_index ${newProjectIndexId} has no project_id`);
+          } else {
+            newProjectId = newProjectIndex.project_id;
+          }
+        }
+
+        if (oldProjectId || newProjectId) {
+          await storage.reconcileBudgetOnDocumentEdit(
+            parseInt(id),
+            oldProjectId,
+            newProjectId,
+            oldAmount,
+            newAmount,
+            req.user.id
+          );
+          console.log(`[Correction] Budget reconciled for correction ${id}`);
+        } else {
+          console.error(`[Correction] WARNING: Skipping budget reconciliation for correction ${id} - no valid project IDs found (oldProjectIndexId: ${oldProjectIndexId}, newProjectIndexId: ${newProjectIndexId})`);
+        }
       } catch (budgetError) {
-        console.error("[DocumentsController] Error reconciling budget:", budgetError);
+        console.error("[Correction] Error reconciling budget:", budgetError);
         // Don't fail the correction if budget reconciliation fails, but log it
       }
     }
@@ -3311,7 +3391,7 @@ router.put(
           console.error("Error fetching document for budget reconciliation:", docFetchError);
         } else if (currentDoc) {
           const oldAmount = parseFloat(String(currentDoc.total_amount || 0));
-          const oldProjectId = currentDoc.project_index_id;
+          const oldProjectIndexId = currentDoc.project_index_id;
 
           // Update document total_amount if changed
           if (Math.abs(newTotalAmount - oldAmount) > 0.001) {
@@ -3327,21 +3407,37 @@ router.put(
             }
 
             // Trigger budget reconciliation for amount change
-            if (oldProjectId && req.user?.id) {
+            if (oldProjectIndexId && req.user?.id) {
               try {
-                await storage.reconcileBudgetOnDocumentEdit(
-                  documentId,
-                  oldProjectId,
-                  oldProjectId, // Same project, amount changed
-                  oldAmount,
-                  newTotalAmount,
-                  req.user.id
-                );
-                console.log(`[EmployeePayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+                // Get actual project ID from project_index
+                const { data: projectIndex, error: projectError } = await supabase
+                  .from("project_index")
+                  .select("project_id")
+                  .eq("id", oldProjectIndexId)
+                  .single();
+
+                if (projectError) {
+                  console.error(`[EmployeePayments] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, projectError);
+                } else if (!projectIndex?.project_id) {
+                  console.error(`[EmployeePayments] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+                } else {
+                  const projectId = projectIndex.project_id;
+                  await storage.reconcileBudgetOnDocumentEdit(
+                    documentId,
+                    projectId,
+                    projectId, // Same project, amount changed
+                    oldAmount,
+                    newTotalAmount,
+                    req.user.id
+                  );
+                  console.log(`[EmployeePayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+                }
               } catch (budgetError) {
                 console.error("[EmployeePayments] Error reconciling budget:", budgetError);
                 // Don't fail the update if budget reconciliation fails
               }
+            } else if (oldProjectIndexId && !req.user?.id) {
+              console.error(`[EmployeePayments] WARNING: Skipping budget reconciliation for document ${documentId} - no user ID available`);
             }
           }
         }
@@ -3476,7 +3572,7 @@ router.put(
         console.error("Error fetching document for budget reconciliation:", docFetchError);
       } else if (currentDoc) {
         const oldAmount = parseFloat(String(currentDoc.total_amount || 0));
-        const oldProjectId = currentDoc.project_index_id;
+        const oldProjectIndexId = currentDoc.project_index_id;
 
         // Update document total_amount if changed
         if (Math.abs(newTotalAmount - oldAmount) > 0.001) {
@@ -3492,21 +3588,37 @@ router.put(
           }
 
           // Trigger budget reconciliation for amount change
-          if (oldProjectId && req.user?.id) {
+          if (oldProjectIndexId && req.user?.id) {
             try {
-              await storage.reconcileBudgetOnDocumentEdit(
-                documentId,
-                oldProjectId,
-                oldProjectId, // Same project, amount changed
-                oldAmount,
-                newTotalAmount,
-                req.user.id
-              );
-              console.log(`[BeneficiaryPayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+              // Get actual project ID from project_index
+              const { data: projectIndex, error: projectError } = await supabase
+                .from("project_index")
+                .select("project_id")
+                .eq("id", oldProjectIndexId)
+                .single();
+
+              if (projectError) {
+                console.error(`[BeneficiaryPayments] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, projectError);
+              } else if (!projectIndex?.project_id) {
+                console.error(`[BeneficiaryPayments] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+              } else {
+                const projectId = projectIndex.project_id;
+                await storage.reconcileBudgetOnDocumentEdit(
+                  documentId,
+                  projectId,
+                  projectId, // Same project, amount changed
+                  oldAmount,
+                  newTotalAmount,
+                  req.user.id
+                );
+                console.log(`[BeneficiaryPayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+              }
             } catch (budgetError) {
               console.error("[BeneficiaryPayments] Error reconciling budget:", budgetError);
               // Don't fail the update if budget reconciliation fails
             }
+          } else if (oldProjectIndexId && !req.user?.id) {
+            console.error(`[BeneficiaryPayments] WARNING: Skipping budget reconciliation for document ${documentId} - no user ID available`);
           }
         }
       }
