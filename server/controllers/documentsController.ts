@@ -1278,6 +1278,9 @@ router.get("/", async (req: Request, res: Response) => {
                 accommodation_expenses,
                 kilometers_traveled,
                 tickets_tolls_rental,
+                has_2_percent_deduction,
+                total_expense,
+                deduction_2_percent,
                 status,
                 Employees (
                   id,
@@ -1315,6 +1318,9 @@ router.get("/", async (req: Request, res: Response) => {
                   accommodation_expenses: payment.accommodation_expenses || 0,
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+                  has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
+                  total_expense: payment.total_expense ?? 0,
+                  deduction_2_percent: payment.deduction_2_percent ?? 0,
                   status: payment.status || "pending",
                   secondary_text: employee?.klados || null,
                 };
@@ -1700,6 +1706,9 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                 accommodation_expenses,
                 kilometers_traveled,
                 tickets_tolls_rental,
+                has_2_percent_deduction,
+                total_expense,
+                deduction_2_percent,
                 status,
                 Employees (
                   id,
@@ -1737,6 +1746,9 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   accommodation_expenses: payment.accommodation_expenses || 0,
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+                  has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
+                  total_expense: payment.total_expense ?? 0,
+                  deduction_2_percent: payment.deduction_2_percent ?? 0,
                   status: payment.status || "pending",
                   secondary_text: employee?.klados || null,
                 };
@@ -3015,6 +3027,9 @@ router.get(
             accommodation_expenses,
             kilometers_traveled,
             tickets_tolls_rental,
+            has_2_percent_deduction,
+            total_expense,
+            deduction_2_percent,
             status,
             Employees (
               id,
@@ -3055,6 +3070,9 @@ router.get(
             accommodation_expenses: payment.accommodation_expenses || 0,
             kilometers_traveled: payment.kilometers_traveled || 0,
             tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+            has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
+            total_expense: payment.total_expense ?? 0,
+            deduction_2_percent: payment.deduction_2_percent ?? 0,
             status: payment.status || "pending",
             secondary_text: employee?.klados || "",
           };
@@ -3173,6 +3191,9 @@ router.put(
                 accommodation_expenses: recipient.accommodation_expenses ?? 0,
                 kilometers_traveled: recipient.kilometers_traveled ?? 0,
                 tickets_tolls_rental: recipient.tickets_tolls_rental ?? 0,
+                has_2_percent_deduction: recipient.has_2_percent_deduction ?? false,
+                total_expense: recipient.total_expense ?? 0,
+                deduction_2_percent: recipient.deduction_2_percent ?? 0,
                 status: recipient.status ?? "pending",
               })
               .eq("id", recipient.id)
@@ -3233,6 +3254,7 @@ router.put(
               .from("EmployeePayments")
               .insert({
                 employee_id: employeeId,
+                document_id: documentId,
                 net_payable: recipient.amount?.toString() || "0",
                 month: recipient.month || "",
                 days: recipient.days || 0,
@@ -3240,6 +3262,9 @@ router.put(
                 accommodation_expenses: recipient.accommodation_expenses || 0,
                 kilometers_traveled: recipient.kilometers_traveled || 0,
                 tickets_tolls_rental: recipient.tickets_tolls_rental || 0,
+                has_2_percent_deduction: recipient.has_2_percent_deduction ?? false,
+                total_expense: recipient.total_expense ?? 0,
+                deduction_2_percent: recipient.deduction_2_percent ?? 0,
                 status: recipient.status || "pending",
               })
               .select()

@@ -1083,6 +1083,7 @@ export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
 // Schema for document recipients
 export const recipientSchema = z.object({
   id: z.number().optional(), // For existing beneficiary/employee payment records
+  employee_id: z.number().optional(), // For linking to employees table (ΕΚΤΟΣ ΕΔΡΑΣ)
   beneficiary_id: z.number().optional(), // For linking to beneficiaries table
   firstname: z.string().min(1, "Το όνομα του παραλήπτη είναι υποχρεωτικό"),
   lastname: z.string().min(1, "Το επώνυμο του παραλήπτη είναι υποχρεωτικό"),
@@ -1097,6 +1098,18 @@ export const recipientSchema = z.object({
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
   installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }), // Πεδίο για ποσά ανά δόση
   status: z.string().optional(), // For payment status
+  // Employee payment fields (ΕΚΤΟΣ ΕΔΡΑΣ only)
+  month: z.string().optional(),
+  days: z.number().optional(),
+  daily_compensation: z.number().optional(),
+  accommodation_expenses: z.number().optional(),
+  kilometers_traveled: z.number().optional(),
+  price_per_km: z.number().optional(),
+  tickets_tolls_rental: z.number().optional(),
+  has_2_percent_deduction: z.boolean().optional(),
+  total_expense: z.number().optional(),
+  deduction_2_percent: z.number().optional(),
+  net_payable: z.number().optional(),
 });
 
 export const insertGeneratedDocumentSchema =

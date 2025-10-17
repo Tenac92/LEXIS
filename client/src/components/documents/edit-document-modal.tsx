@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
@@ -457,6 +458,80 @@ export function EditDocumentModal({
           console.log('[EditDocument] Auto-updating total_amount:', { from: currentTotal, to: total });
           form.setValue("total_amount", total, { shouldValidate: false });
         }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
+
+  // Auto-calculate employee payment fields (ΕΚΤΟΣ ΕΔΡΑΣ)
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      // Check if any employee payment field changed
+      if (name?.startsWith('recipients.') && (
+        name.includes('.days') || 
+        name.includes('.daily_compensation') ||
+        name.includes('.accommodation_expenses') ||
+        name.includes('.kilometers_traveled') ||
+        name.includes('.tickets_tolls_rental') ||
+        name.includes('.has_2_percent_deduction')
+      )) {
+        // Extract the recipient index from the field name
+        const match = name.match(/recipients\.(\d+)\./);
+        if (!match) return;
+        
+        const index = parseInt(match[1]);
+        const recipient = value.recipients?.[index];
+        if (!recipient) return;
+
+        // Calculate total_expense
+        const days = parseFloat(recipient.days?.toString() || '0') || 0;
+        const dailyComp = parseFloat(recipient.daily_compensation?.toString() || '0') || 0;
+        const accommodation = parseFloat(recipient.accommodation_expenses?.toString() || '0') || 0;
+        const kilometers = parseFloat(recipient.kilometers_traveled?.toString() || '0') || 0;
+        const pricePerKm = parseFloat(recipient.price_per_km?.toString() || '0.2') || 0.2;
+        const tickets = parseFloat(recipient.tickets_tolls_rental?.toString() || '0') || 0;
+
+        const totalExpense = (days * dailyComp) + accommodation + (kilometers * pricePerKm) + tickets;
+
+        // Calculate deduction if applicable
+        const has2PercentDeduction = recipient.has_2_percent_deduction ?? false;
+        const deduction = has2PercentDeduction ? totalExpense * 0.02 : 0;
+        const netPayable = totalExpense - deduction;
+
+        // Update the form values
+        const currentTotalExpense = form.getValues(`recipients.${index}.total_expense` as any);
+        const currentDeduction = form.getValues(`recipients.${index}.deduction_2_percent` as any);
+        const currentNetPayable = form.getValues(`recipients.${index}.net_payable` as any);
+        const currentAmount = form.getValues(`recipients.${index}.amount` as any);
+
+        // Only update if values have changed
+        if (totalExpense !== currentTotalExpense) {
+          form.setValue(`recipients.${index}.total_expense` as any, totalExpense, { shouldValidate: false });
+        }
+        if (deduction !== currentDeduction) {
+          form.setValue(`recipients.${index}.deduction_2_percent` as any, deduction, { shouldValidate: false });
+        }
+        if (netPayable !== currentNetPayable) {
+          form.setValue(`recipients.${index}.net_payable` as any, netPayable, { shouldValidate: false });
+        }
+        // Update the amount field to match net_payable (this will trigger total recalculation)
+        if (netPayable !== currentAmount) {
+          form.setValue(`recipients.${index}.amount` as any, netPayable, { shouldValidate: false });
+        }
+
+        console.log('[EditDocument] Auto-calculated employee payment:', {
+          index,
+          days,
+          dailyComp,
+          accommodation,
+          kilometers,
+          tickets,
+          totalExpense,
+          has2PercentDeduction,
+          deduction,
+          netPayable
+        });
       }
     });
     
@@ -1870,6 +1945,69 @@ export function EditDocumentModal({
                                   </FormItem>
                                 )}
                               />
+                            </div>
+
+                            <Separator className="my-4" />
+
+                            {/* 2% Withholding Tax Section */}
+                            <div className="space-y-4">
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.has_2_percent_deduction` as any}
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        data-testid={`checkbox-2percent-${index}`}
+                                      />
+                                    </FormControl>
+                                    <div className="space-y-1 leading-none">
+                                      <FormLabel>
+                                        Παρακράτηση 2% (Φόρος Προκαταβολής)
+                                      </FormLabel>
+                                      <p className="text-sm text-muted-foreground">
+                                        Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης
+                                      </p>
+                                    </div>
+                                  </FormItem>
+                                )}
+                              />
+
+                              {/* Calculated Fields Display */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-900 p-4 rounded-md">
+                                <div>
+                                  <FormLabel className="text-xs text-muted-foreground">Συνολική Δαπάνη</FormLabel>
+                                  <Input
+                                    type="text"
+                                    value={`€ ${(form.watch(`recipients.${index}.total_expense` as any) || 0).toFixed(2)}`}
+                                    readOnly
+                                    className="bg-white dark:bg-gray-800 font-semibold mt-1"
+                                    data-testid={`display-total-expense-${index}`}
+                                  />
+                                </div>
+                                <div>
+                                  <FormLabel className="text-xs text-muted-foreground">Παρακράτηση 2%</FormLabel>
+                                  <Input
+                                    type="text"
+                                    value={`€ ${(form.watch(`recipients.${index}.deduction_2_percent` as any) || 0).toFixed(2)}`}
+                                    readOnly
+                                    className="bg-white dark:bg-gray-800 font-semibold mt-1"
+                                    data-testid={`display-deduction-${index}`}
+                                  />
+                                </div>
+                                <div>
+                                  <FormLabel className="text-xs text-muted-foreground">Καθαρό Πληρωτέο</FormLabel>
+                                  <Input
+                                    type="text"
+                                    value={`€ ${(form.watch(`recipients.${index}.net_payable` as any) || 0).toFixed(2)}`}
+                                    readOnly
+                                    className="bg-white dark:bg-gray-800 font-semibold text-green-600 dark:text-green-400 mt-1"
+                                    data-testid={`display-net-payable-${index}`}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )}
