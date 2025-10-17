@@ -3157,7 +3157,7 @@ router.put(
         const newEmployeePaymentIds = [];
 
         for (const recipient of recipients) {
-          if (recipient.id && recipient.employee_id) {
+          if (recipient.id) {
             // Update existing employee payment
             const { data: updatedPayment, error } = await supabase
               .from("EmployeePayments")
