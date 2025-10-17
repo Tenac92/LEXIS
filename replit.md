@@ -4,6 +4,32 @@ This is a comprehensive document management system specifically designed for the
 
 # Recent Changes
 
+## October 17, 2025 - Budget Reconciliation for Employee/Beneficiary Payment Updates
+- **Feature**: Budget reconciliation now triggers automatically when employee or beneficiary payment amounts are updated
+- **Critical Fix - Project ID Conversion** (`server/controllers/documentsController.ts`):
+  - Fixed project_index_id → project_id conversion issue in all budget reconciliation calls
+  - Documents store project_index_id (from project_index table), but reconcileBudgetOnDocumentEdit expects project_id (from Projects table)
+  - Added queries to fetch project_id from project_index records before calling budget reconciliation
+  - Fixes "Project 1179 not found" errors in budget updates
+- **PUT /api/documents/:id/beneficiaries Endpoint** (lines 3301-3432 employee payments, 3501-3611 beneficiary payments):
+  - Calculate new total amount from all updated recipients
+  - Update document's total_amount field when amounts change
+  - Fetch project_id from project_index using the document's project_index_id
+  - Call storage.reconcileBudgetOnDocumentEdit to update project_budget table
+  - Budget reconciliation isolated from payment updates (doesn't block on failures)
+- **PATCH /api/documents/:id Endpoint** (lines 2038-2093):
+  - Enhanced to fetch both old and new project IDs from project_index before reconciliation
+  - Handles project changes and amount changes with proper ID conversion
+- **POST /api/documents/:id/correction Endpoint** (lines 2402-2457):
+  - Same project_index_id → project_id conversion fix applied
+  - Ensures corrections trigger proper budget updates
+- **Comprehensive Error Logging**:
+  - ERROR level: Project lookup failures, missing project_id in project_index records
+  - WARNING level: Budget reconciliation skipped due to missing project IDs or user ID
+  - All skip scenarios explicitly logged with document ID and project index IDs for debugging
+  - Error isolation ensures document/payment updates succeed even if budget reconciliation fails
+- **Impact**: Employee and beneficiary payment amount changes now automatically update project budgets with full error visibility. Budget inconsistencies from failed lookups are surfaced in logs for monitoring and investigation.
+
 ## October 15, 2025 - Full Document Editing with Budget Reconciliation
 - **Feature**: Extended document editing capabilities to include all document fields with automatic budget reconciliation
 - **Frontend Changes** (`client/src/components/documents/edit-document-modal.tsx`):
