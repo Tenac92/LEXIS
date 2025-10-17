@@ -3156,32 +3156,30 @@ router.put(
         const updatedPayments = [];
         const newEmployeePaymentIds = [];
 
+        console.log('[EmployeePayments] Received recipients for ΕΚΤΟΣ ΕΔΡΑΣ:', JSON.stringify(recipients, null, 2));
+
         for (const recipient of recipients) {
           if (recipient.id) {
             // Update existing employee payment
-            console.log('[EmployeePayments] Updating payment ID', recipient.id, 'with data:', {
-              days: recipient.days,
-              daily_compensation: recipient.daily_compensation,
-              accommodation_expenses: recipient.accommodation_expenses,
-              kilometers_traveled: recipient.kilometers_traveled,
-              tickets_tolls_rental: recipient.tickets_tolls_rental,
-            });
+            console.log('[EmployeePayments] Updating payment ID', recipient.id, 'with recipient data:', recipient);
             
             const { data: updatedPayment, error } = await supabase
               .from("EmployeePayments")
               .update({
-                net_payable: recipient.amount?.toString() || recipient.net_payable?.toString(),
-                month: recipient.month,
+                net_payable: recipient.amount?.toString() ?? recipient.net_payable?.toString() ?? "0",
+                month: recipient.month ?? "",
                 days: recipient.days ?? 0,
                 daily_compensation: recipient.daily_compensation ?? 0,
                 accommodation_expenses: recipient.accommodation_expenses ?? 0,
                 kilometers_traveled: recipient.kilometers_traveled ?? 0,
                 tickets_tolls_rental: recipient.tickets_tolls_rental ?? 0,
-                status: recipient.status || "pending",
+                status: recipient.status ?? "pending",
               })
               .eq("id", recipient.id)
               .select()
               .single();
+              
+            console.log('[EmployeePayments] Update result:', { error, updatedPayment });
 
             if (error) {
               console.error("Error updating employee payment:", error);

@@ -755,6 +755,7 @@ export function EditDocumentModal({
           );
           
           if (validRecipients.length > 0) {
+            console.log('[EditDocument] Sending recipients to backend:', JSON.stringify(validRecipients, null, 2));
             await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
