@@ -1085,7 +1085,7 @@ export function EditDocumentModal({
                         <SelectContent>
                           {expenditureTypes && Array.isArray(expenditureTypes) && expenditureTypes.map((type: any) => (
                             <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.description || type.name}
+                              {type.expenditure_types || type.expenditure_types_minor || `Τύπος #${type.id}`}
                             </SelectItem>
                           ))}
                         </SelectContent>
