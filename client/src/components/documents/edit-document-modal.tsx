@@ -1078,6 +1078,17 @@ export function EditDocumentModal({
                         }} 
                         value={selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined}
                         disabled={!selectedProjectId}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            console.log('[EditDocument] Expenditure Select opened:', {
+                              selectedExpenditureTypeId,
+                              value: selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined,
+                              expenditureTypesCount: expenditureTypes?.length,
+                              expenditureTypes,
+                              hasMatchingItem: expenditureTypes?.some((t: any) => t.id === selectedExpenditureTypeId)
+                            });
+                          }
+                        }}
                       >
                         <SelectTrigger data-testid="select-expenditure-type">
                           <SelectValue placeholder={!selectedProjectId ? "Επιλέξτε πρώτα έργο" : "Επιλέξτε τύπο δαπάνης"} />
