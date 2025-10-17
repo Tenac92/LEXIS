@@ -3106,7 +3106,7 @@ router.get(
   },
 );
 
-// PUT /api/documents/:id/beneficiaries - Update beneficiary payments for a document
+// PUT /api/documents/:id/beneficiaries - Update beneficiary or employee payments for a document
 router.put(
   "/:id/beneficiaries",
   authenticateSession,
@@ -3123,7 +3123,151 @@ router.put(
         return res.status(400).json({ message: "Recipients must be an array" });
       }
 
-      // Start a transaction-like operation by handling updates sequentially
+      // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document by checking expenditure type
+      const { data: document, error: docError } = await supabase
+        .from("generated_documents")
+        .select(`
+          employee_payments_id, 
+          beneficiary_payments_id,
+          project_index!inner (
+            expenditure_type_id,
+            expenditure_types!inner (
+              expenditure_types
+            )
+          )
+        `)
+        .eq("id", documentId)
+        .single();
+
+      if (docError) {
+        console.error("Error fetching document:", docError);
+        return res.status(500).json({
+          message: "Failed to fetch document",
+          error: docError.message,
+        });
+      }
+
+      // Check if expenditure type is ΕΚΤΟΣ ΕΔΡΑΣ
+      const expenditureType = (document as any)?.project_index?.expenditure_types?.expenditure_types;
+      const isEktosEdras = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
+
+      if (isEktosEdras) {
+        // Handle employee payments update for ΕΚΤΟΣ ΕΔΡΑΣ
+        const updatedPayments = [];
+        const newEmployeePaymentIds = [];
+
+        for (const recipient of recipients) {
+          if (recipient.id && recipient.employee_id) {
+            // Update existing employee payment
+            const { data: updatedPayment, error } = await supabase
+              .from("EmployeePayments")
+              .update({
+                net_payable: recipient.amount?.toString() || recipient.net_payable?.toString(),
+                month: recipient.month,
+                days: recipient.days || 0,
+                daily_compensation: recipient.daily_compensation || 0,
+                accommodation_expenses: recipient.accommodation_expenses || 0,
+                kilometers_traveled: recipient.kilometers_traveled || 0,
+                tickets_tolls_rental: recipient.tickets_tolls_rental || 0,
+                status: recipient.status || "pending",
+              })
+              .eq("id", recipient.id)
+              .select()
+              .single();
+
+            if (error) {
+              console.error("Error updating employee payment:", error);
+              return res.status(500).json({
+                message: "Failed to update employee payment",
+                error: error.message,
+              });
+            }
+
+            updatedPayments.push(updatedPayment);
+          } else if (recipient.afm && recipient.firstname && recipient.lastname) {
+            // Create new employee payment
+            // First, find or create the employee
+            let employeeId = recipient.employee_id;
+
+            if (!employeeId) {
+              // Try to find existing employee by AFM
+              const { data: existingEmployee } = await supabase
+                .from("Employees")
+                .select("id")
+                .eq("afm", recipient.afm)
+                .single();
+
+              if (existingEmployee) {
+                employeeId = existingEmployee.id;
+              } else {
+                // Create new employee
+                const { data: newEmployee, error: employeeError } = await supabase
+                  .from("Employees")
+                  .insert({
+                    name: recipient.firstname,
+                    surname: recipient.lastname,
+                    fathername: recipient.fathername || null,
+                    afm: recipient.afm,
+                    klados: recipient.secondary_text || null,
+                  })
+                  .select("id")
+                  .single();
+
+                if (employeeError) {
+                  console.error("Error creating employee:", employeeError);
+                  continue;
+                }
+
+                employeeId = newEmployee.id;
+              }
+            }
+
+            // Create employee payment
+            const { data: newPayment, error: paymentError } = await supabase
+              .from("EmployeePayments")
+              .insert({
+                employee_id: employeeId,
+                net_payable: recipient.amount?.toString() || "0",
+                month: recipient.month || "",
+                days: recipient.days || 0,
+                daily_compensation: recipient.daily_compensation || 0,
+                accommodation_expenses: recipient.accommodation_expenses || 0,
+                kilometers_traveled: recipient.kilometers_traveled || 0,
+                tickets_tolls_rental: recipient.tickets_tolls_rental || 0,
+                status: recipient.status || "pending",
+              })
+              .select()
+              .single();
+
+            if (paymentError) {
+              console.error("Error creating employee payment:", paymentError);
+              continue;
+            }
+
+            updatedPayments.push(newPayment);
+            newEmployeePaymentIds.push(newPayment.id);
+          }
+        }
+
+        // Update document with new employee payment IDs if any were created
+        if (newEmployeePaymentIds.length > 0) {
+          const existingIds = document.employee_payments_id || [];
+          const allIds = [...existingIds, ...newEmployeePaymentIds];
+          
+          const { error: updateError } = await supabase
+            .from("generated_documents")
+            .update({ employee_payments_id: allIds })
+            .eq("id", documentId);
+
+          if (updateError) {
+            console.error("Error updating document with new employee payment IDs:", updateError);
+          }
+        }
+
+        return res.json(updatedPayments);
+      }
+
+      // Handle standard beneficiary payments
       const updatedPayments = [];
 
       for (const recipient of recipients) {

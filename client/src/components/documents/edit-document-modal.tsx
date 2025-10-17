@@ -99,11 +99,6 @@ export function EditDocumentModal({
     },
   });
 
-  // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document (via project_index relationship)
-  // The expenditure type comes from the joined project_index data
-  const docAny = document as any;
-  const isEktosEdras = docAny?.expenditure_type === EKTOS_EDRAS_TYPE;
-
   // Fetch beneficiary payments for this document
   const { data: beneficiaryPayments, refetch: refetchPayments, isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/documents', document?.id, 'beneficiaries'],
@@ -169,6 +164,16 @@ export function EditDocumentModal({
     staleTime: 60 * 60 * 1000,
     enabled: open,
   });
+
+  // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document
+  // Use the selected expenditure type from dropdown if available, otherwise use document's original type
+  const docAny = document as any;
+  const selectedExpenditureName = allExpenditureTypes.find(
+    (type: any) => type.id === selectedExpenditureTypeId
+  )?.expenditure_types;
+  const isEktosEdras = selectedExpenditureName 
+    ? selectedExpenditureName === EKTOS_EDRAS_TYPE 
+    : docAny?.expenditure_type === EKTOS_EDRAS_TYPE;
 
   // Fetch valid expenditure types for the selected project from project_index
   // This is the ONLY source for the dropdown - no fallback to all types
@@ -385,24 +390,53 @@ export function EditDocumentModal({
         )
       : (projectGeographicAreas as any)?.availableMunicipalities || [];
 
-  // Convert beneficiary payments to recipients format for the form
+  // Convert beneficiary or employee payments to recipients format for the form
   const recipients = useMemo(() => {
     if (!beneficiaryPayments || !Array.isArray(beneficiaryPayments) || beneficiaryPayments.length === 0) return [];
     
-    return beneficiaryPayments.map((payment: any) => ({
-      id: payment.id,
-      beneficiary_id: payment.beneficiary_id,
-      firstname: payment.beneficiaries?.name || '',
-      lastname: payment.beneficiaries?.surname || '',
-      fathername: payment.beneficiaries?.fathername || '',
-      afm: payment.beneficiaries?.afm || '',
-      amount: parseFloat(payment.amount) || 0,
-      installment: payment.installment || 'ΕΦΑΠΑΞ',
-      installments: [payment.installment || 'ΕΦΑΠΑΞ'],
-      installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
-      status: payment.status || 'pending',
-      secondary_text: payment.freetext || '',
-    }));
+    return beneficiaryPayments.map((payment: any) => {
+      // Check if this is employee payment data (has month field)
+      if (payment.month) {
+        // ΕΚΤΟΣ ΕΔΡΑΣ employee payment
+        return {
+          id: payment.id,
+          employee_id: payment.employee_id,
+          firstname: payment.firstname || '',
+          lastname: payment.lastname || '',
+          fathername: payment.fathername || '',
+          afm: payment.afm || '',
+          amount: parseFloat(payment.amount) || 0,
+          month: payment.month || '',
+          days: payment.days || 0,
+          daily_compensation: payment.daily_compensation || 0,
+          accommodation_expenses: payment.accommodation_expenses || 0,
+          kilometers_traveled: payment.kilometers_traveled || 0,
+          tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+          net_payable: parseFloat(payment.amount) || 0,
+          status: payment.status || 'pending',
+          secondary_text: payment.secondary_text || '',
+          installment: 'ΕΦΑΠΑΞ',
+          installments: ['ΕΦΑΠΑΞ'],
+          installmentAmounts: { 'ΕΦΑΠΑΞ': parseFloat(payment.amount) || 0 },
+        };
+      }
+      
+      // Standard beneficiary payment
+      return {
+        id: payment.id,
+        beneficiary_id: payment.beneficiary_id,
+        firstname: payment.beneficiaries?.name || '',
+        lastname: payment.beneficiaries?.surname || '',
+        fathername: payment.beneficiaries?.fathername || '',
+        afm: payment.beneficiaries?.afm || '',
+        amount: parseFloat(payment.amount) || 0,
+        installment: payment.installment || 'ΕΦΑΠΑΞ',
+        installments: [payment.installment || 'ΕΦΑΠΑΞ'],
+        installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
+        status: payment.status || 'pending',
+        secondary_text: payment.freetext || '',
+      };
+    });
   }, [beneficiaryPayments]);
 
   // Watch recipients and auto-calculate total
@@ -1674,6 +1708,139 @@ export function EditDocumentModal({
                             )}
                           />
                         </div>
+
+                        {/* ΕΚΤΟΣ ΕΔΡΑΣ specific fields */}
+                        {isEktosEdras && (
+                          <div className="space-y-4 mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <h4 className="font-medium text-green-800">Στοιχεία Μετακίνησης</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.month` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Μήνας</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field} 
+                                        placeholder="π.χ. ΙΑΝΟΥΑΡΙΟΣ 2024"
+                                        data-testid={`input-recipient-month-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.days` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Ημέρες</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field}
+                                        type="number"
+                                        min="0"
+                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                        data-testid={`input-recipient-days-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.daily_compensation` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Ημερήσια Αποζημίωση (€)</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        data-testid={`input-recipient-daily-compensation-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.accommodation_expenses` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Δαπάνες Διαμονής (€)</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        data-testid={`input-recipient-accommodation-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.kilometers_traveled` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Χιλιόμετρα</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        data-testid={`input-recipient-kilometers-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.tickets_tolls_rental` as any}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Εισιτήρια/Διόδια/Ενοικίαση (€)</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        {...field}
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        data-testid={`input-recipient-tickets-${index}`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
