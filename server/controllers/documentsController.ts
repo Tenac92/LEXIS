@@ -792,6 +792,7 @@ router.post(
         director_signature: directorSignature,
         beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
         employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
+        region: regionJsonb, // Geographic region data (parsed from Region|RegionalUnit|Municipality format)
         created_at: now,
         updated_at: now,
       };
