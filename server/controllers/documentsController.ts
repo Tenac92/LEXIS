@@ -3295,6 +3295,57 @@ router.put(
           }
         }
 
+        // Calculate new total amount from all updated employee payments
+        const newTotalAmount = recipients.reduce((sum, recipient) => {
+          return sum + (parseFloat(recipient.amount?.toString() || '0') || 0);
+        }, 0);
+
+        // Get current document data for budget reconciliation
+        const { data: currentDoc, error: docFetchError } = await supabase
+          .from("generated_documents")
+          .select("total_amount, project_index_id")
+          .eq("id", documentId)
+          .single();
+
+        if (docFetchError) {
+          console.error("Error fetching document for budget reconciliation:", docFetchError);
+        } else if (currentDoc) {
+          const oldAmount = parseFloat(String(currentDoc.total_amount || 0));
+          const oldProjectId = currentDoc.project_index_id;
+
+          // Update document total_amount if changed
+          if (Math.abs(newTotalAmount - oldAmount) > 0.001) {
+            const { error: totalUpdateError } = await supabase
+              .from("generated_documents")
+              .update({ total_amount: newTotalAmount })
+              .eq("id", documentId);
+
+            if (totalUpdateError) {
+              console.error("Error updating document total_amount:", totalUpdateError);
+            } else {
+              console.log(`[EmployeePayments] Updated document ${documentId} total_amount: ${oldAmount} -> ${newTotalAmount}`);
+            }
+
+            // Trigger budget reconciliation for amount change
+            if (oldProjectId && req.user?.id) {
+              try {
+                await storage.reconcileBudgetOnDocumentEdit(
+                  documentId,
+                  oldProjectId,
+                  oldProjectId, // Same project, amount changed
+                  oldAmount,
+                  newTotalAmount,
+                  req.user.id
+                );
+                console.log(`[EmployeePayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+              } catch (budgetError) {
+                console.error("[EmployeePayments] Error reconciling budget:", budgetError);
+                // Don't fail the update if budget reconciliation fails
+              }
+            }
+          }
+        }
+
         return res.json(updatedPayments);
       }
 
@@ -3406,6 +3457,57 @@ router.put(
           }
 
           updatedPayments.push(newPayment);
+        }
+      }
+
+      // Calculate new total amount from all updated beneficiary payments
+      const newTotalAmount = recipients.reduce((sum, recipient) => {
+        return sum + (parseFloat(recipient.amount?.toString() || '0') || 0);
+      }, 0);
+
+      // Get current document data for budget reconciliation
+      const { data: currentDoc, error: docFetchError } = await supabase
+        .from("generated_documents")
+        .select("total_amount, project_index_id")
+        .eq("id", documentId)
+        .single();
+
+      if (docFetchError) {
+        console.error("Error fetching document for budget reconciliation:", docFetchError);
+      } else if (currentDoc) {
+        const oldAmount = parseFloat(String(currentDoc.total_amount || 0));
+        const oldProjectId = currentDoc.project_index_id;
+
+        // Update document total_amount if changed
+        if (Math.abs(newTotalAmount - oldAmount) > 0.001) {
+          const { error: totalUpdateError } = await supabase
+            .from("generated_documents")
+            .update({ total_amount: newTotalAmount })
+            .eq("id", documentId);
+
+          if (totalUpdateError) {
+            console.error("Error updating document total_amount:", totalUpdateError);
+          } else {
+            console.log(`[BeneficiaryPayments] Updated document ${documentId} total_amount: ${oldAmount} -> ${newTotalAmount}`);
+          }
+
+          // Trigger budget reconciliation for amount change
+          if (oldProjectId && req.user?.id) {
+            try {
+              await storage.reconcileBudgetOnDocumentEdit(
+                documentId,
+                oldProjectId,
+                oldProjectId, // Same project, amount changed
+                oldAmount,
+                newTotalAmount,
+                req.user.id
+              );
+              console.log(`[BeneficiaryPayments] Budget reconciled for document ${documentId}: amount changed from ${oldAmount} to ${newTotalAmount}`);
+            } catch (budgetError) {
+              console.error("[BeneficiaryPayments] Error reconciling budget:", budgetError);
+              // Don't fail the update if budget reconciliation fails
+            }
+          }
         }
       }
 
