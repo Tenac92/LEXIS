@@ -1080,13 +1080,7 @@ export function EditDocumentModal({
                         disabled={!selectedProjectId}
                       >
                         <SelectTrigger data-testid="select-expenditure-type">
-                          <SelectValue placeholder={!selectedProjectId ? "Επιλέξτε πρώτα έργο" : "Επιλέξτε τύπο δαπάνης"}>
-                            {selectedExpenditureTypeId && (() => {
-                              const currentType = expenditureTypes.find((t: any) => t.id === selectedExpenditureTypeId) || 
-                                                  allExpenditureTypes.find((t: any) => t.id === selectedExpenditureTypeId);
-                              return currentType ? (currentType.description || currentType.name) : null;
-                            })()}
-                          </SelectValue>
+                          <SelectValue placeholder={!selectedProjectId ? "Επιλέξτε πρώτα έργο" : "Επιλέξτε τύπο δαπάνης"} />
                         </SelectTrigger>
                         <SelectContent>
                           {expenditureTypes && Array.isArray(expenditureTypes) && expenditureTypes.map((type: any) => (
