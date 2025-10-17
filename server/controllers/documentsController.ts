@@ -2095,7 +2095,7 @@ router.patch(
         documentId,
         data: {
           id: documentId,
-          project_index_id: newProjectId,
+          project_index_id: newProjectIndexId,
           total_amount: newAmount,
         },
       });

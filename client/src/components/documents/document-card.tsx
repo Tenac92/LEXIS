@@ -224,14 +224,6 @@ const DocumentCard = memo(function DocumentCard({
     doc.protocol_number_input || null,
   );
 
-  // Debug log to check values
-  console.log("Document data:", {
-    id: doc.id,
-    is_correction: docAny.is_correction,
-    original_protocol_number: docAny.original_protocol_number,
-    original_protocol_date: docAny.original_protocol_date,
-    comments: doc.comments,
-  });
 
   // Show orthi epanalipsi info when either condition is met
   const showOrthiEpanalipsiInfo =
