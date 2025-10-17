@@ -38,6 +38,7 @@ import { Loader2, Save, X, User, Euro, Hash, FileText, Plus, Trash2, Users, Aler
 import type { GeneratedDocument } from "@shared/schema";
 import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
+import { EKTOS_EDRAS_TYPE } from "./constants";
 
 // Use editDocumentSchema as base type - includes all fields with optional correction_reason
 // The zodResolver enforces correct validation based on mode (edit vs correction)
@@ -97,6 +98,11 @@ export function EditDocumentModal({
       region: undefined,
     },
   });
+
+  // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document (via project_index relationship)
+  // The expenditure type comes from the joined project_index data
+  const docAny = document as any;
+  const isEktosEdras = docAny?.expenditure_type === EKTOS_EDRAS_TYPE;
 
   // Fetch beneficiary payments for this document
   const { data: beneficiaryPayments, refetch: refetchPayments, isLoading: beneficiariesLoading } = useQuery({

@@ -2969,7 +2969,7 @@ router.get(
   },
 );
 
-// GET /api/documents/:id/beneficiaries - Get beneficiary payments for a document
+// GET /api/documents/:id/beneficiaries - Get beneficiary or employee payments for a document
 router.get(
   "/:id/beneficiaries",
   authenticateSession,
@@ -2981,7 +2981,89 @@ router.get(
         return res.status(400).json({ message: "Invalid document ID" });
       }
 
-      // Get beneficiary payments for this document
+      // First, get the document to check if it has employee_payments_id
+      const { data: document, error: docError } = await supabase
+        .from("generated_documents")
+        .select("employee_payments_id, beneficiary_payments_id")
+        .eq("id", documentId)
+        .single();
+
+      if (docError) {
+        console.error("Error fetching document:", docError);
+        return res.status(500).json({
+          message: "Failed to fetch document",
+          error: docError.message,
+        });
+      }
+
+      // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document (has employee_payments_id)
+      if (
+        document?.employee_payments_id &&
+        Array.isArray(document.employee_payments_id) &&
+        document.employee_payments_id.length > 0
+      ) {
+        // Fetch employee payments
+        const { data: empPayments, error: empPaymentsError } = await supabase
+          .from("EmployeePayments")
+          .select(
+            `
+            id,
+            net_payable,
+            month,
+            days,
+            daily_compensation,
+            accommodation_expenses,
+            kilometers_traveled,
+            tickets_tolls_rental,
+            status,
+            Employees (
+              id,
+              afm,
+              surname,
+              name,
+              fathername,
+              klados
+            )
+          `,
+          )
+          .in("id", document.employee_payments_id);
+
+        if (empPaymentsError) {
+          console.error("Error fetching employee payments:", empPaymentsError);
+          return res.status(500).json({
+            message: "Failed to fetch employee payments",
+            error: empPaymentsError.message,
+          });
+        }
+
+        // Transform employee payments into recipients format
+        const recipients = (empPayments || []).map((payment) => {
+          const employee = Array.isArray(payment.Employees)
+            ? payment.Employees[0]
+            : payment.Employees;
+          return {
+            id: payment.id,
+            employee_id: employee?.id,
+            firstname: employee?.name || "",
+            lastname: employee?.surname || "",
+            fathername: employee?.fathername || "",
+            afm: employee?.afm ? String(employee.afm) : "",
+            amount: parseFloat(payment.net_payable) || 0,
+            month: payment.month || "",
+            days: payment.days || 0,
+            daily_compensation: payment.daily_compensation || 0,
+            accommodation_expenses: payment.accommodation_expenses || 0,
+            kilometers_traveled: payment.kilometers_traveled || 0,
+            tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+            status: payment.status || "pending",
+            secondary_text: employee?.klados || "",
+          };
+        });
+
+        return res.json(recipients);
+      }
+
+      // Otherwise, fetch beneficiary payments (standard flow)
       const { data: payments, error } = await supabase
         .from("beneficiary_payments")
         .select(
