@@ -427,6 +427,12 @@ export function EditDocumentModal({
     // Reset when modal closes OR when document ID changes
     setFormInitialized(false);
     geoUserInteractedRef.current = false; // Also reset geographic interaction flag
+    
+    // Reset expenditure type state when modal closes to prevent stale NaN values
+    if (!open) {
+      setSelectedExpenditureTypeId(null);
+    }
+    
     console.log('[EditDocument] Resetting initialization flag:', { 
       open, 
       documentId: document?.id 
@@ -538,7 +544,7 @@ export function EditDocumentModal({
       console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries and dropdown display');
     }
     
-    if (documentExpenditureTypeId) {
+    if (documentExpenditureTypeId && !isNaN(documentExpenditureTypeId)) {
       setSelectedExpenditureTypeId(documentExpenditureTypeId);
       console.log('[EditDocument] Set selectedExpenditureTypeId:', documentExpenditureTypeId);
     }
@@ -1068,15 +1074,17 @@ export function EditDocumentModal({
                       <Select 
                         onValueChange={async (value) => {
                           const expenditureTypeId = parseInt(value);
-                          setSelectedExpenditureTypeId(expenditureTypeId);
-                          
-                          // Find and update project_index_id if we have all required values
-                          const unitId = form.getValues('unit_id');
-                          if (selectedProjectId && unitId && expenditureTypeId) {
-                            await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
+                          if (!isNaN(expenditureTypeId)) {
+                            setSelectedExpenditureTypeId(expenditureTypeId);
+                            
+                            // Find and update project_index_id if we have all required values
+                            const unitId = form.getValues('unit_id');
+                            if (selectedProjectId && unitId && expenditureTypeId) {
+                              await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
+                            }
                           }
                         }} 
-                        value={selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined}
+                        value={selectedExpenditureTypeId && !isNaN(selectedExpenditureTypeId) ? selectedExpenditureTypeId.toString() : undefined}
                         disabled={!selectedProjectId}
                         onOpenChange={(open) => {
                           if (open) {
