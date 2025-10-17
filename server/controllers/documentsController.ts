@@ -360,6 +360,7 @@ router.post(
         esdian_field2,
         esdian,
         director_signature,
+        region,
       } = req.body;
 
       console.log("[DocumentsController] V2 Request summary:", {
@@ -742,6 +743,32 @@ router.post(
             error,
           );
         }
+      }
+
+      // Parse region data from string format (Region|RegionalUnit|Municipality) to JSONB
+      let regionJsonb = null;
+      if (region && typeof region === 'string' && region.trim() !== '') {
+        const parts = region.split('|');
+        const regionName = parts[0] || '';
+        const regionalUnit = parts[1] || '';
+        const municipality = parts[2] || '';
+        
+        // Determine the level based on which parts are filled
+        let level = 'region';
+        if (municipality && municipality.trim() !== '') {
+          level = 'municipality';
+        } else if (regionalUnit && regionalUnit.trim() !== '') {
+          level = 'regional_unit';
+        }
+        
+        regionJsonb = {
+          region: regionName,
+          regional_unit: regionalUnit,
+          municipality: municipality,
+          level: level
+        };
+        
+        console.log('[DocumentsController] V2 Parsed region data:', regionJsonb);
       }
 
       // Create document with exact schema match and default values where needed
