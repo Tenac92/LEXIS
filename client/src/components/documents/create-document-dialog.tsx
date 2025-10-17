@@ -3121,11 +3121,13 @@ export function CreateDocumentDialog({
                                     availableRegions.find(
                                       (r: any) => r.code === regionCode,
                                     )?.name || "";
-                                  form.setValue("region", selectedRegionName);
+                                  // Build hierarchy: Region|| (region only, no unit or municipality)
+                                  const regionHierarchy = `${selectedRegionName}||`;
+                                  form.setValue("region", regionHierarchy);
                                   setSelectedMunicipalityId(""); // Clear municipality selection
                                   console.log(
                                     "[Geographic] Selected region as final choice:",
-                                    selectedRegionName,
+                                    regionHierarchy,
                                   );
                                 } else {
                                   form.setValue("region", "");
@@ -3185,18 +3187,33 @@ export function CreateDocumentDialog({
                                   );
 
                                   if (selectedUnit) {
+                                    let regionHierarchy = selectedUnit.name;
+                                    
                                     // Auto-complete: Fill region filter
                                     if (selectedUnit.region_code) {
                                       setSelectedRegionFilter(
                                         selectedUnit.region_code,
                                       );
+                                      
+                                      // Find the region name to build hierarchy
+                                      const parentRegion = availableRegions.find(
+                                        (r: any) => r.code === selectedUnit.region_code,
+                                      );
+                                      
+                                      if (parentRegion) {
+                                        // Build hierarchy: Region|RegionalUnit|
+                                        regionHierarchy = `${parentRegion.name}|${selectedUnit.name}|`;
+                                      } else {
+                                        // Fallback: if no region found, use unit only
+                                        regionHierarchy = `|${selectedUnit.name}|`;
+                                      }
                                     }
 
-                                    form.setValue("region", selectedUnit.name);
+                                    form.setValue("region", regionHierarchy);
                                     setSelectedMunicipalityId(""); // Clear municipality selection
                                     console.log(
                                       "[Geographic] Selected regional unit as final choice:",
-                                      selectedUnit.name,
+                                      regionHierarchy,
                                     );
                                   }
                                 } else if (!selectedRegionFilter) {
@@ -3257,6 +3274,8 @@ export function CreateDocumentDialog({
                                       u.code === selectedMunicipality.unit_code,
                                   );
 
+                                  let regionHierarchy = selectedMunicipality.name;
+                                  
                                   if (parentUnit) {
                                     // Auto-fill regional unit filter
                                     setSelectedUnitFilter(parentUnit.code);
@@ -3266,17 +3285,27 @@ export function CreateDocumentDialog({
                                       setSelectedRegionFilter(
                                         parentUnit.region_code,
                                       );
+                                      
+                                      // Find the region name to build full hierarchy
+                                      const parentRegion = availableRegions.find(
+                                        (r: any) => r.code === parentUnit.region_code,
+                                      );
+                                      
+                                      if (parentRegion) {
+                                        // Build hierarchy: Region|RegionalUnit|Municipality
+                                        regionHierarchy = `${parentRegion.name}|${parentUnit.name}|${selectedMunicipality.name}`;
+                                      } else {
+                                        // Fallback: if no region found, use unit and municipality
+                                        regionHierarchy = `|${parentUnit.name}|${selectedMunicipality.name}`;
+                                      }
                                     }
                                   }
 
-                                  form.setValue(
-                                    "region",
-                                    selectedMunicipality.name,
-                                  );
+                                  form.setValue("region", regionHierarchy);
                                   setSelectedMunicipalityId(value); // Store ID for dropdown
                                   console.log(
                                     "[Geographic] Selected municipality as final choice:",
-                                    selectedMunicipality.name,
+                                    regionHierarchy,
                                   );
                                 }
                               }}

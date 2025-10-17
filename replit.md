@@ -6,14 +6,21 @@ This is a comprehensive document management system specifically designed for the
 
 ## October 17, 2025 - Region Field Saved in Document Creation
 - **Issue**: The region field from the create document dialog was not being saved to the `generated_documents` table's `region` JSONB field
-- **Root Cause**: The V2 document creation endpoint was receiving the region data from the frontend but not parsing or persisting it to the database
-- **Solution** (`server/controllers/documentsController.ts`):
-  - Added `region` to request body destructuring (line 363)
-  - Implemented parsing logic to convert region string format ("Region|RegionalUnit|Municipality") to JSONB object (lines 748-772)
-  - Added `region: regionJsonb` field to documentPayload before database insert (line 795)
-  - JSONB structure includes: `region`, `regional_unit`, `municipality`, and `level` fields
-  - Handles all cases: region only, region+unit, and full hierarchy (region+unit+municipality)
-- **Impact**: Geographic region data is now properly saved when creating documents and can be retrieved for document display and filtering
+- **Root Cause**: 
+  - Frontend was only saving the selected item's name (e.g., "ΔΟΞΑΤΟΥ") instead of the full geographic hierarchy
+  - Backend was receiving incomplete data and couldn't reconstruct the full hierarchy
+- **Solution**:
+  - **Frontend** (`client/src/components/documents/create-document-dialog.tsx`):
+    - Fixed region selection (line 3128): Saves as `"Region||"` format
+    - Fixed regional unit selection (line 3206): Saves as `"Region|RegionalUnit|"` format  
+    - Fixed municipality selection (line 3282): Saves as `"Region|RegionalUnit|Municipality"` format
+    - Auto-completes parent hierarchy when child item is selected
+  - **Backend** (`server/controllers/documentsController.ts`):
+    - Added `region` to request body destructuring (line 363)
+    - Implemented parsing logic to convert hierarchy string to JSONB object (lines 748-772)
+    - Added `region: regionJsonb` field to documentPayload (line 795)
+    - JSONB structure: `{ region, regional_unit, municipality, level }`
+- **Impact**: Full geographic hierarchy is now saved correctly. Database stores complete region data that can be used for filtering and reporting
 
 ## October 17, 2025 - Budget Reconciliation for Employee/Beneficiary Payment Updates
 - **Feature**: Budget reconciliation now triggers automatically when employee or beneficiary payment amounts are updated
