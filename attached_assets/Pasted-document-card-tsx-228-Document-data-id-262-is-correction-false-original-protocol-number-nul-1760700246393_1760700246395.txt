@@ -1,0 +1,54 @@
+document-card.tsx:228 Document data: 
+{id: 262, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 261, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 260, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 259, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 258, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 256, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 255, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 254, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 253, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 252, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 251, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 250, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 249, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 248, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 247, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 246, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 241, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 326'}
+document-card.tsx:228 Document data: 
+{id: 240, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 9'}
+document-card.tsx:228 Document data: 
+{id: 239, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 238, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 224, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 223, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 209, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 204, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+document-card.tsx:228 Document data: 
+{id: 202, is_correction: false, original_protocol_number: null, original_protocol_date: null, comments: 'Document created for project 4'}
+64
+edit-document-modal.tsx:712 [EditDocument] Skipping geographic init - form not initialized yet
+﻿
+
