@@ -422,6 +422,7 @@ export function EditDocumentModal({
       }
       
       // Standard beneficiary payment
+      const installmentKey = payment.installment || 'ΕΦΑΠΑΞ';
       return {
         id: payment.id,
         beneficiary_id: payment.beneficiary_id,
@@ -430,9 +431,9 @@ export function EditDocumentModal({
         fathername: payment.beneficiaries?.fathername || '',
         afm: payment.beneficiaries?.afm || '',
         amount: parseFloat(payment.amount) || 0,
-        installment: payment.installment || 'ΕΦΑΠΑΞ',
-        installments: [payment.installment || 'ΕΦΑΠΑΞ'],
-        installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
+        installment: installmentKey,
+        installments: [installmentKey],
+        installmentAmounts: { [installmentKey]: parseFloat(payment.amount) || 0 } as Record<string, number>,
         status: payment.status || 'pending',
         secondary_text: payment.freetext || '',
       };
@@ -532,21 +533,51 @@ export function EditDocumentModal({
       esdianField2 = document.esdian[1] || "";
     }
 
-    // Calculate initial recipients from beneficiary payments
-    const initialRecipients = (Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []).map((payment: any) => ({
-      id: payment.id,
-      beneficiary_id: payment.beneficiary_id,
-      firstname: payment.beneficiaries?.name || '',
-      lastname: payment.beneficiaries?.surname || '',
-      fathername: payment.beneficiaries?.fathername || '',
-      afm: payment.beneficiaries?.afm || '',
-      amount: parseFloat(payment.amount) || 0,
-      installment: payment.installment || 'ΕΦΑΠΑΞ',
-      installments: [payment.installment || 'ΕΦΑΠΑΞ'],
-      installmentAmounts: { [payment.installment || 'ΕΦΑΠΑΞ']: parseFloat(payment.amount) || 0 },
-      status: payment.status || 'pending',
-      secondary_text: payment.freetext || '',
-    }));
+    // Calculate initial recipients from beneficiary or employee payments
+    const initialRecipients = (Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []).map((payment: any) => {
+      // Check if this is employee payment data (has month field)
+      if (payment.month) {
+        // ΕΚΤΟΣ ΕΔΡΑΣ employee payment
+        return {
+          id: payment.id,
+          employee_id: payment.employee_id,
+          firstname: payment.firstname || '',
+          lastname: payment.lastname || '',
+          fathername: payment.fathername || '',
+          afm: payment.afm || '',
+          amount: parseFloat(payment.amount) || 0,
+          month: payment.month || '',
+          days: payment.days || 0,
+          daily_compensation: payment.daily_compensation || 0,
+          accommodation_expenses: payment.accommodation_expenses || 0,
+          kilometers_traveled: payment.kilometers_traveled || 0,
+          tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+          net_payable: parseFloat(payment.amount) || 0,
+          status: payment.status || 'pending',
+          secondary_text: payment.secondary_text || '',
+          installment: 'ΕΦΑΠΑΞ',
+          installments: ['ΕΦΑΠΑΞ'],
+          installmentAmounts: { 'ΕΦΑΠΑΞ': parseFloat(payment.amount) || 0 },
+        };
+      }
+      
+      // Standard beneficiary payment
+      const installmentKey = payment.installment || 'ΕΦΑΠΑΞ';
+      return {
+        id: payment.id,
+        beneficiary_id: payment.beneficiary_id,
+        firstname: payment.beneficiaries?.name || '',
+        lastname: payment.beneficiaries?.surname || '',
+        fathername: payment.beneficiaries?.fathername || '',
+        afm: payment.beneficiaries?.afm || '',
+        amount: parseFloat(payment.amount) || 0,
+        installment: installmentKey,
+        installments: [installmentKey],
+        installmentAmounts: { [installmentKey]: parseFloat(payment.amount) || 0 } as Record<string, number>,
+        status: payment.status || 'pending',
+        secondary_text: payment.freetext || '',
+      };
+    });
 
     // Calculate initial total from recipients or document
     const initialTotal = initialRecipients.length > 0
