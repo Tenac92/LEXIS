@@ -4,6 +4,17 @@ This is a comprehensive document management system specifically designed for the
 
 # Recent Changes
 
+## October 17, 2025 - Region Field Saved in Document Creation
+- **Issue**: The region field from the create document dialog was not being saved to the `generated_documents` table's `region` JSONB field
+- **Root Cause**: The V2 document creation endpoint was receiving the region data from the frontend but not parsing or persisting it to the database
+- **Solution** (`server/controllers/documentsController.ts`):
+  - Added `region` to request body destructuring (line 363)
+  - Implemented parsing logic to convert region string format ("Region|RegionalUnit|Municipality") to JSONB object (lines 748-772)
+  - Added `region: regionJsonb` field to documentPayload before database insert (line 795)
+  - JSONB structure includes: `region`, `regional_unit`, `municipality`, and `level` fields
+  - Handles all cases: region only, region+unit, and full hierarchy (region+unit+municipality)
+- **Impact**: Geographic region data is now properly saved when creating documents and can be retrieved for document display and filtering
+
 ## October 17, 2025 - Budget Reconciliation for Employee/Beneficiary Payment Updates
 - **Feature**: Budget reconciliation now triggers automatically when employee or beneficiary payment amounts are updated
 - **Critical Fix - Project ID Conversion** (`server/controllers/documentsController.ts`):
