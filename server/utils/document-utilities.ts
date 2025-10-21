@@ -56,7 +56,7 @@ export const EXPENDITURE_CONFIGS: Record<string, ExpenditureConfig> = {
   },
   "ΕΚΤΟΣ ΕΔΡΑΣ": {
     documentTitle:
-      "Αίτημα χορήγησης αποζημίωσης δαπανών οδοιπορικών εξόδων και εκτός έδρας αποζημίωσης",
+      "Αίτημα χορήγησης αποζημίωσης δαπανών οδοιπορικών εξόδων και εκτός έδρας αποζημίωσης υπαλλήλων",
     columns: ["Α/Α", "ΟΝΟΜΑΤΕΠΩΝΥΜΟ", "Α.Φ.Μ.", "ΗΜΕΡΕΣ", "ΠΟΣΟ (€)"],
     mainText:
       "Αιτούμαστε για την πληρωμή των δαπανών εκτός έδρας μετακινήσεων & οδοιπορικών των υπαλλήλων",
@@ -803,10 +803,10 @@ export class DocumentUtilities {
 
       // Return default if not found
       logger.warn(`No NA853 found for identifier: ${mis}`);
-      return `2024ΝΑ85300000`;
+      return ``;
     } catch (error) {
       logger.error("Error fetching project NA853:", error);
-      return `2024ΝΑ85300000`;
+      return ``;
     }
   }
 
