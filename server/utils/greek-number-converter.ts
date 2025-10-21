@@ -10,15 +10,15 @@
 function greekToUpperCase(text: string): string {
   return text
     .toUpperCase()
-    .replace(/Ά/g, 'Α')
-    .replace(/Έ/g, 'Ε')
-    .replace(/Ή/g, 'Η')
-    .replace(/Ί/g, 'Ι')
-    .replace(/Ό/g, 'Ο')
-    .replace(/Ύ/g, 'Υ')
-    .replace(/Ώ/g, 'Ω')
-    .replace(/Ϊ/g, 'Ι')
-    .replace(/Ϋ/g, 'Υ');
+    .replace(/Ά/g, "Α")
+    .replace(/Έ/g, "Ε")
+    .replace(/Ή/g, "Η")
+    .replace(/Ί/g, "Ι")
+    .replace(/Ό/g, "Ο")
+    .replace(/Ύ/g, "Υ")
+    .replace(/Ώ/g, "Ω")
+    .replace(/Ϊ/g, "Ι")
+    .replace(/Ϋ/g, "Υ");
 }
 
 // Masculine forms (used for standalone numbers and with ευρώ)
@@ -38,10 +38,10 @@ const UNITS = [
 // Feminine forms (used with χιλιάδες)
 const UNITS_FEM = [
   "",
-  "μία",
+  "μίας",
   "δύο",
-  "τρεις",
-  "τέσσερις",
+  "τριών",
+  "τεσσάρων",
   "πέντε",
   "έξι",
   "επτά",
@@ -181,9 +181,9 @@ function convertThousands(num: number): string {
 
   // Handle thousands part with feminine agreement
   if (thousands === 1) {
-    result = "χίλια";
+    result = "χιλίων";
   } else if (thousands < 1000) {
-    result = `${convertHundreds(thousands, true)} χιλιάδες`;
+    result = `${convertHundreds(thousands, true)} χιλιάδων`;
   }
 
   // Add remainder if exists
