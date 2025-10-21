@@ -214,9 +214,9 @@ export class DocumentGenerator {
       {
         text: ` ${documentTitle} ${
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-            ? unitDetails?.unit_name?.prop || "τη"
-            : unitDetails?.unit_name?.prop || "της"
-        } ${unitDetails?.unit_name?.name || unitDetails?.name || "Διεύθυνση"}`,
+            ? unitDetails?.unit_name?.prop || "της"
+            : unitDetails?.unit_name?.prop || "τη"
+        } ${unitDetails?.unit_name?.name || unitDetails?.name || (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ? "Διεύθυνσης" : "Διεύθυνση")}`,
         italics: true,
         bold: true,
         color: "000000",
@@ -270,11 +270,14 @@ export class DocumentGenerator {
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
     const greekAmount = safeAmountToGreekText(documentData.total_amount);
+    const prop = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" 
+      ? unitDetails?.unit_name?.prop || "της"
+      : unitDetails?.unit_name?.prop || "τη";
     return [
       new Paragraph({
         children: [
           t(
-            `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
+            `${mainText} ${prop} ${unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
             { font: FONT_BODY.font, size: FONT_BODY.size },
           ),
         ],
