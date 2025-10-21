@@ -4,40 +4,40 @@
 
 import { amountToGreekText, safeAmountToGreekText } from "./greek-number-converter";
 
-// Test cases covering grammar, edge cases, and range
+// Test cases covering grammar, edge cases, and range (uppercase genitive)
 const testCases = [
-  // Original user example
-  { input: 150.50, expected: "εκατόν πενήντα ευρώ και πενήντα λεπτών" },
+  // Original user example (uppercase genitive)
+  { input: 150.50, expected: "ΕΚΑΤΟΝ ΠΕΝΗΝΤΑ ΕΥΡΩ ΚΑΙ ΠΕΝΗΝΤΑ ΛΕΠΤΩΝ" },
   
   // Basic cases
-  { input: 0, expected: "μηδέν ευρώ" },
-  { input: 1, expected: "ένα ευρώ" },
-  { input: 10, expected: "δέκα ευρώ" },
-  { input: 100, expected: "εκατό ευρώ" },
-  { input: 200, expected: "διακόσια ευρώ" },
+  { input: 0, expected: "ΜΗΔΕΝ ΕΥΡΩ" },
+  { input: 1, expected: "ΕΝΑ ΕΥΡΩ" },
+  { input: 10, expected: "ΔΕΚΑ ΕΥΡΩ" },
+  { input: 100, expected: "ΕΚΑΤΟ ΕΥΡΩ" },
+  { input: 200, expected: "ΔΙΑΚΟΣΙΩΝ ΕΥΡΩ" }, // Genitive plural
   
   // Thousands with feminine agreement
-  { input: 1000, expected: "χίλια ευρώ" },
-  { input: 2000, expected: "δύο χιλιάδες ευρώ" },
-  { input: 3000, expected: "τρεις χιλιάδες ευρώ" },
-  { input: 4000, expected: "τέσσερις χιλιάδες ευρώ" },
-  { input: 2500, expected: "δύο χιλιάδες πεντακόσια ευρώ" },
-  { input: 21000, expected: "είκοσι μία χιλιάδες ευρώ" },
-  { input: 234000, expected: "διακόσιες τριάντα τέσσερις χιλιάδες ευρώ" },
-  { input: 999999, expected: "εννιακόσιες ενενήντα εννέα χιλιάδες εννιακόσια ενενήντα εννέα ευρώ" },
+  { input: 1000, expected: "ΧΙΛΙΑ ΕΥΡΩ" },
+  { input: 2000, expected: "ΔΥΟ ΧΙΛΙΑΔΕΣ ΕΥΡΩ" },
+  { input: 3000, expected: "ΤΡΕΙΣ ΧΙΛΙΑΔΕΣ ΕΥΡΩ" },
+  { input: 4000, expected: "ΤΕΣΣΕΡΙΣ ΧΙΛΙΑΔΕΣ ΕΥΡΩ" },
+  { input: 2500, expected: "ΔΥΟ ΧΙΛΙΑΔΕΣ ΠΕΝΤΑΚΟΣΙΩΝ ΕΥΡΩ" }, // Genitive plural for hundreds
+  { input: 21000, expected: "ΕΙΚΟΣΙ ΜΙΑ ΧΙΛΙΑΔΕΣ ΕΥΡΩ" },
+  { input: 234000, expected: "ΔΙΑΚΟΣΙΕΣ ΤΡΙΑΝΤΑ ΤΕΣΣΕΡΙΣ ΧΙΛΙΑΔΕΣ ΕΥΡΩ" },
+  { input: 999999, expected: "ΕΝΝΙΑΚΟΣΙΕΣ ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΧΙΛΙΑΔΕΣ ΕΝΝΙΑΚΟΣΙΩΝ ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΕΥΡΩ" }, // Genitive plural for hundreds
   
   // Cents edge cases
-  { input: 0.01, expected: "ενός λεπτού" },
-  { input: 1.01, expected: "ένα ευρώ και ενός λεπτού" },
-  { input: 99.99, expected: "ενενήντα εννέα ευρώ και ενενήντα εννέα λεπτών" },
-  { input: 1.999, expected: "δύο ευρώ" }, // Rounding edge case: 1.999 rounds cents to 100, adds to euros
-  { input: 1250.75, expected: "χίλια διακόσια πενήντα ευρώ και εβδομήντα πέντε λεπτών" },
+  { input: 0.01, expected: "ΕΝΟΣ ΛΕΠΤΟΥ" },
+  { input: 1.01, expected: "ΕΝΑ ΕΥΡΩ ΚΑΙ ΕΝΟΣ ΛΕΠΤΟΥ" },
+  { input: 99.99, expected: "ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΕΥΡΩ ΚΑΙ ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΛΕΠΤΩΝ" },
+  { input: 1.999, expected: "ΔΥΟ ΕΥΡΩ" }, // Rounding edge case: 1.999 rounds cents to 100, adds to euros
+  { input: 1250.75, expected: "ΧΙΛΙΑ ΔΙΑΚΟΣΙΩΝ ΠΕΝΗΝΤΑ ΕΥΡΩ ΚΑΙ ΕΒΔΟΜΗΝΤΑ ΠΕΝΤΕ ΛΕΠΤΩΝ" }, // Genitive plural for hundreds
   
   // Negative numbers
-  { input: -50, expected: "μείον πενήντα ευρώ" },
+  { input: -50, expected: "ΜΕΙΟΝ ΠΕΝΗΝΤΑ ΕΥΡΩ" },
   
   // Range limits
-  { input: 1000000, expected: "εννιακόσιες ενενήντα εννέα χιλιάδες εννιακόσια ενενήντα εννέα ευρώ" }, // Clamped to 999,999
+  { input: 1000000, expected: "ΕΝΝΙΑΚΟΣΙΕΣ ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΧΙΛΙΑΔΕΣ ΕΝΝΙΑΚΟΣΙΩΝ ΕΝΕΝΗΝΤΑ ΕΝΝΕΑ ΕΥΡΩ" }, // Clamped to 999,999, genitive plural for hundreds
 ];
 
 console.log("Greek Number Converter Tests:\n");
@@ -64,10 +64,10 @@ testCases.forEach(({ input, expected }) => {
 
 // Test safeAmountToGreekText with invalid inputs
 console.log("Testing safe wrapper with invalid inputs:");
-console.log(`safeAmountToGreekText("invalid"): ${safeAmountToGreekText("invalid")}`);
-console.log(`safeAmountToGreekText(null): ${safeAmountToGreekText(null)}`);
-console.log(`safeAmountToGreekText(undefined): ${safeAmountToGreekText(undefined)}`);
-console.log(`safeAmountToGreekText("150.50"): ${safeAmountToGreekText("150.50")}`);
+console.log(`safeAmountToGreekText("invalid"): ${safeAmountToGreekText("invalid")} (expected: ΜΗΔΕΝ ΕΥΡΩ)`);
+console.log(`safeAmountToGreekText(null): ${safeAmountToGreekText(null)} (expected: ΜΗΔΕΝ ΕΥΡΩ)`);
+console.log(`safeAmountToGreekText(undefined): ${safeAmountToGreekText(undefined)} (expected: ΜΗΔΕΝ ΕΥΡΩ)`);
+console.log(`safeAmountToGreekText("150.50"): ${safeAmountToGreekText("150.50")} (expected: ΕΚΑΤΟΝ ΠΕΝΗΝΤΑ ΕΥΡΩ ΚΑΙ ΠΕΝΗΝΤΑ ΛΕΠΤΩΝ)`);
 
 console.log(`\n\nSummary: ${passCount} passed, ${failCount} failed`);
 

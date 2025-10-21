@@ -532,11 +532,11 @@ export class DocumentGenerator {
   ): Promise<Table> {
     const FONT = { size: FONT_BODY.size, font: FONT_BODY.font };
     const fullWidth = contentWidthTwip();
-    
+
     // Define column structure: Month (40%), ΣΤΟΥΣ ΔΙΚΑΙΟΥΧΟΥΣ (20%), ΥΠΕΡ ΜΤΠΥ (20%), ΣΥΝΟΛΟ (20%)
     const columnPercents = [40, 20, 20, 20];
     const colGrid = gridFromPercents(columnPercents);
-    
+
     // Column headers
     const columns = [
       "ΜΗΝΑΣ",
@@ -700,7 +700,10 @@ export class DocumentGenerator {
                   alignment: AlignmentType.CENTER,
                   spacing: { after: 0 },
                   children: [
-                    t(safeCurrency(grandTotalNetPayable), { ...FONT, bold: true }),
+                    t(safeCurrency(grandTotalNetPayable), {
+                      ...FONT,
+                      bold: true,
+                    }),
                   ],
                 }),
               ],
@@ -714,7 +717,10 @@ export class DocumentGenerator {
                   alignment: AlignmentType.CENTER,
                   spacing: { after: 0 },
                   children: [
-                    t(safeCurrency(grandTotalDeduction), { ...FONT, bold: true }),
+                    t(safeCurrency(grandTotalDeduction), {
+                      ...FONT,
+                      bold: true,
+                    }),
                   ],
                 }),
               ],
@@ -745,7 +751,7 @@ export class DocumentGenerator {
       });
     } catch (error) {
       logger.error("Error creating ΕΚΤΟΣ ΕΔΡΑΣ monthly table:", error);
-      
+
       // Return empty table on error
       return new Table({
         width: { type: WidthType.DXA, size: fullWidth },

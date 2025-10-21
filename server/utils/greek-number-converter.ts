@@ -3,44 +3,118 @@
  * Supports range: 0 to 999,999.99
  */
 
+/**
+ * Convert Greek text to uppercase without accents (τόνοι)
+ * Standard Greek orthography: capital letters don't have accents
+ */
+function greekToUpperCase(text: string): string {
+  return text
+    .toUpperCase()
+    .replace(/Ά/g, 'Α')
+    .replace(/Έ/g, 'Ε')
+    .replace(/Ή/g, 'Η')
+    .replace(/Ί/g, 'Ι')
+    .replace(/Ό/g, 'Ο')
+    .replace(/Ύ/g, 'Υ')
+    .replace(/Ώ/g, 'Ω')
+    .replace(/Ϊ/g, 'Ι')
+    .replace(/Ϋ/g, 'Υ');
+}
+
 // Masculine forms (used for standalone numbers and with ευρώ)
 const UNITS = [
-  "", "ένα", "δύο", "τρία", "τέσσερα", "πέντε", 
-  "έξι", "επτά", "οκτώ", "εννέα"
+  "",
+  "ένα",
+  "δύο",
+  "τρία",
+  "τέσσερα",
+  "πέντε",
+  "έξι",
+  "επτά",
+  "οκτώ",
+  "εννέα",
 ];
 
 // Feminine forms (used with χιλιάδες)
 const UNITS_FEM = [
-  "", "μία", "δύο", "τρεις", "τέσσερις", "πέντε",
-  "έξι", "επτά", "οκτώ", "εννέα"
+  "",
+  "μία",
+  "δύο",
+  "τρεις",
+  "τέσσερις",
+  "πέντε",
+  "έξι",
+  "επτά",
+  "οκτώ",
+  "εννέα",
 ];
 
 const TEENS = [
-  "δέκα", "έντεκα", "δώδεκα", "δεκατρία", "δεκατέσσερα",
-  "δεκαπέντε", "δεκαέξι", "δεκαεπτά", "δεκαοκτώ", "δεκαεννέα"
+  "δέκα",
+  "έντεκα",
+  "δώδεκα",
+  "δεκατρία",
+  "δεκατέσσερα",
+  "δεκαπέντε",
+  "δεκαέξι",
+  "δεκαεπτά",
+  "δεκαοκτώ",
+  "δεκαεννέα",
 ];
 
 // Feminine teens (for thousands)
 const TEENS_FEM = [
-  "δέκα", "έντεκα", "δώδεκα", "δεκατρείς", "δεκατέσσερις",
-  "δεκαπέντε", "δεκαέξι", "δεκαεπτά", "δεκαοκτώ", "δεκαεννέα"
+  "δέκα",
+  "έντεκα",
+  "δώδεκα",
+  "δεκατρείς",
+  "δεκατέσσερις",
+  "δεκαπέντε",
+  "δεκαέξι",
+  "δεκαεπτά",
+  "δεκαοκτώ",
+  "δεκαεννέα",
 ];
 
 const TENS = [
-  "", "", "είκοσι", "τριάντα", "σαράντα", "πενήντα",
-  "εξήντα", "εβδομήντα", "ογδόντα", "ενενήντα"
+  "",
+  "",
+  "είκοσι",
+  "τριάντα",
+  "σαράντα",
+  "πενήντα",
+  "εξήντα",
+  "εβδομήντα",
+  "ογδόντα",
+  "ενενήντα",
 ];
 
 // Masculine hundreds
 const HUNDREDS = [
-  "", "εκατόν", "διακόσια", "τριακόσια", "τετρακόσια",
-  "πεντακόσια", "εξακόσια", "επτακόσια", "οκτακόσια", "εννιακόσια"
+  "",
+  "εκατόν",
+  "διακοσίων",
+  "τριακοσίων",
+  "τετρακοσίων",
+  "πεντακοσίων",
+  "εξακοσίων",
+  "επτακοσίων",
+  "οκτακοσίων",
+  "εννιακοσίων",
 ];
 
 // Feminine hundreds (for thousands)
 const HUNDREDS_FEM = [
-  "", "εκατόν", "διακόσιες", "τριακόσιες", "τετρακόσιες",
-  "πεντακόσιες", "εξακόσιες", "επτακόσιες", "οκτακόσιες", "εννιακόσιες"
+  "",
+  "εκατόν",
+  "διακόσιες",
+  "τριακόσιες",
+  "τετρακόσιες",
+  "πεντακόσιες",
+  "εξακόσιες",
+  "επτακόσιες",
+  "οκτακόσιες",
+  "εννιακόσιες",
 ];
 
 /**
@@ -50,20 +124,20 @@ const HUNDREDS_FEM = [
  */
 function convertTens(num: number, feminine = false): string {
   if (num === 0) return "";
-  
+
   const units = feminine ? UNITS_FEM : UNITS;
   const teens = feminine ? TEENS_FEM : TEENS;
-  
+
   if (num < 10) return units[num];
   if (num < 20) return teens[num - 10];
-  
+
   const tensDigit = Math.floor(num / 10);
   const unitsDigit = num % 10;
-  
+
   if (unitsDigit === 0) {
     return TENS[tensDigit];
   }
-  
+
   return `${TENS[tensDigit]} ${units[unitsDigit]}`;
 }
 
@@ -76,16 +150,16 @@ function convertHundreds(num: number, feminine = false): string {
   if (num === 0) return "";
   if (num === 100) return "εκατό";
   if (num < 100) return convertTens(num, feminine);
-  
+
   const hundreds = feminine ? HUNDREDS_FEM : HUNDREDS;
   const hundredsDigit = Math.floor(num / 100);
   const remainder = num % 100;
-  
+
   if (remainder === 0) {
     // For exact hundreds, use εκατό instead of εκατόν
     return hundredsDigit === 1 ? "εκατό" : hundreds[hundredsDigit];
   }
-  
+
   return `${hundreds[hundredsDigit]} ${convertTens(remainder, feminine)}`.trim();
 }
 
@@ -96,86 +170,88 @@ function convertHundreds(num: number, feminine = false): string {
 function convertThousands(num: number): string {
   // Clamp to supported range
   const clamped = Math.max(0, Math.min(999999, Math.floor(num)));
-  
+
   if (clamped === 0) return "μηδέν";
   if (clamped < 1000) return convertHundreds(clamped, false);
-  
+
   const thousands = Math.floor(clamped / 1000);
   const remainder = clamped % 1000;
-  
+
   let result = "";
-  
+
   // Handle thousands part with feminine agreement
   if (thousands === 1) {
     result = "χίλια";
   } else if (thousands < 1000) {
     result = `${convertHundreds(thousands, true)} χιλιάδες`;
   }
-  
+
   // Add remainder if exists
   if (remainder > 0) {
     result += ` ${convertHundreds(remainder, false)}`;
   }
-  
+
   return result.trim();
 }
 
 /**
- * Converts a numeric amount to Greek currency text
- * Example: 150.50 -> "εκατόν πενήντα ευρώ και πενήντα λεπτών"
- * 
+ * Converts a numeric amount to Greek currency text in genitive case with capital letters
+ * Example: 150.50 -> "ΕΚΑΤΟΝ ΠΕΝΗΝΤΑ ΕΥΡΩ ΚΑΙ ΠΕΝΗΝΤΑ ΛΕΠΤΩΝ"
+ * Note: Output is in genitive case for use after "συνολικού ποσού"
+ *
  * @param amount - The numeric amount to convert (0-999,999.99)
- * @returns Greek text representation with currency
+ * @returns Greek text representation with currency in genitive case, uppercase
  */
 export function amountToGreekText(amount: number | string): string {
   // Convert to number and validate
   const num = typeof amount === "number" ? amount : parseFloat(amount);
-  
+
   if (!Number.isFinite(num)) {
-    return "μηδέν ευρώ";
+    return "ΜΗΔΕΝ ΕΥΡΩ";
   }
-  
+
   // Handle negative numbers
   if (num < 0) {
-    return `μείον ${amountToGreekText(Math.abs(num))}`;
+    return `ΜΕΙΟΝ ${amountToGreekText(Math.abs(num))}`;
   }
-  
+
   // Split into euros and cents, handling rounding edge case
   let euros = Math.floor(num);
   let cents = Math.round((num - euros) * 100);
-  
+
   // Handle rounding edge case: if cents rounds to 100, add to euros
   if (cents >= 100) {
     euros += Math.floor(cents / 100);
     cents = cents % 100;
   }
-  
+
   // Convert euros part
   let result = "";
-  
+
   if (euros === 0 && cents === 0) {
-    result = "μηδέν ευρώ";
+    result = "ΜΗΔΕΝ ΕΥΡΩ";
   } else if (euros === 0) {
     result = "";
   } else {
-    result = `${convertThousands(euros)} ευρώ`;
+    // Uppercase the number words (without accents) and add genitive currency form
+    result = `${greekToUpperCase(convertThousands(euros))} ΕΥΡΩ`;
   }
-  
-  // Add cents if present with correct grammar
+
+  // Add cents if present with correct genitive grammar
   if (cents > 0) {
-    const centsText = convertTens(cents, false);
-    
+    const centsText = greekToUpperCase(convertTens(cents, false));
+
     if (cents === 1) {
       // Singular genitive for 1 cent
-      const prefix = euros > 0 ? " και " : "";
-      result += `${prefix}ενός λεπτού`;
+      const prefix = euros > 0 ? " ΚΑΙ " : "";
+      result += `${prefix}ΕΝΟΣ ΛΕΠΤΟΥ`;
     } else {
       // Plural genitive for multiple cents
-      const prefix = euros > 0 ? " και " : "";
-      result += `${prefix}${centsText} λεπτών`;
+      const prefix = euros > 0 ? " ΚΑΙ " : "";
+      result += `${prefix}${centsText} ΛΕΠΤΩΝ`;
     }
   }
-  
+
   return result.trim();
 }
 
