@@ -32,6 +32,7 @@ import { DocumentUtilities } from "./document-utilities";
 import { DocumentData, UnitDetails } from "./document-types";
 import { createLogger } from "./logger";
 import { supabase } from "../config/db";
+import { safeAmountToGreekText } from "./greek-number-converter";
 
 const logger = createLogger("DocumentGenerator");
 
@@ -268,12 +269,12 @@ export class DocumentGenerator {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
-
+    const greekAmount = safeAmountToGreekText(documentData.total_amount);
     return [
       new Paragraph({
         children: [
           t(
-            `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name}`,
+            `${mainText} ${unitDetails?.unit_name?.prop || "τη"} ${unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
             { font: FONT_BODY.font, size: FONT_BODY.size },
           ),
         ],
