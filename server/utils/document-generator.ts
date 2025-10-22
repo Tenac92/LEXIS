@@ -214,9 +214,9 @@ export class DocumentGenerator {
       {
         text: ` ${documentTitle} ${
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-            ? unitDetails?.unit_name?.propgen
-            : unitDetails?.unit_name?.prop
-        } ${expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ? unitDetails?.unit_name?.namegen : unitDetails?.unit_name?.name}`,
+            ? unitDetails?.unit_name?.prop || "της"
+            : unitDetails?.unit_name?.prop || "τη"
+        } ${unitDetails?.unit_name?.name || unitDetails?.name || (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ? "Διεύθυνσης" : "Διεύθυνση")}`,
         italics: true,
         bold: true,
         color: "000000",
@@ -270,15 +270,14 @@ export class DocumentGenerator {
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
     const greekAmount = safeAmountToGreekText(documentData.total_amount);
-    const prop =
-      expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-        ? unitDetails?.unit_name?.propgen
-        : unitDetails?.unit_name?.prop;
+    const prop = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" 
+      ? unitDetails?.unit_name?.prop || "της"
+      : unitDetails?.unit_name?.prop || "τη";
     return [
       new Paragraph({
         children: [
           t(
-            `${mainText} ${prop} ${expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ? unitDetails?.unit_name?.namegen : unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
+            `${mainText} ${prop} ${unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
             { font: FONT_BODY.font, size: FONT_BODY.size },
           ),
         ],
@@ -784,6 +783,8 @@ export class DocumentGenerator {
     unitDetails: UnitDetails | null | undefined,
   ): Table {
     const left: Paragraph[] = [];
+    const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
+    const isEktosEdras = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
 
     // Attachments
     left.push(
@@ -813,7 +814,57 @@ export class DocumentGenerator {
 
     left.push(new Paragraph({ children: [t("")] }));
 
-    // Distribution
+    // ΑΝΑΚΟΙΝΩΣΗ section (only for ΕΚΤΟΣ ΕΔΡΑΣ)
+    if (isEktosEdras) {
+      left.push(
+        new Paragraph({
+          children: [
+            t("ΑΝΑΚΟΙΝΩΣΗ", {
+              bold: true,
+              underline: { type: UnderlineType.SINGLE },
+              ...FONT_SMALL,
+            }),
+          ],
+        }),
+      );
+
+      left.push(
+        new Paragraph({
+          children: [
+            t("Γρ. Υφυπουργού Κλιματικής Κρίσης και Πολιτικής", {
+              ...FONT_SMALL,
+            }),
+          ],
+          indent: { left: 426 },
+        }),
+      );
+
+      left.push(
+        new Paragraph({
+          children: [
+            t("Προστασίας (Αρμόδιου για την Αποκατάσταση", {
+              ...FONT_SMALL,
+            }),
+          ],
+          indent: { left: 426 },
+        }),
+      );
+
+      left.push(
+        new Paragraph({
+          children: [
+            t("Φυσικών Καταστροφών & Κρατικής Αρωγής)", {
+              ...FONT_SMALL,
+            }),
+          ],
+          indent: { left: 426 },
+        }),
+      );
+
+      left.push(new Paragraph({ children: [t("")] }));
+    }
+
+    // Distribution (ΚΟΙΝΟΠΟΙΗΣΗ)
     left.push(
       new Paragraph({
         children: [
@@ -826,18 +877,32 @@ export class DocumentGenerator {
       }),
     );
 
-    [
-      "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
-      "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
-      "Γ.Δ.Α.Ε.Φ.Κ.",
-    ].forEach((n, i) =>
+    // Different distribution list for ΕΚΤΟΣ ΕΔΡΑΣ vs other types
+    if (isEktosEdras) {
       left.push(
         new Paragraph({
-          children: [t(`${i + 1}. ${n}`, { ...FONT_SMALL })],
+          children: [
+            t("1. Γρ. Γ. Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής", {
+              ...FONT_SMALL,
+            }),
+          ],
           indent: { left: 426 },
         }),
-      ),
-    );
+      );
+    } else {
+      [
+        "Γρ. Υφυπουργού Κλιματικής Κρίσης & Πολιτικής Προστασίας",
+        "Γρ. Γ.Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+        "Γ.Δ.Α.Ε.Φ.Κ.",
+      ].forEach((n, i) =>
+        left.push(
+          new Paragraph({
+            children: [t(`${i + 1}. ${n}`, { ...FONT_SMALL })],
+            indent: { left: 426 },
+          }),
+        ),
+      );
+    }
 
     left.push(new Paragraph({ children: [t("")] }));
 
