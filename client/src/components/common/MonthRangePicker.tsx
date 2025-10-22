@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { GREEK_MONTHS } from "@/components/documents/constants";
 
 interface MonthRangePickerProps {
@@ -10,12 +11,18 @@ interface MonthRangePickerProps {
 }
 
 export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker" }: MonthRangePickerProps) {
+  const [open, setOpen] = useState(false);
   const [displayYear, setDisplayYear] = useState(new Date().getFullYear());
   const [startMonth, setStartMonth] = useState("");
   const [startYear, setStartYear] = useState("");
   const [endMonth, setEndMonth] = useState("");
   const [endYear, setEndYear] = useState("");
   const [isSelectingEnd, setIsSelectingEnd] = useState(false);
+
+  // Get current month and year for validation
+  const now = new Date();
+  const currentMonth = GREEK_MONTHS[now.getMonth()];
+  const currentYear = now.getFullYear();
 
   // Sync internal state when value prop changes (but not during active range selection)
   useEffect(() => {
@@ -59,7 +66,23 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
     }
   }, [value, isSelectingEnd]);
 
+  // Check if a month is in the future
+  const isMonthInFuture = (month: string, year: number) => {
+    if (year > currentYear) return true;
+    if (year === currentYear) {
+      const monthIdx = GREEK_MONTHS.indexOf(month);
+      const currentMonthIdx = GREEK_MONTHS.indexOf(currentMonth);
+      return monthIdx > currentMonthIdx;
+    }
+    return false;
+  };
+
   const handleMonthClick = (month: string) => {
+    // Don't allow clicking on future months
+    if (isMonthInFuture(month, displayYear)) {
+      return;
+    }
+
     if (!startMonth || (startMonth && endMonth && !isSelectingEnd)) {
       // Start new selection
       setStartMonth(month);
@@ -87,6 +110,9 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
         } else {
           onChange(`${startMonth} ${startYear} - ${month} ${displayYear}`);
         }
+        
+        // Close popover when range is complete
+        setOpen(false);
       } else {
         // User clicked before start, make it the new start
         setStartMonth(month);
@@ -137,69 +163,87 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
   };
 
   return (
-    <div className="space-y-2">
-      {/* Year Navigation */}
-      <div className="flex items-center justify-between">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          onClick={() => setDisplayYear(displayYear - 1)}
-          className="h-7 w-7 p-0"
-          data-testid={`${testIdPrefix}-prev-year`}
+          className="w-full justify-start text-left font-normal"
+          data-testid={`${testIdPrefix}-trigger`}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <Calendar className="mr-2 h-4 w-4" />
+          {value || "Επιλέξτε περίοδο"}
         </Button>
-        <span className="text-sm font-semibold">{displayYear}</span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setDisplayYear(displayYear + 1)}
-          className="h-7 w-7 p-0"
-          data-testid={`${testIdPrefix}-next-year`}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Month Grid */}
-      <div className="grid grid-cols-3 gap-1">
-        {GREEK_MONTHS.map((month) => {
-          const inRange = isMonthInRange(month);
-          const isStart = isStartMonth(month);
-          const isEnd = isEndMonth(month);
-          
-          return (
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="space-y-2">
+          {/* Year Navigation */}
+          <div className="flex items-center justify-between">
             <Button
-              key={month}
               type="button"
-              variant={inRange ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => handleMonthClick(month)}
-              className={`h-8 text-[10px] px-1 ${
-                isStart || isEnd ? "ring-2 ring-blue-500 ring-offset-1" : ""
-              }`}
-              data-testid={`${testIdPrefix}-month-${month}`}
+              onClick={() => setDisplayYear(displayYear - 1)}
+              className="h-7 w-7 p-0"
+              data-testid={`${testIdPrefix}-prev-year`}
             >
-              {month.slice(0, 3)}
+              <ChevronLeft className="h-4 w-4" />
             </Button>
-          );
-        })}
-      </div>
+            <span className="text-sm font-semibold">{displayYear}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDisplayYear(displayYear + 1)}
+              disabled={displayYear >= currentYear}
+              className="h-7 w-7 p-0"
+              data-testid={`${testIdPrefix}-next-year`}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
 
-      {/* Selected Range Display */}
-      {startMonth && (
-        <div className="bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
-          <p className="text-xs text-blue-700 font-medium">
-            {isSelectingEnd ? (
-              <>Επιλέξτε τέλος περιόδου</>
-            ) : (
-              <>Επιλεγμένη περίοδος: {value}</>
-            )}
-          </p>
+          {/* Month Grid */}
+          <div className="grid grid-cols-3 gap-1">
+            {GREEK_MONTHS.map((month) => {
+              const inRange = isMonthInRange(month);
+              const isStart = isStartMonth(month);
+              const isEnd = isEndMonth(month);
+              const isFuture = isMonthInFuture(month, displayYear);
+              
+              return (
+                <Button
+                  key={month}
+                  type="button"
+                  variant={inRange ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleMonthClick(month)}
+                  disabled={isFuture}
+                  className={`h-8 text-[10px] px-1 ${
+                    isStart || isEnd ? "ring-2 ring-blue-500 ring-offset-1" : ""
+                  } ${isFuture ? "opacity-40 cursor-not-allowed" : ""}`}
+                  data-testid={`${testIdPrefix}-month-${month}`}
+                >
+                  {month.slice(0, 3)}
+                </Button>
+              );
+            })}
+          </div>
+
+          {/* Selected Range Display */}
+          {startMonth && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
+              <p className="text-xs text-blue-700 font-medium">
+                {isSelectingEnd ? (
+                  <>Επιλέξτε τέλος περιόδου</>
+                ) : (
+                  <>Επιλεγμένη περίοδος: {value}</>
+                )}
+              </p>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
