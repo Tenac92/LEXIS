@@ -3429,7 +3429,7 @@ export function CreateDocumentDialog({
                       <Card key={index} className="p-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
+                          <div className="md:col-span-2 md:row-span-1">
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.firstname`}
@@ -3450,7 +3450,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* Επώνυμο */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
+                          <div className="md:col-span-2 md:row-span-1">
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.lastname`}
@@ -3471,7 +3471,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* Πατρώνυμο */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
+                          <div className="md:col-span-2 md:row-span-1">
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.fathername`}
@@ -3492,7 +3492,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
+                          <div className="md:col-span-2 md:row-span-1">
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""
@@ -3727,36 +3727,33 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* Month Field - only for ΕΚΤΟΣ ΕΔΡΑΣ */}
-                          {form.getValues("expenditure_type") ===
-                            EKTOS_EDRAS_TYPE && (
-                            <div className="md:col-span-4">
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.month`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel className="text-xs font-medium">
-                                      Περίοδος (Μήνες)
-                                    </FormLabel>
-                                    <FormControl>
-                                      <MonthRangePicker
-                                        value={field.value || ""}
-                                        onChange={field.onChange}
-                                        testIdPrefix={`recipient-${index}-month`}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                          )}
-
-                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific expense fields */}
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
                             <>
+                              {/* Month Range Selector - on same row as name fields */}
+                              <div className="md:col-span-4">
+                                <FormField
+                                  control={form.control}
+                                  name={`recipients.${index}.month`}
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel className="text-xs font-medium">
+                                        Περίοδος (Μήνες)
+                                      </FormLabel>
+                                      <FormControl>
+                                        <MonthRangePicker
+                                          value={field.value || ""}
+                                          onChange={field.onChange}
+                                          testIdPrefix={`recipient-${index}-month`}
+                                        />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+
                               {/* All Expense Fields in One Row */}
                               <div className="md:col-span-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                                 {/* Days Input */}

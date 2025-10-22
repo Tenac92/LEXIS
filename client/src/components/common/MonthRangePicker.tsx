@@ -111,8 +111,8 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
           onChange(`${startMonth} ${startYear} - ${month} ${displayYear}`);
         }
         
-        // Close popover only after completing the range selection
-        setTimeout(() => setOpen(false), 100);
+        // Close popover when range is complete
+        setOpen(false);
       } else {
         // User clicked before start, make it the new start
         setStartMonth(month);
@@ -163,7 +163,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -175,11 +175,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
           <span className="truncate">{value || "Επιλέξτε περίοδο"}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-80 p-4" 
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
+      <PopoverContent className="w-80 p-4" align="start">
         <div className="space-y-3">
           {/* Year Navigation */}
           <div className="flex items-center justify-between">
