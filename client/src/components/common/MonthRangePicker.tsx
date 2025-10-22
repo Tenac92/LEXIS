@@ -111,8 +111,8 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
           onChange(`${startMonth} ${startYear} - ${month} ${displayYear}`);
         }
         
-        // Close popover when range is complete
-        setOpen(false);
+        // Close popover only after completing the range selection
+        setTimeout(() => setOpen(false), 100);
       } else {
         // User clicked before start, make it the new start
         setStartMonth(month);
