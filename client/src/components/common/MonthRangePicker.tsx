@@ -168,15 +168,15 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-start text-left font-normal"
+          className="w-full justify-start text-left font-normal text-xs h-9 px-2"
           data-testid={`${testIdPrefix}-trigger`}
         >
-          <Calendar className="mr-2 h-4 w-4" />
-          {value || "Επιλέξτε περίοδο"}
+          <Calendar className="mr-1.5 h-3.5 w-3.5" />
+          <span className="truncate">{value || "Επιλέξτε περίοδο"}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" align="start">
-        <div className="space-y-2">
+      <PopoverContent className="w-80 p-4" align="start">
+        <div className="space-y-3">
           {/* Year Navigation */}
           <div className="flex items-center justify-between">
             <Button
@@ -184,19 +184,19 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
               variant="outline"
               size="sm"
               onClick={() => setDisplayYear(displayYear - 1)}
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
               data-testid={`${testIdPrefix}-prev-year`}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm font-semibold">{displayYear}</span>
+            <span className="text-base font-semibold">{displayYear}</span>
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setDisplayYear(displayYear + 1)}
               disabled={displayYear >= currentYear}
-              className="h-7 w-7 p-0"
+              className="h-8 w-8 p-0"
               data-testid={`${testIdPrefix}-next-year`}
             >
               <ChevronRight className="h-4 w-4" />
@@ -204,7 +204,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
           </div>
 
           {/* Month Grid */}
-          <div className="grid grid-cols-3 gap-1">
+          <div className="grid grid-cols-3 gap-2">
             {GREEK_MONTHS.map((month) => {
               const inRange = isMonthInRange(month);
               const isStart = isStartMonth(month);
@@ -219,7 +219,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
                   size="sm"
                   onClick={() => handleMonthClick(month)}
                   disabled={isFuture}
-                  className={`h-8 text-[10px] px-1 ${
+                  className={`h-10 text-xs px-2 ${
                     isStart || isEnd ? "ring-2 ring-blue-500 ring-offset-1" : ""
                   } ${isFuture ? "opacity-40 cursor-not-allowed" : ""}`}
                   data-testid={`${testIdPrefix}-month-${month}`}
@@ -232,7 +232,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
 
           {/* Selected Range Display */}
           {startMonth && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
+            <div className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
               <p className="text-xs text-blue-700 font-medium">
                 {isSelectingEnd ? (
                   <>Επιλέξτε τέλος περιόδου</>

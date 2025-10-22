@@ -3731,8 +3731,8 @@ export function CreateDocumentDialog({
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
                             <>
-                              {/* Month Range Selector */}
-                              <div className="md:col-span-6">
+                              {/* Month Range Selector - on same row as name fields */}
+                              <div className="md:col-span-4">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.month`}
