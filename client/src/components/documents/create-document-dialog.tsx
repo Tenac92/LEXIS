@@ -3429,7 +3429,7 @@ export function CreateDocumentDialog({
                       <Card key={index} className="p-4 relative">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-2"} md:row-span-1`}>
+                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.firstname`}
@@ -3450,7 +3450,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* Επώνυμο */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-2"} md:row-span-1`}>
+                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.lastname`}
@@ -3471,7 +3471,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* Πατρώνυμο */}
-                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-2"} md:row-span-1`}>
+                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
                             <FormField
                               control={form.control}
                               name={`recipients.${index}.fathername`}
@@ -3492,7 +3492,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                          <div className="md:col-span-2 md:row-span-1">
+                          <div className={`${form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-3"}`}>
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""
@@ -3727,10 +3727,10 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* Month Field - only visible for ΕΚΤΟΣ ΕΔΡΑΣ */}
-                          <div className="md:col-span-4">
-                            {form.getValues("expenditure_type") ===
-                              EKTOS_EDRAS_TYPE && (
+                          {/* Month Field - only for ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {form.getValues("expenditure_type") ===
+                            EKTOS_EDRAS_TYPE && (
+                            <div className="md:col-span-4">
                               <FormField
                                 control={form.control}
                                 name={`recipients.${index}.month`}
@@ -3750,8 +3750,8 @@ export function CreateDocumentDialog({
                                   </FormItem>
                                 )}
                               />
-                            )}
-                          </div>
+                            </div>
+                          )}
 
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific expense fields */}
                           {form.getValues("expenditure_type") ===
