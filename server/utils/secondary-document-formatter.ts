@@ -20,6 +20,27 @@ import { supabase } from "../config/db";
 
 const logger = createLogger("SecondaryDocumentFormatter");
 
+// Landscape A4 dimensions (11906 x 16838 twips for landscape)
+const LANDSCAPE_PAGE_WIDTH_TWIP = 16838;
+
+// Compute usable content width from margins for landscape orientation
+const landscapeContentWidthTwip = () => {
+  const m = DocumentUtilities.DOCUMENT_MARGINS || { left: 720, right: 720 };
+  const left = (m as any).left ?? 0;
+  const right = (m as any).right ?? 0;
+  return LANDSCAPE_PAGE_WIDTH_TWIP - left - right;
+};
+
+// Convert % array -> twip column grid for landscape orientation
+const gridFromPercents = (percents: number[]): number[] => {
+  const total = landscapeContentWidthTwip();
+  const raw = percents.map((p) => Math.max(0, Math.round((p / 100) * total)));
+  // Fix rounding drift so sum matches exactly
+  const diff = total - raw.reduce((a, b) => a + b, 0);
+  if (diff !== 0 && raw.length) raw[raw.length - 1] += diff;
+  return raw;
+};
+
 export class SecondaryDocumentFormatter {
   /**
    * Fetch employee payments data with employee details (klados) for ΕΚΤΟΣ ΕΔΡΑΣ documents
@@ -93,6 +114,11 @@ export class SecondaryDocumentFormatter {
   private static async createEktosEdrasTable(documentId: number): Promise<Table> {
     const employeePayments = await this.fetchEmployeePayments(documentId);
     
+    // Define column widths (14 columns total, must sum to 100)
+    const columnPercents = [3, 12, 10, 8, 4, 7, 7, 6, 5, 7, 9, 7, 6, 9];
+    const colGrid = gridFromPercents(columnPercents);
+    const fullWidth = landscapeContentWidthTwip();
+    
     if (!employeePayments || employeePayments.length === 0) {
       // Return empty table with headers
       const emptyHeaders = ["Α/Α", "ΔΙΚΑΙΟΥΧΟΙ", "ΕΙΔΙΚΟΤΗΤΑ", "ΜΗΝΑΣ", "Αρ.ημ.", 
@@ -115,8 +141,9 @@ export class SecondaryDocumentFormatter {
           spacing: { after: 0 },
         });
 
-      const headerCells = emptyHeaders.map(label => 
+      const headerCells = emptyHeaders.map((label, idx) => 
         new TableCell({
+          width: { type: WidthType.DXA, size: colGrid[idx] },
           borders: cellBorder,
           children: [mkCentered(label, true)],
           verticalAlign: VerticalAlign.CENTER,
@@ -124,7 +151,9 @@ export class SecondaryDocumentFormatter {
       );
       
       return new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
+        width: { type: WidthType.DXA, size: fullWidth },
+        layout: TableLayoutType.FIXED,
+        columnWidths: colGrid,
         borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
         rows: [new TableRow({ children: headerCells })],
       });
@@ -163,8 +192,9 @@ export class SecondaryDocumentFormatter {
       "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ"
     ];
 
-    const headerCells = headers.map(label => 
+    const headerCells = headers.map((label, idx) => 
       new TableCell({
+        width: { type: WidthType.DXA, size: colGrid[idx] },
         borders: cellBorder,
         children: [mkCentered(label, true)],
         verticalAlign: VerticalAlign.CENTER,
@@ -232,8 +262,9 @@ export class SecondaryDocumentFormatter {
         DocumentUtilities.formatCurrency(netPayable)
       ];
 
-      const dataCells = rowData.map(value => 
+      const dataCells = rowData.map((value, idx) => 
         new TableCell({
+          width: { type: WidthType.DXA, size: colGrid[idx] },
           borders: cellBorder,
           children: [mkCentered(value, false)],
           verticalAlign: VerticalAlign.CENTER,
@@ -263,6 +294,7 @@ export class SecondaryDocumentFormatter {
 
     const totalCells = totalRowData.map((value, idx) => 
       new TableCell({
+        width: { type: WidthType.DXA, size: colGrid[idx] },
         borders: cellBorder,
         children: [mkCentered(value, idx >= 4)],
         verticalAlign: VerticalAlign.CENTER,
@@ -272,7 +304,9 @@ export class SecondaryDocumentFormatter {
     rows.push(new TableRow({ children: totalCells }));
 
     return new Table({
-      width: { size: 100, type: WidthType.PERCENTAGE },
+      width: { type: WidthType.DXA, size: fullWidth },
+      layout: TableLayoutType.FIXED,
+      columnWidths: colGrid,
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
