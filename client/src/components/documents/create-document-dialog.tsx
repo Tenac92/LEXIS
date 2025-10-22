@@ -3783,18 +3783,18 @@ export function CreateDocumentDialog({
 
                                     return (
                                       <FormItem>
-                                        <FormLabel className="text-sm font-medium">
+                                        <FormLabel className="text-xs font-medium">
                                           Περίοδος (Μήνες)
                                         </FormLabel>
-                                        <div className="space-y-3">
+                                        <div className="space-y-1.5">
                                           {/* Start Month/Year */}
-                                          <div className="grid grid-cols-2 gap-2">
+                                          <div className="grid grid-cols-2 gap-1.5">
                                             <Select
                                               onValueChange={(month) => updateMonthRange(month, undefined, undefined, undefined)}
                                               value={startMonth}
                                             >
                                               <FormControl>
-                                                <SelectTrigger data-testid={`select-recipient-${index}-start-month`}>
+                                                <SelectTrigger className="h-8 text-xs" data-testid={`select-recipient-${index}-start-month`}>
                                                   <SelectValue placeholder="Από Μήνα" />
                                                 </SelectTrigger>
                                               </FormControl>
@@ -3812,7 +3812,7 @@ export function CreateDocumentDialog({
                                               value={startYear}
                                             >
                                               <FormControl>
-                                                <SelectTrigger data-testid={`select-recipient-${index}-start-year`}>
+                                                <SelectTrigger className="h-8 text-xs" data-testid={`select-recipient-${index}-start-year`}>
                                                   <SelectValue placeholder="Από Έτος" />
                                                 </SelectTrigger>
                                               </FormControl>
@@ -3827,13 +3827,13 @@ export function CreateDocumentDialog({
                                           </div>
 
                                           {/* End Month/Year */}
-                                          <div className="grid grid-cols-2 gap-2">
+                                          <div className="grid grid-cols-2 gap-1.5">
                                             <Select
                                               onValueChange={(month) => updateMonthRange(undefined, undefined, month, undefined)}
                                               value={endMonth}
                                             >
                                               <FormControl>
-                                                <SelectTrigger data-testid={`select-recipient-${index}-end-month`}>
+                                                <SelectTrigger className="h-8 text-xs" data-testid={`select-recipient-${index}-end-month`}>
                                                   <SelectValue placeholder="Έως Μήνα" />
                                                 </SelectTrigger>
                                               </FormControl>
@@ -3851,7 +3851,7 @@ export function CreateDocumentDialog({
                                               value={endYear}
                                             >
                                               <FormControl>
-                                                <SelectTrigger data-testid={`select-recipient-${index}-end-year`}>
+                                                <SelectTrigger className="h-8 text-xs" data-testid={`select-recipient-${index}-end-year`}>
                                                   <SelectValue placeholder="Έως Έτος" />
                                                 </SelectTrigger>
                                               </FormControl>
@@ -3867,7 +3867,7 @@ export function CreateDocumentDialog({
 
                                           {/* Selected Range Display */}
                                           {startMonth && startYear && (
-                                            <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+                                            <div className="bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
                                               <p className="text-xs text-blue-700 font-medium">
                                                 Επιλεγμένη περίοδος: {field.value}
                                               </p>
