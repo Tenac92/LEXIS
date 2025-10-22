@@ -3738,9 +3738,6 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.month`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-xs font-medium">
-                                        Περίοδος (Μήνες)
-                                      </FormLabel>
                                       <FormControl>
                                         <MonthRangePicker
                                           value={field.value || ""}
@@ -4875,3 +4872,7 @@ export function CreateDocumentDialog({
     </Dialog>
   );
 }
+
+
+
+
