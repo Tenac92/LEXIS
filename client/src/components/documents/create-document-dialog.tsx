@@ -3730,82 +3730,149 @@ export function CreateDocumentDialog({
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
                             <>
-                              {/* Month + Year Selector */}
-                              <div className="md:col-span-3 grid grid-cols-2 gap-2">
+                              {/* Month Range Selector */}
+                              <div className="md:col-span-6">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.month`}
                                   render={({ field }) => {
                                     const currentValue = field.value || "";
-                                    const [selectedMonth, selectedYear] =
-                                      currentValue.includes(" ")
-                                        ? currentValue.split(" ")
-                                        : ["", ""];
+                                    let startMonth = "";
+                                    let startYear = "";
+                                    let endMonth = "";
+                                    let endYear = "";
+
+                                    // Parse current value - supports both single month and range
+                                    if (currentValue.includes(" - ")) {
+                                      // Range format: "ΙΑΝΟΥΑΡΙΟΣ 2024 - ΜΑΡΤΙΟΣ 2024"
+                                      const [start, end] = currentValue.split(" - ");
+                                      const startParts = start.split(" ");
+                                      const endParts = end.split(" ");
+                                      startMonth = startParts[0] || "";
+                                      startYear = startParts[1] || "";
+                                      endMonth = endParts[0] || "";
+                                      endYear = endParts[1] || "";
+                                    } else if (currentValue.includes(" ")) {
+                                      // Single month format: "ΙΑΝΟΥΑΡΙΟΣ 2024"
+                                      const parts = currentValue.split(" ");
+                                      startMonth = parts[0] || "";
+                                      startYear = parts[1] || "";
+                                      endMonth = startMonth;
+                                      endYear = startYear;
+                                    }
+
+                                    const updateMonthRange = (
+                                      newStartMonth?: string,
+                                      newStartYear?: string,
+                                      newEndMonth?: string,
+                                      newEndYear?: string
+                                    ) => {
+                                      const sMonth = newStartMonth || startMonth || GREEK_MONTHS[0];
+                                      const sYear = newStartYear || startYear || new Date().getFullYear().toString();
+                                      const eMonth = newEndMonth || endMonth || sMonth;
+                                      const eYear = newEndYear || endYear || sYear;
+
+                                      // Single month - no range
+                                      if (sMonth === eMonth && sYear === eYear) {
+                                        field.onChange(`${sMonth} ${sYear}`);
+                                      } else {
+                                        // Month range
+                                        field.onChange(`${sMonth} ${sYear} - ${eMonth} ${eYear}`);
+                                      }
+                                    };
 
                                     return (
-                                      <FormItem className="col-span-2">
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <Select
-                                            onValueChange={(month) => {
-                                              const year =
-                                                selectedYear ||
-                                                new Date()
-                                                  .getFullYear()
-                                                  .toString();
-                                              field.onChange(
-                                                `${month} ${year}`,
-                                              );
-                                            }}
-                                            value={selectedMonth}
-                                          >
-                                            <FormControl>
-                                              <SelectTrigger
-                                                data-testid={`select-recipient-${index}-month`}
-                                              >
-                                                <SelectValue placeholder="Μήνας" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              {GREEK_MONTHS.map((month) => (
-                                                <SelectItem
-                                                  key={month}
-                                                  value={month}
-                                                >
-                                                  {month}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
+                                      <FormItem>
+                                        <FormLabel className="text-sm font-medium">
+                                          Περίοδος (Μήνες)
+                                        </FormLabel>
+                                        <div className="space-y-3">
+                                          {/* Start Month/Year */}
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <Select
+                                              onValueChange={(month) => updateMonthRange(month, undefined, undefined, undefined)}
+                                              value={startMonth}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger data-testid={`select-recipient-${index}-start-month`}>
+                                                  <SelectValue placeholder="Από Μήνα" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                {GREEK_MONTHS.map((month) => (
+                                                  <SelectItem key={month} value={month}>
+                                                    {month}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
 
-                                          <Select
-                                            onValueChange={(year) => {
-                                              const month =
-                                                selectedMonth ||
-                                                GREEK_MONTHS[0];
-                                              field.onChange(
-                                                `${month} ${year}`,
-                                              );
-                                            }}
-                                            value={selectedYear}
-                                          >
-                                            <FormControl>
-                                              <SelectTrigger
-                                                data-testid={`select-recipient-${index}-year`}
-                                              >
-                                                <SelectValue placeholder="Έτος" />
-                                              </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                              {AVAILABLE_YEARS.map((year) => (
-                                                <SelectItem
-                                                  key={year}
-                                                  value={year.toString()}
-                                                >
-                                                  {year}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
+                                            <Select
+                                              onValueChange={(year) => updateMonthRange(undefined, year, undefined, undefined)}
+                                              value={startYear}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger data-testid={`select-recipient-${index}-start-year`}>
+                                                  <SelectValue placeholder="Από Έτος" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                {AVAILABLE_YEARS.map((year) => (
+                                                  <SelectItem key={year} value={year.toString()}>
+                                                    {year}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+
+                                          {/* End Month/Year */}
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <Select
+                                              onValueChange={(month) => updateMonthRange(undefined, undefined, month, undefined)}
+                                              value={endMonth}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger data-testid={`select-recipient-${index}-end-month`}>
+                                                  <SelectValue placeholder="Έως Μήνα" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                {GREEK_MONTHS.map((month) => (
+                                                  <SelectItem key={month} value={month}>
+                                                    {month}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+
+                                            <Select
+                                              onValueChange={(year) => updateMonthRange(undefined, undefined, undefined, year)}
+                                              value={endYear}
+                                            >
+                                              <FormControl>
+                                                <SelectTrigger data-testid={`select-recipient-${index}-end-year`}>
+                                                  <SelectValue placeholder="Έως Έτος" />
+                                                </SelectTrigger>
+                                              </FormControl>
+                                              <SelectContent>
+                                                {AVAILABLE_YEARS.map((year) => (
+                                                  <SelectItem key={year} value={year.toString()}>
+                                                    {year}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+
+                                          {/* Selected Range Display */}
+                                          {startMonth && startYear && (
+                                            <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+                                              <p className="text-xs text-blue-700 font-medium">
+                                                Επιλεγμένη περίοδος: {field.value}
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
                                         <FormMessage />
                                       </FormItem>
