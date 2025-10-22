@@ -45,13 +45,16 @@ export class SecondaryDocumentFormatter {
   /**
    * Fetch employee payments data with employee details (klados) for ΕΚΤΟΣ ΕΔΡΑΣ documents
    */
-  private static async fetchEmployeePayments(documentId: number): Promise<any[]> {
+  private static async fetchEmployeePayments(
+    documentId: number,
+  ): Promise<any[]> {
     try {
       logger.debug(`Fetching employee payments for document: ${documentId}`);
-      
+
       const { data, error } = await supabase
-        .from('EmployeePayments')
-        .select(`
+        .from("EmployeePayments")
+        .select(
+          `
           *,
           Employees:employee_id (
             id,
@@ -61,19 +64,20 @@ export class SecondaryDocumentFormatter {
             afm,
             klados
           )
-        `)
-        .eq('document_id', documentId)
-        .order('id', { ascending: true });
+        `,
+        )
+        .eq("document_id", documentId)
+        .order("id", { ascending: true });
 
       if (error) {
-        logger.error('Error fetching employee payments:', error);
+        logger.error("Error fetching employee payments:", error);
         throw error;
       }
 
       logger.debug(`Found ${data?.length || 0} employee payments`);
       return data || [];
     } catch (error) {
-      logger.error('Error in fetchEmployeePayments:', error);
+      logger.error("Error in fetchEmployeePayments:", error);
       return [];
     }
   }
@@ -111,21 +115,35 @@ export class SecondaryDocumentFormatter {
   /**
    * Create comprehensive ΕΚΤΟΣ ΕΔΡΑΣ payment table with all expense columns
    */
-  private static async createEktosEdrasTable(documentId: number): Promise<Table> {
+  private static async createEktosEdrasTable(
+    documentId: number,
+  ): Promise<Table> {
     const employeePayments = await this.fetchEmployeePayments(documentId);
-    
+
     // Define column widths (14 columns total, must sum to 100)
     const columnPercents = [3, 12, 10, 8, 4, 7, 7, 6, 5, 7, 9, 7, 6, 9];
     const colGrid = gridFromPercents(columnPercents);
     const fullWidth = landscapeContentWidthTwip();
-    
+
     if (!employeePayments || employeePayments.length === 0) {
       // Return empty table with headers
-      const emptyHeaders = ["Α/Α", "ΔΙΚΑΙΟΥΧΟΙ", "ΕΙΔΙΚΟΤΗΤΑ", "ΜΗΝΑΣ", "Αρ.ημ.", 
-        "Ημερήσια αποζημίωση (ΑΛΕ: 2420403001)", "ΔΑΠΑΝΕΣ ΔΙΑΜΟΝΗΣ (ΑΛΕ: 2420405001)",
-        "Διανυθ.χιλ.ΙΧ", "Αξία χιλ.", "Διανυθ.χιλ.ΙΧ αξία (ΑΛΕ: 2420404001)",
-        "Εισητήρια/Διόδια/Ενοικίαση (ΑΛΕ: 2420404001)", "ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ", "ΚΡΑΤ.2%", "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ"];
-      
+      const emptyHeaders = [
+        "Α/Α",
+        "ΔΙΚΑΙΟΥΧΟΙ",
+        "ΕΙΔΙΚΟΤΗΤΑ",
+        "ΜΗΝΑΣ",
+        "Αρ.ημ.",
+        "Ημερήσια αποζημίωση (ΑΛΕ: 2420403001)",
+        "ΔΑΠΑΝΕΣ ΔΙΑΜΟΝΗΣ (ΑΛΕ: 2420405001)",
+        "Διανυθ.χιλ.ΙΧ",
+        "Αξία χιλ.",
+        "Διανυθ.χιλ.ΙΧ αξία (ΑΛΕ: 2420404001)",
+        "Εισητήρια/Διόδια/Ενοικίαση (ΑΛΕ: 2420404001)",
+        "ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ",
+        "ΚΡΑΤ.2%",
+        "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ",
+      ];
+
       const cellBorder = DocumentUtilities.BORDERS.STANDARD_CELL;
       const mkCentered = (text: string, bold = false) =>
         new Paragraph({
@@ -141,15 +159,16 @@ export class SecondaryDocumentFormatter {
           spacing: { after: 0 },
         });
 
-      const headerCells = emptyHeaders.map((label, idx) => 
-        new TableCell({
-          width: { type: WidthType.DXA, size: colGrid[idx] },
-          borders: cellBorder,
-          children: [mkCentered(label, true)],
-          verticalAlign: VerticalAlign.CENTER,
-        })
+      const headerCells = emptyHeaders.map(
+        (label, idx) =>
+          new TableCell({
+            width: { type: WidthType.DXA, size: colGrid[idx] },
+            borders: cellBorder,
+            children: [mkCentered(label, true)],
+            verticalAlign: VerticalAlign.CENTER,
+          }),
       );
-      
+
       return new Table({
         width: { type: WidthType.DXA, size: fullWidth },
         layout: TableLayoutType.FIXED,
@@ -190,16 +209,17 @@ export class SecondaryDocumentFormatter {
       "Εισητήρια/Διόδια/Ενοικίαση (ΑΛΕ: 2420404001)",
       "ΣΥΝΟΛΟ ΔΑΠΑΝΗΣ",
       "ΚΡΑΤ.2%",
-      "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ"
+      "ΚΑΘΑΡΟ ΠΛΗΡΩΤΕΟ",
     ];
 
-    const headerCells = headers.map((label, idx) => 
-      new TableCell({
-        width: { type: WidthType.DXA, size: colGrid[idx] },
-        borders: cellBorder,
-        children: [mkCentered(label, true)],
-        verticalAlign: VerticalAlign.CENTER,
-      })
+    const headerCells = headers.map(
+      (label, idx) =>
+        new TableCell({
+          width: { type: WidthType.DXA, size: colGrid[idx] },
+          borders: cellBorder,
+          children: [mkCentered(label, true)],
+          verticalAlign: VerticalAlign.CENTER,
+        }),
     );
 
     const rows: TableRow[] = [new TableRow({ children: headerCells })];
@@ -216,21 +236,17 @@ export class SecondaryDocumentFormatter {
     // Create data rows
     employeePayments.forEach((payment: any, index: number) => {
       const employee = payment.Employees || {};
-      const surname = employee.surname || '';
-      const name = employee.name || '';
-      const fathername = employee.fathername || '';
-      const fullName = fathername 
-        ? `${surname} ${name} ΤΟΥ ${fathername}`.trim()
-        : `${surname} ${name}`.trim();
-      
-      const klados = employee.klados || '';
-      const month = payment.month || '';
+      const surname = employee.surname || "";
+      const name = employee.name || "";
+      const fullName = `${surname} ${name}`.trim();
+      const klados = employee.klados || "";
+      const month = payment.month || "";
       const days = payment.days || 0;
-      
+
       const dailyComp = parseFloat(payment.daily_compensation || 0);
       const accommodation = parseFloat(payment.accommodation_expenses || 0);
       const kmTraveled = parseFloat(payment.kilometers_traveled || 0);
-      const pricePerKm = parseFloat(payment.price_per_km || 0.20);
+      const pricePerKm = parseFloat(payment.price_per_km || 0.2);
       const kmValue = kmTraveled * pricePerKm;
       const tickets = parseFloat(payment.tickets_tolls_rental || 0);
       const totalExp = parseFloat(payment.total_expense || 0);
@@ -260,16 +276,17 @@ export class SecondaryDocumentFormatter {
         DocumentUtilities.formatCurrency(tickets),
         DocumentUtilities.formatCurrency(totalExp),
         DocumentUtilities.formatCurrency(deduction),
-        DocumentUtilities.formatCurrency(netPayable)
+        DocumentUtilities.formatCurrency(netPayable),
       ];
 
-      const dataCells = rowData.map((value, idx) => 
-        new TableCell({
-          width: { type: WidthType.DXA, size: colGrid[idx] },
-          borders: cellBorder,
-          children: [mkCentered(value, false)],
-          verticalAlign: VerticalAlign.CENTER,
-        })
+      const dataCells = rowData.map(
+        (value, idx) =>
+          new TableCell({
+            width: { type: WidthType.DXA, size: colGrid[idx] },
+            borders: cellBorder,
+            children: [mkCentered(value, false)],
+            verticalAlign: VerticalAlign.CENTER,
+          }),
       );
 
       rows.push(new TableRow({ children: dataCells }));
@@ -277,29 +294,30 @@ export class SecondaryDocumentFormatter {
 
     // Add total row
     const totalRowData = [
-      '',
-      '',
-      '',
-      '',
-      'ΣΥΝΟΛΟ:',
+      "",
+      "",
+      "",
+      "ΣΥΝΟΛΟ:",
+      "",
       DocumentUtilities.formatCurrency(totalDailyComp),
       DocumentUtilities.formatCurrency(totalAccommodation),
-      '',
-      '',
+      "",
+      "",
       DocumentUtilities.formatCurrency(totalKmValue),
       DocumentUtilities.formatCurrency(totalTickets),
       DocumentUtilities.formatCurrency(totalExpense),
       DocumentUtilities.formatCurrency(totalDeduction),
-      DocumentUtilities.formatCurrency(totalNetPayable)
+      DocumentUtilities.formatCurrency(totalNetPayable),
     ];
 
-    const totalCells = totalRowData.map((value, idx) => 
-      new TableCell({
-        width: { type: WidthType.DXA, size: colGrid[idx] },
-        borders: cellBorder,
-        children: [mkCentered(value, idx >= 4)],
-        verticalAlign: VerticalAlign.CENTER,
-      })
+    const totalCells = totalRowData.map(
+      (value, idx) =>
+        new TableCell({
+          width: { type: WidthType.DXA, size: colGrid[idx] },
+          borders: cellBorder,
+          children: [mkCentered(value, idx >= 4)],
+          verticalAlign: VerticalAlign.CENTER,
+        }),
     );
 
     rows.push(new TableRow({ children: totalCells }));
@@ -669,7 +687,7 @@ export class SecondaryDocumentFormatter {
 
       // Create signature section first since it's async
       const signatureSection = await this.createSignatureSection(documentData);
-      
+
       // Create recipients table (async for ΕΚΤΟΣ ΕΔΡΑΣ)
       const recipientsTable = await this.createRecipientsTable(
         documentData.recipients || [],
