@@ -154,6 +154,7 @@ export class SecondaryDocumentFormatter {
         width: { type: WidthType.DXA, size: fullWidth },
         layout: TableLayoutType.FIXED,
         columnWidths: colGrid,
+        alignment: AlignmentType.CENTER,
         borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
         rows: [new TableRow({ children: headerCells })],
       });
@@ -307,6 +308,7 @@ export class SecondaryDocumentFormatter {
       width: { type: WidthType.DXA, size: fullWidth },
       layout: TableLayoutType.FIXED,
       columnWidths: colGrid,
+      alignment: AlignmentType.CENTER,
       borders: DocumentUtilities.BORDERS.STANDARD_TABLE,
       rows,
     });
