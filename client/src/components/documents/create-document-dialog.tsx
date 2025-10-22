@@ -3427,6 +3427,16 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeRecipient(index)}
+                          className="absolute top-3 right-3"
+                          aria-label="Διαγραφή παραλήπτη"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
                           <div className="md:col-span-2 md:row-span-1">
@@ -3732,7 +3742,7 @@ export function CreateDocumentDialog({
                             EKTOS_EDRAS_TYPE && (
                             <>
                               {/* Month Range Selector - on same row as name fields */}
-                              <div className="md:col-span-4">
+                              <div className="md:col-start-9 md:col-span-4">
                                 <FormField
                                   control={form.control}
                                   name={`recipients.${index}.month`}
@@ -4246,19 +4256,6 @@ export function CreateDocumentDialog({
                               </div>
                             </div>
                           )}
-
-                          {/* Delete Button - same row as the inputs */}
-                          <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeRecipient(index)}
-                              className="shrink-0"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
 
                           {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
