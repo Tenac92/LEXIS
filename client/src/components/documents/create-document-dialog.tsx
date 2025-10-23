@@ -3492,7 +3492,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                          <div className="md:col-span-2 md:row-span-1">
+                          <div className={form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-2 md:row-span-1"}>
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""
@@ -3727,11 +3727,9 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ Month Range - in first row next to AFM */}
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
-                            <>
-                              {/* Month Range Selector - on same row as name fields */}
                               <div className="md:col-span-4">
                                 <FormField
                                   control={form.control}
@@ -3750,7 +3748,12 @@ export function CreateDocumentDialog({
                                   )}
                                 />
                               </div>
+                          )}
 
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific expense fields */}
+                          {form.getValues("expenditure_type") ===
+                            EKTOS_EDRAS_TYPE && (
+                            <>
                               {/* All Expense Fields in One Row */}
                               <div className="md:col-span-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                                 {/* Days Input */}
