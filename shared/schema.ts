@@ -276,6 +276,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   }),
   original_protocol_date: date("original_protocol_date"),
   is_correction: boolean("is_correction").default(false),
+  is_returned: boolean("is_returned").default(false),
   comments: text("comments"),
   updated_by: text("updated_by"),
   updated_at: timestamp("updated_at", { withTimezone: true }),
