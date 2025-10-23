@@ -3492,7 +3492,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                          <div className={form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE ? "md:col-span-2" : "md:col-span-2 md:row-span-1"}>
+                          <div className="md:col-span-2 md:row-span-1">
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""

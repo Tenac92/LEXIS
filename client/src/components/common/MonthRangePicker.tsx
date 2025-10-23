@@ -184,7 +184,7 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
           <span className="truncate">{value || "Επιλέξτε περίοδο"}</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-4 z-[60]" align="start">
+      <PopoverContent className="w-80 p-4" align="start">
         <div className="space-y-3">
           {/* Year Navigation */}
           <div className="flex items-center justify-between">
