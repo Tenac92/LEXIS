@@ -162,8 +162,17 @@ export function MonthRangePicker({ value, onChange, testIdPrefix = "month-picker
     return endMonth && month === endMonth && displayYear === parseInt(endYear);
   };
 
+  // Handle popover open/close - prevent closing during range selection
+  const handleOpenChange = (newOpen: boolean) => {
+    // If trying to close while selecting end of range, keep it open
+    if (!newOpen && isSelectingEnd) {
+      return;
+    }
+    setOpen(newOpen);
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
