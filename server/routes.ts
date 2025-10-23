@@ -678,8 +678,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/documents', documentsRouter);
   app.use('/api/projects', projectRouter);
   app.use('/api/users', usersRouter);
-  app.use('/api/budget', budgetRouter);
+  // Register more specific routes before general routes
   app.use('/api/budget/upload', budgetUploadRouter);
+  app.use('/api/budget', budgetRouter);
   
   // User preferences endpoints for ESDIAN suggestions (Enhanced Smart Suggestions)
   app.get('/api/user-preferences/esdian', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
