@@ -403,8 +403,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(initialKatanomesEtous),
               change_type: 'import',
               change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
-              document_id: null,
-              mis: parseInt(mis)
+              document_id: null
             });
           }
         } else {
@@ -512,8 +511,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(newKatanomesEtous),
               change_type: 'import',
               change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
-              document_id: null,
-              mis: parseInt(mis)
+              document_id: null
             });
           }
         }
