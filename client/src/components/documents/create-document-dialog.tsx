@@ -3189,18 +3189,20 @@ export function CreateDocumentDialog({
 
                                   if (selectedUnit) {
                                     let regionHierarchy = selectedUnit.name;
-                                    
+
                                     // Auto-complete: Fill region filter
                                     if (selectedUnit.region_code) {
                                       setSelectedRegionFilter(
                                         selectedUnit.region_code,
                                       );
-                                      
+
                                       // Find the region name to build hierarchy
-                                      const parentRegion = availableRegions.find(
-                                        (r: any) => r.code === selectedUnit.region_code,
-                                      );
-                                      
+                                      const parentRegion =
+                                        availableRegions.find(
+                                          (r: any) =>
+                                            r.code === selectedUnit.region_code,
+                                        );
+
                                       if (parentRegion) {
                                         // Build hierarchy: Region|RegionalUnit|
                                         regionHierarchy = `${parentRegion.name}|${selectedUnit.name}|`;
@@ -3275,8 +3277,9 @@ export function CreateDocumentDialog({
                                       u.code === selectedMunicipality.unit_code,
                                   );
 
-                                  let regionHierarchy = selectedMunicipality.name;
-                                  
+                                  let regionHierarchy =
+                                    selectedMunicipality.name;
+
                                   if (parentUnit) {
                                     // Auto-fill regional unit filter
                                     setSelectedUnitFilter(parentUnit.code);
@@ -3286,12 +3289,14 @@ export function CreateDocumentDialog({
                                       setSelectedRegionFilter(
                                         parentUnit.region_code,
                                       );
-                                      
+
                                       // Find the region name to build full hierarchy
-                                      const parentRegion = availableRegions.find(
-                                        (r: any) => r.code === parentUnit.region_code,
-                                      );
-                                      
+                                      const parentRegion =
+                                        availableRegions.find(
+                                          (r: any) =>
+                                            r.code === parentUnit.region_code,
+                                        );
+
                                       if (parentRegion) {
                                         // Build hierarchy: Region|RegionalUnit|Municipality
                                         regionHierarchy = `${parentRegion.name}|${parentUnit.name}|${selectedMunicipality.name}`;
@@ -3728,7 +3733,7 @@ export function CreateDocumentDialog({
                           </div>
 
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ Month Range - in first row next to AFM */}
-                          <div className="md:col-span-4">
+                          <div className="md:col-span-3">
                             {form.getValues("expenditure_type") ===
                               EKTOS_EDRAS_TYPE && (
                               <FormField
@@ -4875,7 +4880,3 @@ export function CreateDocumentDialog({
     </Dialog>
   );
 }
-
-
-
-
