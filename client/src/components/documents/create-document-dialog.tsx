@@ -3730,24 +3730,24 @@ export function CreateDocumentDialog({
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ Month Range - in first row next to AFM */}
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
-                              <div className="md:col-span-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`recipients.${index}.month`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormControl>
-                                        <MonthRangePicker
-                                          value={field.value || ""}
-                                          onChange={field.onChange}
-                                          testIdPrefix={`recipient-${index}-month`}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
+                            <div className="md:col-span-4">
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.month`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <MonthRangePicker
+                                        value={field.value || ""}
+                                        onChange={field.onChange}
+                                        testIdPrefix={`recipient-${index}-month`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           )}
 
                           {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific expense fields */}
