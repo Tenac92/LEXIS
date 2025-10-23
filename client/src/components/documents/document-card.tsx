@@ -262,7 +262,7 @@ const DocumentCard = memo(function DocumentCard({
     return (
       <>
         <Card
-          className="transition-shadow hover:shadow-lg flex cursor-pointer"
+          className={`transition-shadow hover:shadow-lg flex cursor-pointer ${isReturned ? 'opacity-60 grayscale' : ''}`}
           onClick={() => setShowDetailsModal(true)}
         >
           <div className="p-6 flex-1">
@@ -337,16 +337,18 @@ const DocumentCard = memo(function DocumentCard({
                   <Download className="w-4 h-4 mr-2" />
                   Εξαγωγή
                 </Button>
-                <Button
-                  size="sm"
-                  variant={isReturned ? "default" : "outline"}
-                  onClick={handleToggleReturn}
-                  disabled={isTogglingReturn}
-                  data-testid="button-toggle-returned"
-                >
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Επεστράφη
-                </Button>
+                {doc.protocol_number_input && (
+                  <Button
+                    size="sm"
+                    variant={isReturned ? "default" : "outline"}
+                    onClick={handleToggleReturn}
+                    disabled={isTogglingReturn}
+                    data-testid="button-toggle-returned"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Επεστράφη
+                  </Button>
+                )}
                 <div className="flex gap-1">
                   {!docAny.is_correction && doc.protocol_number_input ? (
                     <Button
@@ -418,7 +420,7 @@ const DocumentCard = memo(function DocumentCard({
 
   return (
     <>
-      <div className="flip-card" onClick={handleCardClick}>
+      <div className={`flip-card ${isReturned ? 'opacity-60 grayscale' : ''}`} onClick={handleCardClick}>
         <div className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}>
           {/* Front of card */}
           <div className="flip-card-front">
@@ -590,31 +592,48 @@ const DocumentCard = memo(function DocumentCard({
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <Button
-                  variant={isReturned ? "default" : "outline"}
-                  size="sm"
-                  onClick={handleToggleReturn}
-                  disabled={isTogglingReturn}
-                  className="flex-1"
-                  data-testid="button-toggle-returned"
-                >
-                  <RotateCcw className="h-4 h-4 mr-2" />
-                  Επεστράφη
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFlipped(true);
-                  }}
-                  className="text-orange-600 border-orange-200 hover:bg-orange-50 flex-1"
-                >
-                  <Info className="w-4 h-4 mr-2" />
-                  Δείτε δικαιούχους
-                </Button>
-              </div>
+              {doc.protocol_number_input ? (
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <Button
+                    variant={isReturned ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleToggleReturn}
+                    disabled={isTogglingReturn}
+                    className="flex-1"
+                    data-testid="button-toggle-returned"
+                  >
+                    <RotateCcw className="h-4 h-4 mr-2" />
+                    Επεστράφη
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50 flex-1"
+                  >
+                    <Info className="w-4 h-4 mr-2" />
+                    Δείτε δικαιούχους
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                  >
+                    <Info className="w-4 h-4 mr-2" />
+                    Δείτε δικαιούχους
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
