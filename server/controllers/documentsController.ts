@@ -3742,3 +3742,137 @@ router.delete(
     }
   },
 );
+
+router.post(
+  "/:id/toggle-returned",
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const documentId = parseInt(req.params.id);
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Μη έγκυρο ID εγγράφου",
+        });
+      }
+
+      const { data: document, error: fetchError } = await supabase
+        .from("generated_documents")
+        .select("id, is_returned, total_amount, project_index_id, generated_by")
+        .eq("id", documentId)
+        .single();
+
+      if (fetchError || !document) {
+        return res.status(404).json({
+          success: false,
+          message: "Το έγγραφο δεν βρέθηκε",
+        });
+      }
+
+      if (
+        req.user?.role !== "manager" &&
+        document.generated_by !== req.user?.id
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Δεν έχετε άδεια να επεξεργαστείτε αυτό το έγγραφο",
+        });
+      }
+
+      const newReturnedStatus = !document.is_returned;
+      const amount = parseFloat(String(document.total_amount || 0));
+
+      const { error: updateError } = await supabase
+        .from("generated_documents")
+        .update({
+          is_returned: newReturnedStatus,
+          updated_at: new Date().toISOString(),
+          updated_by: req.user?.name || req.user?.email || String(req.user?.id),
+        })
+        .eq("id", documentId);
+
+      if (updateError) {
+        console.error("Error updating document return status:", updateError);
+        return res.status(500).json({
+          success: false,
+          message: "Σφάλμα κατά την ενημέρωση του εγγράφου",
+          error: updateError.message,
+        });
+      }
+
+      if (amount > 0 && document.project_index_id) {
+        const { data: projectIndex, error: indexError } = await supabase
+          .from("project_index")
+          .select("project_id")
+          .eq("id", document.project_index_id)
+          .single();
+
+        if (indexError || !projectIndex?.project_id) {
+          console.error(
+            "[DocumentsController] Error fetching project index:",
+            indexError,
+          );
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά την ανάκτηση δεδομένων έργου",
+            error: indexError?.message,
+          });
+        }
+
+        try {
+          const budgetAdjustment = newReturnedStatus ? -amount : amount;
+
+          await storage.updateProjectBudgetSpending(
+            projectIndex.project_id,
+            budgetAdjustment,
+            documentId,
+            req.user?.id,
+          );
+
+          console.log(
+            `[DocumentsController] Budget adjusted by ${budgetAdjustment} for document ${documentId} (returned: ${newReturnedStatus})`,
+          );
+        } catch (budgetError) {
+          console.error(
+            "[DocumentsController] Error updating budget:",
+            budgetError,
+          );
+
+          await supabase
+            .from("generated_documents")
+            .update({
+              is_returned: !newReturnedStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", documentId);
+
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά την ενημέρωση του προϋπολογισμού",
+            error: budgetError instanceof Error ? budgetError.message : "Unknown error",
+          });
+        }
+      }
+
+      logger.info(
+        `Document ${documentId} return status toggled to ${newReturnedStatus} by user ${req.user?.id}`,
+      );
+
+      res.json({
+        success: true,
+        message: newReturnedStatus
+          ? "Το έγγραφο επεστράφη"
+          : "Η επιστροφή του εγγράφου ακυρώθηκε",
+        is_returned: newReturnedStatus,
+      });
+    } catch (error) {
+      console.error("Error in toggle-returned endpoint:", error);
+      res.status(500).json({
+        success: false,
+        message: "Εσωτερικό σφάλμα διακομιστή",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);

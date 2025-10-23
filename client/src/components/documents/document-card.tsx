@@ -113,6 +113,8 @@ const DocumentCard = memo(function DocumentCard({
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showProtocolModal, setShowProtocolModal] = useState(false);
+  const [isReturned, setIsReturned] = useState((doc as any).is_returned || false);
+  const [isTogglingReturn, setIsTogglingReturn] = useState(false);
   const [projectNa853, setProjectNa853] = useState<string>(
     (doc as any).project_na853 || "",
   );
@@ -216,6 +218,33 @@ const DocumentCard = memo(function DocumentCard({
     }
   };
 
+  const handleToggleReturn = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setIsTogglingReturn(true);
+      const response = await apiRequest(`/api/documents/${doc.id}/toggle-returned`, {
+        method: "POST",
+      }) as { success: boolean; message: string; is_returned: boolean };
+
+      if (response.success) {
+        setIsReturned(response.is_returned);
+        toast({
+          description: response.message,
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description: "Αποτυχία ενημέρωσης κατάστασης επιστροφής",
+        variant: "destructive",
+      });
+      console.error("Toggle return error:", error);
+    } finally {
+      setIsTogglingReturn(false);
+    }
+  };
+
   const recipients = (doc as any).recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
   const statusDetails = getStatusDetails(
@@ -307,6 +336,16 @@ const DocumentCard = memo(function DocumentCard({
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Εξαγωγή
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isReturned ? "default" : "outline"}
+                  onClick={handleToggleReturn}
+                  disabled={isTogglingReturn}
+                  data-testid="button-toggle-returned"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Επεστράφη
                 </Button>
                 <div className="flex gap-1">
                   {!docAny.is_correction && doc.protocol_number_input ? (
@@ -551,7 +590,18 @@ const DocumentCard = memo(function DocumentCard({
                 )}
               </div>
 
-              <div className="flex items-center justify-center">
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <Button
+                  variant={isReturned ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleToggleReturn}
+                  disabled={isTogglingReturn}
+                  className="flex-1"
+                  data-testid="button-toggle-returned"
+                >
+                  <RotateCcw className="h-4 h-4 mr-2" />
+                  Επεστράφη
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -559,7 +609,7 @@ const DocumentCard = memo(function DocumentCard({
                     e.stopPropagation();
                     setIsFlipped(true);
                   }}
-                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                  className="text-orange-600 border-orange-200 hover:bg-orange-50 flex-1"
                 >
                   <Info className="w-4 h-4 mr-2" />
                   Δείτε δικαιούχους
