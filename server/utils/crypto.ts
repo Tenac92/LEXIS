@@ -49,8 +49,8 @@ export function decryptAFM(encryptedAFM: string | null | undefined): string | nu
   try {
     const parts = encryptedAFM.split(':');
     if (parts.length !== 3) {
-      console.error('[Crypto] Invalid encrypted AFM format');
-      return encryptedAFM;
+      console.error('[Crypto] Invalid encrypted AFM format - expected 3 parts separated by ":"');
+      return null;
     }
 
     const iv = Buffer.from(parts[0], 'hex');
@@ -66,8 +66,8 @@ export function decryptAFM(encryptedAFM: string | null | undefined): string | nu
 
     return decrypted;
   } catch (error) {
-    console.error('[Crypto] Error decrypting AFM:', error);
-    return encryptedAFM;
+    console.error('[Crypto] Error decrypting AFM - data may be corrupted:', error);
+    return null;
   }
 }
 
