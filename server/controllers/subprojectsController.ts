@@ -44,31 +44,9 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
       });
     }
 
-    // If no linked subprojects found, also return unlinked ones that could be linked
-    let finalSubprojects = subprojects || [];
-    
-    if (!finalSubprojects.length) {
-      log(`[Subprojects] No linked subprojects found, checking for unlinked subprojects`);
-      const { data: unlinkedSubprojects, error: unlinkedError } = await supabase
-        .from('Subprojects')
-        .select(`
-          id,
-          epa_version_id,
-          title,
-          description,
-          status,
-          created_at,
-          updated_at
-        `)
-        .is('epa_version_id', null)
-        .order('title')
-        .limit(10); // Limit to prevent too many results
-
-      if (!unlinkedError && unlinkedSubprojects) {
-        finalSubprojects = unlinkedSubprojects;
-        log(`[Subprojects] Found ${unlinkedSubprojects.length} unlinked subprojects that could be linked`);
-      }
-    }
+    // Only return subprojects directly linked to this EPA version
+    // Security: Do not return unlinked subprojects from other projects
+    const finalSubprojects = subprojects || [];
 
     // Transform subprojects to include mock financials if needed (for compatibility)
     const transformedSubprojects = finalSubprojects.map(subproject => ({
