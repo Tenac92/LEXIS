@@ -3201,17 +3201,12 @@ export default function ComprehensiveEditFixed() {
                                             ? (Math.max(...existingPdeVersions.map(v => parseFloat(v.version_number || "1.0"))) + 0.1).toFixed(1)
                                             : "1.0";
                                           formulations[index].budget_versions.pde.push({
-                                            version_name: "",
                                             version_number: nextVersionNumber,
-                                            project_budget: "",
-                                            total_public_expense: "",
-                                            eligible_public_expense: "",
+                                            boundary_budget: "",
                                             protocol_number: "",
                                             ada: "",
                                             decision_date: "",
-                                            decision_type: "Έγκριση",
-                                            status: "Ενεργή",
-                                            connected_decisions: [],
+                                            action_type: "Έγκριση",
                                             comments: ""
                                           });
                                           form.setValue("formulation_details", formulations);
@@ -3333,7 +3328,7 @@ export default function ComprehensiveEditFixed() {
                                               />
                                             </div>
                                             
-                                            <div className="grid grid-cols-1 md:grid-cols-1 gap-3 mb-3">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                               <FormField
                                                 control={form.control}
                                                 name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.action_type`}
@@ -3355,12 +3350,24 @@ export default function ComprehensiveEditFixed() {
                                                   </FormItem>
                                                 )}
                                               />
+                                              <FormField
+                                                control={form.control}
+                                                name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.boundary_budget`}
+                                                render={({ field }) => (
+                                                  <FormItem>
+                                                    <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
+                                                    <FormControl>
+                                                      <Input {...field} placeholder="π.χ. 1.500.000,00" />
+                                                    </FormControl>
+                                                  </FormItem>
+                                                )}
+                                              />
                                             </div>
                                             
-                                            {/* Connected Decisions Multi-Select for PDE Version */}
-                                            <FormField
+                                            {/* Connected Decisions - Removed from schema but keeping UI commented for reference */}
+                                            {/* <FormField
                                               control={form.control}
-                                              name={`formulation_details.${index}.budget_versions.pde.${pdeIndex}.connected_decisions`}
+                                              name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.connected_decisions`}
                                               render={({ field }) => (
                                                 <FormItem>
                                                   <FormLabel>Συνδεδεμένες Αποφάσεις</FormLabel>
@@ -3419,7 +3426,7 @@ export default function ComprehensiveEditFixed() {
                                                   )}
                                                 </FormItem>
                                               )}
-                                            />
+                                            /> */}
                                             
                                             <FormField
                                               control={form.control}
@@ -3460,17 +3467,14 @@ export default function ComprehensiveEditFixed() {
                                             ? (Math.max(...existingEpaVersions.map(v => parseFloat(v.version_number || "1.0"))) + 0.1).toFixed(1)
                                             : "1.0";
                                           formulations[index].budget_versions.epa.push({
-                                            version_name: "",
                                             version_number: nextVersionNumber,
                                             epa_version: "",
-                                            amount: "",
                                             protocol_number: "",
                                             ada: "",
                                             decision_date: "",
-                                            decision_type: "Έγκριση",
-                                            status: "Ενεργή",
-                                            connected_decisions: [],
-                                            comments: ""
+                                            action_type: "Έγκριση",
+                                            comments: "",
+                                            financials: []
                                           });
                                           form.setValue("formulation_details", formulations);
                                         }}
