@@ -135,19 +135,20 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     }
     
     // SECURITY: Get beneficiaries ONLY for user's assigned units
+    // OPTIMIZATION: Use optimized method that skips AFM decryption for much faster loading
     const allBeneficiaries = [];
     for (const unitId of userUnits) {
       const userUnit = await getUnitCodeById(unitId);
       if (userUnit) {
         console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ${userUnit} (mapped from unit ID: ${unitId})`);
-        const unitBeneficiaries = await storage.getBeneficiariesByUnit(userUnit);
+        const unitBeneficiaries = await storage.getBeneficiariesByUnitOptimized(userUnit);
         allBeneficiaries.push(...unitBeneficiaries);
       } else {
         console.log(`[Beneficiaries] WARNING: Could not map unit ID ${unitId} to unit code, skipping`);
       }
     }
     
-    console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries from ${userUnits.length} authorized units only`);
+    console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries (OPTIMIZED - AFM masked) from ${userUnits.length} authorized units only`);
     
     // Prevent caching to ensure new pagination code runs
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');

@@ -1208,6 +1208,81 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getBeneficiariesByUnitOptimized(unit: string): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching beneficiaries for unit: ${unit} (OPTIMIZED - no AFM decryption, with unit filtering)`);
+      
+      // SECURITY: First, get the unit_id from the monada table
+      const { data: monadaData, error: monadaError } = await supabase
+        .from('Monada')
+        .select('id')
+        .eq('unit', unit)
+        .single();
+        
+      if (monadaError || !monadaData) {
+        console.error(`[Storage] Could not find unit ID for unit code: ${unit}`, monadaError);
+        return [];
+      }
+      
+      const unitId = monadaData.id;
+      console.log(`[Storage] Mapped unit "${unit}" to unit_id: ${unitId}`);
+      
+      // SECURITY: Get unique beneficiary IDs that have payments for this unit
+      const { data: paymentsBeneficiaryIds, error: paymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id')
+        .eq('unit_id', unitId);
+        
+      if (paymentsError) {
+        console.error('[Storage] Error fetching beneficiary IDs from payments:', paymentsError);
+        throw paymentsError;
+      }
+      
+      // Extract unique beneficiary IDs
+      const uniqueBeneficiaryIds = [...new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || [])];
+      console.log(`[Storage] Found ${uniqueBeneficiaryIds.length} unique beneficiaries for unit ${unit}`);
+      
+      if (uniqueBeneficiaryIds.length === 0) {
+        return [];
+      }
+      
+      // Fetch beneficiaries in batches using .in() for the filtered IDs
+      let allBeneficiaries: any[] = [];
+      const batchSize = 1000;
+      
+      for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
+        const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
+        console.log(`[Storage] Fetching batch ${Math.floor(i / batchSize) + 1} of beneficiaries (${idBatch.length} IDs)`);
+        
+        // Select only needed fields, exclude encrypted AFM field
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('id, surname, name, fathername, region, cengsur1, cengname1, cengsur2, cengname2, freetext, date, created_at, updated_at, afm_hash')
+          .in('id', idBatch);
+          
+        if (error) {
+          console.error('[Storage] Error fetching beneficiaries batch:', error);
+          throw error;
+        }
+        
+        // Return data without decrypting AFM - masked for security and performance
+        const batchData = (data || []).map(b => ({
+          ...b,
+          afm: '***MASKED***', // Masked AFM for list view
+          monada: unit // Add unit for compatibility
+        }));
+        
+        allBeneficiaries.push(...batchData);
+      }
+      
+      console.log(`[Storage] FINAL: Successfully fetched ${allBeneficiaries.length} beneficiaries (optimized, unit-filtered) for unit: ${unit}`);
+      return allBeneficiaries;
+    } catch (error) {
+      console.error('[Storage] Error in getBeneficiariesByUnitOptimized:', error);
+      throw error;
+    }
+  }
+
   async searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]> {
     try {
       console.log(`[Storage] Searching beneficiaries by AFM: ${afm}`);
