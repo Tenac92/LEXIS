@@ -288,7 +288,7 @@ export class DocumentGenerator {
         ],
         spacing: { after: 0 },
         alignment: AlignmentType.JUSTIFIED,
-      });
+      }),
     ];
   }
 
