@@ -422,6 +422,8 @@ export default function ComprehensiveEditFixed() {
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
 
+  // REMOVED: connected_decisions field no longer exists in schema
+  /*
   // 🔗 Auto-inheritance logic για connected decisions
   const handleConnectedDecisionChange = (
     formulationIndex: number, 
@@ -494,6 +496,8 @@ export default function ComprehensiveEditFixed() {
     
     return { isInherited: false, inheritedFromVersion: null };
   };
+  */
+
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(
     new Set(),
   );
