@@ -385,8 +385,8 @@ export const beneficiaries = pgTable(
   "beneficiaries",
   {
     id: serial("id").primaryKey(),
-    afm: text("afm").notNull().unique(), // Tax ID (AFM) - text as per database
-    afm_hash: text("afm_hash"),
+    afm: text("afm").notNull(), // Tax ID (AFM) - encrypted, no longer unique
+    afm_hash: text("afm_hash").notNull().unique(), // Hash for uniqueness and search
     surname: text("surname").notNull(),
     name: text("name").notNull(),
     fathername: text("fathername"),
