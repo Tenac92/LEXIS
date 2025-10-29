@@ -8,7 +8,7 @@ import { DocumentGenerator } from "../utils/document-generator";
 import { broadcastDocumentUpdate } from "../services/websocketService";
 import { createLogger } from "../utils/logger";
 import { storage } from "../storage";
-import { encryptAFM, hashAFM } from "../utils/crypto";
+import { encryptAFM, hashAFM, decryptAFM } from "../utils/crypto";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
@@ -2883,8 +2883,74 @@ router.get(
         }
       }
 
-      // Fetch beneficiary payments data
+      // Fetch employee payments data for ΕΚΤΟΣ ΕΔΡΑΣ documents
       if (
+        document.employee_payments_id &&
+        Array.isArray(document.employee_payments_id) &&
+        document.employee_payments_id.length > 0
+      ) {
+        try {
+          console.log(`[DocumentsController] Fetching employee payments for export, IDs:`, document.employee_payments_id);
+          
+          const { data: empPaymentsData, error: empPaymentsError } = await supabase
+            .from("EmployeePayments")
+            .select(
+              `
+            id,
+            net_payable,
+            month,
+            days,
+            daily_compensation,
+            accommodation_expenses,
+            kilometers_traveled,
+            tickets_tolls_rental,
+            has_2_percent_deduction,
+            total_expense,
+            deduction_2_percent,
+            status,
+            Employees (
+              id,
+              afm,
+              surname,
+              name,
+              fathername,
+              klados
+            )
+          `,
+            )
+            .in("id", document.employee_payments_id);
+
+          if (!empPaymentsError && empPaymentsData) {
+            beneficiaryData = empPaymentsData.map((payment: any) => {
+              const employee = payment.Employees;
+              const encryptedAFM = employee?.afm || "";
+              // SECURITY: Decrypt AFM for document generation
+              const decryptedAFM = encryptedAFM ? decryptAFM(encryptedAFM) : "";
+              
+              return {
+                id: payment.id,
+                firstname: employee?.name || "",
+                lastname: employee?.surname || "",
+                fathername: employee?.fathername || "",
+                afm: decryptedAFM,
+                amount: parseFloat(payment.net_payable || "0"),
+                // ΕΚΤΟΣ ΕΔΡΑΣ specific fields
+                month: payment.month || "",
+                days: payment.days || 1,
+                daily_compensation: payment.daily_compensation || 0,
+                accommodation_expenses: payment.accommodation_expenses || 0,
+                kilometers_traveled: payment.kilometers_traveled || 0,
+                tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+              };
+            });
+            console.log(`[DocumentsController] Fetched ${beneficiaryData.length} employee payment records for export`);
+          }
+        } catch (error) {
+          logger.debug("Error fetching employee payment data for document:", error);
+        }
+      }
+      // Fetch beneficiary payments data for standard documents
+      else if (
         document.beneficiary_payments_id &&
         document.beneficiary_payments_id.length > 0
       ) {
@@ -2909,16 +2975,22 @@ router.get(
             .in("id", document.beneficiary_payments_id);
 
           if (!paymentsError && paymentsData) {
-            beneficiaryData = paymentsData.map((payment: any) => ({
-              id: payment.id,
-              firstname: (payment.beneficiaries as any)?.name || "",
-              lastname: (payment.beneficiaries as any)?.surname || "",
-              fathername: (payment.beneficiaries as any)?.fathername || "",
-              afm: (payment.beneficiaries as any)?.afm || "",
-              amount: parseFloat(payment.amount || "0"),
-              installment: payment.installment || "ΕΦΑΠΑΞ",
-              freetext: payment.freetext || null,
-            }));
+            beneficiaryData = paymentsData.map((payment: any) => {
+              const encryptedAFM = (payment.beneficiaries as any)?.afm || "";
+              // SECURITY: Decrypt AFM for document generation
+              const decryptedAFM = encryptedAFM ? decryptAFM(encryptedAFM) : "";
+              
+              return {
+                id: payment.id,
+                firstname: (payment.beneficiaries as any)?.name || "",
+                lastname: (payment.beneficiaries as any)?.surname || "",
+                fathername: (payment.beneficiaries as any)?.fathername || "",
+                afm: decryptedAFM,
+                amount: parseFloat(payment.amount || "0"),
+                installment: payment.installment || "ΕΦΑΠΑΞ",
+                freetext: payment.freetext || null,
+              };
+            });
           }
         } catch (error) {
           logger.debug("Error fetching beneficiary data for document:", error);
