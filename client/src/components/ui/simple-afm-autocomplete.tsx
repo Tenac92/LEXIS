@@ -139,27 +139,27 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!debouncedSearchTerm || debouncedSearchTerm.length < 7) return [];
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Employee search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && debouncedSearchTerm.length >= 7,
+    enabled: useEmployeeData && debouncedSearchTerm.length >= 4,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!debouncedSearchTerm || debouncedSearchTerm.length < 7) return [];
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       // Fast search without financial data for instant autocomplete
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && debouncedSearchTerm.length >= 7,
+    enabled: !useEmployeeData && debouncedSearchTerm.length >= 4,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;

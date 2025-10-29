@@ -1045,7 +1045,7 @@ export class DatabaseStorage implements IStorage {
           .from('Employees')
           .select('*')
           .order('surname', { ascending: true })
-          .limit(1000);
+          .limit(500);
           
         if (error) {
           console.error('[Storage] Error fetching employees for prefix search:', error);
@@ -1075,8 +1075,8 @@ export class DatabaseStorage implements IStorage {
       
       const employeeToInsert = {
         ...employee,
-        afm: encryptAFM(employee.afm),
-        afm_hash: hashAFM(employee.afm)
+        afm: employee.afm ? encryptAFM(employee.afm) : '',
+        afm_hash: employee.afm ? hashAFM(employee.afm) : ''
       };
       
       const { data, error } = await supabase
@@ -1250,7 +1250,7 @@ export class DatabaseStorage implements IStorage {
           .from('beneficiaries')
           .select('*')
           .order('id', { ascending: false })
-          .limit(5000);
+          .limit(1000);
           
         if (error) {
           console.error('[Storage] Error fetching beneficiaries for prefix search:', error);
