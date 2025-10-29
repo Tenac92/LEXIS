@@ -35,6 +35,7 @@ async function processBudgetVersions(
           project_id: projectId,
           formulation_id: formulationId,
           budget_type: "ΠΔΕ",
+          version_number: pdeVersion.version_number || "1.0",
           action_type: pdeVersion.action_type || "Έγκριση",
           boundary_budget: pdeVersion.boundary_budget
             ? parseAndValidateBudgetAmount(pdeVersion.boundary_budget)
@@ -76,6 +77,7 @@ async function processBudgetVersions(
           project_id: projectId,
           formulation_id: formulationId,
           budget_type: "ΕΠΑ",
+          version_number: epaVersion.version_number || "1.0",
           action_type: epaVersion.action_type || "Έγκριση",
           epa_version: epaVersion.epa_version || null,
           protocol_number: epaVersion.protocol_number || null,
