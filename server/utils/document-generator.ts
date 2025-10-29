@@ -278,8 +278,12 @@ export class DocumentGenerator {
       new Paragraph({
         children: [
           t(
-            `${mainText} ${prop} ${unitDetails?.unit_name?.name},συνολικού ποσού ${greekAmount}`,
-            { font: FONT_BODY.font, size: FONT_BODY.size },
+            `${mainText} ${prop} ${
+              expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+                ? unitDetails?.unit_name?.namegen
+                : unitDetails?.unit_name?.name
+            }, συνολικού ποσού ${greekAmount}`,
+            { font: FONT_BODY.font, size: FONT_BODY.size }
           ),
         ],
         spacing: { after: 0 },
