@@ -270,9 +270,10 @@ export class DocumentGenerator {
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
     const greekAmount = safeAmountToGreekText(documentData.total_amount);
-    const prop = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" 
-      ? unitDetails?.unit_name?.prop || "της"
-      : unitDetails?.unit_name?.prop || "τη";
+    const prop =
+      expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+        ? unitDetails?.unit_name?.propgen || "της"
+        : unitDetails?.unit_name?.prop || "τη";
     return [
       new Paragraph({
         children: [
@@ -882,9 +883,12 @@ export class DocumentGenerator {
       left.push(
         new Paragraph({
           children: [
-            t("1. Γρ. Γ. Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής", {
-              ...FONT_SMALL,
-            }),
+            t(
+              "1. Γρ. Γ. Γ. Αποκατάστασης Φυσικών Καταστροφών και Κρατικής Αρωγής",
+              {
+                ...FONT_SMALL,
+              },
+            ),
           ],
           indent: { left: 426 },
         }),

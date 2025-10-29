@@ -17,6 +17,7 @@ export interface UnitDetails {
   unit_name?: {
     name: string;
     prop: string;
+    propgen?: string; // Genitive case (γενική πτώση) for ΕΚΤΟΣ ΕΔΡΑΣ documents
   };
   manager?: {
     name: string;
