@@ -3,7 +3,7 @@ import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
-import { encryptAFM, decryptAFM } from './utils/crypto';
+import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -1045,7 +1045,8 @@ export class DatabaseStorage implements IStorage {
       
       const employeeToInsert = {
         ...employee,
-        afm: encryptAFM(employee.afm)
+        afm: encryptAFM(employee.afm),
+        afm_hash: hashAFM(employee.afm)
       };
       
       const { data, error } = await supabase
@@ -1077,7 +1078,8 @@ export class DatabaseStorage implements IStorage {
       
       const employeeToUpdate = {
         ...employee,
-        afm: employee.afm ? encryptAFM(employee.afm) : undefined
+        afm: employee.afm ? encryptAFM(employee.afm) : undefined,
+        afm_hash: employee.afm ? hashAFM(employee.afm) : undefined
       };
       
       const { data, error } = await supabase
@@ -1252,6 +1254,7 @@ export class DatabaseStorage implements IStorage {
       const beneficiaryToInsert = {
         ...beneficiary,
         afm: encryptAFM(beneficiary.afm),
+        afm_hash: hashAFM(beneficiary.afm),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -1286,6 +1289,7 @@ export class DatabaseStorage implements IStorage {
       const beneficiaryToUpdate = {
         ...beneficiary,
         afm: beneficiary.afm ? encryptAFM(beneficiary.afm) : undefined,
+        afm_hash: beneficiary.afm ? hashAFM(beneficiary.afm) : undefined,
         updated_at: new Date().toISOString()
       };
       
