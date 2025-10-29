@@ -86,16 +86,36 @@ export function SimpleAFMAutocomplete({
   projectNa853 = ""
 }: SimpleAFMAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState(value);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Update search term when value prop changes
   useEffect(() => {
     if (value !== searchTerm) {
       setSearchTerm(value);
+      setDebouncedSearchTerm(value);
     }
   }, [value]);
+  
+  // Debounce search term to reduce API calls
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchTerm]);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,29 +137,29 @@ export function SimpleAFMAutocomplete({
   
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
-    queryKey: ['/api/employees/search', searchTerm],
+    queryKey: ['/api/employees/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 1) return [];
-      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 7) return [];
+      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
+      console.log(`[SimpleAFM] Employee search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 1,
+    enabled: useEmployeeData && debouncedSearchTerm.length >= 7,
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
-    queryKey: ['/api/beneficiaries/search', searchTerm],
+    queryKey: ['/api/beneficiaries/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 1) return [];
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 7) return [];
       // Fast search without financial data for instant autocomplete
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
+      console.log(`[SimpleAFM] Beneficiary search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 1,
+    enabled: !useEmployeeData && debouncedSearchTerm.length >= 7,
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
