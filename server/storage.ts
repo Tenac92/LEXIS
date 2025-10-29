@@ -961,8 +961,13 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees`);
-      return data || [];
+      const decryptedEmployees = (data || []).map(e => ({
+        ...e,
+        afm: decryptAFM(e.afm)
+      }));
+      
+      console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees`);
+      return decryptedEmployees;
     } catch (error) {
       console.error('[Storage] Error in getAllEmployees:', error);
       throw error;
@@ -984,8 +989,13 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees for unit: ${unit}`);
-      return data || [];
+      const decryptedEmployees = (data || []).map(e => ({
+        ...e,
+        afm: decryptAFM(e.afm)
+      }));
+      
+      console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees for unit: ${unit}`);
+      return decryptedEmployees;
     } catch (error) {
       console.error('[Storage] Error in getEmployeesByUnit:', error);
       throw error;
@@ -1171,7 +1181,6 @@ export class DatabaseStorage implements IStorage {
       while (hasMore) {
         console.log(`[Storage] Fetching batch ${Math.floor(fromIndex / batchSize) + 1}, starting from index ${fromIndex}`);
         
-        // Use the legacy Beneficiary table since it has the expected structure with monada column
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
@@ -1182,16 +1191,18 @@ export class DatabaseStorage implements IStorage {
           throw error;
         }
         
-        const batchData = data || [];
+        const batchData = (data || []).map(b => ({
+          ...b,
+          afm: decryptAFM(b.afm)
+        }));
+        
         allBeneficiaries.push(...batchData);
         
         console.log(`[Storage] Fetched ${batchData.length} beneficiaries in this batch. Total so far: ${allBeneficiaries.length}`);
         
-        // If we got less than the batch size, we've reached the end
         hasMore = batchData.length === batchSize;
         fromIndex += batchSize;
         
-        // Safety break to prevent infinite loops
         if (fromIndex > 50000) {
           console.warn('[Storage] Safety break activated - stopping at 50,000 records');
           break;
@@ -1301,7 +1312,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully fetched beneficiary:`, data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in getBeneficiaryById:', error);
       throw error;
