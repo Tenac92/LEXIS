@@ -51,7 +51,7 @@ export function EPAFinancialsWithValidation({
     setLocalFinancials(financials);
   }, [financials]);
 
-  // Fetch validation data
+  // Fetch validation data - only if EPA version has been saved (id > 0)
   const { data: validationData, isLoading: isValidating } = useQuery({
     queryKey: ['epa-financial-validation', epaVersionId],
     queryFn: async () => {
@@ -64,7 +64,7 @@ export function EPAFinancialsWithValidation({
         has_overall_mismatch: response.has_overall_mismatch
       };
     },
-    enabled: !!epaVersionId && !isEditing,
+    enabled: epaVersionId > 0 && !isEditing,
     staleTime: 1000 * 60 * 2, // 2 minutes
     refetchInterval: 1000 * 30, // Refetch every 30 seconds when not editing
   });

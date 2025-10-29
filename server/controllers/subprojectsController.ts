@@ -594,12 +594,10 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
 
     // Transform data to match frontend expectations
     const transformedVersions = (epaVersions || []).map((version, index) => ({
-      id: version.id,
+      ...version, // Spread version first to avoid property conflicts
       version_number: `${index + 1}`,
       epa_version: version.epa_version || `Έκδοση ${index + 1}`,
-      project_id: version.project_id,
       formulation_index: version.formulation_id ? parseInt(version.formulation_id.toString()) - 1 : index, // Map formulation_id to 0-based index
-      ...version // Include all other fields
     }));
 
     log(`[Subprojects] Found ${transformedVersions?.length || 0} EPA versions for project ${projectId}`);
