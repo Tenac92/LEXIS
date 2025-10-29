@@ -8,6 +8,7 @@ import { DocumentGenerator } from "../utils/document-generator";
 import { broadcastDocumentUpdate } from "../services/websocketService";
 import { createLogger } from "../utils/logger";
 import { storage } from "../storage";
+import { encryptAFM, hashAFM } from "../utils/crypto";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
@@ -948,7 +949,8 @@ router.post(
             } else if (findError && findError.code === "PGRST116") {
               // Beneficiary not found, create new one
               const newBeneficiary = {
-                afm: recipient.afm, // Keep AFM as string to preserve leading zeros
+                afm: encryptAFM(recipient.afm), // Encrypt AFM for security
+                afm_hash: hashAFM(recipient.afm), // Generate hash for search
                 surname: recipient.lastname,
                 name: recipient.firstname,
                 fathername: recipient.fathername,
