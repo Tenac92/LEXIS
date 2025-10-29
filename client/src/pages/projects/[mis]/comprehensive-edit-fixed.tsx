@@ -3247,9 +3247,6 @@ export default function ComprehensiveEditFixed() {
                                                       ΕΝΕΡΓΟ
                                                     </span>
                                                   )}
-                                                  <span className="text-sm text-gray-500">
-                                                    {versionData.version_name && `- ${versionData.version_name}`}
-                                                  </span>
                                                 </div>
                                               </AccordionTrigger>
                                               <Button
@@ -3514,9 +3511,6 @@ export default function ComprehensiveEditFixed() {
                                                       ΕΝΕΡΓΟ
                                                     </span>
                                                   )}
-                                                  <span className="text-sm text-gray-500">
-                                                    {versionData.version_name && `- ${versionData.version_name}`}
-                                                  </span>
                                                 </div>
                                               </AccordionTrigger>
                                               <Button
