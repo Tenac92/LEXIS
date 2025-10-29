@@ -214,9 +214,9 @@ export class DocumentGenerator {
       {
         text: ` ${documentTitle} ${
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-            ? unitDetails?.unit_name?.prop || "της"
-            : unitDetails?.unit_name?.prop || "τη"
-        }  (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ?${unitDetails?.unit_name?.namegen :${unitDetails?.unit_name?.name }`,
+            ? `${unitDetails?.unit_name?.prop || ""} ${unitDetails?.unit_name?.namegen || ""}`
+            : `${unitDetails?.unit_name?.prop || ""} ${unitDetails?.unit_name?.name || ""}`
+        }`,
         italics: true,
         bold: true,
         color: "000000",
