@@ -216,7 +216,7 @@ export class DocumentGenerator {
           expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
             ? unitDetails?.unit_name?.prop || "της"
             : unitDetails?.unit_name?.prop || "τη"
-        } ${unitDetails?.unit_name?.name || unitDetails?.name || (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ? "Διεύθυνσης" : "Διεύθυνση")}`,
+        }  (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" ?${unitDetails?.unit_name?.namegen :${unitDetails?.unit_name?.name }`,
         italics: true,
         bold: true,
         color: "000000",
