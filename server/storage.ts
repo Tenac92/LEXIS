@@ -3,6 +3,7 @@ import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import { encryptAFM, decryptAFM } from './utils/crypto';
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -1073,9 +1074,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new employee:', employee);
       
+      const employeeToInsert = {
+        ...employee,
+        afm: encryptAFM(employee.afm)
+      };
+      
       const { data, error } = await supabase
         .from('Employees')
-        .insert(employee)
+        .insert(employeeToInsert)
         .select()
         .single();
         
@@ -1085,7 +1091,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created employee:', data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in createEmployee:', error);
       throw error;
@@ -1096,9 +1106,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating employee ${id}:`, employee);
       
+      const employeeToUpdate = {
+        ...employee,
+        afm: employee.afm ? encryptAFM(employee.afm) : undefined
+      };
+      
       const { data, error } = await supabase
         .from('Employees')
-        .update(employee)
+        .update(employeeToUpdate)
         .eq('id', id)
         .select()
         .single();
@@ -1109,7 +1124,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated employee:', data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in updateEmployee:', error);
       throw error;
@@ -1293,14 +1312,16 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new beneficiary:', beneficiary);
       
-      // Let the database handle ID generation with its sequence
+      const beneficiaryToInsert = {
+        ...beneficiary,
+        afm: encryptAFM(beneficiary.afm),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('beneficiaries')
-        .insert({
-          ...beneficiary,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(beneficiaryToInsert)
         .select()
         .single();
         
@@ -1310,7 +1331,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created beneficiary with ID:', data.id);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in createBeneficiary:', error);
       throw error;
@@ -1321,12 +1346,15 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
+      const beneficiaryToUpdate = {
+        ...beneficiary,
+        afm: beneficiary.afm ? encryptAFM(beneficiary.afm) : undefined,
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('beneficiaries')
-        .update({
-          ...beneficiary,
-          updated_at: new Date().toISOString()
-        })
+        .update(beneficiaryToUpdate)
         .eq('id', id)
         .select()
         .single();
@@ -1337,7 +1365,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated beneficiary:', data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in updateBeneficiary:', error);
       throw error;
