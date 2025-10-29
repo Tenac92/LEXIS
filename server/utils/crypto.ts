@@ -71,10 +71,13 @@ export function decryptAFM(encryptedAFM: string | null | undefined): string | nu
   }
 }
 
-export function encryptAFMForSearch(afm: string): string {
-  const encrypted = encryptAFM(afm);
-  if (!encrypted) {
-    throw new Error('Failed to encrypt AFM for search');
+export function hashAFM(afm: string): string {
+  if (!afm) {
+    throw new Error('AFM cannot be empty');
   }
-  return encrypted;
+  
+  const key = getEncryptionKey();
+  const hmac = crypto.createHmac('sha256', key);
+  hmac.update(afm);
+  return hmac.digest('hex');
 }

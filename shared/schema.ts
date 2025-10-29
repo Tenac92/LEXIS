@@ -362,6 +362,7 @@ export const employees = pgTable(
     name: text("name"),
     fathername: text("fathername"),
     afm: text("afm"),
+    afm_hash: text("afm_hash"),
     klados: text("klados"),
     attribute: text("attribute"),
     workaf: text("workaf"),
@@ -372,6 +373,7 @@ export const employees = pgTable(
       columns: [table.monada],
       foreignColumns: [monada.unit],
     }),
+    afmHashIndex: index("idx_employees_afm_hash").on(table.afm_hash),
   }),
 );
 
@@ -379,24 +381,31 @@ export const employees = pgTable(
  * Beneficiaries Table (Clean normalized structure)
  * Contains basic beneficiary information
  */
-export const beneficiaries = pgTable("beneficiaries", {
-  id: serial("id").primaryKey(),
-  afm: text("afm").notNull().unique(), // Tax ID (AFM) - text as per database
-  surname: text("surname").notNull(),
-  name: text("name").notNull(),
-  fathername: text("fathername"),
-  region: text("region"),
-  adeia: integer("adeia"), // License/permit number
-  cengsur1: text("cengsur1"), // Engineer 1 surname
-  cengname1: text("cengname1"), // Engineer 1 name
-  cengsur2: text("cengsur2"), // Engineer 2 surname
-  cengname2: text("cengname2"), // Engineer 2 name
-  onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-  freetext: text("freetext"), // Additional free text
-  date: date("date").defaultNow(),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
-});
+export const beneficiaries = pgTable(
+  "beneficiaries",
+  {
+    id: serial("id").primaryKey(),
+    afm: text("afm").notNull().unique(), // Tax ID (AFM) - text as per database
+    afm_hash: text("afm_hash"),
+    surname: text("surname").notNull(),
+    name: text("name").notNull(),
+    fathername: text("fathername"),
+    region: text("region"),
+    adeia: integer("adeia"), // License/permit number
+    cengsur1: text("cengsur1"), // Engineer 1 surname
+    cengname1: text("cengname1"), // Engineer 1 name
+    cengsur2: text("cengsur2"), // Engineer 2 surname
+    cengname2: text("cengname2"), // Engineer 2 name
+    onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+    freetext: text("freetext"), // Additional free text
+    date: date("date").defaultNow(),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at"),
+  },
+  (table) => ({
+    afmHashIndex: index("idx_beneficiaries_afm_hash").on(table.afm_hash),
+  })
+);
 
 /**
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
