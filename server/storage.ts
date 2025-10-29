@@ -1011,28 +1011,58 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      console.log(`[Storage] Fetching all employees to decrypt and search (encrypted AFM requires in-memory search)`);
+      const minDigits = 9;
+      const currentDigits = afm.length;
       
-      const { data, error } = await supabase
-        .from('Employees')
-        .select('*')
-        .order('surname', { ascending: true });
+      if (currentDigits >= minDigits) {
+        console.log(`[Storage] Exact AFM search using hash for: ${afm}`);
         
-      if (error) {
-        console.error('[Storage] Error fetching employees for AFM search:', error);
-        throw error;
-      }
-      
-      const decryptedAndFiltered = (data || [])
-        .map(e => ({
+        const afmHash = hashAFM(afm);
+        
+        const { data, error } = await supabase
+          .from('Employees')
+          .select('*')
+          .eq('afm_hash', afmHash)
+          .order('surname', { ascending: true })
+          .limit(20);
+          
+        if (error) {
+          console.error('[Storage] Error searching employees by AFM hash:', error);
+          throw error;
+        }
+        
+        const decryptedEmployees = (data || []).map(e => ({
           ...e,
           afm: decryptAFM(e.afm)
-        }))
-        .filter(e => e.afm && e.afm.startsWith(afm))
-        .slice(0, 20);
-      
-      console.log(`[Storage] Found ${decryptedAndFiltered.length} employees matching AFM: ${afm}`);
-      return decryptedAndFiltered;
+        }));
+        
+        console.log(`[Storage] Found ${decryptedEmployees.length} employees with exact AFM: ${afm}`);
+        return decryptedEmployees;
+      } else {
+        console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
+        
+        const { data, error } = await supabase
+          .from('Employees')
+          .select('*')
+          .order('surname', { ascending: true })
+          .limit(1000);
+          
+        if (error) {
+          console.error('[Storage] Error fetching employees for prefix search:', error);
+          throw error;
+        }
+        
+        const decryptedAndFiltered = (data || [])
+          .map(e => ({
+            ...e,
+            afm: decryptAFM(e.afm)
+          }))
+          .filter(e => e.afm && e.afm.startsWith(afm))
+          .slice(0, 20);
+        
+        console.log(`[Storage] Found ${decryptedAndFiltered.length} employees matching AFM prefix: ${afm}`);
+        return decryptedAndFiltered;
+      }
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
       throw error;
@@ -1187,29 +1217,57 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      console.log(`[Storage] Fetching beneficiaries to decrypt and search (encrypted AFM requires in-memory search)`);
+      const minDigits = 9;
+      const currentDigits = afm.length;
       
-      const { data, error } = await supabase
-        .from('beneficiaries')
-        .select('*')
-        .order('id', { ascending: false })
-        .limit(10000);
+      if (currentDigits >= minDigits) {
+        console.log(`[Storage] Exact AFM search using hash for: ${afm}`);
         
-      if (error) {
-        console.error('[Storage] Error fetching beneficiaries for AFM search:', error);
-        throw error;
-      }
-      
-      const decryptedAndFiltered = (data || [])
-        .map(b => ({
+        const afmHash = hashAFM(afm);
+        
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('*')
+          .eq('afm_hash', afmHash)
+          .order('id', { ascending: false });
+          
+        if (error) {
+          console.error('[Storage] Error searching beneficiaries by AFM hash:', error);
+          throw error;
+        }
+        
+        const decryptedBeneficiaries = (data || []).map(b => ({
           ...b,
           afm: decryptAFM(b.afm)
-        }))
-        .filter(b => b.afm && b.afm.startsWith(afm))
-        .slice(0, 100);
-      
-      console.log(`[Storage] Found ${decryptedAndFiltered.length} beneficiaries matching AFM: ${afm}`);
-      return decryptedAndFiltered;
+        }));
+        
+        console.log(`[Storage] Found ${decryptedBeneficiaries.length} beneficiaries with exact AFM: ${afm}`);
+        return decryptedBeneficiaries;
+      } else {
+        console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
+        
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(5000);
+          
+        if (error) {
+          console.error('[Storage] Error fetching beneficiaries for prefix search:', error);
+          throw error;
+        }
+        
+        const decryptedAndFiltered = (data || [])
+          .map(b => ({
+            ...b,
+            afm: decryptAFM(b.afm)
+          }))
+          .filter(b => b.afm && b.afm.startsWith(afm))
+          .slice(0, 100);
+        
+        console.log(`[Storage] Found ${decryptedAndFiltered.length} beneficiaries matching AFM prefix: ${afm}`);
+        return decryptedAndFiltered;
+      }
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
       throw error;
