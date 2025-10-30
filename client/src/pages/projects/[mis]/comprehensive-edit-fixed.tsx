@@ -4147,20 +4147,17 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              {...field}
-                                                              value={field.value ?? "0"}
-                                                              placeholder="π.χ. 100000"
+                                                              value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                              placeholder="π.χ. 100.000,00"
                                                               onChange={(e) => {
-                                                                const formatted = formatNumberWhileTyping(e.target.value);
-                                                                field.onChange(formatted);
+                                                                const parsed = parseEuropeanNumber(e.target.value);
+                                                                field.onChange(parsed);
                                                                 
                                                                 // Auto-validate that eligible <= total
                                                                 const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`);
-                                                                const totalValue = parseFloat(e.target.value.replace(/,/g, '')) || 0;
-                                                                const eligibleNumeric = parseFloat(eligibleValue?.replace(/,/g, '') || '0');
                                                                 
-                                                                if (eligibleNumeric > totalValue && totalValue > 0) {
-                                                                  form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, formatted);
+                                                                if (parsed !== undefined && eligibleValue !== undefined && eligibleValue > parsed && parsed > 0) {
+                                                                  form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, parsed);
                                                                 }
                                                               }}
                                                             />
@@ -4176,19 +4173,16 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              {...field}
-                                                              value={field.value ?? "0"}
-                                                              placeholder="π.χ. 80000"
+                                                              value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                              placeholder="π.χ. 80.000,00"
                                                               onChange={(e) => {
-                                                                const formatted = formatNumberWhileTyping(e.target.value);
-                                                                field.onChange(formatted);
+                                                                const parsed = parseEuropeanNumber(e.target.value);
+                                                                field.onChange(parsed);
                                                                 
                                                                 // Validate that eligible <= total
                                                                 const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense`);
-                                                                const eligibleNumeric = parseFloat(e.target.value.replace(/,/g, '')) || 0;
-                                                                const totalNumeric = parseFloat(totalValue?.replace(/,/g, '') || '0');
                                                                 
-                                                                if (eligibleNumeric > totalNumeric && totalNumeric > 0) {
+                                                                if (parsed !== undefined && totalValue !== undefined && parsed > totalValue && totalValue > 0) {
                                                                   toast({
                                                                     title: "Προσοχή",
                                                                     description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
