@@ -933,54 +933,6 @@ export default function ComprehensiveEditFixed() {
     }
   };
 
-  // Number formatting helper functions
-  const formatNumberWhileTyping = (value: string): string => {
-    // Remove all non-numeric characters except comma and period
-    let cleanValue = value.replace(/[^0-9,.]/g, "");
-
-    // If empty, return empty
-    if (!cleanValue) return "";
-
-    // Handle European format (comma as decimal separator)
-    if (cleanValue.includes(",")) {
-      const parts = cleanValue.split(",");
-      if (parts.length === 2) {
-        // Clean integer part and add thousand separators
-        const integerPart = parts[0].replace(/\./g, ""); // Remove existing dots first
-        const formattedInteger = integerPart.replace(
-          /\B(?=(\d{3})+(?!\d))/g,
-          ".",
-        );
-        // Limit decimal part to 2 digits
-        const decimalPart = parts[1].slice(0, 2);
-        return `${formattedInteger},${decimalPart}`;
-      } else if (parts.length > 2) {
-        // If multiple commas, take only the first two parts
-        const integerPart = parts[0].replace(/\./g, "");
-        const formattedInteger = integerPart.replace(
-          /\B(?=(\d{3})+(?!\d))/g,
-          ".",
-        );
-        const decimalPart = parts[1].slice(0, 2);
-        return `${formattedInteger},${decimalPart}`;
-      }
-    }
-
-    // For integers only, remove existing dots and add proper thousand separators
-    const integerValue = cleanValue.replace(/[,.]/g, "");
-    return integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
-
-  const parseEuropeanNumber = (value: string): number | null => {
-    if (!value) return null;
-
-    // Replace thousand separators (periods) and convert comma to period for decimal
-    const cleaned = value.replace(/\./g, "").replace(/,/g, ".");
-    const parsed = parseFloat(cleaned);
-
-    return isNaN(parsed) ? null : parsed;
-  };
-
   // Helper function to validate and limit numeric input to database constraints
   const validateAndLimitNumericInput = (
     value: string,
@@ -1050,17 +1002,19 @@ export default function ComprehensiveEditFixed() {
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
 
-          // Budget fields - parse European format to numbers
+          // Budget fields - sum boundary_budget from all PDE versions
           budget_e069: (() => {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "E069",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
+              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
+                return sum + (pde.boundary_budget || 0);
+              }, 0);
               console.log(
-                `Budget E069: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget E069: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
               );
-              return parsed;
+              return total > 0 ? total : null;
             }
             return typedProjectData?.budget_e069 || null;
           })(),
@@ -1068,12 +1022,14 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ271",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
+              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
+                return sum + (pde.boundary_budget || 0);
+              }, 0);
               console.log(
-                `Budget ΝΑ271: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget ΝΑ271: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
               );
-              return parsed;
+              return total > 0 ? total : null;
             }
             return typedProjectData?.budget_na271 || null;
           })(),
@@ -1081,12 +1037,14 @@ export default function ComprehensiveEditFixed() {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "ΝΑ853",
             );
-            if (formEntry?.project_budget) {
-              const parsed = parseEuropeanNumber(formEntry.project_budget);
+            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
+              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
+                return sum + (pde.boundary_budget || 0);
+              }, 0);
               console.log(
-                `Budget ΝΑ853: "${formEntry.project_budget}" -> ${parsed}`,
+                `Budget ΝΑ853: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
               );
-              return parsed;
+              return total > 0 ? total : null;
             }
             return typedProjectData?.budget_na853 || null;
           })(),
