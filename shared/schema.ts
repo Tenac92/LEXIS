@@ -1082,12 +1082,8 @@ export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
 // Schema for EPA financials with validation
 export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
   year: z.number().int().min(2000).max(2100, "Το έτος πρέπει να είναι έγκυρο"),
-  total_public_expense: z
-    .string()
-    .min(1, "Η συνολική δημόσια δαπάνη είναι υποχρεωτική"),
-  eligible_public_expense: z
-    .string()
-    .min(1, "Η επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
+  total_public_expense: z.string().optional().default("0"),
+  eligible_public_expense: z.string().optional().default("0"),
 });
 
 // Schema for document recipients
