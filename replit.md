@@ -4,6 +4,14 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-10-30: Summary Description Field Integration
+Connected the "Συνοπτική Περιγραφή" (Summary Description) form field to the Projects database. Changes:
+- Added `summary: text("summary")` column to Projects schema in shared/schema.ts
+- Updated form submission to save `summary_description` field to `Projects.summary` column
+- Updated form loading to populate `summary_description` from `Projects.summary`
+- Data flow complete: Form (summary_description) ↔ Database (summary)
+- All changes reviewed and verified working correctly
+
 ## 2025-10-30: EPA Financials Database Integration Fix
 Fixed critical data persistence issue where EPA budget version financial records (Οικονομικά ΕΠΑ) weren't being loaded from the epa_financials table. Changes:
 - Added fetch logic in /complete endpoint to load EPA financials from epa_financials table using epa_version_id
