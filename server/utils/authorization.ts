@@ -11,7 +11,7 @@ export interface ProjectAuthResult {
 
 export async function canAccessProject(
   user: any,
-  mis: string
+  projectId: number
 ): Promise<ProjectAuthResult> {
   try {
     if (!user || !user.id) {
@@ -25,7 +25,7 @@ export async function canAccessProject(
     const { data: project, error: projectError } = await supabase
       .from("Projects")
       .select("id, mis, monada_id, implementing_agency")
-      .eq("mis", mis)
+      .eq("id", projectId)
       .single();
 
     if (projectError || !project) {
@@ -95,9 +95,9 @@ export async function canAccessProject(
 export async function requireProjectAccess(
   req: AuthenticatedRequest,
   res: Response,
-  mis: string
+  projectId: number
 ): Promise<any | null> {
-  const authResult = await canAccessProject(req.user, mis);
+  const authResult = await canAccessProject(req.user, projectId);
 
   if (!authResult.authorized) {
     res.status(authResult.statusCode || 403).json({
