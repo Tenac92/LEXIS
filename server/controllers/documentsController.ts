@@ -3244,7 +3244,7 @@ router.get(
             firstname: employee?.name || "",
             lastname: employee?.surname || "",
             fathername: employee?.fathername || "",
-            afm: employee?.afm ? String(employee.afm) : "",
+            afm: employee?.afm ? decryptAFM(employee.afm) || "" : "",
             amount: parseFloat(payment.net_payable) || 0,
             month: payment.month || "",
             days: payment.days || 0,
@@ -3295,7 +3295,22 @@ router.get(
         });
       }
 
-      res.json(payments || []);
+      // Decrypt AFM fields in beneficiary data
+      const paymentsWithDecryptedAFM = (payments || []).map((payment) => {
+        const beneficiary = Array.isArray(payment.beneficiaries)
+          ? payment.beneficiaries[0]
+          : payment.beneficiaries;
+        
+        return {
+          ...payment,
+          beneficiaries: beneficiary ? {
+            ...beneficiary,
+            afm: decryptAFM(beneficiary.afm) || ""
+          } : null
+        };
+      });
+
+      res.json(paymentsWithDecryptedAFM);
     } catch (error) {
       console.error("Error in beneficiaries endpoint:", error);
       res.status(500).json({
