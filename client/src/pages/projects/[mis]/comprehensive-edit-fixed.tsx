@@ -367,7 +367,7 @@ const comprehensiveProjectSchema = z.object({
             // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
             // Added boundary_budget; renamed decision_type to action_type
             version_number: z.string().default("1.0"),
-            boundary_budget: z.string().default(""), // Προϋπολογισμός Οριοθέτησης
+            boundary_budget: z.number().optional(), // Προϋπολογισμός Οριοθέτησης
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
@@ -387,8 +387,8 @@ const comprehensiveProjectSchema = z.object({
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
               year: z.number().min(2020).max(2050), // Έτος
-              total_public_expense: z.string().default("0"), // Συνολική Δημόσια Δαπάνη
-              eligible_public_expense: z.string().default("0"), // Επιλέξιμη Δημόσια Δαπάνη
+              total_public_expense: z.number().optional(), // Συνολική Δημόσια Δαπάνη
+              eligible_public_expense: z.number().optional(), // Επιλέξιμη Δημόσια Δαπάνη
             })).default([]),
           })).default([]),
         }).default({ pde: [], epa: [] }),
