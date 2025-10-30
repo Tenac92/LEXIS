@@ -3798,7 +3798,14 @@ export default function ComprehensiveEditFixed() {
                                                   <FormItem>
                                                     <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
                                                     <FormControl>
-                                                      <Input {...field} value={field.value ?? ""} placeholder="π.χ. 1.500.000,00" />
+                                                      <Input 
+                                                        value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                        onChange={(e) => {
+                                                          const parsed = parseEuropeanNumber(e.target.value);
+                                                          field.onChange(parsed);
+                                                        }}
+                                                        placeholder="π.χ. 1.500.000,00" 
+                                                      />
                                                     </FormControl>
                                                   </FormItem>
                                                 )}
