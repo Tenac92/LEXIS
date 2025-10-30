@@ -16,8 +16,8 @@ export default function ProjectDetailsPage() {
   console.log("Project Details Page - MIS Parameter:", mis);
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: [`/api/projects/${mis}`], // Direct API route matching
-    enabled: !!mis && !!user // Only fetch if we have both MIS and user
+    queryKey: [`/api/projects/${mis}`], // Using project identifier from route - could be ID or MIS
+    enabled: !!mis && !!user // Only fetch if we have both identifier and user
   });
 
   if (isLoading) {
@@ -126,7 +126,7 @@ export default function ProjectDetailsPage() {
             </div>
             {isAdmin && (
               <Button variant="outline" asChild>
-                <Link href={`/projects/${mis}/edit`}>
+                <Link href={`/projects/${project.id}/edit`}>
                   Edit Project
                 </Link>
               </Button>

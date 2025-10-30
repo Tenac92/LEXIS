@@ -60,7 +60,6 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   // Extract project details safely with comprehensive error handling
   const projectData = project as any;
   const projectId = projectData?.id;
-  const projectMis = projectData?.mis;
 
   // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
   const { 
@@ -68,8 +67,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     isLoading: isCompleteDataLoading, 
     error: completeDataError 
   } = useQuery<CompleteProjectResponse>({
-    queryKey: [`/api/projects/${projectMis}/complete`],
-    enabled: !!projectMis && open,
+    queryKey: [`/api/projects/${projectId}/complete`],
+    enabled: !!projectId && open,
     retry: 1,
     staleTime: 30 * 60 * 1000, // 30 minutes cache
     gcTime: 60 * 60 * 1000, // 1 hour garbage collection
@@ -78,9 +77,10 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   });
 
   // Additional budget query for now (can be integrated into complete endpoint later)
+  // Note: Budget lookup still uses MIS as it's a different system
   const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery<BudgetDataWithCalculated | BudgetDataWithCalculated[] | { status: string; data: BudgetDataWithCalculated | BudgetDataWithCalculated[] }>({
-    queryKey: [`/api/budget/lookup/${projectMis}`],
-    enabled: !!projectMis && open,
+    queryKey: [`/api/budget/lookup/${projectData?.mis}`],
+    enabled: !!projectData?.mis && open,
     retry: 1,
     staleTime: 30 * 60 * 1000, // 30 minutes cache
     gcTime: 60 * 60 * 1000, // 1 hour garbage collection

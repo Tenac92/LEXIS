@@ -615,6 +615,7 @@ export default function ComprehensiveEditFixed() {
 
   // Extract data from optimized API responses with proper typing
   const projectData = completeProjectData?.project;
+  const projectId = projectData?.id; // Extract project ID for API calls
   const projectIndexData = completeProjectData?.index;
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
@@ -916,7 +917,7 @@ export default function ComprehensiveEditFixed() {
           project_title: projectUpdateData.project_title,
         });
         try {
-          const projectResponse = await apiRequest(`/api/projects/${mis}`, {
+          const projectResponse = await apiRequest(`/api/projects/${projectId}`, {
             method: "PATCH",
             body: JSON.stringify(projectUpdateData),
           });
@@ -937,7 +938,7 @@ export default function ComprehensiveEditFixed() {
           let existingDecisions: any[] = [];
           try {
             existingDecisions = (await apiRequest(
-              `/api/projects/${mis}/decisions`,
+              `/api/projects/${projectId}/decisions`,
             )) as any[];
           } catch (error) {
             console.warn("Could not fetch existing decisions:", error);
@@ -987,7 +988,7 @@ export default function ComprehensiveEditFixed() {
                   decisionData,
                 );
                 await apiRequest(
-                  `/api/projects/${mis}/decisions/${existingDecision.id}`,
+                  `/api/projects/${projectId}/decisions/${existingDecision.id}`,
                   {
                     method: "PATCH",
                     body: JSON.stringify(decisionData),
@@ -996,7 +997,7 @@ export default function ComprehensiveEditFixed() {
               } else {
                 // Create new decision
                 console.log(`Creating new decision:`, decisionData);
-                await apiRequest(`/api/projects/${mis}/decisions`, {
+                await apiRequest(`/api/projects/${projectId}/decisions`, {
                   method: "POST",
                   body: JSON.stringify(decisionData),
                 });
@@ -1019,7 +1020,7 @@ export default function ComprehensiveEditFixed() {
                   `Deleting excess decision ${existingDecisions[i].id}`,
                 );
                 await apiRequest(
-                  `/api/projects/${mis}/decisions/${existingDecisions[i].id}`,
+                  `/api/projects/${projectId}/decisions/${existingDecisions[i].id}`,
                   {
                     method: "DELETE",
                   },
@@ -1047,7 +1048,7 @@ export default function ComprehensiveEditFixed() {
           let existingFormulations = [];
           try {
             existingFormulations = await apiRequest(
-              `/api/projects/${mis}/formulations`,
+              `/api/projects/${projectId}/formulations`,
             );
           } catch (error) {
             console.warn("Could not fetch existing formulations:", error);
@@ -1080,7 +1081,7 @@ export default function ComprehensiveEditFixed() {
                   formulationData,
                 );
                 await apiRequest(
-                  `/api/projects/${mis}/formulations/${existingFormulation.id}`,
+                  `/api/projects/${projectId}/formulations/${existingFormulation.id}`,
                   {
                     method: "PATCH",
                     body: JSON.stringify(formulationData),
@@ -1089,7 +1090,7 @@ export default function ComprehensiveEditFixed() {
               } else {
                 // Create new formulation
                 console.log(`Creating new formulation:`, formulationData);
-                await apiRequest(`/api/projects/${mis}/formulations`, {
+                await apiRequest(`/api/projects/${projectId}/formulations`, {
                   method: "POST",
                   body: JSON.stringify(formulationData),
                 });
@@ -1122,7 +1123,7 @@ export default function ComprehensiveEditFixed() {
                   `Deleting excess formulation ${existingFormulations[i].id}`,
                 );
                 await apiRequest(
-                  `/api/projects/${mis}/formulations/${existingFormulations[i].id}`,
+                  `/api/projects/${projectId}/formulations/${existingFormulations[i].id}`,
                   {
                     method: "DELETE",
                   },
@@ -1147,7 +1148,7 @@ export default function ComprehensiveEditFixed() {
             if (change.description && change.description.trim()) {
               try {
                 console.log("Recording change:", change.description);
-                await apiRequest(`/api/projects/${mis}/changes`, {
+                await apiRequest(`/api/projects/${projectId}/changes`, {
                   method: "POST",
                   body: JSON.stringify({
                     description: change.description,
@@ -1309,7 +1310,7 @@ export default function ComprehensiveEditFixed() {
         );
         try {
           const finalProjectResponse = await apiRequest(
-            `/api/projects/${mis}`,
+            `/api/projects/${projectId}`,
             {
               method: "PATCH",
               body: JSON.stringify(projectUpdateData),
@@ -1360,21 +1361,21 @@ export default function ComprehensiveEditFixed() {
       });
 
       // Invalidate all relevant queries to refresh data
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${mis}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
       queryClient.invalidateQueries({
-        queryKey: [`/api/projects/${mis}/complete`],
+        queryKey: [`/api/projects/${projectId}/complete`],
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/projects/${mis}/index`],
+        queryKey: [`/api/projects/${projectId}/index`],
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/projects/${mis}/decisions`],
+        queryKey: [`/api/projects/${projectId}/decisions`],
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/projects/${mis}/formulations`],
+        queryKey: [`/api/projects/${projectId}/formulations`],
       });
       queryClient.invalidateQueries({
-        queryKey: [`/api/projects/${mis}/history`],
+        queryKey: [`/api/projects/${projectId}/history`],
       });
 
       // Stay on the edit page to show updated data

@@ -478,7 +478,7 @@ export default function NewProjectPage() {
           body: JSON.stringify(projectCreateData),
         }) as any;
         
-        const projectMis = createdProject.mis;
+        const projectId = createdProject.id;
         console.log("✓ Project creation successful:", createdProject);
         
         // 2. Create project decisions if provided
@@ -501,7 +501,7 @@ export default function NewProjectPage() {
             comments: decision.comments || "",
           }));
           
-          await apiRequest(`/api/projects/${projectMis}/decisions`, {
+          await apiRequest(`/api/projects/${projectId}/decisions`, {
             method: "PUT",
             body: JSON.stringify({ decisions_data: transformedDecisions }),
           });
@@ -522,7 +522,7 @@ export default function NewProjectPage() {
             // Keep epa_version for backend processing
           }));
           
-          await apiRequest(`/api/projects/${projectMis}/formulations`, {
+          await apiRequest(`/api/projects/${projectId}/formulations`, {
             method: "PUT",
             body: JSON.stringify({ 
               formulation_details: transformedFormulations,
@@ -828,7 +828,7 @@ export default function NewProjectPage() {
         });
         
         // Update the project with all data including normalized geographic arrays
-        const updateResult = await apiRequest(`/api/projects/${projectMis}`, {
+        const updateResult = await apiRequest(`/api/projects/${projectId}`, {
           method: "PATCH",
           body: JSON.stringify(projectUpdateData),
         });
@@ -842,7 +842,7 @@ export default function NewProjectPage() {
     },
     onSuccess: (createdProject) => {
       // Set the saved project ID so subprojects can be managed
-      setSavedProjectId(createdProject.mis);
+      setSavedProjectId(createdProject.id);
       
       toast({
         title: "Επιτυχία",

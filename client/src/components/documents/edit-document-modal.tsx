@@ -281,12 +281,11 @@ export function EditDocumentModal({
 
         console.log("Fetching geographic areas for project:", {
           id: selectedProjectId,
-          mis: project.mis,
         });
 
         // Fetch project complete data which includes geographic relationships
         const response = await apiRequest(
-          `/api/projects/${encodeURIComponent(project.mis || "")}/complete`,
+          `/api/projects/${encodeURIComponent(project.id || "")}/complete`,
         );
 
         if (!response || !geographicData) {

@@ -95,7 +95,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(`/api/projects/${project.mis}`, {
+      const response = await apiRequest(`/api/projects/${project.id}`, {
         method: "DELETE",
       }) as Response;
 
@@ -264,7 +264,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setLocation(`/projects/${project.mis}/edit`);
+                      setLocation(`/projects/${project.id}/edit`);
                     }}
                     className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                     title="Επεξεργασία"
@@ -353,7 +353,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLocation(`/projects/${project.mis}/edit`);
+                        setLocation(`/projects/${project.id}/edit`);
                       }}
                       className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                       title="Επεξεργασία"
@@ -541,7 +541,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setLocation(`/projects/${project.mis}/edit`);
+                      setLocation(`/projects/${project.id}/edit`);
                     }}
                     className="flex-1"
                   >
