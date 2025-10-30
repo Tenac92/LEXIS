@@ -68,6 +68,67 @@ import {
   convertGeographicDataToKallikratis,
 } from "@shared/utils/geographic-utils";
 
+// European number input component that allows free typing with formatting
+function EuropeanNumberInput({ 
+  value, 
+  onChange, 
+  placeholder, 
+  onBlur 
+}: { 
+  value: number | undefined | null; 
+  onChange: (value: number | undefined) => void; 
+  placeholder?: string;
+  onBlur?: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [displayValue, setDisplayValue] = useState<string>(() => 
+    value !== undefined && value !== null ? formatEuropeanNumber(value) : ""
+  );
+
+  // Sync displayValue when the external value changes (e.g., from form reset or cross-field validation)
+  useEffect(() => {
+    // Only skip update if THIS specific input is currently focused
+    const isThisInputFocused = document.activeElement === inputRef.current;
+    
+    if (!isThisInputFocused) {
+      if (value !== undefined && value !== null) {
+        setDisplayValue(formatEuropeanNumber(value));
+      } else {
+        setDisplayValue("");
+      }
+    }
+  }, [value]);
+
+  return (
+    <Input 
+      ref={inputRef}
+      type="text"
+      placeholder={placeholder}
+      value={displayValue}
+      onChange={(e) => {
+        const rawValue = e.target.value;
+        setDisplayValue(rawValue);
+        
+        if (rawValue === "" || rawValue.trim() === "") {
+          onChange(undefined);
+          return;
+        }
+        
+        const numericValue = parseEuropeanNumber(rawValue);
+        if (!isNaN(numericValue)) {
+          onChange(numericValue);
+        }
+      }}
+      onBlur={() => {
+        if (value !== undefined && value !== null) {
+          setDisplayValue(formatEuropeanNumber(value));
+        }
+        onBlur?.();
+      }}
+    />
+  );
+}
+
 // Hook for validating ΣΑ numbers in real-time with proper debouncing
 function useSAValidation() {
   const [validationStates, setValidationStates] = useState<Record<string, { 
@@ -4323,24 +4384,18 @@ export default function ComprehensiveEditFixed() {
                                                         <FormItem>
                                                           <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
-                                                            <Input 
-                                                              value={typeof field.value === 'number' ? formatEuropeanNumber(field.value) : ""}
+                                                            <EuropeanNumberInput
+                                                              value={field.value}
                                                               placeholder="π.χ. 100.000,00"
-                                                              onChange={(e) => {
-                                                                const value = e.target.value.trim();
-                                                                if (value === "") {
-                                                                  field.onChange(undefined);
-                                                                  return;
-                                                                }
-                                                                const parsed = parseEuropeanNumber(value);
-                                                                if (parsed !== undefined) {
-                                                                  field.onChange(parsed);
-                                                                  
+                                                              onChange={(numericValue) => {
+                                                                field.onChange(numericValue);
+                                                                
+                                                                if (numericValue !== undefined) {
                                                                   // Auto-validate that eligible <= total
                                                                   const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`);
                                                                   
-                                                                  if (eligibleValue !== undefined && eligibleValue > parsed && parsed > 0) {
-                                                                    form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, parsed);
+                                                                  if (eligibleValue !== undefined && eligibleValue > numericValue && numericValue > 0) {
+                                                                    form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, numericValue);
                                                                   }
                                                                 }
                                                               }}
@@ -4356,23 +4411,17 @@ export default function ComprehensiveEditFixed() {
                                                         <FormItem>
                                                           <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
-                                                            <Input 
-                                                              value={typeof field.value === 'number' ? formatEuropeanNumber(field.value) : ""}
+                                                            <EuropeanNumberInput
+                                                              value={field.value}
                                                               placeholder="π.χ. 80.000,00"
-                                                              onChange={(e) => {
-                                                                const value = e.target.value.trim();
-                                                                if (value === "") {
-                                                                  field.onChange(undefined);
-                                                                  return;
-                                                                }
-                                                                const parsed = parseEuropeanNumber(value);
-                                                                if (parsed !== undefined) {
-                                                                  field.onChange(parsed);
-                                                                  
+                                                              onChange={(numericValue) => {
+                                                                field.onChange(numericValue);
+                                                                
+                                                                if (numericValue !== undefined) {
                                                                   // Validate that eligible <= total
                                                                   const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense`);
                                                                   
-                                                                  if (totalValue !== undefined && parsed > totalValue && totalValue > 0) {
+                                                                  if (totalValue !== undefined && numericValue > totalValue && totalValue > 0) {
                                                                     toast({
                                                                       title: "Προσοχή",
                                                                       description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
