@@ -22,13 +22,23 @@ export async function canAccessProject(
       };
     }
 
+    console.log(`[Authorization] Checking access for user ${user.id} to project ${projectId}`);
+
     const { data: project, error: projectError } = await supabase
       .from("Projects")
       .select("id, mis, monada_id, implementing_agency")
       .eq("id", projectId)
       .single();
 
+    console.log(`[Authorization] Supabase query result:`, {
+      hasProject: !!project,
+      hasError: !!projectError,
+      error: projectError,
+      projectData: project
+    });
+
     if (projectError || !project) {
+      console.error(`[Authorization] Project ${projectId} not found:`, projectError);
       return {
         authorized: false,
         error: "Project not found",
