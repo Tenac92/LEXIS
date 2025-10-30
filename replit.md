@@ -4,6 +4,15 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-10-30: EPA Financials Database Integration Fix
+Fixed critical data persistence issue where EPA budget version financial records (Οικονομικά ΕΠΑ) weren't being loaded from the epa_financials table. Changes:
+- Added fetch logic in /complete endpoint to load EPA financials from epa_financials table using epa_version_id
+- Group financials by epa_version_id and attach to each EPA budget version object
+- Verified cascade delete behavior on foreign key (epa_financials.epa_version_id → project_budget_versions.id)
+- Confirmed processBudgetVersions function correctly inserts financials into epa_financials table
+- Data flow now complete: Database (epa_financials) → API (budget_versions.epa[].financials) → Frontend form
+- Server logs confirm EPA financials are being fetched and loaded successfully
+
 ## 2025-10-30: Decisions Accordion UI with Batch Operations
 Enhanced the project edit form's decisions section with accordion-based UI and batch operations, matching the patterns used for formulations and locations. Changes:
 - Implemented accordion UI for decisions with expandable/collapsible items
