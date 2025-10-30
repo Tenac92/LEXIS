@@ -3819,7 +3819,7 @@ export default function ComprehensiveEditFixed() {
                                                   <FormItem>
                                                     <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
                                                     <FormControl>
-                                                      <Input {...field} placeholder="π.χ. 1.500.000,00" />
+                                                      <Input {...field} value={field.value ?? ""} placeholder="π.χ. 1.500.000,00" />
                                                     </FormControl>
                                                   </FormItem>
                                                 )}
