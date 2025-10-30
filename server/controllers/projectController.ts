@@ -1137,6 +1137,45 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
     
     console.log(`[ProjectComplete] Processed ${budgetVersions.length} budget versions for ${budgetVersionsByFormulation.size} formulations`);
     
+    // Fetch EPA financials for all EPA versions
+    const epaVersionIds = budgetVersions
+      .filter(v => {
+        const typeNormalized = v.budget_type?.toUpperCase();
+        return typeNormalized === 'ΕΠΑ' || typeNormalized === 'EPA';
+      })
+      .map(v => v.id);
+    
+    let epaFinancialsByVersion = new Map<number, any[]>();
+    if (epaVersionIds.length > 0) {
+      console.log(`[ProjectComplete] Fetching financials for ${epaVersionIds.length} EPA versions`);
+      const { data: epaFinancialsData, error: epaFinancialsError } = await supabase
+        .from('epa_financials')
+        .select('*')
+        .in('epa_version_id', epaVersionIds)
+        .order('year');
+      
+      if (epaFinancialsError) {
+        console.error('[ProjectComplete] Error fetching EPA financials:', epaFinancialsError);
+      } else {
+        // Group financials by epa_version_id
+        (epaFinancialsData || []).forEach(financial => {
+          if (!epaFinancialsByVersion.has(financial.epa_version_id)) {
+            epaFinancialsByVersion.set(financial.epa_version_id, []);
+          }
+          epaFinancialsByVersion.get(financial.epa_version_id)!.push(financial);
+        });
+        console.log(`[ProjectComplete] Loaded ${epaFinancialsData?.length || 0} EPA financial records`);
+      }
+    }
+    
+    // Attach financials to EPA budget versions
+    budgetVersionsByFormulation.forEach((versions, formulationId) => {
+      versions.epa = versions.epa.map(epaVersion => ({
+        ...epaVersion,
+        financials: epaFinancialsByVersion.get(epaVersion.id) || []
+      }));
+    });
+    
     // Attach budget versions to formulations
     const formulationsWithBudgetVersions = (formulationsRes.data || []).map((formulation) => {
       const versions = budgetVersionsByFormulation.get(formulation.id) || { pde: [], epa: [] };
