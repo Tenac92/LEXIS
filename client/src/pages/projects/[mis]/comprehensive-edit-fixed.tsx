@@ -345,7 +345,7 @@ const comprehensiveProjectSchema = z.object({
           .enum(["Έγκριση", "Τροποποίηση", "Παράταση"])
           .default("Έγκριση"),
         included: z.boolean().default(true),
-        comments: z.string().optional(),
+        comments: z.string().default(""),
       }),
     )
     .default([]),
@@ -422,7 +422,7 @@ const comprehensiveProjectSchema = z.object({
         change_type: z
           .enum(["Τροποποίηση", "Παράταση", "Έγκριση"])
           .default("Έγκριση"),
-        comments: z.string().optional(),
+        comments: z.string().default(""),
         budget_versions: z.object({
           pde: z.array(z.object({
             // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
@@ -433,7 +433,7 @@ const comprehensiveProjectSchema = z.object({
             ada: z.string().default(""),
             decision_date: z.string().default(""),
             action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-            comments: z.string().optional(),
+            comments: z.string().default(""),
           })).default([]),
           epa: z.array(z.object({
             // ΕΠΑ fields: removed version_name, amount, status, connected_decisions
@@ -444,7 +444,7 @@ const comprehensiveProjectSchema = z.object({
             ada: z.string().default(""),
             decision_date: z.string().default(""),
             action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-            comments: z.string().optional(),
+            comments: z.string().default(""),
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
               year: z.number().min(2020).max(2050), // Έτος
