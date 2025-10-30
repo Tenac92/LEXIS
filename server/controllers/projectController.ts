@@ -2537,7 +2537,7 @@ router.patch(
       );
 
       console.log(
-        `[Projects] Fields to update for MIS ${mis}:`,
+        `[Projects] Fields to update for project ID ${projectId}:`,
         fieldsToUpdate,
       );
 
@@ -2615,13 +2615,13 @@ router.patch(
       const { data: updatedProject, error: updateError } = await supabase
         .from("Projects")
         .update(fieldsToUpdate)
-        .eq("mis", mis)
+        .eq("id", projectId)
         .select()
         .single();
 
       if (updateError) {
         console.error(
-          `[Projects] Error updating project for MIS ${mis}:`,
+          `[Projects] Error updating project ID ${projectId}:`,
           updateError,
         );
         return res.status(500).json({
@@ -3473,7 +3473,7 @@ router.get(
 
       if (projectError || !project) {
         console.error(
-          `[ProjectFormulations] Project not found for MIS: ${mis}`,
+          `[ProjectFormulations] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3508,7 +3508,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ${mis}`,
+        `[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ID ${projectId}`,
       );
       res.json(formulations || []);
     } catch (error) {
@@ -4791,11 +4791,12 @@ router.get("/:mis/budget-versions", authenticateSession, async (req: Authenticat
   try {
     const { mis } = req.params;
     const { formulation_id } = req.query;
+    const misNumber = parseInt(mis);
     console.log(
       `[ProjectBudgetVersions] Fetching budget versions for MIS: ${mis}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
     );
 
-    const project = await requireProjectAccess(req, res, mis);
+    const project = await requireProjectAccess(req, res, misNumber);
     if (!project) {
       return;
     }
@@ -4830,12 +4831,13 @@ router.post(
     try {
       const { mis } = req.params;
       const budgetVersionData = req.body;
+      const misNumber = parseInt(mis);
       console.log(
         `[ProjectBudgetVersions] Creating budget version for MIS: ${mis}`,
         budgetVersionData,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, misNumber);
       if (!project) {
         return;
       }
