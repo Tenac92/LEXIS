@@ -2874,11 +2874,8 @@ export default function ComprehensiveEditFixed() {
                                 <div className="flex items-center gap-3 pr-4">
                                   {/* Checkbox for batch selection */}
                                   <div 
-                                    className="pl-4 py-4 cursor-pointer"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleLocationSelection(locationIndex);
-                                    }}
+                                    className="pl-4 py-4"
+                                    onClick={(e) => e.stopPropagation()}
                                     data-testid={`checkbox-location-${locationIndex}`}
                                   >
                                     <Checkbox
@@ -3453,11 +3450,8 @@ export default function ComprehensiveEditFixed() {
                               <div className="flex items-center gap-3 pr-4">
                                 {/* Checkbox for batch selection */}
                                 <div 
-                                  className="pl-4 py-4 cursor-pointer"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleFormulationSelection(index);
-                                  }}
+                                  className="pl-4 py-4"
+                                  onClick={(e) => e.stopPropagation()}
                                   data-testid={`checkbox-formulation-${index}`}
                                 >
                                   <Checkbox
