@@ -820,19 +820,20 @@ router.get("/by-unit/:unitName", authenticateSession, async (req: AuthenticatedR
 // This endpoint was removed to prevent database column errors
 
 // Get complete project data in one call (optimized for performance)
-router.get("/:mis/complete", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/complete", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis } = req.params;
+    const { id } = req.params;
+    const projectId = parseInt(id);
 
-    if (!mis) {
-      return res.status(400).json({ message: "MIS parameter is required" });
+    if (isNaN(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID" });
     }
 
     console.log(
-      `[ProjectComplete] Fetching complete data for project MIS: ${mis}`,
+      `[ProjectComplete] Fetching complete data for project ID: ${projectId}`,
     );
 
-    const authResult = await canAccessProject(req.user, mis);
+    const authResult = await canAccessProject(req.user, projectId);
     if (!authResult.authorized) {
       return res.status(authResult.statusCode || 403).json({
         message: authResult.error || "Access denied",
@@ -840,7 +841,6 @@ router.get("/:mis/complete", authenticateSession, async (req: AuthenticatedReque
     }
 
     const projectData = authResult.project;
-    const projectId = projectData.id;
 
     console.log(`[ProjectComplete] User authorized, fetching project data for ID: ${projectId}`);
 
@@ -1262,14 +1262,20 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
 
 // Project Decisions CRUD endpoints
 router.get(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
-      console.log(`[ProjectDecisions] Fetching decisions for MIS: ${mis}`);
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      const project = await requireProjectAccess(req, res, mis);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log(`[ProjectDecisions] Fetching decisions for project ID: ${projectId}`);
+
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1307,18 +1313,24 @@ router.get(
 );
 
 router.post(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const decisionData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectDecisions] Creating decision for MIS: ${mis}`,
+        `[ProjectDecisions] Creating decision for project ID: ${projectId}`,
         decisionData,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1389,18 +1401,24 @@ router.post(
 );
 
 router.patch(
-  "/:mis/decisions/:decisionId",
+  "/:id/decisions/:decisionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, decisionId } = req.params;
+      const { id, decisionId } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectDecisions] Updating decision ${decisionId} for MIS: ${mis}`,
+        `[ProjectDecisions] Updating decision ${decisionId} for project ID: ${projectId}`,
         updateData,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1484,16 +1502,22 @@ router.patch(
 );
 
 router.delete(
-  "/:mis/decisions/:decisionId",
+  "/:id/decisions/:decisionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, decisionId } = req.params;
+      const { id, decisionId } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectDecisions] Deleting decision ${decisionId} for MIS: ${mis}`,
+        `[ProjectDecisions] Deleting decision ${decisionId} for project ID: ${projectId}`,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1545,16 +1569,22 @@ router.delete(
 
 // Project Formulations CRUD endpoints
 router.get(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Fetching formulations for MIS: ${mis}`,
+        `[ProjectFormulations] Fetching formulations for project ID: ${projectId}`,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1595,18 +1625,24 @@ router.get(
 );
 
 router.post(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const formulationData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Creating formulation for MIS: ${mis}`,
+        `[ProjectFormulations] Creating formulation for project ID: ${projectId}`,
         formulationData,
       );
 
-      const project = await requireProjectAccess(req, res, mis);
+      const project = await requireProjectAccess(req, res, projectId);
       if (!project) {
         return;
       }
@@ -1733,14 +1769,20 @@ router.post(
 );
 
 router.patch(
-  "/:mis/formulations/:formulationId",
+  "/:id/formulations/:formulationId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, formulationId } = req.params;
+      const { id, formulationId } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Updating formulation ${formulationId} for MIS: ${mis}`,
+        `[ProjectFormulations] Updating formulation ${formulationId} for project ID: ${projectId}`,
         updateData,
       );
 
@@ -1751,9 +1793,9 @@ router.patch(
       // Verify the formulation exists and belongs to the project
       const { data: existingFormulation, error: findError } = await supabase
         .from("project_formulations")
-        .select("*, Projects!inner(mis)")
+        .select("*, Projects!inner(id)")
         .eq("id", formulationId)
-        .eq("Projects.mis", mis)
+        .eq("Projects.id", projectId)
         .single();
 
       if (findError || !existingFormulation) {
@@ -1907,13 +1949,19 @@ router.patch(
 );
 
 router.delete(
-  "/:mis/formulations/:formulationId",
+  "/:id/formulations/:formulationId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, formulationId } = req.params;
+      const { id, formulationId } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Deleting formulation ${formulationId} for MIS: ${mis}`,
+        `[ProjectFormulations] Deleting formulation ${formulationId} for project ID: ${projectId}`,
       );
 
       if (!req.user) {
@@ -1923,9 +1971,9 @@ router.delete(
       // Verify the formulation exists and belongs to the project
       const { data: existingFormulation, error: findError } = await supabase
         .from("project_formulations")
-        .select("*, Projects!inner(mis)")
+        .select("*, Projects!inner(id)")
         .eq("id", formulationId)
-        .eq("Projects.mis", mis)
+        .eq("Projects.id", projectId)
         .single();
 
       if (findError || !existingFormulation) {
@@ -1967,18 +2015,24 @@ router.delete(
 
 // Project History/Changes endpoints
 router.get(
-  "/:mis/history",
+  "/:id/history",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
-      console.log(`[ProjectHistory] Fetching history for MIS: ${mis}`);
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      // First get the project ID from MIS
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log(`[ProjectHistory] Fetching history for project ID: ${projectId}`);
+
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
@@ -2018,14 +2072,20 @@ router.get(
 );
 
 router.post(
-  "/:mis/changes",
+  "/:id/changes",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const changeData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectChanges] Recording change for MIS: ${mis}`,
+        `[ProjectChanges] Recording change for project ID: ${projectId}`,
         changeData,
       );
 
@@ -2033,11 +2093,11 @@ router.post(
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project ID from MIS
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("*")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
@@ -2356,18 +2416,23 @@ router.get("/", authenticateSession, listProjects);
 router.get("/export", authenticateSession, exportProjectsXLSX);
 router.get("/export/xlsx", authenticateSession, exportProjectsXLSX);
 
-// Update a project by MIS
+// Update a project by ID
 router.patch(
-  "/:mis",
+  "/:id",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
 
-      console.log(`[Projects] Updating project with MIS: ${mis}`, updateData);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
-      const existingProject = await requireProjectAccess(req, res, mis);
+      console.log(`[Projects] Updating project with ID: ${projectId}`, updateData);
+
+      const existingProject = await requireProjectAccess(req, res, projectId);
       if (!existingProject) {
         return;
       }
@@ -3069,7 +3134,7 @@ router.patch(
           : null,
       };
 
-      console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
+      console.log(`[Projects] Successfully updated project with ID: ${projectId}`);
 
       // Return enhanced project with update summary
       res.json({
@@ -3134,19 +3199,24 @@ router.get(
   },
 );
 
-// Get single project by MIS with enhanced data
+// Get single project by ID with enhanced data
 router.get(
-  "/:mis",
+  "/:id",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      console.log(`[Projects] Fetching project with MIS: ${mis}`);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log(`[Projects] Fetching project with ID: ${projectId}`);
 
       if (!req.user) {
         console.error(
-          `[Projects] No authenticated user found when fetching MIS: ${mis}`,
+          `[Projects] No authenticated user found when fetching project ID: ${projectId}`,
         );
         return res.status(401).json({
           message: "Authentication required",
@@ -3162,7 +3232,7 @@ router.get(
         kallikratisRes,
         indexRes,
       ] = await Promise.all([
-        supabase.from("Projects").select("*").eq("mis", mis).single(),
+        supabase.from("Projects").select("*").eq("id", projectId).single(),
         supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
         supabase.from("Monada").select("*"),
@@ -3182,7 +3252,7 @@ router.get(
       }
 
       if (projectRes.error || !projectRes.data) {
-        console.error(`[Projects] Project not found for MIS ${mis}`);
+        console.error(`[Projects] Project not found for ID ${projectId}`);
         return res.status(404).json({
           message: "Project not found",
           error: projectRes.error?.message || "Not found",
@@ -3286,7 +3356,7 @@ router.get(
         ada: decisionData.ada || project.ada,
       };
 
-      console.log(`[Projects] Found project with MIS: ${mis}`);
+      console.log(`[Projects] Found project with ID: ${projectId}`);
       res.json(enhancedProject);
     } catch (error) {
       console.error(`[Projects] Error fetching project:`, error);
@@ -3298,32 +3368,37 @@ router.get(
   },
 );
 
-// Get project decisions from normalized table
+// Get project decisions from normalized table (DUPLICATE - already defined above)
 router.get(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
       console.log(
-        `[ProjectDecisions] Fetching decisions for project MIS: ${mis}`,
+        `[ProjectDecisions] Fetching decisions for project ID: ${projectId}`,
       );
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project to get the project_id
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectDecisions] Project not found for MIS: ${mis}`,
+          `[ProjectDecisions] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3345,7 +3420,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ${mis}`,
+        `[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ID: ${projectId}`,
       );
       res.json(decisions || []);
     } catch (error) {
@@ -3358,27 +3433,32 @@ router.get(
   },
 );
 
-// Get project formulations from normalized table
+// Get project formulations from normalized table (DUPLICATE - already defined above)
 router.get(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
       console.log(
-        `[ProjectFormulations] Fetching formulations for project MIS: ${mis}`,
+        `[ProjectFormulations] Fetching formulations for project ID: ${projectId}`,
       );
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project to get the project_id
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
