@@ -3413,25 +3413,28 @@ router.put(
             // First, find or create the employee
             let employeeId = recipient.employee_id;
 
-            if (!employeeId) {
-              // Try to find existing employee by AFM
+            if (!employeeId && recipient.afm) {
+              // Try to find existing employee by AFM hash
+              const afmHash = hashAFM(recipient.afm);
               const { data: existingEmployee } = await supabase
                 .from("Employees")
                 .select("id")
-                .eq("afm", recipient.afm)
+                .eq("afm_hash", afmHash)
                 .single();
 
               if (existingEmployee) {
                 employeeId = existingEmployee.id;
               } else {
-                // Create new employee
+                // Create new employee with encrypted AFM
+                const encryptedAFM = encryptAFM(recipient.afm);
                 const { data: newEmployee, error: employeeError } = await supabase
                   .from("Employees")
                   .insert({
                     name: recipient.firstname,
                     surname: recipient.lastname,
                     fathername: recipient.fathername || null,
-                    afm: recipient.afm,
+                    afm: encryptedAFM,
+                    afm_hash: afmHash,
                     klados: recipient.secondary_text || null,
                   })
                   .select("id")
@@ -3595,7 +3598,10 @@ router.put(
               beneficiaryUpdate.surname = recipient.lastname;
             if (recipient.fathername)
               beneficiaryUpdate.fathername = recipient.fathername;
-            if (recipient.afm) beneficiaryUpdate.afm = recipient.afm;
+            if (recipient.afm) {
+              beneficiaryUpdate.afm = encryptAFM(recipient.afm);
+              beneficiaryUpdate.afm_hash = hashAFM(recipient.afm);
+            }
 
             if (Object.keys(beneficiaryUpdate).length > 0) {
               const { error: beneficiaryError } = await supabase
@@ -3634,6 +3640,8 @@ router.put(
           updatedPayments.push(updatedPayment);
         } else if (recipient.firstname && recipient.lastname && recipient.afm) {
           // Create new beneficiary and payment if we have required data
+          const encryptedAFM = encryptAFM(recipient.afm);
+          const afmHash = hashAFM(recipient.afm);
           const { data: newBeneficiary, error: beneficiaryError } =
             await supabase
               .from("beneficiaries")
@@ -3641,7 +3649,8 @@ router.put(
                 name: recipient.firstname,
                 surname: recipient.lastname,
                 fathername: recipient.fathername || null,
-                afm: recipient.afm,
+                afm: encryptedAFM,
+                afm_hash: afmHash,
               })
               .select()
               .single();
