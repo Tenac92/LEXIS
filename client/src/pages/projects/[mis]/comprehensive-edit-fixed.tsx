@@ -839,6 +839,82 @@ export default function ComprehensiveEditFixed() {
     });
   };
 
+  // Batch operation handlers for locations
+  const handleSelectAllLocations = () => {
+    const locations = form.getValues("location_details");
+    const allIndices = new Set(locations.map((_, idx) => idx));
+    setSelectedLocations(allIndices);
+  };
+
+  const handleDeselectAllLocations = () => {
+    setSelectedLocations(new Set());
+  };
+
+  const handleDuplicateSelectedLocations = () => {
+    if (selectedLocations.size === 0) return;
+    
+    const locations = form.getValues("location_details");
+    const newLocations = [...locations];
+    
+    // Duplicate selected locations
+    selectedLocations.forEach(index => {
+      const original = locations[index];
+      if (original) {
+        const duplicated = {
+          ...original,
+          geographic_areas: [...(original.geographic_areas || [])],
+          expenditure_types: [...(original.expenditure_types || [])]
+        };
+        newLocations.push(duplicated);
+      }
+    });
+    
+    form.setValue("location_details", newLocations);
+    setSelectedLocations(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Αντιγράφηκαν ${selectedLocations.size} τοποθεσία/ες`
+    });
+  };
+
+  const handleDeleteSelectedLocations = () => {
+    if (selectedLocations.size === 0) return;
+    
+    const locations = form.getValues("location_details");
+    
+    // Prevent deletion if it would leave no locations
+    if (locations.length - selectedLocations.size < 1) {
+      toast({
+        title: "Προσοχή",
+        description: "Πρέπει να υπάρχει τουλάχιστον μία τοποθεσία",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const remainingLocations = locations.filter((_, idx) => !selectedLocations.has(idx));
+    form.setValue("location_details", remainingLocations);
+    setSelectedLocations(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Διαγράφηκαν ${selectedLocations.size} τοποθεσία/ες`
+    });
+  };
+
+  const toggleLocationSelection = (index: number) => {
+    setSelectedLocations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
   const getSAColor = (saType: string): string => {
     switch (saType) {
       case "ΝΑ853": return "blue";
@@ -2726,183 +2802,316 @@ export default function ComprehensiveEditFixed() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-6">
-                        {form
-                          .watch("location_details")
-                          .map((_, locationIndex) => (
-                            <div
-                              key={locationIndex}
-                              className="border rounded-lg p-4 space-y-4"
+                        {/* Batch Operations Toolbar */}
+                        {form.watch("location_details").length > 0 && (
+                          <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={selectedLocations.size === form.watch("location_details").length 
+                                ? handleDeselectAllLocations 
+                                : handleSelectAllLocations}
+                              data-testid="button-toggle-select-all-locations"
                             >
-                              <div className="flex justify-between items-center">
-                                <h4 className="font-medium">
-                                  Τοποθεσία {locationIndex + 1}
-                                </h4>
-                                {form.watch("location_details").length > 1 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      const locations =
-                                        form.getValues("location_details");
-                                      locations.splice(locationIndex, 1);
-                                      form.setValue(
-                                        "location_details",
-                                        locations,
-                                      );
+                              {selectedLocations.size === form.watch("location_details").length ? (
+                                <>
+                                  <Square className="h-4 w-4 mr-2" />
+                                  Αποεπιλογή Όλων
+                                </>
+                              ) : (
+                                <>
+                                  <CheckSquare className="h-4 w-4 mr-2" />
+                                  Επιλογή Όλων
+                                </>
+                              )}
+                            </Button>
+                            
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDuplicateSelectedLocations}
+                              disabled={selectedLocations.size === 0}
+                              data-testid="button-duplicate-selected-locations"
+                            >
+                              <Copy className="h-4 w-4 mr-2" />
+                              Αντιγραφή Επιλεγμένων ({selectedLocations.size})
+                            </Button>
+                            
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleDeleteSelectedLocations}
+                              disabled={selectedLocations.size === 0 || form.watch("location_details").length <= 1}
+                              data-testid="button-delete-selected-locations"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Διαγραφή Επιλεγμένων ({selectedLocations.size})
+                            </Button>
+                            
+                            <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
+                              {selectedLocations.size} / {form.watch("location_details").length} επιλεγμένα
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Location Accordions */}
+                        <Accordion type="multiple" className="w-full space-y-3">
+                          {form.watch("location_details").map((location, locationIndex) => {
+                            const geoAreasCount = location.geographic_areas?.length || 0;
+                            const expenditureTypesCount = location.expenditure_types?.length || 0;
+                            const isSelected = selectedLocations.has(locationIndex);
+                            
+                            return (
+                              <AccordionItem 
+                                key={locationIndex} 
+                                value={`location-${locationIndex}`}
+                                className={`border-l-4 border-l-teal-500 ${isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-600' : ''}`}
+                                data-testid={`accordion-location-${locationIndex}`}
+                              >
+                                <div className="flex items-center gap-3 pr-4">
+                                  {/* Checkbox for batch selection */}
+                                  <div 
+                                    className="pl-4 py-4 cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleLocationSelection(locationIndex);
                                     }}
+                                    data-testid={`checkbox-location-${locationIndex}`}
                                   >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.implementing_agency`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Επιλέξτε μονάδα" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {typedUnitsData?.map((unit) => (
-                                            <SelectItem
-                                              key={unit.id}
-                                              value={
-                                                unit.unit_name?.name ||
-                                                unit.name ||
-                                                unit.unit ||
-                                                ""
-                                              }
-                                            >
-                                              {unit.unit_name?.name ||
-                                                unit.name ||
-                                                unit.unit}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.event_type`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Τύπος Γεγονότος</FormLabel>
-                                      <Select
-                                        onValueChange={field.onChange}
-                                        value={field.value}
-                                      >
-                                        <FormControl>
-                                          <SelectTrigger>
-                                            <SelectValue placeholder="Επιλέξτε τύπο" />
-                                          </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                          {typedEventTypesData?.map(
-                                            (eventType) => (
-                                              <SelectItem
-                                                key={eventType.id}
-                                                value={eventType.name}
-                                              >
-                                                {eventType.name}
-                                              </SelectItem>
-                                            ),
-                                          )}
-                                        </SelectContent>
-                                      </Select>
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
-                              {/* Expenditure Types */}
-                              <div>
-                                <FormLabel>Τύποι Δαπανών</FormLabel>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                                  {typedExpenditureTypesData?.map(
-                                    (expenditureType) => (
-                                      <FormField
-                                        key={expenditureType.id}
-                                        control={form.control}
-                                        name={`location_details.${locationIndex}.expenditure_types`}
-                                        render={({ field }) => (
-                                          <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                            <FormControl>
-                                              <Checkbox
-                                                checked={field.value?.includes(
-                                                  expenditureType.expenditure_types ||
-                                                    expenditureType.name ||
-                                                    "",
-                                                )}
-                                                onCheckedChange={(checked) => {
-                                                  const expenditureName =
-                                                    expenditureType.expenditure_types ||
-                                                    expenditureType.name ||
-                                                    "";
-                                                  if (checked) {
-                                                    field.onChange([
-                                                      ...(field.value || []),
-                                                      expenditureName,
-                                                    ]);
-                                                  } else {
-                                                    field.onChange(
-                                                      (
-                                                        field.value || []
-                                                      ).filter(
-                                                        (item: string) =>
-                                                          item !==
-                                                          expenditureName,
-                                                      ),
-                                                    );
-                                                  }
-                                                }}
-                                              />
-                                            </FormControl>
-                                            <FormLabel className="text-sm font-normal">
-                                              {expenditureType.expenditure_types ||
-                                                expenditureType.name}
-                                            </FormLabel>
-                                          </FormItem>
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => toggleLocationSelection(locationIndex)}
+                                    />
+                                  </div>
+                                  
+                                  <AccordionTrigger className="flex-1 hover:no-underline py-4">
+                                    {/* Rich Preview Card */}
+                                    <div className="flex items-center gap-4 w-full pr-4">
+                                      <div className="flex items-center gap-2">
+                                        <Badge 
+                                          variant="outline" 
+                                          className="bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-900 dark:text-teal-300 font-bold"
+                                        >
+                                          #{locationIndex + 1}
+                                        </Badge>
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                                          Τοποθεσία {locationIndex + 1}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                        {location.implementing_agency && (
+                                          <div className="flex items-center gap-1">
+                                            <Building2 className="h-4 w-4" />
+                                            <span className="truncate max-w-[200px]">{location.implementing_agency}</span>
+                                          </div>
                                         )}
-                                      />
-                                    ),
+                                        
+                                        {location.event_type && (
+                                          <div className="flex items-center gap-1">
+                                            <span className="truncate max-w-[150px]">{location.event_type}</span>
+                                          </div>
+                                        )}
+                                        
+                                        <div className="flex items-center gap-2 ml-auto">
+                                          {geoAreasCount > 0 && (
+                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300">
+                                              {geoAreasCount} Γεωγρ. Περιοχές
+                                            </Badge>
+                                          )}
+                                          {expenditureTypesCount > 0 && (
+                                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300">
+                                              {expenditureTypesCount} Δαπάνες
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </AccordionTrigger>
+                                  
+                                  {/* Individual delete button */}
+                                  {form.watch("location_details").length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const locations = form.getValues("location_details");
+                                        locations.splice(locationIndex, 1);
+                                        form.setValue("location_details", locations);
+                                        // Update selection state
+                                        setSelectedLocations(prev => {
+                                          const newSet = new Set(prev);
+                                          newSet.delete(locationIndex);
+                                          return newSet;
+                                        });
+                                        toast({
+                                          title: "Επιτυχία",
+                                          description: "Η τοποθεσία διαγράφηκε"
+                                        });
+                                      }}
+                                      data-testid={`button-delete-location-${locationIndex}`}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
                                   )}
                                 </div>
-                              </div>
+                                
+                                <AccordionContent className="px-4 pb-4 pt-2 space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`location_details.${locationIndex}.implementing_agency`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
+                                          <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger data-testid={`select-implementing-agency-${locationIndex}`}>
+                                                <SelectValue placeholder="Επιλέξτε μονάδα" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {typedUnitsData?.map((unit) => (
+                                                <SelectItem
+                                                  key={unit.id}
+                                                  value={
+                                                    unit.unit_name?.name ||
+                                                    unit.name ||
+                                                    unit.unit ||
+                                                    ""
+                                                  }
+                                                >
+                                                  {unit.unit_name?.name ||
+                                                    unit.name ||
+                                                    unit.unit}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </FormItem>
+                                      )}
+                                    />
 
-                              {/* Geographic Areas */}
-                              <div className="space-y-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`location_details.${locationIndex}.geographic_areas`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Γεωγραφικές Περιοχές</FormLabel>
-                                      <SmartGeographicMultiSelect
-                                        value={field.value || []}
-                                        onChange={field.onChange}
-                                        kallikratisData={kallikratisData}
-                                        placeholder="Επιλέξτε γεωγραφικές περιοχές..."
-                                      />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-                            </div>
-                          ))}
+                                    <FormField
+                                      control={form.control}
+                                      name={`location_details.${locationIndex}.event_type`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Τύπος Γεγονότος</FormLabel>
+                                          <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger data-testid={`select-event-type-${locationIndex}`}>
+                                                <SelectValue placeholder="Επιλέξτε τύπο" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {typedEventTypesData?.map(
+                                                (eventType) => (
+                                                  <SelectItem
+                                                    key={eventType.id}
+                                                    value={eventType.name}
+                                                  >
+                                                    {eventType.name}
+                                                  </SelectItem>
+                                                ),
+                                              )}
+                                            </SelectContent>
+                                          </Select>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  {/* Expenditure Types */}
+                                  <div>
+                                    <FormLabel>Τύποι Δαπανών</FormLabel>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                                      {typedExpenditureTypesData?.map(
+                                        (expenditureType) => (
+                                          <FormField
+                                            key={expenditureType.id}
+                                            control={form.control}
+                                            name={`location_details.${locationIndex}.expenditure_types`}
+                                            render={({ field }) => (
+                                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                                <FormControl>
+                                                  <Checkbox
+                                                    checked={field.value?.includes(
+                                                      expenditureType.expenditure_types ||
+                                                        expenditureType.name ||
+                                                        "",
+                                                    )}
+                                                    onCheckedChange={(checked) => {
+                                                      const expenditureName =
+                                                        expenditureType.expenditure_types ||
+                                                        expenditureType.name ||
+                                                        "";
+                                                      if (checked) {
+                                                        field.onChange([
+                                                          ...(field.value || []),
+                                                          expenditureName,
+                                                        ]);
+                                                      } else {
+                                                        field.onChange(
+                                                          (
+                                                            field.value || []
+                                                          ).filter(
+                                                            (item: string) =>
+                                                              item !==
+                                                              expenditureName,
+                                                          ),
+                                                        );
+                                                      }
+                                                    }}
+                                                    data-testid={`checkbox-expenditure-${locationIndex}-${expenditureType.id}`}
+                                                  />
+                                                </FormControl>
+                                                <FormLabel className="text-sm font-normal">
+                                                  {expenditureType.expenditure_types ||
+                                                    expenditureType.name}
+                                                </FormLabel>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Geographic Areas */}
+                                  <div className="space-y-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`location_details.${locationIndex}.geographic_areas`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Γεωγραφικές Περιοχές</FormLabel>
+                                          <SmartGeographicMultiSelect
+                                            value={field.value || []}
+                                            onChange={field.onChange}
+                                            kallikratisData={kallikratisData}
+                                            placeholder="Επιλέξτε γεωγραφικές περιοχές..."
+                                          />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            );
+                          })}
+                        </Accordion>
 
                         <Button
                           type="button"
@@ -2918,6 +3127,7 @@ export default function ComprehensiveEditFixed() {
                             });
                             form.setValue("location_details", locations);
                           }}
+                          data-testid="button-add-location"
                         >
                           <Plus className="h-4 w-4 mr-2" />
                           Προσθήκη Τοποθεσίας
