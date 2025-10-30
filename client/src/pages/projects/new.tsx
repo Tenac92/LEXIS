@@ -266,9 +266,10 @@ const comprehensiveProjectSchema = z.object({
         // Added boundary_budget; renamed decision_type to action_type
         version_number: z.string().default("1.0"),
         boundary_budget: z.string().default("").refine((val) => {
-          if (!val) return true;
+          if (!val || val.trim() === "") return true;
           const numericValue = parseEuropeanNumber(val);
-          return numericValue <= 9999999999.99;
+          if (isNaN(numericValue)) return true;
+          return numericValue >= 0 && numericValue <= 9999999999.99;
         }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Προϋπολογισμός Οριοθέτησης
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
@@ -290,14 +291,16 @@ const comprehensiveProjectSchema = z.object({
         financials: z.array(z.object({
           year: z.number().min(2020).max(2050), // Έτος
           total_public_expense: z.string().default("0").refine((val) => {
-            if (!val) return true;
+            if (!val || val.trim() === "") return true;
             const numericValue = parseEuropeanNumber(val);
-            return numericValue <= 9999999999.99;
+            if (isNaN(numericValue)) return true;
+            return numericValue >= 0 && numericValue <= 9999999999.99;
           }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Συνολική Δημόσια Δαπάνη
           eligible_public_expense: z.string().default("0").refine((val) => {
-            if (!val) return true;
+            if (!val || val.trim() === "") return true;
             const numericValue = parseEuropeanNumber(val);
-            return numericValue <= 9999999999.99;
+            if (isNaN(numericValue)) return true;
+            return numericValue >= 0 && numericValue <= 9999999999.99;
           }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Επιλέξιμη Δημόσια Δαπάνη
         })).default([]),
       })).default([]),
