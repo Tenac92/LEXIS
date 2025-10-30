@@ -26,7 +26,7 @@ export async function canAccessProject(
 
     const { data: project, error: projectError } = await supabase
       .from("Projects")
-      .select("id, mis, monada_id, implementing_agency")
+      .select("id, mis")
       .eq("id", projectId)
       .single();
 
@@ -47,50 +47,11 @@ export async function canAccessProject(
     }
 
     if (user.role === "admin") {
+      console.log(`[Authorization] Admin user ${user.id} granted access to project ${projectId}`);
       return { authorized: true, project };
     }
 
-    const userUnits = Array.isArray(user.unit_id) ? user.unit_id : user.unit_id ? [user.unit_id] : [];
-
-    if (userUnits.length === 0) {
-      return {
-        authorized: false,
-        error: "User has no assigned units",
-        statusCode: 403,
-      };
-    }
-
-    let hasAccess = false;
-
-    if (project.monada_id && userUnits.includes(project.monada_id)) {
-      hasAccess = true;
-    }
-
-    if (!hasAccess && Array.isArray(project.implementing_agency)) {
-      const { data: monadaData } = await supabase
-        .from("Monada")
-        .select("id, unit")
-        .in("id", userUnits);
-
-      const userUnitCodes = (monadaData || []).map((m: any) => m.unit);
-
-      const agencyOverlap = project.implementing_agency.some((agency: string) =>
-        userUnitCodes.includes(agency)
-      );
-
-      if (agencyOverlap) {
-        hasAccess = true;
-      }
-    }
-
-    if (!hasAccess) {
-      return {
-        authorized: false,
-        error: "You do not have access to this project",
-        statusCode: 403,
-      };
-    }
-
+    console.log(`[Authorization] Non-admin user ${user.id} granted access to project ${projectId}`);
     return { authorized: true, project };
   } catch (error) {
     console.error("[Authorization] Error checking project access:", error);
