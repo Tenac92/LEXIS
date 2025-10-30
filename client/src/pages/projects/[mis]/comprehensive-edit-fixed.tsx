@@ -2914,7 +2914,11 @@ export default function ComprehensiveEditFixed() {
                                         <FormLabel>Σχόλια</FormLabel>
                                         <FormControl>
                                           <Textarea
-                                            {...field}
+                                            value={field.value || ""}
+                                            onChange={field.onChange}
+                                            onBlur={field.onBlur}
+                                            name={field.name}
+                                            ref={field.ref}
                                             placeholder="Προαιρετικά σχόλια..."
                                           />
                                         </FormControl>
@@ -4671,7 +4675,11 @@ export default function ComprehensiveEditFixed() {
                                   <FormLabel>Περιγραφή Αλλαγής</FormLabel>
                                   <FormControl>
                                     <Textarea
-                                      {...field}
+                                      value={field.value || ""}
+                                      onChange={field.onChange}
+                                      onBlur={field.onBlur}
+                                      name={field.name}
+                                      ref={field.ref}
                                       placeholder="Περιγράψτε την αλλαγή που πραγματοποιήθηκε..."
                                       rows={3}
                                     />
@@ -4689,7 +4697,11 @@ export default function ComprehensiveEditFixed() {
                                 <FormLabel>Επιπλέον Σημειώσεις</FormLabel>
                                 <FormControl>
                                   <Textarea
-                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    name={field.name}
+                                    ref={field.ref}
                                     placeholder="Προαιρετικές σημειώσεις ή παρατηρήσεις..."
                                     rows={2}
                                   />
