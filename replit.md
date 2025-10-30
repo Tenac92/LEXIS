@@ -2,6 +2,17 @@
 
 This project is a full-stack TypeScript document management system for the Greek Civil Protection agency. Its primary purpose is to streamline budget management, project tracking, and document generation processes. Key capabilities include real-time notifications, PDF generation, comprehensive budget monitoring with quarterly transitions, and efficient management of employees and beneficiaries within projects. The system aims to enhance operational efficiency and financial oversight for the agency.
 
+# Recent Changes
+
+## 2025-10-30: Numeric Field Type Alignment
+Fixed critical type mismatch in project edit form where database numeric fields (boundary_budget, total_public_expense, eligible_public_expense) were being validated as strings, causing save failures. Changes:
+- Updated form schema to use `z.number().optional()` for PDE boundary_budget and EPA financial fields
+- Updated input components to format numbers for display (European format) and parse string input to numbers
+- Removed duplicate function definitions for parseEuropeanNumber and formatNumberWhileTyping
+- Updated data loading logic to preserve numeric values from database without string conversion
+- Updated form submission logic to extract latest boundary_budget from PDE budget versions (instead of the removed project_budget field)
+- All numeric data now flows correctly: Database (numbers) → Form (numbers) → Validation (numbers) → Submission (numbers)
+
 # User Preferences
 
 Preferred communication style: Simple, everyday language.
