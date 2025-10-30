@@ -2051,11 +2051,12 @@ export default function ComprehensiveEditFixed() {
                   })) || [],
                   epa: formulation.budget_versions?.epa?.map((epa: any) => ({
                     ...epa,
-                    financials: epa.financials?.map((fin: any) => ({
+                    financials: Array.isArray(epa.financials) ? epa.financials.map((fin: any) => ({
                       ...fin,
-                      total_public_expense: fin.total_public_expense,
-                      eligible_public_expense: fin.eligible_public_expense,
-                    })) || [],
+                      year: fin.year || new Date().getFullYear(),
+                      total_public_expense: fin.total_public_expense ?? undefined,
+                      eligible_public_expense: fin.eligible_public_expense ?? undefined,
+                    })) : [],
                   })) || [],
                 },
               };
@@ -4121,7 +4122,7 @@ export default function ComprehensiveEditFixed() {
                                                 <FormItem>
                                                   <FormLabel>Σχόλια</FormLabel>
                                                   <FormControl>
-                                                    <Textarea {...field} placeholder="Εισάγετε σχόλια..." rows={2} />
+                                                    <Textarea value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} placeholder="Εισάγετε σχόλια..." rows={2} />
                                                   </FormControl>
                                                 </FormItem>
                                               )}
@@ -4455,7 +4456,7 @@ export default function ComprehensiveEditFixed() {
                                                 <FormItem>
                                                   <FormLabel>Σχόλια</FormLabel>
                                                   <FormControl>
-                                                    <Textarea {...field} placeholder="Εισάγετε σχόλια..." rows={2} />
+                                                    <Textarea value={field.value || ""} onChange={field.onChange} onBlur={field.onBlur} name={field.name} ref={field.ref} placeholder="Εισάγετε σχόλια..." rows={2} />
                                                   </FormControl>
                                                 </FormItem>
                                               )}
@@ -4482,7 +4483,11 @@ export default function ComprehensiveEditFixed() {
                                 <FormLabel>Σχόλια</FormLabel>
                                 <FormControl>
                                   <Textarea
-                                    {...field}
+                                    value={field.value || ""}
+                                    onChange={field.onChange}
+                                    onBlur={field.onBlur}
+                                    name={field.name}
+                                    ref={field.ref}
                                     placeholder="Προαιρετικά σχόλια..."
                                   />
                                 </FormControl>
