@@ -1217,9 +1217,8 @@ export default function ComprehensiveEditFixed() {
 
         console.log("1. Updating core project data:", projectUpdateData);
         console.log("🔍 Key fields being sent:", {
-          inclusion_year: projectUpdateData.inclusion_year,
+          inc_year: projectUpdateData.inc_year,
           na853: projectUpdateData.na853,
-          enumeration_code: projectUpdateData.enumeration_code,
           project_title: projectUpdateData.project_title,
         });
         try {
@@ -1370,8 +1369,6 @@ export default function ComprehensiveEditFixed() {
             const formulationData = {
               sa: formulation.sa,
               enumeration_code: formulation.enumeration_code,
-              protocol_number: formulation.protocol_number,
-              ada: formulation.ada,
               decision_year: formulation.decision_year,
               budget_versions: formulation.budget_versions,
               decision_status: formulation.decision_status,
@@ -2032,8 +2029,6 @@ export default function ComprehensiveEditFixed() {
               return {
                 sa: formulation.sa_type || ("ΝΑ853" as const),
                 enumeration_code: formulation.enumeration_code || "",
-                protocol_number: formulation.protocol_number || "",
-                ada: formulation.ada || formulation.ada_reference || "",
                 decision_year: String(
                   formulation.decision_year || formulation.year || "",
                 ),
@@ -2042,7 +2037,6 @@ export default function ComprehensiveEditFixed() {
                   formulation.status ||
                   ("Ενεργή" as const),
                 change_type: formulation.change_type || ("Έγκριση" as const),
-                connected_decisions: connectedDecisions,
                 comments: formulation.comments || "",
                 budget_versions: {
                   pde: formulation.budget_versions?.pde?.map((pde: any) => ({
@@ -2066,26 +2060,20 @@ export default function ComprehensiveEditFixed() {
               {
                 sa: "ΝΑ853" as const,
                 enumeration_code: typedProjectData.na853 || "",
-                protocol_number: "",
-                ada: "",
                 decision_year: Array.isArray(typedProjectData.event_year)
                   ? typedProjectData.event_year[0]
                   : typedProjectData.event_year?.toString() || "",
                 decision_status: "Ενεργή" as const,
                 change_type: "Έγκριση" as const,
-                connected_decisions: [],
                 comments: "",
                 budget_versions: {
                   pde: typedProjectData.budget_na853 ? [{
-                    version_name: "Αρχική έγκριση",
-                    project_budget: formatEuropeanNumber(typedProjectData.budget_na853),
-                    total_public_expense: "",
-                    eligible_public_expense: "",
+                    version_number: "1.0",
+                    boundary_budget: typedProjectData.budget_na853,
                     protocol_number: "",
                     ada: "",
                     decision_date: "",
-                    decision_type: "Έγκριση" as const,
-                    status: "Ενεργή" as const,
+                    action_type: "Έγκριση" as const,
                     comments: "",
                   }] : [],
                   epa: [],
@@ -2097,26 +2085,20 @@ export default function ComprehensiveEditFixed() {
                     {
                       sa: "ΝΑ271" as const,
                       enumeration_code: typedProjectData.na271,
-                      protocol_number: "",
-                      ada: "",
                       decision_year: Array.isArray(typedProjectData.event_year)
                         ? typedProjectData.event_year[0]
                         : typedProjectData.event_year?.toString() || "",
                       decision_status: "Ενεργή" as const,
                       change_type: "Έγκριση" as const,
-                      connected_decisions: [],
                       comments: "",
                       budget_versions: {
                         pde: typedProjectData.budget_na271 ? [{
-                          version_name: "Αρχική έγκριση",
-                          project_budget: formatEuropeanNumber(typedProjectData.budget_na271),
-                          total_public_expense: "",
-                          eligible_public_expense: "",
+                          version_number: "1.0",
+                          boundary_budget: typedProjectData.budget_na271,
                           protocol_number: "",
                           ada: "",
                           decision_date: "",
-                          decision_type: "Έγκριση" as const,
-                          status: "Ενεργή" as const,
+                          action_type: "Έγκριση" as const,
                           comments: "",
                         }] : [],
                         epa: [],
@@ -2130,26 +2112,20 @@ export default function ComprehensiveEditFixed() {
                     {
                       sa: "E069" as const,
                       enumeration_code: typedProjectData.e069,
-                      protocol_number: "",
-                      ada: "",
                       decision_year: Array.isArray(typedProjectData.event_year)
                         ? typedProjectData.event_year[0]
                         : typedProjectData.event_year?.toString() || "",
                       decision_status: "Ενεργή" as const,
                       change_type: "Έγκριση" as const,
-                      connected_decisions: [],
                       comments: "",
                       budget_versions: {
                         pde: typedProjectData.budget_e069 ? [{
-                          version_name: "Αρχική έγκριση",
-                          project_budget: formatEuropeanNumber(typedProjectData.budget_e069),
-                          total_public_expense: "",
-                          eligible_public_expense: "",
+                          version_number: "1.0",
+                          boundary_budget: typedProjectData.budget_e069,
                           protocol_number: "",
                           ada: "",
                           decision_date: "",
-                          decision_type: "Έγκριση" as const,
-                          status: "Ενεργή" as const,
+                          action_type: "Έγκριση" as const,
                           comments: "",
                         }] : [],
                         epa: [],
