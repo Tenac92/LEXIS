@@ -1014,7 +1014,7 @@ export default function ComprehensiveEditFixed() {
     switch (decisionType) {
       case "Έγκριση": return "blue";
       case "Τροποποίηση": return "orange";
-      case "Κλείσιμο στο ύψος πληρωμών": return "gray";
+      case "Παράταση": return "gray";
       default: return "gray";
     }
   };
@@ -1023,7 +1023,7 @@ export default function ComprehensiveEditFixed() {
     switch (decisionType) {
       case "Έγκριση": return "border-l-blue-500";
       case "Τροποποίηση": return "border-l-orange-500";
-      case "Κλείσιμο στο ύψος πληρωμών": return "border-l-gray-500";
+      case "Παράταση": return "border-l-gray-500";
       default: return "border-l-gray-500";
     }
   };
