@@ -9,15 +9,15 @@ import { type Project } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function ProjectDetailsPage() {
-  const { mis } = useParams<{ mis: string }>();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
-  console.log("Project Details Page - MIS Parameter:", mis);
+  console.log("Project Details Page - ID Parameter:", id);
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: [`/api/projects/${mis}`], // Using project identifier from route - could be ID or MIS
-    enabled: !!mis && !!user // Only fetch if we have both identifier and user
+    queryKey: [`/api/projects/${id}`], // Using project ID from route
+    enabled: !!id && !!user // Only fetch if we have both ID and user
   });
 
   if (isLoading) {

@@ -416,11 +416,14 @@ const comprehensiveProjectSchema = z.object({
 type ComprehensiveFormData = z.infer<typeof comprehensiveProjectSchema>;
 
 export default function ComprehensiveEditFixed() {
-  const { mis } = useParams();
+  const { id } = useParams();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
+  
+  // Parse the project ID from the URL parameter
+  const projectId = id ? parseInt(id, 10) : undefined;
 
   // REMOVED: connected_decisions field no longer exists in schema
   /*
@@ -573,23 +576,7 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
-  // STEP 1: Resolve MIS to project ID
-  const {
-    data: resolvedProject,
-    isLoading: isResolvingProject,
-    error: resolveError,
-  } = useQuery({
-    queryKey: [`/api/projects/resolve/${mis}`],
-    enabled: !!mis,
-    staleTime: 10 * 60 * 1000, // 10 minutes cache for resolved project
-    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-
-  const projectId = resolvedProject?.id;
-
-  // STEP 2: PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
+  // PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
   const {
     data: completeProjectData,
     isLoading: isCompleteDataLoading,
@@ -650,8 +637,8 @@ export default function ComprehensiveEditFixed() {
   }, {} as Record<string, string>) || {};
 
   // Check if all essential data is loading
-  const isEssentialDataLoading = isResolvingProject || isCompleteDataLoading;
-  const isAllDataLoading = isResolvingProject || isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
+  const isEssentialDataLoading = isCompleteDataLoading;
+  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
   console.log("DEBUG - Project Data:", {
@@ -660,7 +647,7 @@ export default function ComprehensiveEditFixed() {
     projectData: !!projectData,
     decisionsCount: decisionsData?.length || 0,
     formulationsCount: formulationsData?.length || 0,
-    isProjectLoading: isResolvingProject || isCompleteDataLoading,
+    isProjectLoading: isCompleteDataLoading,
     isReferenceLoading: isReferenceDataLoading,
     projectError: completeDataError?.message || completeDataError,
     referenceError: referenceDataError?.message || referenceDataError,
@@ -2012,7 +1999,7 @@ export default function ComprehensiveEditFixed() {
     return convertGeographicDataToKallikratis(geographicData);
   }, [geographicData]);
 
-  if (resolveError || completeDataError) {
+  if (completeDataError) {
     return (
       <div className="container mx-auto p-6">
         <Card>
@@ -2021,7 +2008,7 @@ export default function ComprehensiveEditFixed() {
           </CardHeader>
           <CardContent>
             <p className="text-destructive">
-              {resolveError ? 'Δεν βρέθηκε το έργο' : 'Σφάλμα κατά τη φόρτωση των δεδομένων'}
+              Σφάλμα κατά τη φόρτωση των δεδομένων
             </p>
           </CardContent>
         </Card>
@@ -2124,7 +2111,7 @@ export default function ComprehensiveEditFixed() {
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => navigate(`/projects/${mis}`)}
+              onClick={() => navigate(`/projects/${id}`)}
             >
               Επιστροφή στο Έργο
             </Button>
