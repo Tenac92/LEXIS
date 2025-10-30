@@ -1002,19 +1002,22 @@ export default function ComprehensiveEditFixed() {
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
 
-          // Budget fields - sum boundary_budget from all PDE versions
+          // Budget fields - take latest boundary_budget from PDE versions
           budget_e069: (() => {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "E069",
             );
             if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
-                return sum + (pde.boundary_budget || 0);
-              }, 0);
-              console.log(
-                `Budget E069: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
-              );
-              return total > 0 ? total : null;
+              // Take the latest (last) non-null boundary_budget
+              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
+                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
+                if (boundary !== undefined && boundary !== null) {
+                  console.log(
+                    `Budget E069: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                  );
+                  return boundary;
+                }
+              }
             }
             return typedProjectData?.budget_e069 || null;
           })(),
@@ -1023,13 +1026,16 @@ export default function ComprehensiveEditFixed() {
               (f) => f.sa === "ΝΑ271",
             );
             if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
-                return sum + (pde.boundary_budget || 0);
-              }, 0);
-              console.log(
-                `Budget ΝΑ271: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
-              );
-              return total > 0 ? total : null;
+              // Take the latest (last) non-null boundary_budget
+              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
+                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
+                if (boundary !== undefined && boundary !== null) {
+                  console.log(
+                    `Budget ΝΑ271: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                  );
+                  return boundary;
+                }
+              }
             }
             return typedProjectData?.budget_na271 || null;
           })(),
@@ -1038,13 +1044,16 @@ export default function ComprehensiveEditFixed() {
               (f) => f.sa === "ΝΑ853",
             );
             if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              const total = formEntry.budget_versions.pde.reduce((sum, pde) => {
-                return sum + (pde.boundary_budget || 0);
-              }, 0);
-              console.log(
-                `Budget ΝΑ853: summed from ${formEntry.budget_versions.pde.length} PDE versions -> ${total}`,
-              );
-              return total > 0 ? total : null;
+              // Take the latest (last) non-null boundary_budget
+              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
+                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
+                if (boundary !== undefined && boundary !== null) {
+                  console.log(
+                    `Budget ΝΑ853: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                  );
+                  return boundary;
+                }
+              }
             }
             return typedProjectData?.budget_na853 || null;
           })(),
