@@ -92,6 +92,7 @@ export const projects = pgTable("Projects", {
   na853: text("na853").notNull().unique(),
   event_description: text("event_description").notNull().unique(),
   project_title: text("project_title"),
+  summary: text("summary"),
   event_year: jsonb("event_year").default([]),
   budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
   budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),

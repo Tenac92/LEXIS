@@ -1128,6 +1128,7 @@ export default function ComprehensiveEditFixed() {
         const projectUpdateData = {
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
+          summary: data.project_details.summary_description || null,
           // New fields: inc_year and updates (enumeration_code removed from project details)  
           inc_year: data.project_details.inc_year ? parseInt(data.project_details.inc_year) : null,
           updates: data.changes || [],
@@ -2154,7 +2155,7 @@ export default function ComprehensiveEditFixed() {
           inc_year: typedProjectData.inc_year?.toString() || "",
           project_title: typedProjectData.project_title || "",
           project_description: typedProjectData.event_description || "",
-          summary_description: "",
+          summary_description: typedProjectData.summary || "",
           expenses_executed: "",
           project_status: typedProjectData.status || "Ενεργό",
         },
