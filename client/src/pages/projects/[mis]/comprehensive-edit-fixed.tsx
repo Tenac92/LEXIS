@@ -4161,7 +4161,8 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              {...field} 
+                                                              {...field}
+                                                              value={field.value ?? "0"}
                                                               placeholder="π.χ. 100000"
                                                               onChange={(e) => {
                                                                 const formatted = formatNumberWhileTyping(e.target.value);
@@ -4189,7 +4190,8 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              {...field} 
+                                                              {...field}
+                                                              value={field.value ?? "0"}
                                                               placeholder="π.χ. 80000"
                                                               onChange={(e) => {
                                                                 const formatted = formatNumberWhileTyping(e.target.value);
