@@ -811,7 +811,7 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
 
     // PERFORMANCE OPTIMIZATION: Fetch only essential project-specific data first
     // Reference data will be cached and loaded separately
-    const [decisionsRes, formulationsRes, indexRes] = await Promise.all([
+    const [decisionsRes, formulationsRes, indexRes, budgetVersionsRes] = await Promise.all([
       supabase
         .from("project_decisions")
         .select("*")
@@ -823,7 +823,22 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
         .eq("project_id", projectId)
         .order("created_at"),
       supabase.from("project_index").select("*").eq("project_id", projectId),
+      supabase
+        .from("project_budget_versions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("formulation_id")
+        .order("budget_type")
+        .order("version_number"),
     ]);
+    
+    // Check for errors in budget versions fetch
+    if (budgetVersionsRes.error) {
+      console.error(
+        "[ProjectComplete] Error fetching budget versions:",
+        budgetVersionsRes.error,
+      );
+    }
 
     // Fetch reference data with optimized queries and smaller limits for initial load
     const [eventTypesRes, unitsRes, expenditureTypesRes] = await Promise.all([
@@ -1057,10 +1072,39 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
         : null,
     };
 
+    // Process budget versions and group them by formulation_id
+    const budgetVersions = budgetVersionsRes.data || [];
+    const budgetVersionsByFormulation = new Map<number, { pde: any[], epa: any[] }>();
+    
+    budgetVersions.forEach((version) => {
+      if (!budgetVersionsByFormulation.has(version.formulation_id)) {
+        budgetVersionsByFormulation.set(version.formulation_id, { pde: [], epa: [] });
+      }
+      const formVersions = budgetVersionsByFormulation.get(version.formulation_id)!;
+      // Handle both Greek (ΠΔΕ/ΕΠΑ) and English (pde/epa) budget types
+      const budgetTypeNormalized = version.budget_type?.toUpperCase();
+      if (budgetTypeNormalized === 'ΠΔΕ' || budgetTypeNormalized === 'PDE') {
+        formVersions.pde.push(version);
+      } else if (budgetTypeNormalized === 'ΕΠΑ' || budgetTypeNormalized === 'EPA') {
+        formVersions.epa.push(version);
+      }
+    });
+    
+    console.log(`[ProjectComplete] Processed ${budgetVersions.length} budget versions for ${budgetVersionsByFormulation.size} formulations`);
+    
+    // Attach budget versions to formulations
+    const formulationsWithBudgetVersions = (formulationsRes.data || []).map((formulation) => {
+      const versions = budgetVersionsByFormulation.get(formulation.id) || { pde: [], epa: [] };
+      return {
+        ...formulation,
+        budget_versions: versions
+      };
+    });
+
     const completeData = {
       project: enhancedProject,
       decisions: decisionsRes.data || [],
-      formulations: formulationsRes.data || [],
+      formulations: formulationsWithBudgetVersions,
       index: indexRes.data || [],
       eventTypes: eventTypes,
       units: units,
