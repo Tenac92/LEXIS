@@ -2042,9 +2042,11 @@ export default function ComprehensiveEditFixed() {
                   pde: formulation.budget_versions?.pde?.map((pde: any) => ({
                     ...pde,
                     boundary_budget: pde.boundary_budget,
+                    comments: pde.comments || "",
                   })) || [],
                   epa: formulation.budget_versions?.epa?.map((epa: any) => ({
                     ...epa,
+                    comments: epa.comments || "",
                     financials: Array.isArray(epa.financials) ? epa.financials.map((fin: any) => ({
                       ...fin,
                       year: fin.year || new Date().getFullYear(),
