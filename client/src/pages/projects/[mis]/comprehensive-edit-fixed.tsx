@@ -1976,7 +1976,7 @@ export default function ComprehensiveEditFixed() {
       }, 3000);
     }
   }, [
-    mis,
+    id,
     typedProjectData,
     typedUnitsData,
     typedExpenditureTypesData,
