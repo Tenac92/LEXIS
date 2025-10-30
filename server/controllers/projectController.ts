@@ -2494,6 +2494,8 @@ router.patch(
         fieldsToUpdate.project_title = updateData.project_title;
       if (updateData.event_description)
         fieldsToUpdate.event_description = updateData.event_description;
+      if (updateData.summary !== undefined)
+        fieldsToUpdate.summary = updateData.summary;
 
       // Handle event_type field - can be ID or text
       if (
