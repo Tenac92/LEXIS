@@ -51,8 +51,45 @@ export async function canAccessProject(
       return { authorized: true, project };
     }
 
-    console.log(`[Authorization] Non-admin user ${user.id} granted access to project ${projectId}`);
-    return { authorized: true, project };
+    // For non-admin users, check if they have access through project_index
+    const userUnits = Array.isArray(user.unit_id) ? user.unit_id : user.unit_id ? [user.unit_id] : [];
+
+    if (userUnits.length === 0) {
+      console.log(`[Authorization] User ${user.id} has no assigned units`);
+      return {
+        authorized: false,
+        error: "User has no assigned units",
+        statusCode: 403,
+      };
+    }
+
+    // Check if user's units match any project_index entries for this project
+    const { data: projectIndexEntries, error: indexError } = await supabase
+      .from("project_index")
+      .select("id, monada_id")
+      .eq("project_id", projectId)
+      .in("monada_id", userUnits);
+
+    if (indexError) {
+      console.error(`[Authorization] Error checking project_index:`, indexError);
+      return {
+        authorized: false,
+        error: "Error checking project access",
+        statusCode: 500,
+      };
+    }
+
+    if (projectIndexEntries && projectIndexEntries.length > 0) {
+      console.log(`[Authorization] Non-admin user ${user.id} granted access to project ${projectId} through ${projectIndexEntries.length} matching index entries`);
+      return { authorized: true, project };
+    }
+
+    console.log(`[Authorization] User ${user.id} denied access to project ${projectId} - no matching units`);
+    return {
+      authorized: false,
+      error: "You do not have access to this project",
+      statusCode: 403,
+    };
   } catch (error) {
     console.error("[Authorization] Error checking project access:", error);
     return {
