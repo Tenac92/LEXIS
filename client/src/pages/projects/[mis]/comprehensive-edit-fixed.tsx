@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -44,6 +45,9 @@ import {
   Building2,
   RefreshCw,
   FolderOpen,
+  Copy,
+  CheckSquare,
+  Square,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -422,6 +426,10 @@ export default function ComprehensiveEditFixed() {
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
   
+  // Batch selection state for formulations and locations
+  const [selectedFormulations, setSelectedFormulations] = useState<Set<number>>(new Set());
+  const [selectedLocations, setSelectedLocations] = useState<Set<number>>(new Set());
+  
   // Parse the project ID from the URL parameter
   const projectId = id ? parseInt(id, 10) : undefined;
 
@@ -751,6 +759,103 @@ export default function ComprehensiveEditFixed() {
     isGeographicDataLoading,
     geographicDataError: geographicDataError?.message,
   });
+
+  // Batch operation handlers for formulations
+  const handleSelectAllFormulations = () => {
+    const formulations = form.getValues("formulation_details");
+    const allIndices = new Set(formulations.map((_, idx) => idx));
+    setSelectedFormulations(allIndices);
+  };
+
+  const handleDeselectAllFormulations = () => {
+    setSelectedFormulations(new Set());
+  };
+
+  const handleDuplicateSelectedFormulations = () => {
+    if (selectedFormulations.size === 0) return;
+    
+    const formulations = form.getValues("formulation_details");
+    const newFormulations = [...formulations];
+    
+    // Duplicate selected formulations
+    selectedFormulations.forEach(index => {
+      const original = formulations[index];
+      if (original) {
+        const duplicated = {
+          ...original,
+          enumeration_code: generateEnumerationCode(original.sa, "", existingEnumerationCodes),
+          budget_versions: {
+            pde: [...(original.budget_versions?.pde || [])],
+            epa: [...(original.budget_versions?.epa || [])]
+          }
+        };
+        newFormulations.push(duplicated);
+      }
+    });
+    
+    form.setValue("formulation_details", newFormulations);
+    setSelectedFormulations(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Αντιγράφηκαν ${selectedFormulations.size} διατύπωση/εις`
+    });
+  };
+
+  const handleDeleteSelectedFormulations = () => {
+    if (selectedFormulations.size === 0) return;
+    
+    const formulations = form.getValues("formulation_details");
+    
+    // Prevent deletion if it would leave no formulations
+    if (formulations.length - selectedFormulations.size < 1) {
+      toast({
+        title: "Προσοχή",
+        description: "Πρέπει να υπάρχει τουλάχιστον μία διατύπωση",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const remainingFormulations = formulations.filter((_, idx) => !selectedFormulations.has(idx));
+    form.setValue("formulation_details", remainingFormulations);
+    setSelectedFormulations(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Διαγράφηκαν ${selectedFormulations.size} διατύπωση/εις`
+    });
+  };
+
+  const toggleFormulationSelection = (index: number) => {
+    setSelectedFormulations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
+  const getSAColor = (saType: string): string => {
+    switch (saType) {
+      case "ΝΑ853": return "blue";
+      case "ΝΑ271": return "purple";
+      case "E069": return "green";
+      default: return "gray";
+    }
+  };
+
+  const getSABorderColor = (saType: string): string => {
+    switch (saType) {
+      case "ΝΑ853": return "border-l-blue-500";
+      case "ΝΑ271": return "border-l-purple-500";
+      case "E069": return "border-l-green-500";
+      default: return "border-l-gray-500";
+    }
+  };
 
   // Number formatting helper functions
   const formatNumberWhileTyping = (value: string): string => {
@@ -3064,35 +3169,175 @@ export default function ComprehensiveEditFixed() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
-                      {form.watch("formulation_details").map((_, index) => (
-                        <div
-                          key={index}
-                          className="border rounded-lg p-4 space-y-4"
-                        >
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-medium">
-                              Διατύπωση {index + 1}
-                            </h4>
-                            {form.watch("formulation_details").length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const formulations = form.getValues(
-                                    "formulation_details",
-                                  );
-                                  formulations.splice(index, 1);
-                                  form.setValue(
-                                    "formulation_details",
-                                    formulations,
-                                  );
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                      {/* Batch Operations Toolbar */}
+                      {form.watch("formulation_details").length > 0 && (
+                        <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={selectedFormulations.size === form.watch("formulation_details").length 
+                              ? handleDeselectAllFormulations 
+                              : handleSelectAllFormulations}
+                            data-testid="button-toggle-select-all-formulations"
+                          >
+                            {selectedFormulations.size === form.watch("formulation_details").length ? (
+                              <>
+                                <Square className="h-4 w-4 mr-2" />
+                                Αποεπιλογή Όλων
+                              </>
+                            ) : (
+                              <>
+                                <CheckSquare className="h-4 w-4 mr-2" />
+                                Επιλογή Όλων
+                              </>
                             )}
+                          </Button>
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDuplicateSelectedFormulations}
+                            disabled={selectedFormulations.size === 0}
+                            data-testid="button-duplicate-selected-formulations"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Αντιγραφή Επιλεγμένων ({selectedFormulations.size})
+                          </Button>
+                          
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDeleteSelectedFormulations}
+                            disabled={selectedFormulations.size === 0 || form.watch("formulation_details").length <= 1}
+                            data-testid="button-delete-selected-formulations"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Διαγραφή Επιλεγμένων ({selectedFormulations.size})
+                          </Button>
+                          
+                          <div className="ml-auto text-sm text-gray-600 dark:text-gray-400">
+                            {selectedFormulations.size} / {form.watch("formulation_details").length} επιλεγμένα
                           </div>
+                        </div>
+                      )}
+
+                      {/* Formulation Accordions */}
+                      <Accordion type="multiple" className="w-full space-y-3">
+                        {form.watch("formulation_details").map((formulation, index) => {
+                          const pdeCount = formulation.budget_versions?.pde?.length || 0;
+                          const epaCount = formulation.budget_versions?.epa?.length || 0;
+                          const saColor = getSAColor(formulation.sa);
+                          const borderColor = getSABorderColor(formulation.sa);
+                          const isSelected = selectedFormulations.has(index);
+                          
+                          return (
+                            <AccordionItem 
+                              key={index} 
+                              value={`formulation-${index}`}
+                              className={`border-l-4 ${borderColor} ${isSelected ? 'ring-2 ring-blue-400 dark:ring-blue-600' : ''}`}
+                              data-testid={`accordion-formulation-${index}`}
+                            >
+                              <div className="flex items-center gap-3 pr-4">
+                                {/* Checkbox for batch selection */}
+                                <div 
+                                  className="pl-4 py-4 cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFormulationSelection(index);
+                                  }}
+                                  data-testid={`checkbox-formulation-${index}`}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleFormulationSelection(index)}
+                                  />
+                                </div>
+                                
+                                <AccordionTrigger className="flex-1 hover:no-underline py-4">
+                                  {/* Rich Preview Card */}
+                                  <div className="flex items-center gap-4 w-full pr-4">
+                                    <div className="flex items-center gap-2">
+                                      <Badge 
+                                        variant="outline" 
+                                        className={`
+                                          ${saColor === 'blue' ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900 dark:text-blue-300' : ''}
+                                          ${saColor === 'purple' ? 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-900 dark:text-purple-300' : ''}
+                                          ${saColor === 'green' ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-900 dark:text-green-300' : ''}
+                                          font-bold
+                                        `}
+                                      >
+                                        {formulation.sa}
+                                      </Badge>
+                                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                                        Διατύπωση {index + 1}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                      <div className="flex items-center gap-1">
+                                        <FileText className="h-4 w-4" />
+                                        <span>{formulation.enumeration_code || "Χωρίς κωδικό"}</span>
+                                      </div>
+                                      
+                                      {formulation.decision_year && (
+                                        <div className="flex items-center gap-1">
+                                          <Calendar className="h-4 w-4" />
+                                          <span>{formulation.decision_year}</span>
+                                        </div>
+                                      )}
+                                      
+                                      <div className="flex items-center gap-2 ml-auto">
+                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300">
+                                          {pdeCount} ΠΔΕ
+                                        </Badge>
+                                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300">
+                                          {epaCount} ΕΠΑ
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
+                                
+                                {/* Individual delete button */}
+                                {form.watch("formulation_details").length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const formulations = form.getValues("formulation_details");
+                                      formulations.splice(index, 1);
+                                      form.setValue("formulation_details", formulations);
+                                      
+                                      // Update selected indices
+                                      setSelectedFormulations(prev => {
+                                        const newSet = new Set<number>();
+                                        prev.forEach(i => {
+                                          if (i < index) newSet.add(i);
+                                          else if (i > index) newSet.add(i - 1);
+                                        });
+                                        return newSet;
+                                      });
+                                      
+                                      toast({
+                                        title: "Επιτυχία",
+                                        description: "Η διατύπωση διαγράφηκε"
+                                      });
+                                    }}
+                                    data-testid={`button-delete-formulation-${index}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              <AccordionContent className="px-4 pb-4 pt-2">
+                                {/* All existing formulation fields */}
+                                <div className="space-y-4">
 
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <FormField
@@ -3818,8 +4063,12 @@ export default function ComprehensiveEditFixed() {
                               </FormItem>
                             )}
                           />
-                        </div>
-                      ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
 
                       <Button
                         type="button"
