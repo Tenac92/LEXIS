@@ -284,7 +284,7 @@ const comprehensiveProjectSchema = z.object({
           .enum(["Έγκριση", "Τροποποίηση", "Παράταση"])
           .default("Έγκριση"),
         included: z.boolean().default(true),
-        comments: z.string().default(""),
+        comments: z.string().optional(),
       }),
     )
     .default([]),
@@ -361,29 +361,29 @@ const comprehensiveProjectSchema = z.object({
         change_type: z
           .enum(["Τροποποίηση", "Παράταση", "Έγκριση"])
           .default("Έγκριση"),
-        comments: z.string().default(""),
+        comments: z.string().optional(),
         budget_versions: z.object({
           pde: z.array(z.object({
             // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
             // Added boundary_budget; renamed decision_type to action_type
-            version_number: z.string().default("1.0"),
+            version_number: z.coerce.string().default("1.0"),
             boundary_budget: z.number().optional(), // Προϋπολογισμός Οριοθέτησης
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
             action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-            comments: z.string().default(""),
+            comments: z.string().optional(),
           })).default([]),
           epa: z.array(z.object({
             // ΕΠΑ fields: removed version_name, amount, status, connected_decisions
             // Renamed decision_type to action_type; added normalized financials section
-            version_number: z.string().default("1.0"),
+            version_number: z.coerce.string().default("1.0"),
             epa_version: z.string().default(""),
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
             action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
-            comments: z.string().default(""),
+            comments: z.string().optional(),
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
               year: z.number().min(2020).max(2050), // Έτος
@@ -4324,17 +4324,24 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Συνολική Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                              value={typeof field.value === 'number' ? formatEuropeanNumber(field.value) : ""}
                                                               placeholder="π.χ. 100.000,00"
                                                               onChange={(e) => {
-                                                                const parsed = parseEuropeanNumber(e.target.value);
-                                                                field.onChange(parsed);
-                                                                
-                                                                // Auto-validate that eligible <= total
-                                                                const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`);
-                                                                
-                                                                if (parsed !== undefined && eligibleValue !== undefined && eligibleValue > parsed && parsed > 0) {
-                                                                  form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, parsed);
+                                                                const value = e.target.value.trim();
+                                                                if (value === "") {
+                                                                  field.onChange(undefined);
+                                                                  return;
+                                                                }
+                                                                const parsed = parseEuropeanNumber(value);
+                                                                if (parsed !== undefined) {
+                                                                  field.onChange(parsed);
+                                                                  
+                                                                  // Auto-validate that eligible <= total
+                                                                  const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`);
+                                                                  
+                                                                  if (eligibleValue !== undefined && eligibleValue > parsed && parsed > 0) {
+                                                                    form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, parsed);
+                                                                  }
                                                                 }
                                                               }}
                                                             />
@@ -4350,21 +4357,28 @@ export default function ComprehensiveEditFixed() {
                                                           <FormLabel>Επιλέξιμη Δημόσια Δαπάνη (€)</FormLabel>
                                                           <FormControl>
                                                             <Input 
-                                                              value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                              value={typeof field.value === 'number' ? formatEuropeanNumber(field.value) : ""}
                                                               placeholder="π.χ. 80.000,00"
                                                               onChange={(e) => {
-                                                                const parsed = parseEuropeanNumber(e.target.value);
-                                                                field.onChange(parsed);
-                                                                
-                                                                // Validate that eligible <= total
-                                                                const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense`);
-                                                                
-                                                                if (parsed !== undefined && totalValue !== undefined && parsed > totalValue && totalValue > 0) {
-                                                                  toast({
-                                                                    title: "Προσοχή",
-                                                                    description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
-                                                                    variant: "destructive"
-                                                                  });
+                                                                const value = e.target.value.trim();
+                                                                if (value === "") {
+                                                                  field.onChange(undefined);
+                                                                  return;
+                                                                }
+                                                                const parsed = parseEuropeanNumber(value);
+                                                                if (parsed !== undefined) {
+                                                                  field.onChange(parsed);
+                                                                  
+                                                                  // Validate that eligible <= total
+                                                                  const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense`);
+                                                                  
+                                                                  if (totalValue !== undefined && parsed > totalValue && totalValue > 0) {
+                                                                    toast({
+                                                                      title: "Προσοχή",
+                                                                      description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
+                                                                      variant: "destructive"
+                                                                    });
+                                                                  }
                                                                 }
                                                               }}
                                                             />
