@@ -840,9 +840,19 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
       });
     }
 
-    const projectData = authResult.project;
-
     console.log(`[ProjectComplete] User authorized, fetching project data for ID: ${projectId}`);
+
+    // Fetch full project data from Projects table
+    const { data: projectData, error: projectError } = await supabase
+      .from("Projects")
+      .select("*")
+      .eq("id", projectId)
+      .single();
+
+    if (projectError || !projectData) {
+      console.error(`[ProjectComplete] Error fetching full project data:`, projectError);
+      return res.status(404).json({ message: "Project data not found" });
+    }
 
     // PERFORMANCE OPTIMIZATION: Fetch only essential project-specific data first
     // Reference data will be cached and loaded separately
