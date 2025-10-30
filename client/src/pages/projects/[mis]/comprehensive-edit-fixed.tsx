@@ -426,7 +426,8 @@ export default function ComprehensiveEditFixed() {
   const queryClient = useQueryClient();
   const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
   
-  // Batch selection state for formulations and locations
+  // Batch selection state for decisions, formulations and locations
+  const [selectedDecisions, setSelectedDecisions] = useState<Set<number>>(new Set());
   const [selectedFormulations, setSelectedFormulations] = useState<Set<number>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<Set<number>>(new Set());
   
