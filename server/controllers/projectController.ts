@@ -10,6 +10,7 @@ import {
   parseAndValidateBudgetAmount,
   parseEuropeanNumber,
 } from "../utils/europeanNumberParser";
+import { canAccessProject, requireProjectAccess } from "../utils/authorization";
 
 export const router = Router();
 
@@ -159,7 +160,15 @@ async function processBudgetVersions(
 
 export async function listProjects(req: Request, res: Response) {
   try {
-    console.log("[Projects] Fetching all projects with optimized schema");
+    console.log("[Projects] Fetching all projects with optimized schema and pagination");
+
+    // Validate and clamp pagination parameters
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.max(1, Math.min(parseInt(req.query.pageSize as string) || 50, 500));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    console.log(`[Projects] Pagination: page=${page}, pageSize=${pageSize}, range=${from}-${to}`);
 
     // Get projects with enhanced data using optimized schema
     const [
@@ -172,8 +181,9 @@ export async function listProjects(req: Request, res: Response) {
     ] = await Promise.all([
       supabase
         .from("Projects")
-        .select("*")
-        .order("created_at", { ascending: false }),
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to),
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
@@ -293,10 +303,21 @@ export async function listProjects(req: Request, res: Response) {
       })
       .filter((project): project is Project => project !== null);
 
-    res.json(enhancedProjects);
+    const total = projectsRes.count || 0;
+    console.log(`[Projects] Returning ${enhancedProjects.length} projects (page ${page}/${Math.ceil(total / pageSize)}, total: ${total})`);
+
+    return res.json({
+      data: enhancedProjects,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("Error fetching projects:", error);
-    res.status(500).json({ message: "Failed to fetch projects" });
+    return res.status(500).json({ message: "Failed to fetch projects" });
   }
 }
 
@@ -666,13 +687,17 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 }
 
 // Get projects by unit
-router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
+router.get("/by-unit/:unitName", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     let { unitName } = req.params;
 
     if (!unitName) {
       return res.status(400).json({ message: "Unit name is required" });
     }
+
+    // Validate and clamp pagination parameters
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.max(1, Math.min(parseInt(req.query.pageSize as string) || 50, 500));
 
     // Decode URL-encoded Greek characters
     try {
@@ -683,10 +708,41 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
       );
     }
 
-    console.log(`[Projects] Fetching projects for unit: ${unitName}`);
+    console.log(`[Projects] Fetching projects for unit: ${unitName} (page ${page}, pageSize ${pageSize})`);
     console.log(
       `[Projects] Unit name after decoding: "${unitName}" (length: ${unitName.length})`,
     );
+
+    // SECURITY: Verify user has access to this unit
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Get the unit ID from the unit name
+    const { data: unitData, error: unitError } = await supabase
+      .from("Monada")
+      .select("id, unit")
+      .eq("unit", unitName)
+      .single();
+
+    if (unitError || !unitData) {
+      console.log(`[Projects] Unit not found: ${unitName}`);
+      return res.status(404).json({ message: "Unit not found" });
+    }
+
+    // Check if user has access to this unit (unless admin)
+    if (req.user.role !== "admin") {
+      const userUnits = Array.isArray(req.user.unit_id) ? req.user.unit_id : req.user.unit_id ? [req.user.unit_id] : [];
+      
+      if (!userUnits.includes(unitData.id)) {
+        console.log(`[Projects] User ${req.user.id} denied access to unit ${unitName} (ID: ${unitData.id})`);
+        return res.status(403).json({ 
+          message: "You do not have access to this unit's projects" 
+        });
+      }
+    }
+
+    console.log(`[Projects] User authorized to access unit: ${unitName}`);
 
     // Use the storage method which correctly handles filtering by implementing_agency
     const projects = await storage.getProjectsByUnit(unitName);
@@ -694,13 +750,28 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
       `[Projects] Storage returned ${projects?.length || 0} projects`,
     );
 
+    const total = projects?.length || 0;
+
     if (!projects || projects.length === 0) {
       console.log(`[Projects] No projects found for unit: ${unitName}`);
-      return res.json([]);
+      return res.json({
+        data: [],
+        pagination: {
+          page,
+          pageSize,
+          total: 0,
+          totalPages: 0,
+        },
+      });
     }
 
+    // Apply pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize;
+    const paginatedProjects = projects.slice(from, to);
+
     // Return projects with proper formatting (manually constructed to avoid type errors)
-    const formattedProjects = projects.map((project) => {
+    const formattedProjects = paginatedProjects.map((project) => {
       return {
         id: project.id,
         mis: project.mis?.toString() || "",
@@ -724,9 +795,18 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
     });
 
     console.log(
-      `[Projects] Found ${formattedProjects.length} projects for unit: ${unitName}`,
+      `[Projects] Returning ${formattedProjects.length} of ${total} projects for unit: ${unitName} (page ${page}/${Math.ceil(total / pageSize)})`,
     );
-    res.json(formattedProjects);
+
+    return res.json({
+      data: formattedProjects,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("[Projects] Error fetching projects by unit:", error);
     res.status(500).json({
@@ -740,8 +820,7 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
 // This endpoint was removed to prevent database column errors
 
 // Get complete project data in one call (optimized for performance)
-// This endpoint is public as it's used for read-only viewing
-router.get("/:mis/complete", async (req: Request, res: Response) => {
+router.get("/:mis/complete", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
 
@@ -753,61 +832,17 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
       `[ProjectComplete] Fetching complete data for project MIS: ${mis}`,
     );
 
-    // First get the project to extract the ID for related tables
-    // Optimization: Use project_id if available, otherwise look up by MIS
-    let projectId: number;
-    let projectData: any;
-
-    // Check if mis is actually a numeric ID
-    const numericMis = parseInt(mis);
-    if (!isNaN(numericMis) && numericMis.toString() === mis) {
-      // Try to fetch by ID first for better performance
-      const { data: projectById, error: idError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("id", numericMis)
-        .single();
-
-      if (!idError && projectById) {
-        projectData = projectById;
-        projectId = projectById.id;
-        console.log(`[ProjectComplete] Found project by ID: ${projectId}`);
-      } else {
-        // Fallback to MIS lookup
-        const { data: projectByMis, error: misError } = await supabase
-          .from("Projects")
-          .select("*")
-          .eq("mis", mis)
-          .single();
-
-        if (misError || !projectByMis) {
-          console.error("Error fetching project by MIS:", misError);
-          return res
-            .status(404)
-            .json({ message: "Project not found", error: misError?.message });
-        }
-
-        projectData = projectByMis;
-        projectId = projectByMis.id;
-      }
-    } else {
-      // Non-numeric MIS, use standard lookup
-      const { data: projectByMis, error: misError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("mis", mis)
-        .single();
-
-      if (misError || !projectByMis) {
-        console.error("Error fetching project by MIS:", misError);
-        return res
-          .status(404)
-          .json({ message: "Project not found", error: misError?.message });
-      }
-
-      projectData = projectByMis;
-      projectId = projectByMis.id;
+    const authResult = await canAccessProject(req.user, mis);
+    if (!authResult.authorized) {
+      return res.status(authResult.statusCode || 403).json({
+        message: authResult.error || "Access denied",
+      });
     }
+
+    const projectData = authResult.project;
+    const projectId = projectData.id;
+
+    console.log(`[ProjectComplete] User authorized, fetching project data for ID: ${projectId}`);
 
     // PERFORMANCE OPTIMIZATION: Fetch only essential project-specific data first
     // Reference data will be cached and loaded separately
@@ -1143,7 +1178,7 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
 });
 
 // Separate endpoint for reference data that can be heavily cached
-router.get("/reference-data", async (req: Request, res: Response) => {
+router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log("[ProjectReference] Fetching reference data");
 
@@ -1234,18 +1269,9 @@ router.get(
       const { mis } = req.params;
       console.log(`[ProjectDecisions] Fetching decisions for MIS: ${mis}`);
 
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
       // Fetch all decisions for this project
@@ -1292,22 +1318,9 @@ router.post(
         decisionData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
       // Get the next sequence number
@@ -1387,16 +1400,17 @@ router.patch(
         updateData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
-      // Verify the decision exists and belongs to the project
+      // Verify the decision exists and belongs to this project
       const { data: existingDecision, error: findError } = await supabase
         .from("project_decisions")
-        .select("*, Projects!inner(mis)")
+        .select("*")
         .eq("id", decisionId)
-        .eq("Projects.mis", mis)
+        .eq("project_id", project.id)
         .single();
 
       if (findError || !existingDecision) {
@@ -1479,16 +1493,17 @@ router.delete(
         `[ProjectDecisions] Deleting decision ${decisionId} for MIS: ${mis}`,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
-      // Verify the decision exists and belongs to the project
+      // Verify the decision exists and belongs to this project
       const { data: existingDecision, error: findError } = await supabase
         .from("project_decisions")
-        .select("*, Projects!inner(mis)")
+        .select("*")
         .eq("id", decisionId)
-        .eq("Projects.mis", mis)
+        .eq("project_id", project.id)
         .single();
 
       if (findError || !existingDecision) {
@@ -1539,18 +1554,9 @@ router.get(
         `[ProjectFormulations] Fetching formulations for MIS: ${mis}`,
       );
 
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
       // Fetch all formulations for this project
@@ -1600,22 +1606,9 @@ router.post(
         formulationData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
       // Get the next sequence number
@@ -2359,9 +2352,9 @@ async function insertGeographicRelationships(
 }
 
 // Mount routes
-router.get("/", listProjects);
-router.get("/export", exportProjectsXLSX);
-router.get("/export/xlsx", exportProjectsXLSX);
+router.get("/", authenticateSession, listProjects);
+router.get("/export", authenticateSession, exportProjectsXLSX);
+router.get("/export/xlsx", authenticateSession, exportProjectsXLSX);
 
 // Update a project by MIS
 router.patch(
@@ -2374,28 +2367,9 @@ router.patch(
 
       console.log(`[Projects] Updating project with MIS: ${mis}`, updateData);
 
-      if (!req.user) {
-        console.error(
-          `[Projects] No authenticated user found when updating MIS: ${mis}`,
-        );
-        return res.status(401).json({
-          message: "Authentication required",
-        });
-      }
-
-      // First check if the project exists
-      const { data: existingProject, error: findError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("mis", mis)
-        .single();
-
-      if (findError || !existingProject) {
-        console.error(`[Projects] Project not found for MIS ${mis}`);
-        return res.status(404).json({
-          message: "Project not found",
-          error: findError?.message || "Not found",
-        });
+      const existingProject = await requireProjectAccess(req, res, mis);
+      if (!existingProject) {
+        return;
       }
 
       // Conservative update - only use fields we know exist based on actual database structure
@@ -4723,7 +4697,7 @@ router.put(
 // ================================================================
 
 // Get budget versions for a project
-router.get("/:mis/budget-versions", async (req: Request, res: Response) => {
+router.get("/:mis/budget-versions", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { mis } = req.params;
     const { formulation_id } = req.query;
@@ -4731,18 +4705,9 @@ router.get("/:mis/budget-versions", async (req: Request, res: Response) => {
       `[ProjectBudgetVersions] Fetching budget versions for MIS: ${mis}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
     );
 
-    // First get the project ID from MIS
-    const { data: project, error: projectError } = await supabase
-      .from("Projects")
-      .select("id")
-      .eq("mis", mis)
-      .single();
-
-    if (projectError || !project) {
-      return res.status(404).json({
-        message: "Project not found",
-        error: projectError?.message || "Not found",
-      });
+    const project = await requireProjectAccess(req, res, mis);
+    if (!project) {
+      return;
     }
 
     // Get budget versions using storage method
@@ -4780,22 +4745,9 @@ router.post(
         budgetVersionData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, mis);
+      if (!project) {
+        return;
       }
 
       // Prepare budget version data
@@ -4976,7 +4928,8 @@ router.delete(
 // Get EPA financials for a budget version
 router.get(
   "/:mis/budget-versions/:versionId/epa-financials",
-  async (req: Request, res: Response) => {
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { mis, versionId } = req.params;
       console.log(
