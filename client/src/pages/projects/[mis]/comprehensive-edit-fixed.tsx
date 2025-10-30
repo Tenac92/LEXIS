@@ -1922,39 +1922,18 @@ export default function ComprehensiveEditFixed() {
                 connected_decisions: connectedDecisions,
                 comments: formulation.comments || "",
                 budget_versions: {
-                  pde: formulation.budget_versions?.pde || [
-                    ...(formulation.project_budget ? [{
-                      version_name: "Αρχική έγκριση",
-                      project_budget: formulation.project_budget
-                        ? formatEuropeanNumber(formulation.project_budget)
-                        : "",
-                      total_public_expense: formulation.total_public_expense
-                        ? String(formulation.total_public_expense)
-                        : "",
-                      eligible_public_expense: formulation.eligible_public_expense
-                        ? String(formulation.eligible_public_expense)
-                        : "",
-                      protocol_number: formulation.protocol_number || "",
-                      ada: formulation.ada || formulation.ada_reference || "",
-                      decision_date: "",
-                      decision_type: "Έγκριση" as const,
-                      status: "Ενεργή" as const,
-                      comments: "",
-                    }] : [])
-                  ],
-                  epa: formulation.budget_versions?.epa || [
-                    ...(formulation.epa_version ? [{
-                      version_name: "Αρχική έγκριση",
-                      epa_version: formulation.epa_version || "",
-                      amount: formulation.epa_amount || "",
-                      protocol_number: formulation.protocol_number || "",
-                      ada: formulation.ada || formulation.ada_reference || "",
-                      decision_date: "",
-                      decision_type: "Έγκριση" as const,
-                      status: "Ενεργή" as const,
-                      comments: "",
-                    }] : [])
-                  ],
+                  pde: formulation.budget_versions?.pde?.map((pde: any) => ({
+                    ...pde,
+                    boundary_budget: pde.boundary_budget ?? "0",
+                  })) || [],
+                  epa: formulation.budget_versions?.epa?.map((epa: any) => ({
+                    ...epa,
+                    financials: epa.financials?.map((fin: any) => ({
+                      ...fin,
+                      total_public_expense: fin.total_public_expense ?? "0",
+                      eligible_public_expense: fin.eligible_public_expense ?? "0",
+                    })) || [],
+                  })) || [],
                 },
               };
             })
