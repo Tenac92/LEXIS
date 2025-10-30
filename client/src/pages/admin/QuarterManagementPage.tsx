@@ -56,6 +56,7 @@ import {
   checkQuarterTransition,
   forceQuarterTransition 
 } from '@/lib/services/adminService';
+import { Header } from '@/components/header';
 
 const QuarterManagementPage: React.FC = () => {
   const [isCheckDialogOpen, setIsCheckDialogOpen] = useState(false);
@@ -119,8 +120,10 @@ const QuarterManagementPage: React.FC = () => {
   };
   
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Διαχείριση Τριμήνων</h1>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto py-8">
+        <h1 className="text-3xl font-bold mb-6">Διαχείριση Τριμήνων</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Current Status Card */}
@@ -327,6 +330,7 @@ const QuarterManagementPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };

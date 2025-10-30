@@ -27,9 +27,9 @@ import { broadcastNotification } from '../websocket';
 
 /**
  * Schedule all tasks needed by the application
- * @param wss WebSocket server instance for notifications
+ * @param wss WebSocket server instance for notifications (optional)
  */
-export function initializeScheduledTasks(wss: WebSocketServer) {
+export function initializeScheduledTasks(wss?: WebSocketServer) {
   // Schedule quarter change check for midnight on the first day of each quarter
   // Runs at 00:01 on Jan 1, Apr 1, Jul 1, and Oct 1
   scheduleQuarterTransition(wss);
@@ -45,9 +45,9 @@ export function initializeScheduledTasks(wss: WebSocketServer) {
 
 /**
  * Schedule the quarterly transition task
- * @param wss WebSocket server for notifications
+ * @param wss WebSocket server for notifications (optional)
  */
-function scheduleQuarterTransition(wss: WebSocketServer) {
+function scheduleQuarterTransition(wss?: WebSocketServer) {
   // Run at 23:59 on the last day of each quarter (Mar 31, Jun 30, Sep 30, Dec 31)
   // This ensures budgets are updated at quarter end, not quarter start
   // Cron format: second(0-59) minute(0-59) hour(0-23) day(1-31) month(1-12) weekday(0-6)
@@ -71,10 +71,10 @@ function scheduleQuarterTransition(wss: WebSocketServer) {
 
 /**
  * Process the quarter transition for all budget records
- * @param wss WebSocket server for notifications
+ * @param wss WebSocket server for notifications (optional - will work without notifications if not provided)
  * @param isVerificationOnly Whether this is just a verification run
  */
-export async function processQuarterTransition(wss: WebSocketServer, isVerificationOnly = false) {
+export async function processQuarterTransition(wss?: WebSocketServer, isVerificationOnly = false) {
   try {
     // Get current date and determine the current quarter
     const currentDate = new Date();
@@ -131,9 +131,9 @@ export async function processQuarterTransition(wss: WebSocketServer, isVerificat
  * Update an individual budget record for quarter transition
  * @param budget The budget record to update
  * @param newQuarterKey The new quarter key (q1, q2, q3, q4)
- * @param wss WebSocket server for notifications
+ * @param wss WebSocket server for notifications (optional)
  */
-async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3' | 'q4', wss: WebSocketServer) {
+async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3' | 'q4', wss?: WebSocketServer) {
   try {
     // Get the old quarter key and values
     const oldQuarterKey = budget.last_quarter_check || 'q1';
@@ -298,9 +298,9 @@ async function createQuarterChangeHistoryEntry(
 /**
  * Run a manual quarter transition check and update
  * This can be triggered from an admin API endpoint
- * @param wss WebSocket server for notifications
+ * @param wss WebSocket server for notifications (optional)
  */
-export async function manualQuarterTransitionCheck(wss: WebSocketServer) {
+export async function manualQuarterTransitionCheck(wss?: WebSocketServer) {
   logger.info('[Quarter Transition] Manual quarter transition check initiated');
   await processQuarterTransition(wss);
   return { success: true, message: 'Quarter transition check completed' };

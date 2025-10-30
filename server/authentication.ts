@@ -353,7 +353,6 @@ export function authenticateToken(
 
 /**
  * Middleware to check if the user has admin role
- * Temporarily modified to allow quarter transition
  */
 export function requireAdmin(
   req: AuthenticatedRequest,
@@ -361,20 +360,6 @@ export function requireAdmin(
   next: NextFunction,
 ) {
   try {
-    // TEMPORARY: Allow any authenticated user to access admin endpoints
-    // specifically for quarter transition operations
-    if (req.path.includes("quarter-transition")) {
-      console.log(
-        "[Auth] TEMPORARY: Bypassing admin check for quarter transition:",
-        {
-          userRole: req.user?.role,
-          userId: req.user?.id,
-          path: req.path,
-        },
-      );
-      return next();
-    }
-
     if (!req.user?.role || req.user.role !== "admin") {
       console.log("[Auth] Admin access denied:", {
         userRole: req.user?.role,
@@ -387,6 +372,12 @@ export function requireAdmin(
     if (!req.user.id) {
       return res.status(403).json({ message: "Invalid admin user data" });
     }
+
+    console.log("[Auth] Admin access granted:", {
+      userId: req.user.id,
+      userRole: req.user.role,
+      path: req.path,
+    });
 
     next();
   } catch (error) {
