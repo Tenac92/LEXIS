@@ -840,6 +840,82 @@ export default function ComprehensiveEditFixed() {
     });
   };
 
+  // Batch operation handlers for decisions
+  const handleSelectAllDecisions = () => {
+    const decisions = form.getValues("decisions");
+    const allIndices = new Set(decisions.map((_, idx) => idx));
+    setSelectedDecisions(allIndices);
+  };
+
+  const handleDeselectAllDecisions = () => {
+    setSelectedDecisions(new Set());
+  };
+
+  const handleDuplicateSelectedDecisions = () => {
+    if (selectedDecisions.size === 0) return;
+    
+    const decisions = form.getValues("decisions");
+    const newDecisions = [...decisions];
+    
+    // Duplicate selected decisions
+    selectedDecisions.forEach(index => {
+      const original = decisions[index];
+      if (original) {
+        const duplicated = {
+          ...original,
+          implementing_agency: [...(original.implementing_agency || [])],
+          expenditure_type: [...(original.expenditure_type || [])]
+        };
+        newDecisions.push(duplicated);
+      }
+    });
+    
+    form.setValue("decisions", newDecisions);
+    setSelectedDecisions(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Αντιγράφηκαν ${selectedDecisions.size} απόφαση/εις`
+    });
+  };
+
+  const handleDeleteSelectedDecisions = () => {
+    if (selectedDecisions.size === 0) return;
+    
+    const decisions = form.getValues("decisions");
+    
+    // Prevent deletion if it would leave no decisions
+    if (decisions.length - selectedDecisions.size < 1) {
+      toast({
+        title: "Προσοχή",
+        description: "Πρέπει να υπάρχει τουλάχιστον μία απόφαση",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const remainingDecisions = decisions.filter((_, idx) => !selectedDecisions.has(idx));
+    form.setValue("decisions", remainingDecisions);
+    setSelectedDecisions(new Set());
+    
+    toast({
+      title: "Επιτυχία",
+      description: `Διαγράφηκαν ${selectedDecisions.size} απόφαση/εις`
+    });
+  };
+
+  const toggleDecisionSelection = (index: number) => {
+    setSelectedDecisions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  };
+
   // Batch operation handlers for locations
   const handleSelectAllLocations = () => {
     const locations = form.getValues("location_details");
@@ -930,6 +1006,24 @@ export default function ComprehensiveEditFixed() {
       case "ΝΑ853": return "border-l-blue-500";
       case "ΝΑ271": return "border-l-purple-500";
       case "E069": return "border-l-green-500";
+      default: return "border-l-gray-500";
+    }
+  };
+
+  const getDecisionColor = (decisionType: string): string => {
+    switch (decisionType) {
+      case "Έγκριση": return "blue";
+      case "Τροποποίηση": return "orange";
+      case "Κλείσιμο στο ύψος πληρωμών": return "gray";
+      default: return "gray";
+    }
+  };
+
+  const getDecisionBorderColor = (decisionType: string): string => {
+    switch (decisionType) {
+      case "Έγκριση": return "border-l-blue-500";
+      case "Τροποποίηση": return "border-l-orange-500";
+      case "Κλείσιμο στο ύψος πληρωμών": return "border-l-gray-500";
       default: return "border-l-gray-500";
     }
   };
@@ -2324,339 +2418,453 @@ export default function ComprehensiveEditFixed() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-6">
-                      {form.watch("decisions").map((_, index) => (
-                        <div
-                          key={index}
-                          className="border rounded-lg p-4 space-y-4"
+                    <div className="space-y-4">
+                      {/* Batch Operation Buttons */}
+                      <div className="flex flex-wrap gap-2 pb-4 border-b">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSelectAllDecisions}
+                          className="flex items-center gap-2"
                         >
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-medium">Απόφαση {index + 1}</h4>
-                            {form.watch("decisions").length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const decisions = form.getValues("decisions");
-                                  decisions.splice(index, 1);
-                                  form.setValue("decisions", decisions);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
+                          <CheckSquare className="h-4 w-4" />
+                          Επιλογή Όλων
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDeselectAllDecisions}
+                          className="flex items-center gap-2"
+                        >
+                          <Square className="h-4 w-4" />
+                          Αποεπιλογή Όλων
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDuplicateSelectedDecisions}
+                          disabled={selectedDecisions.size === 0}
+                          className="flex items-center gap-2"
+                        >
+                          <Copy className="h-4 w-4" />
+                          Αντιγραφή Επιλεγμένων ({selectedDecisions.size})
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDeleteSelectedDecisions}
+                          disabled={selectedDecisions.size === 0}
+                          className="flex items-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Διαγραφή Επιλεγμένων ({selectedDecisions.size})
+                        </Button>
+                      </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.protocol_number`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. 12345/2024"
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
+                      {/* Accordion for Decisions */}
+                      <Accordion type="multiple" className="w-full space-y-2">
+                        {form.watch("decisions").map((decision, index) => {
+                          const protocolNumber = decision.protocol_number || `Απόφαση ${index + 1}`;
+                          const decisionType = decision.decision_type || "Έγκριση";
+                          const budget = decision.decision_budget 
+                            ? formatEuropeanCurrency(parseEuropeanNumber(decision.decision_budget))
+                            : "Μη καθορισμένο";
+                          const fekInfo = decision.fek?.year && decision.fek?.issue && decision.fek?.number
+                            ? `ΦΕΚ ${decision.fek.issue}' ${decision.fek.number}/${decision.fek.year}`
+                            : "Χωρίς ΦΕΚ";
+                          const ada = decision.ada || "Χωρίς ΑΔΑ";
+                          const agenciesCount = decision.implementing_agency?.length || 0;
+                          const isExcluded = decision.included === false;
 
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.ada`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>ΑΔΑ</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ"
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.fek.year`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>ΦΕΚ Έτος</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Επιλέξτε έτος" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => {
-                                        const year = new Date().getFullYear() - i;
-                                        return (
-                                          <SelectItem key={year} value={year.toString()}>
-                                            {year}
-                                          </SelectItem>
-                                        );
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.fek.issue`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>ΦΕΚ Τεύχος</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Επιλέξτε τεύχος" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Α">Α</SelectItem>
-                                      <SelectItem value="Β">Β</SelectItem>
-                                      <SelectItem value="Γ">Γ</SelectItem>
-                                      <SelectItem value="Δ">Δ</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.fek.number`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>ΦΕΚ Αριθμός</FormLabel>
-                                  <FormControl>
-                                    <Input {...field} placeholder="π.χ. 1234" />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.decision_budget`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Προϋπολογισμός Απόφασης</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. 1.000.000,00"
-                                      onChange={(e) => {
-                                        const formatted =
-                                          formatNumberWhileTyping(
-                                            e.target.value,
-                                          );
-                                        field.onChange(formatted);
-                                      }}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.expenses_covered`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Δαπάνες που καλύπτει</FormLabel>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="π.χ. 500.000,00"
-                                      onChange={(e) => {
-                                        const formatted =
-                                          formatNumberWhileTyping(
-                                            e.target.value,
-                                          );
-                                        field.onChange(formatted);
-                                      }}
-                                    />
-                                  </FormControl>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.decision_type`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Τύπος Απόφασης</FormLabel>
-                                  <Select
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger>
-                                        <SelectValue placeholder="Επιλέξτε τύπο" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      <SelectItem value="Έγκριση">
-                                        Έγκριση
-                                      </SelectItem>
-                                      <SelectItem value="Τροποποίηση">
-                                        Τροποποίηση
-                                      </SelectItem>
-                                      <SelectItem value="Παράταση">
-                                        Παράταση
-                                      </SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </FormItem>
-                              )}
-                            />
-
-                            <FormField
-                              control={form.control}
-                              name={`decisions.${index}.included`}
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <div className="space-y-1 leading-none">
-                                    <FormLabel>
-                                      Συμπεριλαμβάνεται στο έργο
-                                    </FormLabel>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-
-                          {/* Implementing Agency Multi-select */}
-                          <div>
-                            <FormLabel>Υλοποιούσες Μονάδες</FormLabel>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                              {typedUnitsData?.map((unit) => (
-                                <FormField
-                                  key={unit.id}
-                                  control={form.control}
-                                  name={`decisions.${index}.implementing_agency`}
-                                  render={({ field }) => (
-                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                      <FormControl>
-                                        <Checkbox
-                                          checked={field.value?.includes(
-                                            unit.id,
-                                          )}
-                                          onCheckedChange={(checked) => {
-                                            if (checked) {
-                                              field.onChange([
-                                                ...(field.value || []),
-                                                unit.id,
-                                              ]);
-                                            } else {
-                                              field.onChange(
-                                                (field.value || []).filter(
-                                                  (item: number) =>
-                                                    item !== unit.id,
-                                                ),
-                                              );
-                                            }
-                                          }}
-                                        />
-                                      </FormControl>
-                                      <FormLabel className="text-sm font-normal">
-                                        {unit.unit_name?.name ||
-                                          unit.name ||
-                                          unit.unit}
-                                      </FormLabel>
-                                    </FormItem>
-                                  )}
+                          return (
+                            <AccordionItem 
+                              key={index} 
+                              value={`decision-${index}`}
+                              className={`border rounded-lg ${getDecisionBorderColor(decisionType)} border-l-4`}
+                            >
+                              <div className="flex items-center gap-3 pr-2">
+                                <Checkbox
+                                  checked={selectedDecisions.has(index)}
+                                  onCheckedChange={() => toggleDecisionSelection(index)}
+                                  className="ml-4"
+                                  onClick={(e) => e.stopPropagation()}
                                 />
-                              ))}
-                            </div>
-                          </div>
+                                
+                                <AccordionTrigger className="flex-1 hover:no-underline py-4">
+                                  <div className="flex items-start justify-between w-full pr-4">
+                                    <div className="flex flex-col items-start gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="font-semibold text-base">{protocolNumber}</h4>
+                                        <Badge variant="outline" className={`bg-${getDecisionColor(decisionType)}-100 text-${getDecisionColor(decisionType)}-700 border-${getDecisionColor(decisionType)}-300`}>
+                                          {decisionType}
+                                        </Badge>
+                                        {isExcluded && (
+                                          <Badge variant="destructive" className="bg-red-100 text-red-700 border-red-300">
+                                            Εξαιρείται
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                        <span className="flex items-center gap-1">
+                                          <strong>Προϋπολογισμός:</strong> {budget}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <strong>{fekInfo}</strong>
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <strong>ΑΔΑ:</strong> {ada}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                          <Building2 className="h-3 w-3" />
+                                          {agenciesCount} {agenciesCount === 1 ? 'Μονάδα' : 'Μονάδες'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </AccordionTrigger>
 
-                          {/* Expenditure Type Multi-select */}
-                          <div>
-                            <FormLabel>Τύποι Δαπανών</FormLabel>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                              {typedExpenditureTypesData?.map(
-                                (expenditureType) => (
-                                  <FormField
-                                    key={expenditureType.id}
-                                    control={form.control}
-                                    name={`decisions.${index}.expenditure_type`}
-                                    render={({ field }) => (
-                                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                        <FormControl>
-                                          <Checkbox
-                                            checked={field.value?.includes(
-                                              expenditureType.id,
-                                            )}
-                                            onCheckedChange={(checked) => {
-                                              if (checked) {
-                                                field.onChange([
-                                                  ...(field.value || []),
-                                                  expenditureType.id,
-                                                ]);
-                                              } else {
-                                                field.onChange(
-                                                  (field.value || []).filter(
-                                                    (item: number) =>
-                                                      item !==
-                                                      expenditureType.id,
-                                                  ),
+                                {form.watch("decisions").length > 1 && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const decisions = form.getValues("decisions");
+                                      decisions.splice(index, 1);
+                                      form.setValue("decisions", decisions);
+                                      setSelectedDecisions(prev => {
+                                        const newSet = new Set(prev);
+                                        newSet.delete(index);
+                                        return newSet;
+                                      });
+                                    }}
+                                    data-testid={`button-delete-decision-${index}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              <AccordionContent className="px-4 pb-4 pt-2">
+                                <div className="space-y-4">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.protocol_number`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Αριθμός Πρωτοκόλλου</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="π.χ. 12345/2024"
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.ada`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>ΑΔΑ</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="π.χ. ΩΔΨΚ4653Π6-ΓΞΤ"
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.fek.year`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>ΦΕΚ Έτος</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Επιλέξτε έτος" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              {Array.from({ length: new Date().getFullYear() - 1899 }, (_, i) => {
+                                                const year = new Date().getFullYear() - i;
+                                                return (
+                                                  <SelectItem key={year} value={year.toString()}>
+                                                    {year}
+                                                  </SelectItem>
                                                 );
-                                              }
-                                            }}
+                                              })}
+                                            </SelectContent>
+                                          </Select>
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.fek.issue`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>ΦΕΚ Τεύχος</FormLabel>
+                                          <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Επιλέξτε τεύχος" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              <SelectItem value="Α">Α</SelectItem>
+                                              <SelectItem value="Β">Β</SelectItem>
+                                              <SelectItem value="Γ">Γ</SelectItem>
+                                              <SelectItem value="Δ">Δ</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.fek.number`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>ΦΕΚ Αριθμός</FormLabel>
+                                          <FormControl>
+                                            <Input {...field} placeholder="π.χ. 1234" />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.decision_budget`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Προϋπολογισμός Απόφασης</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="π.χ. 1.000.000,00"
+                                              onChange={(e) => {
+                                                const formatted =
+                                                  formatNumberWhileTyping(
+                                                    e.target.value,
+                                                  );
+                                                field.onChange(formatted);
+                                              }}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.expenses_covered`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Δαπάνες που καλύπτει</FormLabel>
+                                          <FormControl>
+                                            <Input
+                                              {...field}
+                                              placeholder="π.χ. 500.000,00"
+                                              onChange={(e) => {
+                                                const formatted =
+                                                  formatNumberWhileTyping(
+                                                    e.target.value,
+                                                  );
+                                                field.onChange(formatted);
+                                              }}
+                                            />
+                                          </FormControl>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.decision_type`}
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormLabel>Τύπος Απόφασης</FormLabel>
+                                          <Select
+                                            onValueChange={field.onChange}
+                                            defaultValue={field.value}
+                                          >
+                                            <FormControl>
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Επιλέξτε τύπο" />
+                                              </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                              <SelectItem value="Έγκριση">
+                                                Έγκριση
+                                              </SelectItem>
+                                              <SelectItem value="Τροποποίηση">
+                                                Τροποποίηση
+                                              </SelectItem>
+                                              <SelectItem value="Παράταση">
+                                                Παράταση
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </FormItem>
+                                      )}
+                                    />
+
+                                    <FormField
+                                      control={form.control}
+                                      name={`decisions.${index}.included`}
+                                      render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                          <FormControl>
+                                            <Checkbox
+                                              checked={field.value}
+                                              onCheckedChange={field.onChange}
+                                            />
+                                          </FormControl>
+                                          <div className="space-y-1 leading-none">
+                                            <FormLabel>
+                                              Συμπεριλαμβάνεται στο έργο
+                                            </FormLabel>
+                                          </div>
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+
+                                  {/* Implementing Agency Multi-select */}
+                                  <div>
+                                    <FormLabel>Υλοποιούσες Μονάδες</FormLabel>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                                      {typedUnitsData?.map((unit) => (
+                                        <FormField
+                                          key={unit.id}
+                                          control={form.control}
+                                          name={`decisions.${index}.implementing_agency`}
+                                          render={({ field }) => (
+                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                              <FormControl>
+                                                <Checkbox
+                                                  checked={field.value?.includes(
+                                                    unit.id,
+                                                  )}
+                                                  onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                      field.onChange([
+                                                        ...(field.value || []),
+                                                        unit.id,
+                                                      ]);
+                                                    } else {
+                                                      field.onChange(
+                                                        (field.value || []).filter(
+                                                          (item: number) =>
+                                                            item !== unit.id,
+                                                        ),
+                                                      );
+                                                    }
+                                                  }}
+                                                />
+                                              </FormControl>
+                                              <FormLabel className="text-sm font-normal">
+                                                {unit.unit_name?.name ||
+                                                  unit.name ||
+                                                  unit.unit}
+                                              </FormLabel>
+                                            </FormItem>
+                                          )}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Expenditure Type Multi-select */}
+                                  <div>
+                                    <FormLabel>Τύποι Δαπανών</FormLabel>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                                      {typedExpenditureTypesData?.map(
+                                        (expenditureType) => (
+                                          <FormField
+                                            key={expenditureType.id}
+                                            control={form.control}
+                                            name={`decisions.${index}.expenditure_type`}
+                                            render={({ field }) => (
+                                              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                                <FormControl>
+                                                  <Checkbox
+                                                    checked={field.value?.includes(
+                                                      expenditureType.id,
+                                                    )}
+                                                    onCheckedChange={(checked) => {
+                                                      if (checked) {
+                                                        field.onChange([
+                                                          ...(field.value || []),
+                                                          expenditureType.id,
+                                                        ]);
+                                                      } else {
+                                                        field.onChange(
+                                                          (field.value || []).filter(
+                                                            (item: number) =>
+                                                              item !==
+                                                              expenditureType.id,
+                                                          ),
+                                                        );
+                                                      }
+                                                    }}
+                                                  />
+                                                </FormControl>
+                                                <FormLabel className="text-sm font-normal">
+                                                  {expenditureType.expenditure_types ||
+                                                    expenditureType.name}
+                                                </FormLabel>
+                                              </FormItem>
+                                            )}
+                                          />
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <FormField
+                                    control={form.control}
+                                    name={`decisions.${index}.comments`}
+                                    render={({ field }) => (
+                                      <FormItem>
+                                        <FormLabel>Σχόλια</FormLabel>
+                                        <FormControl>
+                                          <Textarea
+                                            {...field}
+                                            placeholder="Προαιρετικά σχόλια..."
                                           />
                                         </FormControl>
-                                        <FormLabel className="text-sm font-normal">
-                                          {expenditureType.expenditure_types ||
-                                            expenditureType.name}
-                                        </FormLabel>
                                       </FormItem>
                                     )}
                                   />
-                                ),
-                              )}
-                            </div>
-                          </div>
-
-                          <FormField
-                            control={form.control}
-                            name={`decisions.${index}.comments`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Σχόλια</FormLabel>
-                                <FormControl>
-                                  <Textarea
-                                    {...field}
-                                    placeholder="Προαιρετικά σχόλια..."
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      ))}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          );
+                        })}
+                      </Accordion>
 
                       <Button
                         type="button"
@@ -2677,6 +2885,7 @@ export default function ComprehensiveEditFixed() {
                           });
                           form.setValue("decisions", decisions);
                         }}
+                        className="w-full"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Προσθήκη Απόφασης
