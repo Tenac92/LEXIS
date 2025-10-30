@@ -167,7 +167,6 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     const userView = budget.user_view || 0;
     const transferAmount = Math.max(0, oldQuarterValue - userView);
     const updatedNewQuarterValue = newQuarterValue + transferAmount;
-    const quarterAvailable = Math.max(0, updatedNewQuarterValue - userView);
     
     logger.info(`[Quarter Transition] Budget ${budget.mis}: transferring ${transferAmount} from ${oldQuarterKey} to ${newQuarterKey}`);
     
@@ -193,7 +192,6 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     // Build dynamic update object with the new quarter value
     const updateData: any = {
       last_quarter_check: newQuarterKey,
-      quarter_available: quarterAvailable,
       sum: sumObject,
       updated_at: new Date().toISOString()
     };
