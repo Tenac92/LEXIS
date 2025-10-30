@@ -573,14 +573,30 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
-  // PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
+  // STEP 1: Resolve MIS to project ID
+  const {
+    data: resolvedProject,
+    isLoading: isResolvingProject,
+    error: resolveError,
+  } = useQuery({
+    queryKey: [`/api/projects/resolve/${mis}`],
+    enabled: !!mis,
+    staleTime: 10 * 60 * 1000, // 10 minutes cache for resolved project
+    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const projectId = resolvedProject?.id;
+
+  // STEP 2: PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
   const {
     data: completeProjectData,
     isLoading: isCompleteDataLoading,
     error: completeDataError,
   } = useQuery({
-    queryKey: [`/api/projects/${mis}/complete`],
-    enabled: !!mis,
+    queryKey: [`/api/projects/${projectId}/complete`],
+    enabled: !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for project-specific data
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
@@ -615,7 +631,6 @@ export default function ComprehensiveEditFixed() {
 
   // Extract data from optimized API responses with proper typing
   const projectData = completeProjectData?.project;
-  const projectId = projectData?.id; // Extract project ID for API calls
   const projectIndexData = completeProjectData?.index;
   const decisionsData = completeProjectData?.decisions;
   const formulationsData = completeProjectData?.formulations;
@@ -635,8 +650,8 @@ export default function ComprehensiveEditFixed() {
   }, {} as Record<string, string>) || {};
 
   // Check if all essential data is loading
-  const isEssentialDataLoading = isCompleteDataLoading;
-  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
+  const isEssentialDataLoading = isResolvingProject || isCompleteDataLoading;
+  const isAllDataLoading = isResolvingProject || isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
   console.log("DEBUG - Project Data:", {
@@ -645,7 +660,7 @@ export default function ComprehensiveEditFixed() {
     projectData: !!projectData,
     decisionsCount: decisionsData?.length || 0,
     formulationsCount: formulationsData?.length || 0,
-    isProjectLoading: isCompleteDataLoading,
+    isProjectLoading: isResolvingProject || isCompleteDataLoading,
     isReferenceLoading: isReferenceDataLoading,
     projectError: completeDataError?.message || completeDataError,
     referenceError: referenceDataError?.message || referenceDataError,
@@ -1997,10 +2012,19 @@ export default function ComprehensiveEditFixed() {
     return convertGeographicDataToKallikratis(geographicData);
   }, [geographicData]);
 
-  if (completeDataError) {
+  if (resolveError || completeDataError) {
     return (
       <div className="container mx-auto p-6">
-        Σφάλμα κατά τη φόρτωση των δεδομένων
+        <Card>
+          <CardHeader>
+            <CardTitle>Σφάλμα</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive">
+              {resolveError ? 'Δεν βρέθηκε το έργο' : 'Σφάλμα κατά τη φόρτωση των δεδομένων'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
