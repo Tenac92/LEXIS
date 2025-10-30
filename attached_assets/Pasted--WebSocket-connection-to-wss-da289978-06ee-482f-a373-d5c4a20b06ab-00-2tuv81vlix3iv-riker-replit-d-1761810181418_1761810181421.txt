@@ -1,0 +1,304 @@
+ WebSocket connection to 'wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/?token=ocfeLUApPuc1' failed: 
+createConnection @ client:745
+ WebSocket connection to 'wss://localhost:5173/?token=ocfeLUApPuc1' failed: 
+createConnection @ client:755
+ [vite] failed to connect to websocket.
+your current setup:
+  (browser) da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ <--[HTTP]--> localhost:5173/ (server)
+  (browser) da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev:/ <--[WebSocket (failing)]--> localhost:5173/ (server)
+Check out your Vite / network configuration and https://vite.dev/config/server-options.html#server-hmr .
+connect @ client:765
+ Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+ [SessionInit] Generated new client session ID: session_1761809807158_w8tonq29
+ ME endpoint response: Object
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Units data: 11 units total
+ DEBUG - Raw unitsData: Array(11)
+ DEBUG - referenceData?.units: 11
+ DEBUG - completeProjectData?.units: 11
+ DEBUG - All units: Array(11)
+ DEBUG - Event types data: 17 total items Array(3)
+ DEBUG - Expenditure types data: 8 total items Array(3)
+ 🚀 INITIALIZING FORM with project data: Object
+ Project index data: Array(5)
+ DEBUG - Final decisions array: Array(1)
+ [ConnectedDecisions] Processing for formulation ΝΑ853: Object
+ [FormulationInit] Formulation ΝΑ853: Object
+ 🔥 RESETTING FORM WITH DECISIONS: Array(1)
+ DEBUG: Processing new geographic data structure: Object
+ 🔥 SETTING FORM VALUES INDIVIDUALLY:
+ DEBUG: Processing new geographic data structure: Object
+ 🔥 SETTING LOCATION DETAILS: Array(2)
+ 🔍 FORM location_details AFTER SET: Array(2)
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Units data: 11 units total
+ DEBUG - Raw unitsData: Array(11)
+ DEBUG - referenceData?.units: 11
+ DEBUG - completeProjectData?.units: 11
+ DEBUG - All units: Array(11)
+ DEBUG - Event types data: 17 total items Array(3)
+ DEBUG - Expenditure types data: 8 total items Array(3)
+ [StableWebSocket] Creating new connection
+ [StableWebSocket] URL construction: Object
+ [StableWebSocket] Connecting to: wss://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/ws
+ 🔍 PROJECT DETAILS AFTER SET: Object
+ [StableWebSocket] Connected successfully
+ Form initialization complete - field clearing protection disabled
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Units data: 11 units total
+ DEBUG - Raw unitsData: Array(11)
+ DEBUG - referenceData?.units: 11
+ DEBUG - completeProjectData?.units: 11
+ DEBUG - All units: Array(11)
+ DEBUG - Event types data: 17 total items Array(3)
+ DEBUG - Expenditure types data: 8 total items Array(3)
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Units data: 11 units total
+ DEBUG - Raw unitsData: Array(11)
+ DEBUG - referenceData?.units: 11
+ DEBUG - completeProjectData?.units: 11
+ DEBUG - All units: Array(11)
+ DEBUG - Event types data: 17 total items Array(3)
+ DEBUG - Expenditure types data: 8 total items Array(3)
+ === COMPREHENSIVE FORM SUBMISSION ===
+ Form data: Object
+ Event type conversion: Object
+ 1. Updating core project data: Object
+ 🔍 Key fields being sent: Object
+343:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+ [API] Request failed: 
+apiRequest @ queryClient.ts:97
+ [API] Error details: Object
+apiRequest @ queryClient.ts:98
+ ✗ Project update failed: 
+mutationFn @ comprehensive-edit-fixed.tsx:654
+ === COMPREHENSIVE FORM SUBMISSION ERROR ===
+mutationFn @ comprehensive-edit-fixed.tsx:956
+ Error details: 
+mutationFn @ comprehensive-edit-fixed.tsx:957
+ Completed operations: Object
+mutationFn @ comprehensive-edit-fixed.tsx:958
+ DEBUG - Project Data: Object
+ DEBUG - Geographic Data Status: Object
+ DEBUG - ΣΑ Data: Object
+ DEBUG - Geographic Data: Object
+ DEBUG - Units data: 11 units total
+ DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+comprehensive-edit-fixed.tsx:825 === COMPREHENSIVE FORM SUBMISSION ===
+comprehensive-edit-fixed.tsx:826 Form data: Object
+comprehensive-edit-fixed.tsx:859 Event type conversion: Object
+comprehensive-edit-fixed.tsx:914 1. Updating core project data: Object
+comprehensive-edit-fixed.tsx:915 🔍 Key fields being sent: Object
+/api/projects/343:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:154 [API] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+apiRequest @ queryClient.ts:154
+queryClient.ts:155 [API] Error details: Object
+apiRequest @ queryClient.ts:155
+comprehensive-edit-fixed.tsx:929 ✗ Project update failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+mutationFn @ comprehensive-edit-fixed.tsx:929
+comprehensive-edit-fixed.tsx:1332 === COMPREHENSIVE FORM SUBMISSION ERROR ===
+mutationFn @ comprehensive-edit-fixed.tsx:1332
+comprehensive-edit-fixed.tsx:1333 Error details: Error: Failed to update project data: Σφάλμα HTTP! κατάσταση: 500
+    at Object.mutationFn (comprehensive-edit-fixed.tsx:930:17)
+mutationFn @ comprehensive-edit-fixed.tsx:1333
+comprehensive-edit-fixed.tsx:1334 Completed operations: Object
+mutationFn @ comprehensive-edit-fixed.tsx:1334
+comprehensive-edit-fixed.tsx:1390 Form submission failed: Error: Σφάλμα ενημέρωσης βασικών στοιχείων έργου
+    at Object.mutationFn (comprehensive-edit-fixed.tsx:1352:31)
+onError @ comprehensive-edit-fixed.tsx:1390
+execute @ mutation.ts:243
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: Object
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: Object
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: Object
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: Object
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: Object
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: Object
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: Object
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: Object
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+SessionKeeper.tsx:121 [SessionKeeper] Tab now visible, checking session
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: Object
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: Object
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: Object
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: Object
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: Object
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: Object
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: Object
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: Object
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+comprehensive-edit-fixed.tsx:825 === COMPREHENSIVE FORM SUBMISSION ===
+comprehensive-edit-fixed.tsx:826 Form data: Object
+comprehensive-edit-fixed.tsx:859 Event type conversion: Object
+comprehensive-edit-fixed.tsx:914 1. Updating core project data: Object
+comprehensive-edit-fixed.tsx:915 🔍 Key fields being sent: Object
+use-auth.tsx:175 ME endpoint response: Object
+use-auth.tsx:264 [Auth] Manually refreshing user session
+use-auth.tsx:175 ME endpoint response: Object
+/api/projects/343:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+queryClient.ts:154 [API] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+apiRequest @ queryClient.ts:154
+queryClient.ts:155 [API] Error details: Object
+apiRequest @ queryClient.ts:155
+comprehensive-edit-fixed.tsx:929 ✗ Project update failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+mutationFn @ comprehensive-edit-fixed.tsx:929
+comprehensive-edit-fixed.tsx:1332 === COMPREHENSIVE FORM SUBMISSION ERROR ===
+mutationFn @ comprehensive-edit-fixed.tsx:1332
+comprehensive-edit-fixed.tsx:1333 Error details: Error: Failed to update project data: Σφάλμα HTTP! κατάσταση: 500
+    at Object.mutationFn (comprehensive-edit-fixed.tsx:930:17)
+mutationFn @ comprehensive-edit-fixed.tsx:1333
+comprehensive-edit-fixed.tsx:1334 Completed operations: Object
+mutationFn @ comprehensive-edit-fixed.tsx:1334
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: Object
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: Object
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: Object
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: Object
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: Array(11)
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: Array(11)
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items Array(3)
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items Array(3)
+comprehensive-edit-fixed.tsx:825 === COMPREHENSIVE FORM SUBMISSION ===
+comprehensive-edit-fixed.tsx:826 Form data: {decisions: Array(1), event_details: {…}, location_details: Array(2), project_details: {…}, previous_entries: Array(0), …}
+comprehensive-edit-fixed.tsx:859 Event type conversion: {input: 'ΠΥΡΚΑΓΙΑ', found: {…}, result: 12}
+comprehensive-edit-fixed.tsx:914 1. Updating core project data: {project_title: 'Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκε…τρικής Μακεδονίας καθώς και δαπ. μετακ. μηχανικών', event_description: '2024 πυρκαγιές (Π.Ε. Θεσσαλονίκης)', inc_year: 2025, updates: Array(0), na853: 'ΝΑ853', …}
+comprehensive-edit-fixed.tsx:915 🔍 Key fields being sent: {inclusion_year: undefined, na853: 'ΝΑ853', enumeration_code: undefined, project_title: 'Δωρεάν κρατική αρωγή για την επισκευή ή ανακατασκε…τρικής Μακεδονίας καθώς και δαπ. μετακ. μηχανικών'}
+queryClient.ts:29  PATCH https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/api/projects/343 500 (Internal Server Error)
+apiRequest @ queryClient.ts:29
+mutationFn @ comprehensive-edit-fixed.tsx:922
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+queryClient.ts:154 [API] Request failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+apiRequest @ queryClient.ts:154
+await in apiRequest
+mutationFn @ comprehensive-edit-fixed.tsx:922
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+queryClient.ts:155 [API] Error details: {message: 'Σφάλμα HTTP! κατάσταση: 500', requestInfo: {…}, stack: 'Error: Σφάλμα HTTP! κατάσταση: 500\n    at apiReque…ojects/[mis]/comprehensive-edit-fixed.tsx:647:35)'}
+apiRequest @ queryClient.ts:155
+await in apiRequest
+mutationFn @ comprehensive-edit-fixed.tsx:922
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+comprehensive-edit-fixed.tsx:929 ✗ Project update failed: Error: Σφάλμα HTTP! κατάσταση: 500
+    at apiRequest (queryClient.ts:101:31)
+    at async Object.mutationFn (comprehensive-edit-fixed.tsx:922:35)
+mutationFn @ comprehensive-edit-fixed.tsx:929
+await in mutationFn
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+comprehensive-edit-fixed.tsx:1332 === COMPREHENSIVE FORM SUBMISSION ERROR ===
+mutationFn @ comprehensive-edit-fixed.tsx:1332
+await in mutationFn
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+comprehensive-edit-fixed.tsx:1333 Error details: Error: Failed to update project data: Σφάλμα HTTP! κατάσταση: 500
+    at Object.mutationFn (comprehensive-edit-fixed.tsx:930:17)
+mutationFn @ comprehensive-edit-fixed.tsx:1333
+await in mutationFn
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+comprehensive-edit-fixed.tsx:1334 Completed operations: {projectUpdate: false, decisions: Array(0), formulations: Array(0), changes: false}
+mutationFn @ comprehensive-edit-fixed.tsx:1334
+await in mutationFn
+fn @ mutation.ts:170
+run @ retryer.ts:153
+(ανώνυμες) @ retryer.ts:199
+comprehensive-edit-fixed.tsx:1390 Form submission failed: Error: Σφάλμα ενημέρωσης βασικών στοιχείων έργου
+    at Object.mutationFn (comprehensive-edit-fixed.tsx:1352:31)
+onError @ comprehensive-edit-fixed.tsx:1390
+execute @ mutation.ts:243
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: {hasProjectData: true, hasReferenceData: true, projectData: true, decisionsCount: 1, formulationsCount: 1, …}
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: {hasNormalizedGeographicData: true, normalizedRegions: 13, normalizedRegionalUnits: 74, normalizedMunicipalities: 324}
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: Array(1)}
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: {uniqueRegionsCount: 13, uniqueRegions: Array(3), hasGeographicData: true, regionsCount: 13, regionalUnitsCount: 74, …}
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: (11) ['11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ', '4: ΔΑΕΦΚ-ΒΕ', '6: ΤΑΕΦΚ-ΔΑ', '7: ΤΑΕΦΚ-ΑΑ', '8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ', '9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ', '10: ΤΑΕΦΚ ΧΑΝΙΩΝ', '1: ΓΔΑΕΦΚ', '3: ΔΑΕΦΚ-ΑΚ', '5: ΔΑΕΦΚ-ΔΕ', '2: ΔΑΕΦΚ-ΚΕ']
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items (3) [{…}, {…}, {…}]
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items (3) [{…}, {…}, {…}]
+comprehensive-edit-fixed.tsx:644 DEBUG - Project Data: {hasProjectData: true, hasReferenceData: true, projectData: true, decisionsCount: 1, formulationsCount: 1, …}
+comprehensive-edit-fixed.tsx:657 DEBUG - Geographic Data Status: {hasNormalizedGeographicData: true, normalizedRegions: 13, normalizedRegionalUnits: 74, normalizedMunicipalities: 324}
+comprehensive-edit-fixed.tsx:665 DEBUG - ΣΑ Data: {existingSATypes: Array(0), existingEnumerationCodes: {…}, formulationsDataSample: Array(1)}
+comprehensive-edit-fixed.tsx:743 DEBUG - Geographic Data: {uniqueRegionsCount: 13, uniqueRegions: Array(3), hasGeographicData: true, regionsCount: 13, regionalUnitsCount: 74, …}
+comprehensive-edit-fixed.tsx:2071 DEBUG - Units data: 11 units total
+comprehensive-edit-fixed.tsx:2072 DEBUG - Raw unitsData: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+comprehensive-edit-fixed.tsx:2073 DEBUG - referenceData?.units: 11
+comprehensive-edit-fixed.tsx:2074 DEBUG - completeProjectData?.units: 11
+comprehensive-edit-fixed.tsx:2075 DEBUG - All units: (11) ['11: ΤΑΕΦΚ ΗΡΑΚΛΕΙΟΥ', '4: ΔΑΕΦΚ-ΒΕ', '6: ΤΑΕΦΚ-ΔΑ', '7: ΤΑΕΦΚ-ΑΑ', '8: ΤΑΕΦΚ ΧΑΛΚΙΔΙΚΗΣ', '9: ΤΑΕΦΚ ΘΕΣΣΑΛΙΑΣ', '10: ΤΑΕΦΚ ΧΑΝΙΩΝ', '1: ΓΔΑΕΦΚ', '3: ΔΑΕΦΚ-ΑΚ', '5: ΔΑΕΦΚ-ΔΕ', '2: ΔΑΕΦΚ-ΚΕ']
+comprehensive-edit-fixed.tsx:2079 DEBUG - Event types data: 17 total items (3) [{…}, {…}, {…}]
+comprehensive-edit-fixed.tsx:2085 DEBUG - Expenditure types data: 8 total items (3) [{…}, {…}, {…}]
