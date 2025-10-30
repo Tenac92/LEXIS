@@ -4,6 +4,17 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-10-30: Decisions Accordion UI with Batch Operations
+Enhanced the project edit form's decisions section with accordion-based UI and batch operations, matching the patterns used for formulations and locations. Changes:
+- Implemented accordion UI for decisions with expandable/collapsible items
+- Added batch selection and operations: Select All, Deselect All, Duplicate Selected, Delete Selected
+- Created preview cards for decision accordion headers showing: protocol number, decision type, budget, FEK info, ADA, and implementing agencies count
+- Added color-coded left borders based on decision type: Έγκριση (blue), Τροποποίηση (orange), Παράταση (gray)
+- Integrated checkboxes for batch selection in each accordion trigger
+- Added status badge "Εξαιρείται" when a decision is excluded (included = false)
+- All form fields preserved in accordion content with proper validation
+- Consistent UI/UX pattern across all three sections (formulations, locations, decisions)
+
 ## 2025-10-30: Numeric Field Type Alignment
 Fixed critical type mismatch in project edit form where database numeric fields (boundary_budget, total_public_expense, eligible_public_expense) were being validated as strings, causing save failures. Changes:
 - Updated form schema to use `z.number().optional()` for PDE boundary_budget and EPA financial fields
