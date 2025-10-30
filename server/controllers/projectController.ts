@@ -3167,7 +3167,7 @@ router.patch(
   },
 );
 
-// Combined reference data endpoint for faster loading - must be before /:mis route
+// Combined reference data endpoint for faster loading - must be before /:id route
 router.get(
   "/reference-data",
   authenticateSession,
