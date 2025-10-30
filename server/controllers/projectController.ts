@@ -3523,13 +3523,13 @@ router.get(
 
 // Get project index data with all relationships
 router.get(
-  "/:mis/index",
+  "/:id/index",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
 
-      console.log(`[ProjectIndex] Fetching project index data for MIS: ${mis}`);
+      console.log(`[ProjectIndex] Fetching project index data for project ID: ${projectId}`);
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -3539,12 +3539,12 @@ router.get(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectIndex] Project not found for MIS: ${mis}`,
+          `[ProjectIndex] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3610,15 +3610,15 @@ router.get(
 
 // Update project decisions (normalized table)
 router.put(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const { decisions_data } = req.body;
 
       console.log(
-        `[ProjectDecisions] Updating decisions for project MIS: ${mis}`,
+        `[ProjectDecisions] Updating decisions for project ID: ${projectId}`,
         decisions_data,
       );
 
@@ -3630,12 +3630,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectDecisions] Project not found for MIS: ${mis}`,
+          `[ProjectDecisions] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3784,16 +3784,16 @@ router.put(
 
 // Update project formulations (normalized table)
 router.put(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const { formulation_details, budget_versions, location_details } =
         req.body;
 
       console.log(
-        `[ProjectFormulations] Updating formulations with budget versions for project MIS: ${mis}`,
+        `[ProjectFormulations] Updating formulations with budget versions for project ID: ${projectId}`,
         { formulation_details, budget_versions },
       );
 
@@ -3805,12 +3805,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectFormulations] Project not found for MIS: ${mis}`,
+          `[ProjectFormulations] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -4305,15 +4305,15 @@ router.put(
 
 // Comprehensive project update - handles all form data at once
 router.put(
-  "/:mis/comprehensive",
+  "/:id/comprehensive",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const formData = req.body;
 
       console.log(
-        `[ComprehensiveUpdate] ========== STARTING UPDATE FOR MIS: ${mis} ==========`,
+        `[ComprehensiveUpdate] ========== STARTING UPDATE FOR PROJECT ID: ${projectId} ==========`,
       );
       console.log(
         `[ComprehensiveUpdate] Request body keys:`,
@@ -4370,12 +4370,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ComprehensiveUpdate] Project not found for MIS: ${mis}`,
+          `[ComprehensiveUpdate] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -4787,16 +4787,16 @@ router.put(
 // ================================================================
 
 // Get budget versions for a project
-router.get("/:mis/budget-versions", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+router.get("/:id/budget-versions", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis } = req.params;
+    const { id: projectId } = req.params;
     const { formulation_id } = req.query;
-    const misNumber = parseInt(mis);
+    const projectIdNumber = parseInt(projectId);
     console.log(
-      `[ProjectBudgetVersions] Fetching budget versions for MIS: ${mis}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
+      `[ProjectBudgetVersions] Fetching budget versions for project ID: ${projectId}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
     );
 
-    const project = await requireProjectAccess(req, res, misNumber);
+    const project = await requireProjectAccess(req, res, projectIdNumber);
     if (!project) {
       return;
     }
@@ -4825,19 +4825,19 @@ router.get("/:mis/budget-versions", authenticateSession, async (req: Authenticat
 
 // Create budget version for a project
 router.post(
-  "/:mis/budget-versions",
+  "/:id/budget-versions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const budgetVersionData = req.body;
-      const misNumber = parseInt(mis);
+      const projectIdNumber = parseInt(projectId);
       console.log(
-        `[ProjectBudgetVersions] Creating budget version for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Creating budget version for project ID: ${projectId}`,
         budgetVersionData,
       );
 
-      const project = await requireProjectAccess(req, res, misNumber);
+      const project = await requireProjectAccess(req, res, projectIdNumber);
       if (!project) {
         return;
       }
@@ -4882,14 +4882,14 @@ router.post(
 
 // Update budget version
 router.patch(
-  "/:mis/budget-versions/:versionId",
+  "/:id/budget-versions/:versionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       const updateData = req.body;
       console.log(
-        `[ProjectBudgetVersions] Updating budget version ${versionId} for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Updating budget version ${versionId} for project ID: ${projectId}`,
         updateData,
       );
 
@@ -4909,7 +4909,7 @@ router.patch(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -4954,13 +4954,13 @@ router.patch(
 
 // Delete budget version
 router.delete(
-  "/:mis/budget-versions/:versionId",
+  "/:id/budget-versions/:versionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       console.log(
-        `[ProjectBudgetVersions] Deleting budget version ${versionId} for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Deleting budget version ${versionId} for project ID: ${projectId}`,
       );
 
       if (!req.user) {
@@ -4979,7 +4979,7 @@ router.delete(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5019,13 +5019,13 @@ router.delete(
 
 // Get EPA financials for a budget version
 router.get(
-  "/:mis/budget-versions/:versionId/epa-financials",
+  "/:id/budget-versions/:versionId/epa-financials",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       console.log(
-        `[EPAFinancials] Fetching EPA financials for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Fetching EPA financials for project ID: ${projectId}, version: ${versionId}`,
       );
 
       // Verify the budget version exists and belongs to the project
@@ -5040,7 +5040,7 @@ router.get(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5072,14 +5072,14 @@ router.get(
 
 // Create EPA financial record
 router.post(
-  "/:mis/budget-versions/:versionId/epa-financials",
+  "/:id/budget-versions/:versionId/epa-financials",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       const financialData = req.body;
       console.log(
-        `[EPAFinancials] Creating EPA financial for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Creating EPA financial for project ID: ${projectId}, version: ${versionId}`,
         financialData,
       );
 
@@ -5099,7 +5099,7 @@ router.post(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5147,14 +5147,14 @@ router.post(
 
 // Update EPA financial record
 router.patch(
-  "/:mis/budget-versions/:versionId/epa-financials/:financialId",
+  "/:id/budget-versions/:versionId/epa-financials/:financialId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId, financialId } = req.params;
+      const { id: projectId, versionId, financialId } = req.params;
       const updateData = req.body;
       console.log(
-        `[EPAFinancials] Updating EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Updating EPA financial ${financialId} for project ID: ${projectId}, version: ${versionId}`,
         updateData,
       );
 
@@ -5174,7 +5174,7 @@ router.patch(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5210,13 +5210,13 @@ router.patch(
 
 // Delete EPA financial record
 router.delete(
-  "/:mis/budget-versions/:versionId/epa-financials/:financialId",
+  "/:id/budget-versions/:versionId/epa-financials/:financialId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId, financialId } = req.params;
+      const { id: projectId, versionId, financialId } = req.params;
       console.log(
-        `[EPAFinancials] Deleting EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Deleting EPA financial ${financialId} for project ID: ${projectId}, version: ${versionId}`,
       );
 
       if (!req.user) {
@@ -5235,7 +5235,7 @@ router.delete(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
