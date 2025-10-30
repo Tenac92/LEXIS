@@ -1924,14 +1924,14 @@ export default function ComprehensiveEditFixed() {
                 budget_versions: {
                   pde: formulation.budget_versions?.pde?.map((pde: any) => ({
                     ...pde,
-                    boundary_budget: pde.boundary_budget ?? "0",
+                    boundary_budget: pde.boundary_budget,
                   })) || [],
                   epa: formulation.budget_versions?.epa?.map((epa: any) => ({
                     ...epa,
                     financials: epa.financials?.map((fin: any) => ({
                       ...fin,
-                      total_public_expense: fin.total_public_expense ?? "0",
-                      eligible_public_expense: fin.eligible_public_expense ?? "0",
+                      total_public_expense: fin.total_public_expense,
+                      eligible_public_expense: fin.eligible_public_expense,
                     })) || [],
                   })) || [],
                 },
