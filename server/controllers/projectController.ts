@@ -1353,8 +1353,8 @@ router.post(
           decisionData.decision_date || new Date().toISOString().split("T")[0],
         included: decisionData.included ?? true,
         comments: decisionData.comments || null,
-        created_by: req.user.id,
-        updated_by: req.user.id,
+        created_by: req.user!.id,
+        updated_by: req.user!.id,
       };
 
       const { data: createdDecision, error: createError } = await supabase
@@ -1422,7 +1422,7 @@ router.patch(
 
       // Prepare update data
       const fieldsToUpdate: any = {
-        updated_by: req.user.id,
+        updated_by: req.user!.id,
         updated_at: new Date().toISOString(),
       };
 
@@ -1649,8 +1649,8 @@ router.post(
         change_type: formulationData.change_type || "Έγκριση",
         connected_decision_ids: formulationData.connected_decisions || [],
         comments: formulationData.comments || null,
-        created_by: req.user.id,
-        updated_by: req.user.id,
+        created_by: req.user!.id,
+        updated_by: req.user!.id,
       };
 
       const { data: createdFormulation, error: createError } = await supabase
@@ -4763,7 +4763,7 @@ router.post(
         decision_date: budgetVersionData.decision_date || null,
         action_type: budgetVersionData.action_type || "Έγκριση",
         comments: budgetVersionData.comments || null,
-        created_by: req.user.id,
+        created_by: req.user!.id,
       };
 
       // Create budget version using storage method
