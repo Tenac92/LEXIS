@@ -308,17 +308,21 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`[Storage] Found budget record - current user_view: ${budgetData.user_view}`);
       
-      // Calculate new spending amount
+      // Calculate new spending amount for both year and current quarter
       const currentSpending = parseFloat(String(budgetData.user_view || 0));
       const newSpending = currentSpending + amount;
       
-      console.log(`[Storage] Budget calculation: ${currentSpending} + ${amount} = ${newSpending}`);
+      const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
+      const newQuarterSpent = currentQuarterSpent + amount;
       
-      // Update the budget record with new spending
+      console.log(`[Storage] Budget calculation: user_view ${currentSpending} + ${amount} = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
+      
+      // Update the budget record with new spending (both year total and current quarter)
       const { error: updateError } = await supabase
         .from('project_budget')
         .update({ 
           user_view: newSpending,
+          current_quarter_spent: newQuarterSpent,
           updated_at: new Date().toISOString()
         })
         .eq('id', budgetData.id);

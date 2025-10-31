@@ -128,6 +128,8 @@ export const projectBudget = pgTable("project_budget", {
     scale: 2,
   }).default("0"),
   user_view: decimal("user_view", { precision: 15, scale: 2 }).default("0"),
+  current_quarter_spent: decimal("current_quarter_spent", { precision: 15, scale: 2 }).default("0"),
+  year_close: jsonb("year_close"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
   last_quarter_check: text("last_quarter_check").default("q1"),
