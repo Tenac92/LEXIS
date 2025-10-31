@@ -166,12 +166,13 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
       case 'q4': newQuarterValue = budget.q4 || 0; break;
     }
     
-    // Apply quarter transition formula: nextQuarter = nextQuarter + currentQuarter - user_view
-    const userView = budget.user_view || 0;
-    const transferAmount = Math.max(0, oldQuarterValue - userView);
+    // Apply quarter transition formula: nextQuarter = nextQuarter + (currentQuarter - current_quarter_spent)
+    // Only the UNSPENT portion of the current quarter gets transferred
+    const currentQuarterSpent = parseFloat(String(budget.current_quarter_spent || 0));
+    const transferAmount = Math.max(0, oldQuarterValue - currentQuarterSpent);
     const updatedNewQuarterValue = newQuarterValue + transferAmount;
     
-    logger.info(`[Quarter Transition] Budget ${budget.mis}: transferring ${transferAmount} from ${oldQuarterKey} to ${newQuarterKey}`);
+    logger.info(`[Quarter Transition] Budget ${budget.mis}: ${oldQuarterKey} had ${oldQuarterValue}, spent ${currentQuarterSpent}, transferring ${transferAmount} to ${newQuarterKey}`);
     
     // Prepare the sum object if it doesn't exist
     let sumObject = budget.sum || {};
@@ -195,6 +196,7 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     // Build dynamic update object with the new quarter value
     const updateData: any = {
       last_quarter_check: newQuarterKey,
+      current_quarter_spent: 0, // Reset quarter spending tracker for new quarter
       sum: sumObject,
       updated_at: new Date().toISOString()
     };
@@ -214,7 +216,7 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     }
     
     // Create a budget history entry for the quarter change
-    await createQuarterChangeHistoryEntry(budget.mis, oldQuarterKey, newQuarterKey, oldQuarterValue, newQuarterValue);
+    await createQuarterChangeHistoryEntry(budget.project_id, oldQuarterKey, newQuarterKey, oldQuarterValue, updatedNewQuarterValue, transferAmount);
     
     // Send notification about the quarter change
     if (wss) {
@@ -246,48 +248,37 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
 
 /**
  * Create a history entry for the quarter change
- * @param mis Project MIS
+ * @param projectId Project ID
  * @param oldQuarter Previous quarter
  * @param newQuarter New quarter
  * @param oldValue Previous quarter value
  * @param newValue New quarter value
+ * @param transferAmount Amount transferred from old quarter
  */
 async function createQuarterChangeHistoryEntry(
-  mis: string | number,
+  projectId: number,
   oldQuarter: string,
   newQuarter: string,
   oldValue: number,
-  newValue: number
+  newValue: number,
+  transferAmount: number
 ) {
   try {
     // Create an entry in the budget_history table
     const { error } = await supabase
       .from('budget_history')
       .insert({
-        mis: mis,
+        project_id: projectId,
+        previous_amount: String(oldValue),
+        new_amount: String(newValue),
         change_type: 'quarter_change',
-        amount: newValue,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          old_quarter: oldQuarter,
-          new_quarter: newQuarter,
-          old_value: oldValue,
-          new_value: newValue,
-          quarters: {
-            [newQuarter]: {
-              previous: oldValue,
-              new: newValue
-            }
-          },
-          operation_type: 'quarter_change',
-          active_quarter: newQuarter
-        }
+        change_reason: `Quarter transition: ${oldQuarter} → ${newQuarter}, transferred ${transferAmount}`
       });
     
     if (error) {
-      logger.error(`[Quarter Transition] Error creating history entry for ${mis}: ${error.message}`);
+      logger.error(`[Quarter Transition] Error creating history entry for project ${projectId}: ${error.message}`);
     } else {
-      logger.info(`[Quarter Transition] Created history entry for ${mis} quarter change`);
+      logger.info(`[Quarter Transition] Created history entry for project ${projectId} quarter change`);
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -427,12 +418,13 @@ async function processYearEndClosureForBudget(budget: any, year: number, wss?: W
     // Add current year's user_view to year_close
     yearCloseObject[year.toString()] = userView;
     
-    // Update the budget record: save user_view to year_close, reset user_view to 0, reset quarter to q1
+    // Update the budget record: save user_view to year_close, reset user_view and current_quarter_spent to 0, reset quarter to q1
     const { error: updateError } = await supabase
       .from('project_budget')
       .update({
         year_close: yearCloseObject,
         user_view: 0,
+        current_quarter_spent: 0,
         last_quarter_check: 'q1',
         updated_at: new Date().toISOString()
       })
@@ -444,7 +436,7 @@ async function processYearEndClosureForBudget(budget: any, year: number, wss?: W
     }
     
     // Create a history entry
-    await createYearEndClosureHistoryEntry(budget.mis, year, userView);
+    await createYearEndClosureHistoryEntry(budget.project_id, year, userView);
     
     logger.info(`[Year-End Closure] Successfully processed budget ${budget.mis}`);
     
@@ -458,32 +450,26 @@ async function processYearEndClosureForBudget(budget: any, year: number, wss?: W
 
 /**
  * Create a history entry for the year-end closure
- * @param mis Project MIS
+ * @param projectId Project ID
  * @param year Year being closed
  * @param closedAmount Amount saved to year_close
  */
-async function createYearEndClosureHistoryEntry(mis: string | number, year: number, closedAmount: number) {
+async function createYearEndClosureHistoryEntry(projectId: number, year: number, closedAmount: number) {
   try {
     const { error } = await supabase
       .from('budget_history')
       .insert({
-        mis: mis,
+        project_id: projectId,
+        previous_amount: String(closedAmount),
+        new_amount: '0',
         change_type: 'year_end_closure',
-        amount: closedAmount,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          year: year,
-          closed_amount: closedAmount,
-          operation_type: 'year_end_closure',
-          reset_quarter: 'q1',
-          reset_user_view: true
-        }
+        change_reason: `Year ${year} closure: saved ${closedAmount} to history, reset spending to 0, quarter to Q1`
       });
     
     if (error) {
-      logger.error(`[Year-End Closure] Error creating history entry for ${mis}: ${error.message}`);
+      logger.error(`[Year-End Closure] Error creating history entry for project ${projectId}: ${error.message}`);
     } else {
-      logger.info(`[Year-End Closure] Created history entry for ${mis} year-end closure`);
+      logger.info(`[Year-End Closure] Created history entry for project ${projectId} year-end closure`);
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
