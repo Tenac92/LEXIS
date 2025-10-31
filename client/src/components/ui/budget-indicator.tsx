@@ -322,12 +322,25 @@ export function BudgetIndicator({
     q1, q2, q3, q4 
   });
   
+  // Get carried forward amount from sum field (accumulated unspent budget from previous quarters)
+  const carriedForward = budgetData.sum?.carried_forward 
+    ? (typeof budgetData.sum.carried_forward === 'number' 
+      ? budgetData.sum.carried_forward 
+      : parseFloat(budgetData.sum.carried_forward.toString()))
+    : 0;
+  
+  // Get current quarter spent
+  const currentQuarterSpent = typeof budgetData.current_quarter_spent === 'number'
+    ? budgetData.current_quarter_spent
+    : parseFloat(budgetData.current_quarter_spent?.toString() || '0');
+  
   // CORRECT FORMULAS as specified:
   // Διαθέσιμη Κατανομή = katanomes_etous - user_view
   const diathesimiKatanomi = Math.max(0, katanomesEtous - userView);
   
-  // Διαθέσιμο Υπόλοιπο Τριμήνου = (current quarter) - user_view  
-  const diathesimoTriminoυ = Math.max(0, currentQuarterValue - userView);
+  // Διαθέσιμο Υπόλοιπο Τριμήνου = (current quarter allocation + carried forward) - current quarter spent
+  // This properly accounts for accumulated unspent budget from previous quarters
+  const diathesimoTriminoυ = Math.max(0, (currentQuarterValue + carriedForward) - currentQuarterSpent);
   
   // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
   const ypoloipoProsPistosi = Math.max(0, ethsiaPistosi - userView);

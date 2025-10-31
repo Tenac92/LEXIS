@@ -1243,7 +1243,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Extract unique beneficiary IDs
-      const uniqueBeneficiaryIds = [...new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || [])];
+      const uniqueBeneficiaryIds = Array.from(new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []));
       console.log(`[Storage] Found ${uniqueBeneficiaryIds.length} unique beneficiaries for unit ${unit}`);
       
       if (uniqueBeneficiaryIds.length === 0) {
