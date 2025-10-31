@@ -4,6 +4,18 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-10-31: Quarter Transition Logic Fix - Critical Budget Calculation Correction
+Fixed critical bug in quarter transition system where leftover budget was incorrectly calculated using cumulative yearly spending instead of quarterly spending. Changes:
+- Added `current_quarter_spent` column to project_budget table (numeric type for financial precision)
+- Updated `updateProjectBudgetSpending` in storage.ts to track both cumulative year spending (user_view) and current quarter spending (current_quarter_spent)
+- Fixed `updateBudgetQuarter` in schedulerService.ts to calculate leftover transfer amount using `current_quarter_spent` instead of `user_view`
+- Quarter transition now correctly: leftover = quarterBudget - current_quarter_spent (only current quarter's spending, not entire year)
+- Reset `current_quarter_spent` to 0 after each quarter transition and at year-end
+- Fixed `createQuarterChangeHistoryEntry` to use `project_id` instead of `mis` with correct budget_history schema fields
+- Fixed `createYearEndClosureHistoryEntry` to use `project_id` instead of `mis` for proper foreign key relationship
+- Year-end closure now resets three fields: user_view (cumulative spending), current_quarter_spent (quarter spending), and last_quarter_check (quarter marker)
+- Example: If Q1 budget=100€, spent=40€, then Q1 leftover=60€ transfers to Q2 (previously this was incorrectly calculated using cumulative year spending)
+
 ## 2025-10-30: Summary Description Field Integration
 Connected the "Συνοπτική Περιγραφή" (Summary Description) form field to the Projects database. Changes:
 - Added `summary: text("summary")` column to Projects schema in shared/schema.ts
