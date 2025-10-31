@@ -132,13 +132,19 @@ export async function processQuarterTransition(wss?: WebSocketServer, isVerifica
 
 /**
  * Update an individual budget record for quarter transition
+ * 
+ * CRITICAL: Q1, Q2, Q3, Q4 columns contain FIXED budget allocations and should NEVER be modified.
+ * Instead, we track accumulated unspent budget in sum.carried_forward.
+ * 
+ * Formula: new_carried_forward = (current_quarter_allocation + previous_carried_forward) - current_quarter_spent
+ * 
  * @param budget The budget record to update
  * @param newQuarterKey The new quarter key (q1, q2, q3, q4)
  * @param wss WebSocket server for notifications (optional)
  */
 async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3' | 'q4', wss?: WebSocketServer) {
   try {
-    // Get the old quarter key and values
+    // Get the old quarter key
     const oldQuarterKey = budget.last_quarter_check || 'q1';
     
     // Skip if already on the current quarter
@@ -148,37 +154,53 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     
     logger.info(`[Quarter Transition] Updating budget ${budget.mis} from ${oldQuarterKey} to ${newQuarterKey}`);
     
-    // Get quarter values
-    let oldQuarterValue = 0;
-    let newQuarterValue = 0;
+    // Get the FIXED quarter allocation (these columns should never change)
+    let oldQuarterAllocation = 0;
+    let newQuarterAllocation = 0;
     
     switch(oldQuarterKey) {
-      case 'q1': oldQuarterValue = budget.q1 || 0; break;
-      case 'q2': oldQuarterValue = budget.q2 || 0; break;
-      case 'q3': oldQuarterValue = budget.q3 || 0; break;
-      case 'q4': oldQuarterValue = budget.q4 || 0; break;
+      case 'q1': oldQuarterAllocation = parseFloat(String(budget.q1 || 0)); break;
+      case 'q2': oldQuarterAllocation = parseFloat(String(budget.q2 || 0)); break;
+      case 'q3': oldQuarterAllocation = parseFloat(String(budget.q3 || 0)); break;
+      case 'q4': oldQuarterAllocation = parseFloat(String(budget.q4 || 0)); break;
     }
     
     switch(newQuarterKey) {
-      case 'q1': newQuarterValue = budget.q1 || 0; break;
-      case 'q2': newQuarterValue = budget.q2 || 0; break;
-      case 'q3': newQuarterValue = budget.q3 || 0; break;
-      case 'q4': newQuarterValue = budget.q4 || 0; break;
+      case 'q1': newQuarterAllocation = parseFloat(String(budget.q1 || 0)); break;
+      case 'q2': newQuarterAllocation = parseFloat(String(budget.q2 || 0)); break;
+      case 'q3': newQuarterAllocation = parseFloat(String(budget.q3 || 0)); break;
+      case 'q4': newQuarterAllocation = parseFloat(String(budget.q4 || 0)); break;
     }
-    
-    // Apply quarter transition formula: nextQuarter = nextQuarter + (currentQuarter - current_quarter_spent)
-    // Only the UNSPENT portion of the current quarter gets transferred
-    const currentQuarterSpent = parseFloat(String(budget.current_quarter_spent || 0));
-    const transferAmount = Math.max(0, oldQuarterValue - currentQuarterSpent);
-    const updatedNewQuarterValue = newQuarterValue + transferAmount;
-    
-    logger.info(`[Quarter Transition] Budget ${budget.mis}: ${oldQuarterKey} had ${oldQuarterValue}, spent ${currentQuarterSpent}, transferring ${transferAmount} to ${newQuarterKey}`);
     
     // Prepare the sum object if it doesn't exist
     let sumObject = budget.sum || {};
     if (typeof sumObject !== 'object') {
       sumObject = {};
     }
+    
+    // Get previous carried forward amount (default to 0 for Q1)
+    const previousCarriedForward = parseFloat(String(sumObject.carried_forward || 0));
+    
+    // Calculate current quarter spent
+    const currentQuarterSpent = parseFloat(String(budget.current_quarter_spent || 0));
+    
+    // Calculate new carried forward amount
+    // Formula: (current quarter allocation + previous carried forward) - spending
+    const totalAvailable = oldQuarterAllocation + previousCarriedForward;
+    const unspentAmount = Math.max(0, totalAvailable - currentQuarterSpent);
+    const newCarriedForward = unspentAmount;
+    
+    logger.info(`[Quarter Transition] Budget ${budget.mis}:`);
+    logger.info(`  ${oldQuarterKey} allocation: ${oldQuarterAllocation}`);
+    logger.info(`  Previous carried forward: ${previousCarriedForward}`);
+    logger.info(`  Total available: ${totalAvailable}`);
+    logger.info(`  Spent this quarter: ${currentQuarterSpent}`);
+    logger.info(`  Carrying forward to ${newQuarterKey}: ${newCarriedForward}`);
+    logger.info(`  ${newQuarterKey} allocation: ${newQuarterAllocation}`);
+    logger.info(`  Total available in ${newQuarterKey}: ${newCarriedForward + newQuarterAllocation}`);
+    
+    // Update carried forward in sum object
+    sumObject.carried_forward = newCarriedForward;
     
     // Create the quarter change history in the sum object
     if (!sumObject.quarters) {
@@ -187,22 +209,23 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     
     // Record the quarter change
     sumObject.quarters[newQuarterKey] = {
-      previous: oldQuarterValue,
-      new: updatedNewQuarterValue,
-      transferred: transferAmount,
-      changed_at: new Date().toISOString()
+      transition_date: new Date().toISOString(),
+      from_quarter: oldQuarterKey,
+      old_quarter_allocation: oldQuarterAllocation,
+      previous_carried_forward: previousCarriedForward,
+      quarter_spent: currentQuarterSpent,
+      new_carried_forward: newCarriedForward,
+      new_quarter_allocation: newQuarterAllocation,
+      total_available_in_new_quarter: newCarriedForward + newQuarterAllocation
     };
     
-    // Build dynamic update object with the new quarter value
+    // Build update object - IMPORTANT: DO NOT modify q1, q2, q3, q4 columns
     const updateData: any = {
       last_quarter_check: newQuarterKey,
       current_quarter_spent: 0, // Reset quarter spending tracker for new quarter
       sum: sumObject,
       updated_at: new Date().toISOString()
     };
-    
-    // Set the new quarter value
-    updateData[newQuarterKey] = updatedNewQuarterValue;
     
     // Update the budget record
     const { error: updateError } = await supabase
@@ -216,26 +239,31 @@ async function updateBudgetQuarter(budget: any, newQuarterKey: 'q1' | 'q2' | 'q3
     }
     
     // Create a budget history entry for the quarter change
-    await createQuarterChangeHistoryEntry(budget.project_id, oldQuarterKey, newQuarterKey, oldQuarterValue, updatedNewQuarterValue, transferAmount);
+    await createQuarterChangeHistoryEntry(
+      budget.project_id, 
+      oldQuarterKey, 
+      newQuarterKey, 
+      totalAvailable,
+      newCarriedForward + newQuarterAllocation,
+      newCarriedForward
+    );
     
     // Send notification about the quarter change
     if (wss) {
-      // Just send a generic message notification
-      // This will avoid the typing issues with BudgetNotification
       const notificationMessage = {
         type: 'system_message',
-        message: `Αλλαγή Τριμήνου: Το έργο ${budget.mis} μεταφέρθηκε από το τρίμηνο ${oldQuarterKey.toUpperCase()} στο ${newQuarterKey.toUpperCase()}`,
+        message: `Αλλαγή Τριμήνου: Το έργο ${budget.mis} μεταφέρθηκε από το τρίμηνο ${oldQuarterKey.toUpperCase()} στο ${newQuarterKey.toUpperCase()}. Διαθέσιμο υπόλοιπο: €${(newCarriedForward + newQuarterAllocation).toFixed(2)}`,
         timestamp: new Date().toISOString(),
         projectInfo: {
           mis: budget.mis,
           oldQuarter: oldQuarterKey,
           newQuarter: newQuarterKey,
-          oldValue: oldQuarterValue,
-          newValue: newQuarterValue
+          carriedForward: newCarriedForward,
+          newQuarterAllocation: newQuarterAllocation,
+          totalAvailable: newCarriedForward + newQuarterAllocation
         }
       };
       
-      // Send the notification
       broadcastNotification(wss, notificationMessage as any);
     }
     
