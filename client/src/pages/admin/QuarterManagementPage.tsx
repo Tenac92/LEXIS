@@ -54,13 +54,16 @@ import { toast } from '@/hooks/use-toast';
 import { 
   getQuarterTransitionStatus,
   checkQuarterTransition,
-  forceQuarterTransition 
+  forceQuarterTransition,
+  getYearEndClosureStatus,
+  runYearEndClosure
 } from '@/lib/services/adminService';
 import { Header } from '@/components/header';
 
 const QuarterManagementPage: React.FC = () => {
   const [isCheckDialogOpen, setIsCheckDialogOpen] = useState(false);
   const [isForceDialogOpen, setIsForceDialogOpen] = useState(false);
+  const [isYearEndClosureDialogOpen, setIsYearEndClosureDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   
   // Get the current quarter status
@@ -99,6 +102,31 @@ const QuarterManagementPage: React.FC = () => {
     }
   });
   
+  // Get year-end closure status
+  const { 
+    data: yearEndStatus, 
+    isLoading: isYearEndLoading,
+    isError: isYearEndError,
+    error: yearEndError,
+    refetch: refetchYearEndStatus 
+  } = useQuery({
+    queryKey: ['/api/admin/year-end-closure/status'],
+    queryFn: () => getYearEndClosureStatus(),
+  });
+  
+  // Mutation for year-end closure
+  const yearEndClosureMutation = useMutation({
+    mutationFn: runYearEndClosure,
+    onSuccess: () => {
+      setIsYearEndClosureDialogOpen(false);
+      // Wait a bit then refetch status
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/year-end-closure/status'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/admin/quarter-transition/status'] });
+      }, 1000);
+    }
+  });
+  
   // Format date for display
   const formatDate = (dateString: string) => {
     try {
@@ -123,8 +151,10 @@ const QuarterManagementPage: React.FC = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-6">Διαχείριση Τριμήνων</h1>
+        <h1 className="text-3xl font-bold mb-6">Διαχείριση Τριμήνων & Έτους</h1>
       
+      {/* Quarter Management Section */}
+      <h2 className="text-2xl font-semibold mb-4">Διαχείριση Τριμήνων</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Current Status Card */}
         <Card>
@@ -326,6 +356,153 @@ const QuarterManagementPage: React.FC = () => {
               disabled={forceQuarterMutation.isPending}
             >
               {forceQuarterMutation.isPending ? 'Επεξεργασία...' : 'Εκτέλεση Εξαναγκασμένης Αλλαγής'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Year-End Closure Section */}
+      <h2 className="text-2xl font-semibold mb-4 mt-12">Κλείσιμο Έτους</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Year-End Status Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Calendar className="mr-2 h-5 w-5" />
+              Κατάσταση Έτους
+            </CardTitle>
+            <CardDescription>Πληροφορίες για το κλείσιμο του τρέχοντος έτους</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isYearEndLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Hourglass className="mr-2 h-5 w-5 animate-spin" />
+                <span>Φόρτωση...</span>
+              </div>
+            ) : isYearEndError ? (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Σφάλμα</AlertTitle>
+                <AlertDescription>
+                  Δεν ήταν δυνατή η ανάκτηση των πληροφοριών.
+                  {yearEndError instanceof Error && (
+                    <div className="mt-2 text-xs">{yearEndError.message}</div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium">Τρέχον Έτος:</span>
+                  <span className="font-bold">{yearEndStatus?.current_year}</span>
+                </div>
+                <div className="flex justify-between items-center border-b pb-2">
+                  <span className="font-medium">Προγραμματισμένο Κλείσιμο:</span>
+                  <span>{formatDate(yearEndStatus?.next_scheduled_closure || '')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Ημέρες μέχρι το Κλείσιμο:</span>
+                  <span className="font-bold text-lg">{yearEndStatus?.days_until_closure || 0}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={() => refetchYearEndStatus()}
+              disabled={isYearEndLoading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isYearEndLoading ? 'animate-spin' : ''}`} />
+              Ανανέωση
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        {/* Year-End Closure Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center text-purple-600">
+              <AlertTriangle className="mr-2 h-5 w-5" />
+              Εκτέλεση Κλεισίματος Έτους
+            </CardTitle>
+            <CardDescription>Αποθήκευση user_view και επαναφορά για νέο έτος</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm mb-4">
+              Αυτή η λειτουργία θα:
+            </p>
+            <ul className="text-sm mb-4 space-y-2 list-disc list-inside">
+              <li>Αποθηκεύσει την τρέχουσα τιμή user_view στο year_close με το έτος ως κλειδί</li>
+              <li>Επαναφέρει το user_view σε 0</li>
+              <li>Επαναφέρει το τρίμηνο στο Q1</li>
+            </ul>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Προσοχή</AlertTitle>
+              <AlertDescription>
+                Χρησιμοποιήστε αυτή τη λειτουργία μόνο στο τέλος του έτους (31/12).
+                Αυτή η ενέργεια θα επηρεάσει όλα τα έργα στο σύστημα.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant="destructive" 
+              className="w-full"
+              onClick={() => setIsYearEndClosureDialogOpen(true)}
+              disabled={yearEndClosureMutation.isPending}
+              data-testid="button-run-year-end-closure"
+            >
+              {yearEndClosureMutation.isPending ? (
+                <>
+                  <Hourglass className="mr-2 h-4 w-4 animate-spin" />
+                  Επεξεργασία...
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="mr-2 h-4 w-4" />
+                  Εκτέλεση Κλεισίματος Έτους
+                </>
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+      
+      {/* Year-End Closure Dialog */}
+      <Dialog open={isYearEndClosureDialogOpen} onOpenChange={setIsYearEndClosureDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Επιβεβαίωση Κλεισίματος Έτους</DialogTitle>
+            <DialogDescription>
+              ΠΡΟΣΟΧΗ: Αυτή η ενέργεια θα αποθηκεύσει την τρέχουσα τιμή user_view στο year_close,
+              θα επαναφέρει το user_view σε 0, και θα επαναφέρει το τρίμηνο στο Q1 για όλα τα έργα.
+              Είστε βέβαιοι ότι θέλετε να συνεχίσετε;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Μη Αναστρέψιμη Ενέργεια</AlertTitle>
+              <AlertDescription>
+                Αυτή η ενέργεια δεν μπορεί να αναιρεθεί εύκολα. Τα δεδομένα του user_view θα αποθηκευτούν
+                στο year_close και θα επαναφερθούν σε 0. Εκτελέστε αυτή τη λειτουργία μόνο στο τέλος του έτους.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsYearEndClosureDialogOpen(false)}>
+              Ακύρωση
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => yearEndClosureMutation.mutate()}
+              disabled={yearEndClosureMutation.isPending}
+              data-testid="button-confirm-year-end-closure"
+            >
+              {yearEndClosureMutation.isPending ? 'Επεξεργασία...' : 'Εκτέλεση Κλεισίματος Έτους'}
             </Button>
           </DialogFooter>
         </DialogContent>

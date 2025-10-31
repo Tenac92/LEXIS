@@ -34,6 +34,9 @@ export function initializeScheduledTasks(wss?: WebSocketServer) {
   // Runs at 00:01 on Jan 1, Apr 1, Jul 1, and Oct 1
   scheduleQuarterTransition(wss);
   
+  // Schedule year-end closure for Dec 31 23:59:59
+  scheduleYearEndClosure(wss);
+  
   // Also run an immediate check to ensure everything is working
   setTimeout(() => {
     logger.info('[Scheduler] Running initial quarter verification check to ensure system is properly set up');
@@ -301,4 +304,200 @@ export async function manualQuarterTransitionCheck(wss?: WebSocketServer) {
   logger.info('[Quarter Transition] Manual quarter transition check initiated');
   await processQuarterTransition(wss);
   return { success: true, message: 'Quarter transition check completed' };
+}
+
+/**
+ * Schedule the year-end closure task
+ * Runs on Dec 31 at 23:59:59 every year
+ * @param wss WebSocket server for notifications (optional)
+ */
+function scheduleYearEndClosure(wss?: WebSocketServer) {
+  // Run at 23:59:59 on December 31st every year
+  // Cron format: second(0-59) minute(0-59) hour(0-23) day(1-31) month(1-12) weekday(0-6)
+  cron.schedule('59 59 23 31 12 *', async () => {
+    logger.info('[Year-End Closure] Running scheduled year-end closure');
+    await processYearEndClosure(wss);
+  });
+  
+  logger.info('[Scheduler] Year-end closure scheduled for 23:59:59 on December 31st');
+}
+
+/**
+ * Process year-end closure for all budget records
+ * Saves user_view to year_close JSONB with year as key, resets user_view to 0, and resets quarter to q1
+ * @param wss WebSocket server for notifications (optional)
+ */
+export async function processYearEndClosure(wss?: WebSocketServer) {
+  try {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    
+    logger.info(`[Year-End Closure] Processing year-end closure for year ${currentYear}`);
+    
+    // Fetch all budget records
+    const { data: budgets, error: queryError } = await supabase
+      .from('project_budget')
+      .select('id, mis, na853, user_view, year_close, last_quarter_check');
+    
+    if (queryError) {
+      logger.error(`[Year-End Closure] Error querying budgets: ${queryError.message}`);
+      return { success: false, error: queryError.message };
+    }
+    
+    if (!budgets || budgets.length === 0) {
+      logger.info('[Year-End Closure] No budgets found to process');
+      return { success: true, message: 'No budgets to process' };
+    }
+    
+    logger.info(`[Year-End Closure] Processing ${budgets.length} budget records`);
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // Process each budget
+    for (const budget of budgets) {
+      const result = await processYearEndClosureForBudget(budget, currentYear, wss);
+      if (result.success) {
+        successCount++;
+      } else {
+        errorCount++;
+      }
+    }
+    
+    logger.info(`[Year-End Closure] Completed: ${successCount} successful, ${errorCount} errors`);
+    
+    // Send WebSocket notification
+    if (wss) {
+      const notificationMessage = {
+        type: 'system_message',
+        message: `Κλείσιμο Έτους ${currentYear}: Επεξεργάστηκαν ${successCount} προϋπολογισμοί επιτυχώς`,
+        timestamp: new Date().toISOString(),
+        yearEndInfo: {
+          year: currentYear,
+          totalProcessed: budgets.length,
+          successful: successCount,
+          errors: errorCount
+        }
+      };
+      
+      broadcastNotification(wss, notificationMessage as any);
+    }
+    
+    return { 
+      success: true, 
+      message: 'Year-end closure completed',
+      stats: {
+        year: currentYear,
+        totalProcessed: budgets.length,
+        successful: successCount,
+        errors: errorCount
+      }
+    };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`[Year-End Closure] Error in year-end closure process: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Process year-end closure for a single budget record
+ * @param budget The budget record to process
+ * @param year The year being closed
+ * @param wss WebSocket server for notifications (optional)
+ */
+async function processYearEndClosureForBudget(budget: any, year: number, wss?: WebSocketServer) {
+  try {
+    const userView = budget.user_view || 0;
+    
+    // Skip if user_view is 0
+    if (userView === 0) {
+      logger.info(`[Year-End Closure] Budget ${budget.mis}: user_view is 0, skipping`);
+      return { success: true, skipped: true };
+    }
+    
+    logger.info(`[Year-End Closure] Processing budget ${budget.mis}: saving user_view ${userView} for year ${year}`);
+    
+    // Prepare year_close object
+    let yearCloseObject = budget.year_close || {};
+    if (typeof yearCloseObject !== 'object') {
+      yearCloseObject = {};
+    }
+    
+    // Add current year's user_view to year_close
+    yearCloseObject[year.toString()] = userView;
+    
+    // Update the budget record: save user_view to year_close, reset user_view to 0, reset quarter to q1
+    const { error: updateError } = await supabase
+      .from('project_budget')
+      .update({
+        year_close: yearCloseObject,
+        user_view: 0,
+        last_quarter_check: 'q1',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', budget.id);
+    
+    if (updateError) {
+      logger.error(`[Year-End Closure] Error updating budget ${budget.mis}: ${updateError.message}`);
+      return { success: false, error: updateError.message };
+    }
+    
+    // Create a history entry
+    await createYearEndClosureHistoryEntry(budget.mis, year, userView);
+    
+    logger.info(`[Year-End Closure] Successfully processed budget ${budget.mis}`);
+    
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`[Year-End Closure] Error processing budget ${budget.mis}: ${errorMessage}`);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Create a history entry for the year-end closure
+ * @param mis Project MIS
+ * @param year Year being closed
+ * @param closedAmount Amount saved to year_close
+ */
+async function createYearEndClosureHistoryEntry(mis: string | number, year: number, closedAmount: number) {
+  try {
+    const { error } = await supabase
+      .from('budget_history')
+      .insert({
+        mis: mis,
+        change_type: 'year_end_closure',
+        amount: closedAmount,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          year: year,
+          closed_amount: closedAmount,
+          operation_type: 'year_end_closure',
+          reset_quarter: 'q1',
+          reset_user_view: true
+        }
+      });
+    
+    if (error) {
+      logger.error(`[Year-End Closure] Error creating history entry for ${mis}: ${error.message}`);
+    } else {
+      logger.info(`[Year-End Closure] Created history entry for ${mis} year-end closure`);
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`[Year-End Closure] Error creating history: ${errorMessage}`);
+  }
+}
+
+/**
+ * Run a manual year-end closure
+ * This can be triggered from an admin API endpoint
+ * @param wss WebSocket server for notifications (optional)
+ */
+export async function manualYearEndClosure(wss?: WebSocketServer) {
+  logger.info('[Year-End Closure] Manual year-end closure initiated');
+  const result = await processYearEndClosure(wss);
+  return result;
 }
