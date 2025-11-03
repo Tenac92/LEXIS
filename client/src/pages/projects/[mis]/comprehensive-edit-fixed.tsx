@@ -428,7 +428,7 @@ const comprehensiveProjectSchema = z.object({
             // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
             // Added boundary_budget; renamed decision_type to action_type
             version_number: z.coerce.string().default("1.0"),
-            boundary_budget: z.number().optional(), // Προϋπολογισμός Οριοθέτησης
+            boundary_budget: z.string().default(""), // Προϋπολογισμός Οριοθέτησης (stored as string for better form handling)
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
@@ -1159,7 +1159,7 @@ export default function ComprehensiveEditFixed() {
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
 
-          // Budget fields - take latest boundary_budget from PDE versions
+          // Budget fields - take latest boundary_budget from PDE versions and parse to number
           budget_e069: (() => {
             const formEntry = data.formulation_details.find(
               (f) => f.sa === "E069",
@@ -1168,11 +1168,12 @@ export default function ComprehensiveEditFixed() {
               // Take the latest (last) non-null boundary_budget
               for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
                 const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null) {
+                if (boundary !== undefined && boundary !== null && boundary !== "") {
+                  const parsed = parseEuropeanNumber(boundary);
                   console.log(
-                    `Budget E069: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                    `Budget E069: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
                   );
-                  return boundary;
+                  return parsed;
                 }
               }
             }
@@ -1186,11 +1187,12 @@ export default function ComprehensiveEditFixed() {
               // Take the latest (last) non-null boundary_budget
               for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
                 const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null) {
+                if (boundary !== undefined && boundary !== null && boundary !== "") {
+                  const parsed = parseEuropeanNumber(boundary);
                   console.log(
-                    `Budget ΝΑ271: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                    `Budget ΝΑ271: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
                   );
-                  return boundary;
+                  return parsed;
                 }
               }
             }
@@ -1204,11 +1206,12 @@ export default function ComprehensiveEditFixed() {
               // Take the latest (last) non-null boundary_budget
               for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
                 const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null) {
+                if (boundary !== undefined && boundary !== null && boundary !== "") {
+                  const parsed = parseEuropeanNumber(boundary);
                   console.log(
-                    `Budget ΝΑ853: latest boundary_budget from version ${i + 1} -> ${boundary}`,
+                    `Budget ΝΑ853: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
                   );
-                  return boundary;
+                  return parsed;
                 }
               }
             }
@@ -1371,7 +1374,24 @@ export default function ComprehensiveEditFixed() {
               sa: formulation.sa,
               enumeration_code: formulation.enumeration_code,
               decision_year: formulation.decision_year,
-              budget_versions: formulation.budget_versions,
+              budget_versions: {
+                pde: formulation.budget_versions.pde.map(pde => ({
+                  ...pde,
+                  boundary_budget: parseEuropeanNumber(pde.boundary_budget || "")
+                })),
+                epa: formulation.budget_versions.epa.map(epa => ({
+                  ...epa,
+                  financials: epa.financials?.map(fin => ({
+                    ...fin,
+                    total_public_expense: typeof fin.total_public_expense === 'string' 
+                      ? parseEuropeanNumber(fin.total_public_expense) 
+                      : fin.total_public_expense,
+                    eligible_public_expense: typeof fin.eligible_public_expense === 'string'
+                      ? parseEuropeanNumber(fin.eligible_public_expense)
+                      : fin.eligible_public_expense
+                  })) || []
+                }))
+              },
               decision_status: formulation.decision_status,
               change_type: formulation.change_type,
               comments: formulation.comments,
@@ -2042,7 +2062,9 @@ export default function ComprehensiveEditFixed() {
                 budget_versions: {
                   pde: formulation.budget_versions?.pde?.map((pde: any) => ({
                     ...pde,
-                    boundary_budget: pde.boundary_budget,
+                    boundary_budget: pde.boundary_budget !== null && pde.boundary_budget !== undefined
+                      ? formatEuropeanNumber(pde.boundary_budget)
+                      : "",
                     comments: pde.comments || "",
                   })) || [],
                   epa: formulation.budget_versions?.epa?.map((epa: any) => ({
@@ -2072,7 +2094,7 @@ export default function ComprehensiveEditFixed() {
                 budget_versions: {
                   pde: typedProjectData.budget_na853 ? [{
                     version_number: "1.0",
-                    boundary_budget: typedProjectData.budget_na853,
+                    boundary_budget: formatEuropeanNumber(typedProjectData.budget_na853),
                     protocol_number: "",
                     ada: "",
                     decision_date: "",
@@ -2097,7 +2119,7 @@ export default function ComprehensiveEditFixed() {
                       budget_versions: {
                         pde: typedProjectData.budget_na271 ? [{
                           version_number: "1.0",
-                          boundary_budget: typedProjectData.budget_na271,
+                          boundary_budget: formatEuropeanNumber(typedProjectData.budget_na271),
                           protocol_number: "",
                           ada: "",
                           decision_date: "",
@@ -2124,7 +2146,7 @@ export default function ComprehensiveEditFixed() {
                       budget_versions: {
                         pde: typedProjectData.budget_e069 ? [{
                           version_number: "1.0",
-                          boundary_budget: typedProjectData.budget_e069,
+                          boundary_budget: formatEuropeanNumber(typedProjectData.budget_e069),
                           protocol_number: "",
                           ada: "",
                           decision_date: "",
@@ -4021,10 +4043,10 @@ export default function ComprehensiveEditFixed() {
                                                     <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
                                                     <FormControl>
                                                       <Input 
-                                                        value={field.value !== undefined && field.value !== null ? formatEuropeanNumber(field.value) : ""}
+                                                        {...field}
                                                         onChange={(e) => {
-                                                          const parsed = parseEuropeanNumber(e.target.value);
-                                                          field.onChange(parsed);
+                                                          const formatted = formatNumberWhileTyping(e.target.value);
+                                                          field.onChange(formatted);
                                                         }}
                                                         placeholder="π.χ. 1.500.000,00" 
                                                       />
