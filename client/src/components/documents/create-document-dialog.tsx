@@ -1997,24 +1997,30 @@ export function CreateDocumentDialog({
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
-      const invalidRecipients = data.recipients.some((r, index) => {
-        // For ΕΚΤΟΣ ΕΔΡΑΣ, skip installments validation since it uses employee-based payments
+      // Detailed validation for each recipient
+      for (let index = 0; index < data.recipients.length; index++) {
+        const r = data.recipients[index];
         const isEktosEdras = data.expenditure_type === EKTOS_EDRAS_TYPE;
 
-        const isInvalid =
-          !r.firstname ||
-          !r.lastname ||
-          !r.afm ||
-          typeof r.amount !== "number" ||
-          (!isEktosEdras && (!r.installments || r.installments.length === 0));
-
-        if (isInvalid) {
-          devLog("ValidationFail", `Recipient ${index} invalid fields`);
+        // Check required fields with specific error messages
+        if (!r.firstname || r.firstname.trim() === "") {
+          throw new Error(`Δικαιούχος #${index + 1}: Το όνομα είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`);
         }
-        return isInvalid;
-      });
-      if (invalidRecipients) {
-        throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
+        if (!r.lastname || r.lastname.trim() === "") {
+          throw new Error(`Δικαιούχος #${index + 1}: Το επώνυμο είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`);
+        }
+        if (!r.afm || r.afm.trim() === "") {
+          throw new Error(`Δικαιούχος #${index + 1}: Το ΑΦΜ είναι υποχρεωτικό.`);
+        }
+        if (r.afm.trim().length !== 9) {
+          throw new Error(`Δικαιούχος #${index + 1}: Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία.`);
+        }
+        if (typeof r.amount !== "number" || r.amount <= 0) {
+          throw new Error(`Δικαιούχος #${index + 1}: Το ποσό πρέπει να είναι μεγαλύτερο από 0.`);
+        }
+        if (!isEktosEdras && (!r.installments || r.installments.length === 0)) {
+          throw new Error(`Δικαιούχος #${index + 1}: Πρέπει να επιλέξετε τουλάχιστον μία δόση.`);
+        }
       }
 
       // Validate that all installments are in sequence (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
@@ -2051,40 +2057,58 @@ export function CreateDocumentDialog({
       // Validate that all installments have amounts entered (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
       if (data.expenditure_type !== EKTOS_EDRAS_TYPE) {
         console.log("[HandleSubmit] Checking installment amounts...");
-        const missingInstallmentAmounts = data.recipients.some(
-          (recipient, index) => {
+        
+        // Find recipients with missing installment amounts
+        const recipientsWithMissingAmounts: { index: number; missingInstallments: string[] }[] = [];
+        
+        data.recipients.forEach((recipient, index) => {
+          console.log(
+            `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
+            {
+              installments: recipient.installments,
+              installmentAmounts: recipient.installmentAmounts,
+            },
+          );
+          
+          const missingInstallments: string[] = [];
+          recipient.installments.forEach((installment) => {
+            const hasAmount = 
+              recipient.installmentAmounts &&
+              typeof recipient.installmentAmounts[installment] === "number" &&
+              recipient.installmentAmounts[installment] > 0;
+            
             console.log(
-              `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
+              `[HandleSubmit] Installment ${installment} validation:`,
               {
-                installments: recipient.installments,
-                installmentAmounts: recipient.installmentAmounts,
+                hasAmounts: !!recipient.installmentAmounts,
+                value: recipient.installmentAmounts?.[installment],
+                type: typeof recipient.installmentAmounts?.[installment],
+                hasAmount: hasAmount,
               },
             );
-            return recipient.installments.some((installment) => {
-              const isInvalid =
-                !recipient.installmentAmounts ||
-                typeof recipient.installmentAmounts[installment] !== "number" ||
-                recipient.installmentAmounts[installment] <= 0;
-              console.log(
-                `[HandleSubmit] Installment ${installment} validation:`,
-                {
-                  hasAmounts: !!recipient.installmentAmounts,
-                  value: recipient.installmentAmounts?.[installment],
-                  type: typeof recipient.installmentAmounts?.[installment],
-                  isInvalid: isInvalid,
-                },
-              );
-              return isInvalid;
-            });
-          },
-        );
+            
+            if (!hasAmount) {
+              missingInstallments.push(installment);
+            }
+          });
+          
+          if (missingInstallments.length > 0) {
+            recipientsWithMissingAmounts.push({ index, missingInstallments });
+          }
+        });
 
         console.log(
-          "[HandleSubmit] Missing installment amounts:",
-          missingInstallmentAmounts,
+          "[HandleSubmit] Recipients with missing amounts:",
+          recipientsWithMissingAmounts,
         );
-        if (missingInstallmentAmounts) {
-          throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
+        
+        if (recipientsWithMissingAmounts.length > 0) {
+          const firstMissing = recipientsWithMissingAmounts[0];
+          const recipientName = `${data.recipients[firstMissing.index].firstname} ${data.recipients[firstMissing.index].lastname}`;
+          const missingList = firstMissing.missingInstallments.join(", ");
+          throw new Error(
+            `Ο δικαιούχος "${recipientName}" έχει επιλεγμένες δόσεις χωρίς ποσά: ${missingList}. Παρακαλώ συμπληρώστε το ποσό για κάθε δόση.`
+          );
         }
       }
 
@@ -2226,19 +2250,24 @@ export function CreateDocumentDialog({
             const quarterNumbers = r.installments.map((q) =>
               q.replace("ΤΡΙΜΗΝΟ ", ""),
             );
+            
+            // Rebuild installmentAmounts from ONLY the selected installments
+            // This prevents stale data from previously selected but now unselected installments
             const quarterAmountsWithNumbers: Record<string, number> = {};
-
-            // Map quarter amounts to numeric keys
-            Object.entries(r.installmentAmounts).forEach(([key, value]) => {
-              const quarterNum = key.replace("ΤΡΙΜΗΝΟ ", "");
-              quarterAmountsWithNumbers[quarterNum] = value;
+            r.installments.forEach((installment) => {
+              const quarterNum = installment.replace("ΤΡΙΜΗΝΟ ", "");
+              const amount = r.installmentAmounts?.[installment];
+              if (typeof amount === "number" && amount > 0) {
+                quarterAmountsWithNumbers[quarterNum] = amount;
+              }
             });
 
             // For housing allowance, use numeric quarter format for storage
+            // Validation ensures firstname, lastname, afm are present, so trim() is safe
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
-              fathername: r.fathername.trim(),
+              fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
               amount: quarterTotal,
               secondary_text: r.secondary_text?.trim() || "",
@@ -2253,10 +2282,11 @@ export function CreateDocumentDialog({
 
           // For ΕΚΤΟΣ ΕΔΡΑΣ, include employee-based payment fields
           if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
+            // Validation ensures firstname, lastname, afm are present, so trim() is safe
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
-              fathername: r.fathername.trim(),
+              fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
               employee_id: r.employee_id,
               month: r.month,
@@ -2265,7 +2295,7 @@ export function CreateDocumentDialog({
               accommodation_expenses: r.accommodation_expenses || 0,
               kilometers_traveled: r.kilometers_traveled || 0,
               tickets_tolls_rental: r.tickets_tolls_rental || 0,
-              net_payable: r.net_payable || parseFloat(r.amount.toString()),
+              net_payable: r.net_payable !== undefined && r.net_payable !== null ? r.net_payable : parseFloat(r.amount.toString()),
               amount: parseFloat(r.amount.toString()),
               secondary_text: r.secondary_text?.trim() || "",
               installment:
@@ -2273,15 +2303,21 @@ export function CreateDocumentDialog({
                 (r.installments && r.installments[0]) ||
                 "ΕΦΑΠΑΞ",
               installments: r.installments,
-              installmentAmounts: r.installmentAmounts || {},
+              // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
+              installmentAmounts: Object.fromEntries(
+                r.installments
+                  .map(inst => [inst, r.installmentAmounts?.[inst]])
+                  .filter(([, amount]) => typeof amount === "number" && amount > 0)
+              ),
             };
           }
 
           // Standard structure for other expenditure types
+          // Validation ensures firstname, lastname, afm are present, so trim() is safe
           return {
             firstname: r.firstname.trim(),
             lastname: r.lastname.trim(),
-            fathername: r.fathername.trim(),
+            fathername: r.fathername?.trim() || "",
             afm: r.afm.trim(),
             amount: parseFloat(r.amount.toString()),
             secondary_text: r.secondary_text?.trim() || "",
@@ -2290,7 +2326,12 @@ export function CreateDocumentDialog({
               (r.installments && r.installments[0]) ||
               "ΕΦΑΠΑΞ",
             installments: r.installments,
-            installmentAmounts: r.installmentAmounts || {},
+            // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
+            installmentAmounts: Object.fromEntries(
+              r.installments
+                .map(inst => [inst, r.installmentAmounts?.[inst]])
+                .filter(([, amount]) => typeof amount === "number" && amount > 0)
+            ),
           };
         }),
         total_amount: totalAmount,
