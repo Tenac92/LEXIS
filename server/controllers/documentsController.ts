@@ -927,15 +927,16 @@ router.post(
           } 
           // Standard flow: Create beneficiary payment
           else {
-            // Step 1: Look up or create beneficiary
+            // Step 1: Look up or create/update beneficiary
             let beneficiaryId = null;
           try {
-            // Find existing beneficiary by AFM (keep as string to preserve leading zeros)
+            // Find existing beneficiary by AFM hash (since AFM is encrypted)
+            const afmHash = hashAFM(recipient.afm);
             const { data: existingBeneficiary, error: findError } =
               await supabase
                 .from("beneficiaries")
                 .select("id")
-                .eq("afm", recipient.afm)
+                .eq("afm_hash", afmHash)
                 .single();
 
             if (existingBeneficiary) {
@@ -946,11 +947,34 @@ router.post(
                 "for AFM:",
                 recipient.afm,
               );
+              
+              // Update beneficiary with latest details
+              const { error: updateError } = await supabase
+                .from("beneficiaries")
+                .update({
+                  surname: recipient.lastname,
+                  name: recipient.firstname,
+                  fathername: recipient.fathername,
+                  updated_at: now,
+                })
+                .eq("id", beneficiaryId);
+              
+              if (updateError) {
+                console.error(
+                  "[DocumentsController] V2 Error updating beneficiary:",
+                  updateError,
+                );
+              } else {
+                console.log(
+                  "[DocumentsController] V2 Updated beneficiary details for:",
+                  beneficiaryId,
+                );
+              }
             } else if (findError && findError.code === "PGRST116") {
               // Beneficiary not found, create new one
               const newBeneficiary = {
                 afm: encryptAFM(recipient.afm), // Encrypt AFM for security
-                afm_hash: hashAFM(recipient.afm), // Generate hash for search
+                afm_hash: afmHash, // Use the hash we already computed
                 surname: recipient.lastname,
                 name: recipient.firstname,
                 fathername: recipient.fathername,
