@@ -2517,27 +2517,45 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
 
       // Create new beneficiary payments
       for (const recipient of recipients) {
-        // First, try to find or create beneficiary
+        // First, try to find or create/update beneficiary
         let beneficiaryId: number | null = null;
 
         if (recipient.afm) {
+          // Search by AFM hash (since AFM is encrypted)
+          const afmHash = hashAFM(recipient.afm);
           const { data: existingBeneficiary } = await supabase
             .from("beneficiaries")
             .select("id")
-            .eq("afm", recipient.afm)
+            .eq("afm_hash", afmHash)
             .single();
 
           if (existingBeneficiary) {
             beneficiaryId = existingBeneficiary.id;
-          } else {
-            // Create new beneficiary
-            const { data: newBeneficiary } = await supabase
+            
+            // Update beneficiary with latest details
+            await supabase
               .from("beneficiaries")
-              .insert({
-                afm: recipient.afm,
+              .update({
                 name: recipient.firstname,
                 surname: recipient.lastname,
                 fathername: recipient.fathername || null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", beneficiaryId);
+          } else {
+            // Create new beneficiary with encrypted AFM
+            const { data: newBeneficiary } = await supabase
+              .from("beneficiaries")
+              .insert({
+                afm: encryptAFM(recipient.afm),
+                afm_hash: afmHash,
+                name: recipient.firstname,
+                surname: recipient.lastname,
+                fathername: recipient.fathername || null,
+                region: "1",
+                date: new Date().toISOString().split("T")[0],
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
               })
               .select("id")
               .single();
