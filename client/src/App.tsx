@@ -11,7 +11,7 @@ import ProjectsPage from "@/pages/projects";
 import NewProjectPage from "@/pages/projects/new";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
 import EditProjectPage from "@/pages/projects/[mis]/edit";
-import ComprehensiveEditProjectPage from "@/pages/projects/[mis]/comprehensive-edit-fixed";
+import ComprehensiveEditProjectPage from "@/pages/projects/[mis]/ComprehensiveEditFixed";
 import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
 import BeneficiariesPage from "@/pages/beneficiaries-page";
@@ -43,10 +43,22 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/templates" component={TemplatesPage} />
         {/* Order matters: more specific routes should come first */}
         <ProtectedRoute path="/projects/new" component={NewProjectPage} />
-        <ProtectedRoute path="/projects/:id/comprehensive-edit-fixed" component={ComprehensiveEditProjectPage} />
-        <ProtectedRoute path="/projects/:id/comprehensive-edit-new" component={ComprehensiveEditProjectPage} />
-        <ProtectedRoute path="/projects/:id/comprehensive-edit" component={ComprehensiveEditProjectPage} />
-        <ProtectedRoute path="/projects/:id/edit" component={ComprehensiveEditProjectPage} />
+        <ProtectedRoute
+          path="/projects/:id/comprehensive-edit-fixed"
+          component={ComprehensiveEditProjectPage}
+        />
+        <ProtectedRoute
+          path="/projects/:id/comprehensive-edit-new"
+          component={ComprehensiveEditProjectPage}
+        />
+        <ProtectedRoute
+          path="/projects/:id/comprehensive-edit"
+          component={ComprehensiveEditProjectPage}
+        />
+        <ProtectedRoute
+          path="/projects/:id/edit"
+          component={ComprehensiveEditProjectPage}
+        />
         <ProtectedRoute path="/projects/:id" component={ProjectDetailsPage} />
         <ProtectedRoute path="/projects" component={ProjectsPage} />
         <ProtectedRoute path="/users" component={UsersPage} />
@@ -55,10 +67,22 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/budget/history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/notifications" component={NotificationsPage} />
-        <ProtectedRoute path="/admin/notifications" component={AdminNotificationsPage} />
-        <ProtectedRoute path="/admin/budget-upload" component={AdminBudgetUploadPage} />
-        <ProtectedRoute path="/admin/budget-monitoring" component={BudgetMonitoringPage} />
-        <ProtectedRoute path="/admin/quarter-management" component={() => <QuarterManagementPage />} />
+        <ProtectedRoute
+          path="/admin/notifications"
+          component={AdminNotificationsPage}
+        />
+        <ProtectedRoute
+          path="/admin/budget-upload"
+          component={AdminBudgetUploadPage}
+        />
+        <ProtectedRoute
+          path="/admin/budget-monitoring"
+          component={BudgetMonitoringPage}
+        />
+        <ProtectedRoute
+          path="/admin/quarter-management"
+          component={() => <QuarterManagementPage />}
+        />
 
         <Route path="/auth" component={AuthPage} />
         <Route component={NotFound} />
