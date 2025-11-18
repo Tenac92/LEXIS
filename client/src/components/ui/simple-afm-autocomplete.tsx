@@ -139,13 +139,13 @@ export function SimpleAFMAutocomplete({
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!debouncedSearchTerm || debouncedSearchTerm.length < 3) return [];
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Employee search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: useEmployeeData && debouncedSearchTerm.length >= 3,
+    enabled: useEmployeeData && debouncedSearchTerm.length >= 4,
     staleTime: 30 * 1000, // Cache for 30 seconds to reduce API calls while staying fresh
     gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
   });
@@ -154,14 +154,14 @@ export function SimpleAFMAutocomplete({
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', debouncedSearchTerm],
     queryFn: async () => {
-      if (!debouncedSearchTerm || debouncedSearchTerm.length < 3) return [];
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       // Fast search without financial data for instant autocomplete
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
       console.log(`[SimpleAFM] Beneficiary search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
-    enabled: !useEmployeeData && debouncedSearchTerm.length >= 3,
+    enabled: !useEmployeeData && debouncedSearchTerm.length >= 4,
     staleTime: 30 * 1000, // Cache for 30 seconds to reduce API calls while staying fresh
     gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
   });
@@ -334,8 +334,8 @@ export function SimpleAFMAutocomplete({
     // Notify parent component when user types
     onChange?.(numericValue);
     
-    // Show dropdown when user types at least 3 characters
-    if (numericValue.length >= 3) {
+    // Show dropdown when user types at least 4 characters
+    if (numericValue.length >= 4) {
       setShowDropdown(true);
     } else {
       setShowDropdown(false);
@@ -351,7 +351,7 @@ export function SimpleAFMAutocomplete({
           placeholder={placeholder}
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => searchTerm.length >= 3 && setShowDropdown(true)}
+          onFocus={() => searchTerm.length >= 4 && setShowDropdown(true)}
           disabled={disabled}
           className="w-full pr-8"
           data-testid="input-afm-search"
@@ -368,7 +368,7 @@ export function SimpleAFMAutocomplete({
       </div>
       
       {/* Dropdown results */}
-      {showDropdown && searchTerm.length >= 3 && (
+      {showDropdown && searchTerm.length >= 4 && (
         <div 
           ref={dropdownRef}
           className="absolute z-50 min-w-full w-[500px] mt-1 bg-popover border border-border rounded-md shadow-lg max-h-[400px] overflow-auto"
@@ -380,8 +380,8 @@ export function SimpleAFMAutocomplete({
             </div>
           ) : searchResults.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              {searchTerm.length < 3 ? (
-                "Πληκτρολογήστε τουλάχιστον 3 χαρακτήρες"
+              {searchTerm.length < 4 ? (
+                "Πληκτρολογήστε τουλάχιστον 4 χαρακτήρες"
               ) : (
                 "Δεν βρέθηκαν αποτελέσματα"
               )}
