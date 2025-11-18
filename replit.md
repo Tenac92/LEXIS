@@ -4,14 +4,30 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
-## 2025-11-18: AFM Autocomplete Performance Optimization
-Improved the responsiveness of AFM (Greek Tax ID) autocomplete functionality without sacrificing search accuracy. Changes:
-- **Frontend (SimpleAFMAutocomplete)**: Reduced debounce delay from 300ms to 150ms for 50% faster response time
-- **Frontend**: Added 30-second query cache with TanStack Query (staleTime: 30s, gcTime: 2min) to make repeat searches instant
-- **Frontend**: Kept 4-character minimum requirement to ensure complete search coverage given AFM encryption constraints
-- **Backend**: Maintained original record limits (500 employees, 1000 beneficiaries) to prevent missing valid matches
-- **Constraint**: AFM encryption prevents server-side prefix filtering, requiring client-side decryption of fetched records
-- **Result**: Faster perceived performance through debounce reduction and intelligent caching while maintaining search accuracy
+## 2025-11-18: AFM Autocomplete Performance Optimization - Phase 2
+Comprehensive performance improvements for AFM search addressing both database indexing and decryption efficiency. Changes:
+
+**Database Indexing (Critical - Requires Manual SQL Execution):**
+- Schema already defines btree indexes on `afm_hash` columns for both tables
+- Indexes must be created in Supabase SQL editor using `CREATE INDEX CONCURRENTLY`
+- Once indexes exist, exact 9-digit AFM searches will be instant (O(log n) vs O(n) sequential scan)
+
+**Backend Optimizations (searchEmployeesByAFM and searchBeneficiariesByAFM):**
+- Reduced selected columns to only essential fields (id, afm, afm_hash, surname, name, fathername, etc.) - faster network transfer
+- Reduced batch sizes: Employees 500→200, Beneficiaries 1000→300 - less data to decrypt
+- Implemented early exit logic: stops decryption after finding 20 (employees) or 100 (beneficiaries) matches
+- Decryption now happens incrementally with immediate exit, not map-then-filter pattern
+
+**Frontend Optimizations (from Phase 1):**
+- Reduced debounce delay from 300ms to 150ms for 50% faster response
+- Added 30-second query cache with TanStack Query to make repeat searches instant
+- Kept 4-character minimum to ensure coverage given encryption constraints
+
+**Constraint:** AFM encryption prevents server-side prefix filtering, requiring client-side decryption
+
+**Expected Performance:**
+- Exact 9-digit searches: 24-50s → <500ms (with indexes)
+- Partial 4-8 digit searches: 25-50s → 2-5s (backend optimization + early exit)
 
 ## 2025-10-31: Quarter Transition Logic Fix - Critical Budget Calculation Correction
 Fixed critical bug in quarter transition system where leftover budget was incorrectly calculated using cumulative yearly spending instead of quarterly spending. Changes:
