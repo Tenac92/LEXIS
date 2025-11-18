@@ -2243,7 +2243,122 @@ router.get("/:id", async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Access denied to this document" });
     }
 
-    res.json(document);
+    // Enrich document with project and expenditure type information
+    let unitInfo: any = null;
+    let projectInfo: any = null;
+    let expenditureTypeInfo: any = null;
+
+    // Fetch unit information
+    if (document.unit_id) {
+      try {
+        const { data: unitData, error: unitError } = await supabase
+          .from("Monada")
+          .select("id, unit, unit_name")
+          .eq("id", document.unit_id)
+          .single();
+
+        if (!unitError && unitData) {
+          unitInfo = unitData;
+        }
+      } catch (err) {
+        console.error("Error fetching unit info for document", document.id, ":", err);
+      }
+    }
+
+    // Fetch project information via project_index
+    if (document.project_index_id) {
+      try {
+        const { data: indexData, error: indexError } = await supabase
+          .from("project_index")
+          .select(`
+            *,
+            Projects (
+              id,
+              mis,
+              na853,
+              project_title,
+              event_description
+            )
+          `)
+          .eq("id", document.project_index_id)
+          .single();
+
+        if (!indexError && indexData && indexData.Projects) {
+          projectInfo = indexData.Projects;
+
+          // Fetch expenditure type from project_index
+          if (indexData.expenditure_type_id) {
+            const { data: expTypeData, error: expTypeError } = await supabase
+              .from("expenditure_types")
+              .select("expenditure_types")
+              .eq("id", indexData.expenditure_type_id)
+              .single();
+
+            if (!expTypeError && expTypeData) {
+              expenditureTypeInfo = { name: expTypeData.expenditure_types };
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching project info for document", document.id, ":", err);
+      }
+    }
+
+    // Fallback: Try to get expenditure type from attachments if not found via project_index
+    if (
+      !expenditureTypeInfo &&
+      document.attachment_id &&
+      Array.isArray(document.attachment_id) &&
+      document.attachment_id.length > 0
+    ) {
+      try {
+        const { data: attachmentData, error: attachmentError } = await supabase
+          .from("attachments")
+          .select("expenditure_type_id")
+          .in("id", document.attachment_id)
+          .limit(1);
+
+        if (
+          !attachmentError &&
+          attachmentData &&
+          attachmentData.length > 0 &&
+          attachmentData[0].expenditure_type_id
+        ) {
+          const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id)
+            ? attachmentData[0].expenditure_type_id
+            : [attachmentData[0].expenditure_type_id];
+
+          if (expenditureTypeIds.length > 0) {
+            const { data: expTypeData, error: expTypeError } = await supabase
+              .from("expenditure_types")
+              .select("expenditure_types")
+              .eq("id", expenditureTypeIds[0])
+              .single();
+
+            if (!expTypeError && expTypeData) {
+              expenditureTypeInfo = { name: expTypeData.expenditure_types };
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching expenditure type from attachments for document", document.id, ":", err);
+      }
+    }
+
+    // Return enriched document
+    const enrichedDocument = {
+      ...document,
+      unit: unitInfo?.unit || "",
+      unit_name: unitInfo?.unit_name || "",
+      project_id: (projectInfo as any)?.mis || "",
+      mis: (projectInfo as any)?.mis || "",
+      project_na853: (projectInfo as any)?.na853 || "",
+      project_title: (projectInfo as any)?.project_title || "",
+      event_description: (projectInfo as any)?.event_description || "",
+      expenditure_type: expenditureTypeInfo?.name || "",
+    };
+
+    res.json(enrichedDocument);
   } catch (error) {
     console.error("Error fetching document:", error);
     res.status(500).json({
