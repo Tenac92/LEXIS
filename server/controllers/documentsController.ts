@@ -3205,6 +3205,51 @@ router.get(
   },
 );
 
+// GET /api/documents/search - Search documents by AFM (encrypted search via hash)
+router.get(
+  "/search",
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { afm } = req.query;
+      
+      if (!afm || typeof afm !== 'string') {
+        return res.status(400).json({
+          message: 'Το ΑΦΜ είναι υποχρεωτικό για την αναζήτηση'
+        });
+      }
+      
+      if (!/^\d{9}$/.test(afm)) {
+        return res.status(400).json({
+          message: 'Το ΑΦΜ πρέπει να περιέχει ακριβώς 9 ψηφία'
+        });
+      }
+      
+      // SECURITY: Get user's authorized units
+      const userUnits = req.user?.unit_id || [];
+      if (userUnits.length === 0) {
+        return res.status(403).json({
+          message: 'Δεν έχετε εκχωρημένες μονάδες'
+        });
+      }
+      
+      console.log(`[DocumentsController] Searching documents by AFM for units:`, userUnits);
+      
+      // Use storage method to search documents by AFM hash
+      const documents = await storage.searchDocumentsByAFM(afm, userUnits);
+      
+      console.log(`[DocumentsController] Found ${documents.length} documents matching AFM: ${afm}`);
+      res.json(documents);
+    } catch (error) {
+      console.error('[DocumentsController] Error searching documents by AFM:', error);
+      res.status(500).json({
+        message: 'Αποτυχία αναζήτησης εγγράφων',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+);
+
 // GET /api/documents/:id/beneficiaries - Get beneficiary or employee payments for a document
 router.get(
   "/:id/beneficiaries",

@@ -60,6 +60,9 @@ export interface IStorage {
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
   deleteBeneficiary(id: number): Promise<void>;
   
+  // Document search operations - SECURITY: Searches encrypted AFM via hash
+  searchDocumentsByAFM(afm: string, userUnits: number[]): Promise<GeneratedDocument[]>;
+  
   // Beneficiary Payment operations - for normalized structure
   getBeneficiaryPayments(beneficiaryId: number): Promise<BeneficiaryPayment[]>;
   createBeneficiaryPayment(payment: InsertBeneficiaryPayment): Promise<BeneficiaryPayment>;
@@ -1317,7 +1320,7 @@ export class DatabaseStorage implements IStorage {
           .from('beneficiaries')
           .select('id, afm, afm_hash, surname, name, fathername, region')
           .eq('afm_hash', afmHash)
-          .order('id', { ascending: false })
+          .order('id', { ascending: false})
           .limit(100);
           
         if (error) {
@@ -1366,6 +1369,114 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
+      throw error;
+    }
+  }
+
+  async searchDocumentsByAFM(afm: string, userUnits: number[]): Promise<GeneratedDocument[]> {
+    try {
+      console.log(`[Storage] Searching documents by AFM: ${afm} for units:`, userUnits);
+      
+      if (!/^\d{9}$/.test(afm)) {
+        console.log(`[Storage] Invalid AFM format - must be exactly 9 digits: ${afm}`);
+        return [];
+      }
+      
+      // SECURITY: Verify user has at least one authorized unit
+      if (!userUnits || userUnits.length === 0) {
+        console.log(`[Storage] SECURITY: No authorized units provided`);
+        return [];
+      }
+      
+      const afmHash = hashAFM(afm);
+      const documentIds = new Set<number>();
+      
+      // PART 1: Search beneficiary payments with SECURITY unit filtering
+      console.log(`[Storage] Searching beneficiary payments with AFM hash for units:`, userUnits);
+      const { data: beneficiaryPayments, error: benError } = await supabase
+        .from('beneficiary_payments')
+        .select(`
+          document_id,
+          beneficiaries!inner (
+            afm_hash
+          ),
+          generated_documents!inner (
+            unit_id
+          )
+        `)
+        .eq('beneficiaries.afm_hash', afmHash)
+        .in('generated_documents.unit_id', userUnits);
+      
+      if (benError) {
+        console.error('[Storage] Error searching beneficiary payments:', benError);
+      } else {
+        (beneficiaryPayments || []).forEach(payment => {
+          if (payment.document_id) documentIds.add(payment.document_id);
+        });
+        console.log(`[Storage] Found ${documentIds.size} documents from beneficiary payments (unit-filtered)`);
+      }
+      
+      // PART 2: Search employee payments with SECURITY unit filtering
+      console.log(`[Storage] Searching employee payments with AFM hash for units:`, userUnits);
+      const { data: employeePayments, error: empError } = await supabase
+        .from('EmployeePayments')
+        .select(`
+          id,
+          Employees!inner (
+            afm_hash
+          )
+        `)
+        .eq('Employees.afm_hash', afmHash);
+      
+      if (empError) {
+        console.error('[Storage] Error searching employee payments:', empError);
+      } else if (employeePayments && employeePayments.length > 0) {
+        // Get employee payment IDs
+        const employeePaymentIds = employeePayments.map(ep => ep.id);
+        console.log(`[Storage] Found ${employeePaymentIds.length} employee payment IDs`);
+        
+        // SECURITY: Find documents that contain these employee payment IDs AND belong to user's units
+        const { data: empDocuments, error: empDocError } = await supabase
+          .from('generated_documents')
+          .select('id, employee_payments_id, unit_id')
+          .not('employee_payments_id', 'is', null)
+          .in('unit_id', userUnits);
+        
+        if (empDocError) {
+          console.error('[Storage] Error searching documents with employee payments:', empDocError);
+        } else {
+          (empDocuments || []).forEach(doc => {
+            const empPaymentIds = doc.employee_payments_id || [];
+            if (Array.isArray(empPaymentIds) && empPaymentIds.some((id: number) => employeePaymentIds.includes(id))) {
+              documentIds.add(doc.id);
+            }
+          });
+          console.log(`[Storage] Total documents found after employee search (unit-filtered): ${documentIds.size}`);
+        }
+      }
+      
+      // PART 3: Fetch final documents (already filtered by unit)
+      if (documentIds.size === 0) {
+        console.log(`[Storage] No documents found matching AFM: ${afm} for authorized units`);
+        return [];
+      }
+      
+      console.log(`[Storage] Fetching ${documentIds.size} documents (all pre-filtered by user units)...`);
+      const { data: documents, error: docError } = await supabase
+        .from('generated_documents')
+        .select('*')
+        .in('id', Array.from(documentIds))
+        .order('created_at', { ascending: false });
+      
+      if (docError) {
+        console.error('[Storage] Error fetching documents:', docError);
+        throw docError;
+      }
+      
+      console.log(`[Storage] SECURITY: Returning ${documents?.length || 0} documents (all verified to belong to user units)`);
+      return documents || [];
+    } catch (error) {
+      console.error('[Storage] Error in searchDocumentsByAFM:', error);
       throw error;
     }
   }

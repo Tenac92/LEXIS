@@ -436,8 +436,22 @@ export default function BeneficiariesPage() {
     });
   };
 
+  // Server-side AFM search query - only triggers when AFM is 9 digits
+  const { data: afmSearchResults } = useQuery<Beneficiary[]>({
+    queryKey: ['/api/beneficiaries/search', searchTerm],
+    enabled: searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
+    staleTime: 30 * 1000, // Cache for 30 seconds
+  });
+
   // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
   const filteredBeneficiaries = useMemo(() => {
+    // If AFM search results are available (9-digit AFM), use them
+    if (afmSearchResults) {
+      console.log(`[Beneficiaries] Using server-side AFM search results: ${afmSearchResults.length} beneficiaries`);
+      return afmSearchResults;
+    }
+
+    // Otherwise, do client-side filtering (for non-AFM searches)
     if (!searchTerm.trim()) return beneficiaries;
 
     const searchLower = searchTerm.toLowerCase();
@@ -445,11 +459,11 @@ export default function BeneficiariesPage() {
       return (
         beneficiary.surname?.toLowerCase().includes(searchLower) ||
         beneficiary.name?.toLowerCase().includes(searchLower) ||
-        beneficiary.afm?.toString().includes(searchLower) ||
         beneficiary.region?.toLowerCase().includes(searchLower)
+        // Note: AFM client-side filtering removed since it won't work with encrypted data
       );
     });
-  }, [beneficiaries, searchTerm]);
+  }, [beneficiaries, searchTerm, afmSearchResults]);
 
   // PERFORMANCE OPTIMIZATION: Memoized pagination
   const paginationData = useMemo(() => {

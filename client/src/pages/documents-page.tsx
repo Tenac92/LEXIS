@@ -221,6 +221,15 @@ export default function DocumentsPage() {
           JSON.stringify(filters),
         );
 
+        // If AFM filter is provided (9 digits), use the dedicated search endpoint
+        if (filters.afm && filters.afm.length === 9) {
+          console.log(`[DocumentsPage] Using AFM search endpoint for: ${filters.afm}`);
+          const data = await apiRequest<GeneratedDocument[]>(`/api/documents/search?afm=${filters.afm}`);
+          const documentsArray = Array.isArray(data) ? data : [];
+          console.log(`[DocumentsPage] AFM search returned ${documentsArray.length} documents`);
+          return documentsArray;
+        }
+
         // Build query parameters for the API request
         const queryParams = new URLSearchParams();
 
@@ -270,10 +279,6 @@ export default function DocumentsPage() {
 
         if (filters.recipient) {
           queryParams.append("recipient", filters.recipient);
-        }
-
-        if (filters.afm) {
-          queryParams.append("afm", filters.afm);
         }
 
         if (filters.expenditureType) {
