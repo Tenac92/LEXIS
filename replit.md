@@ -4,6 +4,15 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-11-18: AFM Autocomplete Performance Optimization
+Improved the responsiveness of AFM (Greek Tax ID) autocomplete functionality without sacrificing search accuracy. Changes:
+- **Frontend (SimpleAFMAutocomplete)**: Reduced debounce delay from 300ms to 150ms for 50% faster response time
+- **Frontend**: Added 30-second query cache with TanStack Query (staleTime: 30s, gcTime: 2min) to make repeat searches instant
+- **Frontend**: Kept 4-character minimum requirement to ensure complete search coverage given AFM encryption constraints
+- **Backend**: Maintained original record limits (500 employees, 1000 beneficiaries) to prevent missing valid matches
+- **Constraint**: AFM encryption prevents server-side prefix filtering, requiring client-side decryption of fetched records
+- **Result**: Faster perceived performance through debounce reduction and intelligent caching while maintaining search accuracy
+
 ## 2025-10-31: Quarter Transition Logic Fix - Critical Budget Calculation Correction
 Fixed critical bug in quarter transition system where leftover budget was incorrectly calculated using cumulative yearly spending instead of quarterly spending. Changes:
 - Added `current_quarter_spent` column to project_budget table (numeric type for financial precision)
