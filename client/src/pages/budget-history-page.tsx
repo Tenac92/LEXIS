@@ -46,6 +46,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { ProjectDetailsDialog } from "@/components/projects/ProjectDetailsDialog";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 
 // Hook to fetch users from the same unit for the creator filter
 const useUnitUsers = (userUnits: string[] | undefined) => {
@@ -139,9 +141,94 @@ const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, sta
   );
 };
 
+// Component to display document details in expanded row
+const DocumentDetailsExpanded = ({ documentId }: { documentId: number }) => {
+  const { data: documentData, isLoading } = useQuery({
+    queryKey: [`/api/documents/${documentId}`],
+    enabled: !!documentId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">Φόρτωση στοιχείων εγγράφου...</span>
+      </div>
+    );
+  }
+
+  if (!documentData) {
+    return (
+      <div className="text-sm text-muted-foreground italic">
+        Δεν βρέθηκαν στοιχεία εγγράφου
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (!amount) return "€0,00";
+    return new Intl.NumberFormat("el-GR", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  return (
+    <div className="bg-blue-50/30 border border-blue-200 rounded-lg p-4 space-y-3">
+      <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
+        <FileText className="h-4 w-4" />
+        Στοιχεία Εγγράφου
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">Αρ. Πρωτοκόλλου</label>
+          <p className="text-sm font-medium text-gray-900">
+            {documentData.protocol_number_input || 'N/A'}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">Κατάσταση</label>
+          <p className="text-sm">
+            <Badge variant={documentData.status === 'ready' ? 'default' : 'secondary'}>
+              {documentData.status === 'ready' ? 'Έτοιμο' : 
+               documentData.status === 'draft' ? 'Προσχέδιο' : 
+               documentData.status === 'sent' ? 'Απεσταλμένο' : documentData.status}
+            </Badge>
+          </p>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600">Συνολικό Ποσό</label>
+          <p className="text-sm font-semibold text-green-700">
+            {formatCurrency(documentData.total_amount)}
+          </p>
+        </div>
+        {documentData.protocol_date && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">Ημερομηνία Πρωτοκόλλου</label>
+            <p className="text-sm text-gray-900">
+              {format(new Date(documentData.protocol_date), 'dd/MM/yyyy')}
+            </p>
+          </div>
+        )}
+        {documentData.expenditure_type && (
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-gray-600">Τύπος Δαπάνης</label>
+            <p className="text-sm text-gray-900">{documentData.expenditure_type}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 interface BudgetHistoryEntry {
   id: number;
+  project_id?: number;
   mis: string;
+  na853?: string;
   previous_amount: string;
   new_amount: string;
   change_type: string;
@@ -176,6 +263,12 @@ export default function BudgetHistoryPage() {
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [creatorFilter, setCreatorFilter] = useState<string>('');
+  
+  // State for modals
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
 
   // Used to submit filters
   const [appliedMisFilter, setAppliedMisFilter] = useState<string>('');
@@ -266,7 +359,9 @@ export default function BudgetHistoryPage() {
   const history: BudgetHistoryEntry[] = data?.data && Array.isArray(data.data) 
     ? data.data.map((entry: any) => ({
         id: entry.id,
+        project_id: entry.project_id,
         mis: entry.mis || 'Unknown',
+        na853: entry.na853,
         previous_amount: entry.previous_amount || '0',
         new_amount: entry.new_amount || '0',
         change_type: entry.change_type || '',
@@ -280,6 +375,13 @@ export default function BudgetHistoryPage() {
         metadata: entry.metadata || {}
       }))
     : [];
+  
+  // Fetch document details for selected document
+  const { data: selectedDocument } = useQuery({
+    queryKey: [`/api/documents/${selectedDocumentId}`],
+    enabled: !!selectedDocumentId && documentModalOpen,
+    staleTime: 5 * 60 * 1000,
+  });
     
   const pagination: PaginationData = data?.pagination || { total: 0, page: 1, limit: 10, pages: 1 };
   const statistics = data?.statistics;
@@ -1081,7 +1183,7 @@ export default function BudgetHistoryPage() {
                         <TableRow>
                           <TableHead className="w-[50px]"></TableHead>
                           <TableHead>Ημερομηνία</TableHead>
-                          <TableHead>MIS</TableHead>
+                          <TableHead>Κωδικός ΝΑ853</TableHead>
                           <TableHead>Προηγούμενο</TableHead>
                           <TableHead>Νέο</TableHead>
                           <TableHead>Αλλαγή</TableHead>
@@ -1112,7 +1214,19 @@ export default function BudgetHistoryPage() {
                                     ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
                                     : 'N/A'}
                                 </TableCell>
-                                <TableCell>{entry.mis}</TableCell>
+                                <TableCell 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (entry.project_id) {
+                                      setSelectedProject({ id: entry.project_id, mis: entry.mis, na853: entry.na853 });
+                                      setProjectDialogOpen(true);
+                                    }
+                                  }}
+                                  className={entry.project_id ? "cursor-pointer hover:underline text-blue-600" : ""}
+                                  data-testid={`link-project-${entry.id}`}
+                                >
+                                  {entry.na853 || entry.mis || 'N/A'}
+                                </TableCell>
                                 <TableCell>
                                   <div className="font-medium">{formatCurrency(previousAmount)}</div>
                                   {previousAmount > 0 && <div className="text-xs text-muted-foreground">Προηγούμενη τιμή</div>}
@@ -1181,7 +1295,16 @@ export default function BudgetHistoryPage() {
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <Badge variant={entry.document_status === 'completed' ? "default" : "outline"}>
+                                          <Badge 
+                                            variant={entry.document_status === 'completed' ? "default" : "outline"}
+                                            className="cursor-pointer hover:opacity-80"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedDocumentId(entry.document_id!);
+                                              setDocumentModalOpen(true);
+                                            }}
+                                            data-testid={`link-document-${entry.id}`}
+                                          >
                                             <FileText className="h-3 w-3 mr-1" />
                                             {entry.document_status === 'completed' ? 'Ολοκληρωμένο' : 
                                              entry.protocol_number_input ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` :
@@ -1209,11 +1332,16 @@ export default function BudgetHistoryPage() {
                               {isExpanded && (
                                 <TableRow className="bg-muted/30">
                                   <TableCell colSpan={10} className="p-4">
-                                    {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
-                                      <div className="text-muted-foreground text-sm italic">
-                                        Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
-                                      </div>
-                                    )}
+                                    <div className="space-y-4">
+                                      {entry.document_id && (
+                                        <DocumentDetailsExpanded documentId={entry.document_id} />
+                                      )}
+                                      {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
+                                        <div className="text-muted-foreground text-sm italic">
+                                          Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
+                                        </div>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               )}
@@ -1309,6 +1437,24 @@ export default function BudgetHistoryPage() {
           </div>
         </Card>
       </div>
+      
+      {/* Project Details Modal */}
+      {selectedProject && (
+        <ProjectDetailsDialog
+          project={selectedProject}
+          open={projectDialogOpen}
+          onOpenChange={setProjectDialogOpen}
+        />
+      )}
+      
+      {/* Document Details Modal */}
+      {selectedDocument && (
+        <DocumentDetailsModal
+          document={selectedDocument}
+          open={documentModalOpen}
+          onOpenChange={setDocumentModalOpen}
+        />
+      )}
     </div>
   );
 }
