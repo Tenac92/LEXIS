@@ -1023,9 +1023,10 @@ export class DatabaseStorage implements IStorage {
         
         const afmHash = hashAFM(afm);
         
+        // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('Employees')
-          .select('*')
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
           .eq('afm_hash', afmHash)
           .order('surname', { ascending: true })
           .limit(20);
@@ -1045,27 +1046,34 @@ export class DatabaseStorage implements IStorage {
       } else {
         console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
         
+        // Optimized: select only essential columns and reduced batch size
         const { data, error } = await supabase
           .from('Employees')
-          .select('*')
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
           .order('surname', { ascending: true })
-          .limit(500);
+          .limit(200);
           
         if (error) {
           console.error('[Storage] Error fetching employees for prefix search:', error);
           throw error;
         }
         
-        const decryptedAndFiltered = (data || [])
-          .map(e => ({
-            ...e,
-            afm: decryptAFM(e.afm)
-          }))
-          .filter(e => e.afm && e.afm.startsWith(afm))
-          .slice(0, 20);
+        // Optimized: early exit after finding 20 matches to avoid unnecessary decryption
+        const results: any[] = [];
+        for (const e of (data || [])) {
+          if (results.length >= 20) break;
+          
+          const decryptedAFM = decryptAFM(e.afm);
+          if (decryptedAFM && decryptedAFM.startsWith(afm)) {
+            results.push({
+              ...e,
+              afm: decryptedAFM
+            });
+          }
+        }
         
-        console.log(`[Storage] Found ${decryptedAndFiltered.length} employees matching AFM prefix: ${afm}`);
-        return decryptedAndFiltered;
+        console.log(`[Storage] Found ${results.length} employees matching AFM prefix: ${afm}`);
+        return results;
       }
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
@@ -1304,11 +1312,13 @@ export class DatabaseStorage implements IStorage {
         
         const afmHash = hashAFM(afm);
         
+        // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('*')
+          .select('id, afm, afm_hash, surname, name, fathername, region, adeia')
           .eq('afm_hash', afmHash)
-          .order('id', { ascending: false });
+          .order('id', { ascending: false })
+          .limit(100);
           
         if (error) {
           console.error('[Storage] Error searching beneficiaries by AFM hash:', error);
@@ -1325,27 +1335,34 @@ export class DatabaseStorage implements IStorage {
       } else {
         console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
         
+        // Optimized: select only essential columns and reduced batch size
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('*')
+          .select('id, afm, afm_hash, surname, name, fathername, region, adeia')
           .order('id', { ascending: false })
-          .limit(1000);
+          .limit(300);
           
         if (error) {
           console.error('[Storage] Error fetching beneficiaries for prefix search:', error);
           throw error;
         }
         
-        const decryptedAndFiltered = (data || [])
-          .map(b => ({
-            ...b,
-            afm: decryptAFM(b.afm)
-          }))
-          .filter(b => b.afm && b.afm.startsWith(afm))
-          .slice(0, 100);
+        // Optimized: early exit after finding 100 matches to avoid unnecessary decryption
+        const results: any[] = [];
+        for (const b of (data || [])) {
+          if (results.length >= 100) break;
+          
+          const decryptedAFM = decryptAFM(b.afm);
+          if (decryptedAFM && decryptedAFM.startsWith(afm)) {
+            results.push({
+              ...b,
+              afm: decryptedAFM
+            });
+          }
+        }
         
-        console.log(`[Storage] Found ${decryptedAndFiltered.length} beneficiaries matching AFM prefix: ${afm}`);
-        return decryptedAndFiltered;
+        console.log(`[Storage] Found ${results.length} beneficiaries matching AFM prefix: ${afm}`);
+        return results;
       }
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
