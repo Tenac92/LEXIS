@@ -441,8 +441,8 @@ export default function BeneficiariesPage() {
   const { data: afmSearchResults } = useQuery<Beneficiary[]>({
     queryKey: ['/api/beneficiaries/search', searchTerm],
     queryFn: async () => {
-      const response = await apiRequest<Beneficiary[]>(`/api/beneficiaries/search?afm=${searchTerm}`);
-      return response;
+      const response = await apiRequest<{ success: boolean; data: Beneficiary[]; count: number }>(`/api/beneficiaries/search?afm=${searchTerm}`);
+      return response.data; // Extract the data array from the response object
     },
     enabled: searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
     staleTime: 30 * 1000, // Cache for 30 seconds
