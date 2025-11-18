@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Plus,
   Edit,
@@ -439,6 +440,10 @@ export default function BeneficiariesPage() {
   // Server-side AFM search query - only triggers when AFM is 9 digits
   const { data: afmSearchResults } = useQuery<Beneficiary[]>({
     queryKey: ['/api/beneficiaries/search', searchTerm],
+    queryFn: async () => {
+      const response = await apiRequest<Beneficiary[]>(`/api/beneficiaries/search?afm=${searchTerm}`);
+      return response;
+    },
     enabled: searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
     staleTime: 30 * 1000, // Cache for 30 seconds
   });

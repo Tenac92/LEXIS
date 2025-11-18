@@ -4,6 +4,15 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-11-18: Express Route Ordering Bug Fix - AFM Search NaN Error
+Fixed critical routing bug causing AFM document search to fail with "invalid input syntax for type bigint: 'NaN'" PostgreSQL error. Changes:
+- **Root Cause:** Express parameterized route `GET /:id` (line 2169) was defined BEFORE specific route `GET /search` (line 3209), causing Express to match "/search" as document ID and parse "search" → NaN
+- **Fix:** Moved `/search` route definition to BEFORE `/:id` route (now lines 2171-2215, before /:id at line 2217)
+- **Impact:** AFM search endpoint `/api/documents/search?afm=123456789` now routes correctly
+- **Best Practice:** Express specific routes (e.g., `/search`) must be registered BEFORE parameterized routes (e.g., `/:id`)
+- **Comment Added:** Clear documentation explaining why route ordering is critical to prevent future regressions
+- **Verification:** No duplicate routes remain, routing logic verified by architect review
+
 ## 2025-11-18: AFM Autocomplete Performance Optimization - Phase 2
 Comprehensive performance improvements for AFM search addressing both database indexing and decryption efficiency. Changes:
 
