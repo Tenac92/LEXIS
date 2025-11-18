@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
+import { useQuery } from "@tanstack/react-query";
 
 interface DocumentDetailsModalProps {
   document: GeneratedDocument | null;
@@ -102,6 +103,13 @@ export function DocumentDetailsModal({
 }: DocumentDetailsModalProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // Fetch recipients with decrypted AFM values from the API
+  const { data: recipientsData = [], isLoading: recipientsLoading } = useQuery<any[]>({
+    queryKey: [`/api/documents/${document?.id}/beneficiaries`],
+    enabled: !!document?.id && open,
+    staleTime: 5 * 60 * 1000,
+  });
+
   if (!document) return null;
 
   const docAny = document as any; // Type assertion for accessing additional properties
@@ -117,17 +125,53 @@ export function DocumentDetailsModal({
     }).format(amount);
   };
 
-  // Parse recipients data
-  let recipients: Recipient[] = [];
-  try {
-    if (docAny.recipients && typeof docAny.recipients === "string") {
-      recipients = JSON.parse(docAny.recipients);
-    } else if (docAny.recipients && typeof docAny.recipients === "object") {
-      recipients = docAny.recipients as Recipient[];
+  // Transform recipients data from API
+  const recipients: Recipient[] = recipientsData.map((item: any) => {
+    // Handle both employee payments (ΕΚΤΟΣ ΕΔΡΑΣ) and beneficiary payments
+    if (item.employee_id !== undefined) {
+      // Employee payment format (ΕΚΤΟΣ ΕΔΡΑΣ)
+      return {
+        firstname: item.firstname || "",
+        lastname: item.lastname || "",
+        fathername: item.fathername || "",
+        afm: item.afm || "",
+        amount: Number(item.amount) || 0,
+        installment: "",
+        month: item.month,
+        days: item.days,
+        daily_compensation: item.daily_compensation,
+        accommodation_expenses: item.accommodation_expenses,
+        kilometers_traveled: item.kilometers_traveled,
+        tickets_tolls_rental: item.tickets_tolls_rental,
+        has_2_percent_deduction: item.has_2_percent_deduction,
+        total_expense: item.total_expense,
+        deduction_2_percent: item.deduction_2_percent,
+      };
+    } else if (item.beneficiaries) {
+      // Beneficiary payment format (standard)
+      const beneficiary = Array.isArray(item.beneficiaries) 
+        ? item.beneficiaries[0] 
+        : item.beneficiaries;
+      return {
+        firstname: beneficiary?.name || "",
+        lastname: beneficiary?.surname || "",
+        fathername: beneficiary?.fathername || "",
+        afm: beneficiary?.afm || "",
+        amount: Number(item.amount) || 0,
+        installment: item.installment || "",
+      };
+    } else {
+      // Fallback for unexpected format
+      return {
+        firstname: "",
+        lastname: "",
+        fathername: "",
+        afm: "",
+        amount: 0,
+        installment: "",
+      };
     }
-  } catch (error) {
-    console.error("Error parsing recipients data:", error);
-  }
+  });
 
   // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document
   const isEktosEdras = docAny.expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
