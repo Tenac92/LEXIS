@@ -479,7 +479,9 @@ export class DatabaseStorage implements IStorage {
           created_at,
           updated_at,
           Projects!budget_history_project_id_fkey (
+            id,
             mis,
+            na853,
             project_title
           ),
           generated_documents!budget_history_document_id_fkey (
@@ -888,16 +890,24 @@ export class DatabaseStorage implements IStorage {
         
         console.log(`[Storage] Document data for entry ${entry.id}:`, documentData);
         
-        // Extract MIS from the joined Projects table
+        // Extract project data from the joined Projects table
         const projectData = entry.Projects || {};
         const projectMis = Array.isArray(projectData) 
           ? (projectData[0] as any)?.mis || 'Unknown' 
           : (projectData as any).mis || 'Unknown';
+        const projectNa853 = Array.isArray(projectData) 
+          ? (projectData[0] as any)?.na853 || null 
+          : (projectData as any).na853 || null;
+        const projectId = Array.isArray(projectData) 
+          ? (projectData[0] as any)?.id || null 
+          : (projectData as any).id || null;
         
         // The columns already match what the frontend expects, so we can use them directly
         return {
           id: entry.id,
+          project_id: projectId,
           mis: projectMis,
+          na853: projectNa853,
           previous_amount: entry.previous_amount || '0',
           new_amount: entry.new_amount || '0',
           change_type: entry.change_type || '',
