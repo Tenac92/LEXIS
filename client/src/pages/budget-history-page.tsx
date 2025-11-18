@@ -48,6 +48,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { ProjectDetailsDialog } from "@/components/projects/ProjectDetailsDialog";
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
+import type { GeneratedDocument } from "@shared/schema";
 
 // Hook to fetch users from the same unit for the creator filter
 const useUnitUsers = (userUnits: string[] | undefined) => {
@@ -143,7 +144,7 @@ const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, sta
 
 // Component to display document details in expanded row
 const DocumentDetailsExpanded = ({ documentId }: { documentId: number }) => {
-  const { data: documentData, isLoading } = useQuery({
+  const { data: documentData, isLoading } = useQuery<GeneratedDocument>({
     queryKey: [`/api/documents/${documentId}`],
     enabled: !!documentId,
     staleTime: 5 * 60 * 1000,
@@ -166,15 +167,19 @@ const DocumentDetailsExpanded = ({ documentId }: { documentId: number }) => {
     );
   }
 
-  const formatCurrency = (amount: number | null | undefined) => {
+  const formatCurrency = (amount: string | number | null | undefined) => {
     if (!amount) return "€0,00";
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(numAmount)) return "€0,00";
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(numAmount);
   };
+
+  const documentDataAny = documentData as any;
 
   return (
     <div className="bg-blue-50/30 border border-blue-200 rounded-lg p-4 space-y-3">
@@ -213,10 +218,10 @@ const DocumentDetailsExpanded = ({ documentId }: { documentId: number }) => {
             </p>
           </div>
         )}
-        {documentData.expenditure_type && (
+        {documentDataAny.expenditure_type && (
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-600">Τύπος Δαπάνης</label>
-            <p className="text-sm text-gray-900">{documentData.expenditure_type}</p>
+            <p className="text-sm text-gray-900">{documentDataAny.expenditure_type}</p>
           </div>
         )}
       </div>
@@ -377,7 +382,7 @@ export default function BudgetHistoryPage() {
     : [];
   
   // Fetch document details for selected document
-  const { data: selectedDocument } = useQuery({
+  const { data: selectedDocument } = useQuery<GeneratedDocument>({
     queryKey: [`/api/documents/${selectedDocumentId}`],
     enabled: !!selectedDocumentId && documentModalOpen,
     staleTime: 5 * 60 * 1000,
