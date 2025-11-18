@@ -1315,7 +1315,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('id, afm, afm_hash, surname, name, fathername, region, adeia')
+          .select('id, afm, afm_hash, surname, name, fathername, region')
           .eq('afm_hash', afmHash)
           .order('id', { ascending: false })
           .limit(100);
@@ -1338,7 +1338,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns and reduced batch size
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('id, afm, afm_hash, surname, name, fathername, region, adeia')
+          .select('id, afm, afm_hash, surname, name, fathername, region')
           .order('id', { ascending: false })
           .limit(300);
           
