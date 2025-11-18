@@ -58,9 +58,8 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
   if (is_correction) {
     return {
       label: "Ορθή Επανάληψη",
-      variant: "secondary" as const,
+      className: "bg-purple-100 text-purple-800",
       icon: FileEdit,
-      color: "text-purple-600",
     };
   }
 
@@ -68,30 +67,51 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
     case "draft":
       return {
         label: "Προσχέδιο",
-        variant: "secondary" as const,
+        className: "bg-gray-100 text-gray-800",
         icon: Clock,
-        color: "text-yellow-600",
       };
+    case "pending":
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+        icon: Clock,
+      };
+    case "approved":
+      return {
+        label: "Εγκεκριμένο",
+        className: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      };
+    case "rejected":
+      return {
+        label: "Απορρίφθηκε",
+        className: "bg-red-100 text-red-800",
+        icon: X,
+      };
+    case "completed":
+      return {
+        label: "Ολοκληρώθηκε",
+        className: "bg-blue-100 text-blue-800",
+        icon: CheckCircle,
+      };
+    // Legacy status support
     case "ready":
       return {
         label: "Έτοιμο",
-        variant: "default" as const,
+        className: "bg-green-100 text-green-800",
         icon: CheckCircle,
-        color: "text-green-600",
       };
     case "sent":
       return {
         label: "Απεσταλμένο",
-        variant: "default" as const,
+        className: "bg-blue-100 text-blue-800",
         icon: CheckCircle,
-        color: "text-blue-600",
       };
     default:
       return {
         label: "Άγνωστη Κατάσταση",
-        variant: "destructive" as const,
+        className: "bg-red-100 text-red-800",
         icon: AlertCircle,
-        color: "text-red-600",
       };
   }
 };
@@ -113,7 +133,7 @@ export function DocumentDetailsModal({
   if (!document) return null;
 
   const docAny = document as any; // Type assertion for accessing additional properties
-  const statusDetails = getStatusDetails(document.status || "draft", null);
+  const statusDetails = getStatusDetails(document.status || "draft", document.is_correction || null);
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return "€0,00";
@@ -228,7 +248,7 @@ export function DocumentDetailsModal({
                   Κατάσταση
                 </label>
                 <div className="flex items-center">
-                  <Badge variant={statusDetails.variant} className="text-sm">
+                  <Badge className={`text-sm ${statusDetails.className}`}>
                     <statusDetails.icon className="h-3 w-3 mr-1" />
                     {statusDetails.label}
                   </Badge>
