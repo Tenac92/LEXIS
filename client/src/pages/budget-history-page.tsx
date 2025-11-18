@@ -142,92 +142,6 @@ const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, sta
   );
 };
 
-// Component to display document details in expanded row
-const DocumentDetailsExpanded = ({ documentId }: { documentId: number }) => {
-  const { data: documentData, isLoading } = useQuery<GeneratedDocument>({
-    queryKey: [`/api/documents/${documentId}`],
-    enabled: !!documentId,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">Φόρτωση στοιχείων εγγράφου...</span>
-      </div>
-    );
-  }
-
-  if (!documentData) {
-    return (
-      <div className="text-sm text-muted-foreground italic">
-        Δεν βρέθηκαν στοιχεία εγγράφου
-      </div>
-    );
-  }
-
-  const formatCurrency = (amount: string | number | null | undefined) => {
-    if (!amount) return "€0,00";
-    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(numAmount)) return "€0,00";
-    return new Intl.NumberFormat("el-GR", {
-      style: "currency",
-      currency: "EUR",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(numAmount);
-  };
-
-  const documentDataAny = documentData as any;
-
-  return (
-    <div className="bg-blue-50/30 border border-blue-200 rounded-lg p-4 space-y-3">
-      <h4 className="text-sm font-semibold text-blue-900 flex items-center gap-2">
-        <FileText className="h-4 w-4" />
-        Στοιχεία Εγγράφου
-      </h4>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-600">Αρ. Πρωτοκόλλου</label>
-          <p className="text-sm font-medium text-gray-900">
-            {documentData.protocol_number_input || 'N/A'}
-          </p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-600">Κατάσταση</label>
-          <p className="text-sm">
-            <Badge variant={documentData.status === 'ready' ? 'default' : 'secondary'}>
-              {documentData.status === 'ready' ? 'Έτοιμο' : 
-               documentData.status === 'draft' ? 'Προσχέδιο' : 
-               documentData.status === 'sent' ? 'Απεσταλμένο' : documentData.status}
-            </Badge>
-          </p>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-gray-600">Συνολικό Ποσό</label>
-          <p className="text-sm font-semibold text-green-700">
-            {formatCurrency(documentData.total_amount)}
-          </p>
-        </div>
-        {documentData.protocol_date && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Ημερομηνία Πρωτοκόλλου</label>
-            <p className="text-sm text-gray-900">
-              {format(new Date(documentData.protocol_date), 'dd/MM/yyyy')}
-            </p>
-          </div>
-        )}
-        {documentDataAny.expenditure_type && (
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-600">Τύπος Δαπάνης</label>
-            <p className="text-sm text-gray-900">{documentDataAny.expenditure_type}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 interface BudgetHistoryEntry {
   id: number;
@@ -1339,7 +1253,25 @@ export default function BudgetHistoryPage() {
                                   <TableCell colSpan={10} className="p-4">
                                     <div className="space-y-4">
                                       {entry.document_id && (
-                                        <DocumentDetailsExpanded documentId={entry.document_id} />
+                                        <div className="bg-blue-50/30 border border-blue-200 rounded-lg p-4">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <FileText className="h-4 w-4 text-blue-600" />
+                                              <span className="text-sm font-medium text-blue-900">Συνδεδεμένο έγγραφο</span>
+                                            </div>
+                                            <Button 
+                                              size="sm" 
+                                              onClick={() => {
+                                                setSelectedDocumentId(entry.document_id!);
+                                                setDocumentModalOpen(true);
+                                              }}
+                                              data-testid={`button-view-document-${entry.id}`}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Προβολή Πλήρων Στοιχείων
+                                            </Button>
+                                          </div>
+                                        </div>
                                       )}
                                       {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
                                         <div className="text-muted-foreground text-sm italic">
