@@ -1389,11 +1389,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       const afmHash = hashAFM(afm);
-      const documentIds = new Set<number>();
+      // Use Set that accepts both number and string to safely handle Supabase BigInt IDs
+      const documentIds = new Set<number | string>();
       
       // PART 1: Search beneficiary payments with SECURITY unit filtering
       console.log(`[Storage] Searching beneficiary payments with AFM hash for units:`, userUnits);
-      const { data: beneficiaryPayments, error: benError } = await supabase
+      const { data: beneficiaryPayments, error: benError} = await supabase
         .from('beneficiary_payments')
         .select(`
           document_id,
@@ -1411,7 +1412,20 @@ export class DatabaseStorage implements IStorage {
         console.error('[Storage] Error searching beneficiary payments:', benError);
       } else {
         (beneficiaryPayments || []).forEach(payment => {
-          if (payment.document_id) documentIds.add(payment.document_id);
+          if (payment.document_id != null) {
+            const docId = payment.document_id;
+            // Keep ID as-is (whatever type Supabase returns) - validate it's not NaN/invalid
+            // For numbers: check it's a valid positive integer
+            // For strings: check it's a numeric string  
+            const isValidNumber = typeof docId === 'number' && Number.isFinite(docId) && docId > 0 && Number.isInteger(docId);
+            const isValidString = typeof docId === 'string' && /^\d+$/.test(docId) && docId.length > 0;
+            
+            if (isValidNumber || isValidString) {
+              documentIds.add(docId);
+            } else {
+              console.warn(`[Storage] Skipping invalid document_id from beneficiary payment:`, docId, typeof docId);
+            }
+          }
         });
         console.log(`[Storage] Found ${documentIds.size} documents from beneficiary payments (unit-filtered)`);
       }
@@ -1448,7 +1462,20 @@ export class DatabaseStorage implements IStorage {
           (empDocuments || []).forEach(doc => {
             const empPaymentIds = doc.employee_payments_id || [];
             if (Array.isArray(empPaymentIds) && empPaymentIds.some((id: number) => employeePaymentIds.includes(id))) {
-              documentIds.add(doc.id);
+              if (doc.id != null) {
+                const docId = doc.id;
+                // Keep ID as-is (whatever type Supabase returns) - validate it's not NaN/invalid
+                // For numbers: check it's a valid positive integer
+                // For strings: check it's a numeric string
+                const isValidNumber = typeof docId === 'number' && Number.isFinite(docId) && docId > 0 && Number.isInteger(docId);
+                const isValidString = typeof docId === 'string' && /^\d+$/.test(docId) && docId.length > 0;
+                
+                if (isValidNumber || isValidString) {
+                  documentIds.add(docId);
+                } else {
+                  console.warn(`[Storage] Skipping invalid document id from employee search:`, docId, typeof docId);
+                }
+              }
             }
           });
           console.log(`[Storage] Total documents found after employee search (unit-filtered): ${documentIds.size}`);
@@ -1461,11 +1488,32 @@ export class DatabaseStorage implements IStorage {
         return [];
       }
       
-      console.log(`[Storage] Fetching ${documentIds.size} documents (all pre-filtered by user units)...`);
+      // DEFENSIVE: Filter out any invalid IDs before querying (belt and suspenders approach)
+      // The Set should already contain only valid IDs, but this ensures database safety
+      // Keep IDs as-is (don't convert) to preserve BigInt precision
+      const validDocumentIds = Array.from(documentIds).filter(id => {
+        if (typeof id === 'number') {
+          return Number.isFinite(id) && Number.isInteger(id) && id > 0;
+        } else if (typeof id === 'string') {
+          return /^\d+$/.test(id) && id.length > 0;
+        }
+        return false;
+      });
+      
+      if (validDocumentIds.length === 0) {
+        console.warn(`[Storage] All document IDs were invalid after filtering`);
+        return [];
+      }
+      
+      if (validDocumentIds.length !== documentIds.size) {
+        console.warn(`[Storage] Filtered out ${documentIds.size - validDocumentIds.length} invalid document IDs`);
+      }
+      
+      console.log(`[Storage] Fetching ${validDocumentIds.length} documents (all pre-filtered by user units)...`);
       const { data: documents, error: docError } = await supabase
         .from('generated_documents')
         .select('*')
-        .in('id', Array.from(documentIds))
+        .in('id', validDocumentIds)
         .order('created_at', { ascending: false });
       
       if (docError) {
