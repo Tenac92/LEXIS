@@ -21,7 +21,7 @@ export interface IStorage {
     userId?: number
   ): Promise<void>;
   getBudgetHistory(
-    mis?: string, 
+    na853?: string, 
     page?: number, 
     limit?: number, 
     changeType?: string,
@@ -438,9 +438,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
+  async getBudgetHistory(na853?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
     try {
-      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
+      console.log(`[Storage] Fetching budget history${na853 ? ` for NA853: ${na853}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
       
       const offset = (page - 1) * limit;
       
@@ -540,18 +540,18 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Apply filters
-      if (mis && mis !== 'all') {
-        // Need to get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Need to get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {
           query = query.eq('project_id', projectData.id);
         } else {
-          // MIS not found - return empty result
+          // NA853 not found - return empty result
           return {
             data: [],
             pagination: { total: 0, page, limit, pages: 0 },
@@ -641,12 +641,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      if (mis && mis !== 'all') {
-        // Get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {
@@ -761,12 +761,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      if (mis && mis !== 'all') {
-        // Get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {

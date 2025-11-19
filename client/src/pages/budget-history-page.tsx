@@ -223,7 +223,7 @@ export default function BudgetHistoryPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [changeType, setChangeType] = useState<string>('all');
-  const [misFilter, setMisFilter] = useState<string>('');
+  const [na853Filter, setNa853Filter] = useState<string>('');
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [creatorFilter, setCreatorFilter] = useState<string>('');
@@ -235,7 +235,7 @@ export default function BudgetHistoryPage() {
   const [documentModalOpen, setDocumentModalOpen] = useState(false);
 
   // Used to submit filters
-  const [appliedMisFilter, setAppliedMisFilter] = useState<string>('');
+  const [appliedNa853Filter, setAppliedNa853Filter] = useState<string>('');
   const [appliedDateFilter, setAppliedDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [appliedCreatorFilter, setAppliedCreatorFilter] = useState<string>('');
 
@@ -246,15 +246,15 @@ export default function BudgetHistoryPage() {
   const { unitUsers, isLoadingUsers } = useUnitUsers(user?.units);
 
   // Reset to page 1 when filters change
-  const applyMisFilter = () => {
+  const applyNa853Filter = () => {
     setPage(1);
-    setAppliedMisFilter(misFilter);
+    setAppliedNa853Filter(na853Filter);
   };
 
   // Apply all filters
   const applyAllFilters = () => {
     setPage(1);
-    setAppliedMisFilter(misFilter);
+    setAppliedNa853Filter(na853Filter);
     setAppliedDateFilter(dateFilter);
     setAppliedCreatorFilter(creatorFilter === 'all' ? '' : creatorFilter);
   };
@@ -262,10 +262,10 @@ export default function BudgetHistoryPage() {
   // Clear all filters
   const clearAllFilters = () => {
     setPage(1);
-    setMisFilter('');
+    setNa853Filter('');
     setDateFilter({ from: '', to: '' });
     setCreatorFilter('all');
-    setAppliedMisFilter('');
+    setAppliedNa853Filter('');
     setAppliedDateFilter({ from: '', to: '' });
     setAppliedCreatorFilter('');
   };
@@ -284,7 +284,7 @@ export default function BudgetHistoryPage() {
   };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/budget/history', page, limit, changeType, appliedMisFilter, appliedDateFilter, appliedCreatorFilter],
+    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedDateFilter, appliedCreatorFilter],
     staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
@@ -295,8 +295,8 @@ export default function BudgetHistoryPage() {
         url += `&change_type=${changeType}`;
       }
       
-      if (appliedMisFilter) {
-        url += `&mis=${appliedMisFilter}`;
+      if (appliedNa853Filter) {
+        url += `&na853=${appliedNa853Filter}`;
       }
       
       if (appliedDateFilter.from) {
@@ -360,8 +360,8 @@ export default function BudgetHistoryPage() {
       // Build export URL with current filters
       let url = '/api/budget/history/export?';
       
-      if (appliedMisFilter) {
-        url += `mis=${appliedMisFilter}&`;
+      if (appliedNa853Filter) {
+        url += `na853=${appliedNa853Filter}&`;
       }
       
       if (changeType !== 'all') {
@@ -421,16 +421,16 @@ export default function BudgetHistoryPage() {
         return <Badge className="bg-green-100 text-green-800">Επιστροφή</Badge>;
       case 'document_created':
         return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
-      case 'document_creation':
-        return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
+      case 'import':
+        return <Badge>Εισαγωγή</Badge>;
+      case 'quarter_change':
+        return <Badge className="bg-blue-100 text-blue-800">Αλλαγή Τριμήνου</Badge>;
+      case 'year_end_closure':
+        return <Badge className="bg-purple-100 text-purple-800">Κλείσιμο Έτους</Badge>;
       case 'manual_adjustment':
         return <Badge variant="outline">Χειροκίνητη Προσαρμογή</Badge>;
       case 'notification_created':
         return <Badge variant="secondary">Δημιουργία Ειδοποίησης</Badge>;
-      case 'error':
-        return <Badge variant="destructive">Σφάλμα</Badge>;
-      case 'import':
-        return <Badge>Εισαγωγή</Badge>;
       default:
         return <Badge>{type.replace(/_/g, ' ')}</Badge>;
     }
@@ -863,11 +863,11 @@ export default function BudgetHistoryPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">MIS Έργου</label>
+                      <label className="text-sm font-medium text-gray-700">Κωδικό ΝΑ853</label>
                       <Input
-                        placeholder="π.χ. 5174085"
-                        value={misFilter}
-                        onChange={(e) => setMisFilter(e.target.value)}
+                        placeholder="π.χ. 2024ΝΑ853001"
+                        value={na853Filter}
+                        onChange={(e) => setNa853Filter(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
@@ -878,11 +878,14 @@ export default function BudgetHistoryPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                          <SelectItem value="spending">Δαπάνη</SelectItem>
+                          <SelectItem value="refund">Επιστροφή</SelectItem>
                           <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                          <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
+                          <SelectItem value="quarter_change">Αλλαγή Τριμήνου</SelectItem>
+                          <SelectItem value="year_end_closure">Κλείσιμο Έτους</SelectItem>
                           <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
                           <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
-                          <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
-                          <SelectItem value="error">Σφάλματα</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -964,12 +967,12 @@ export default function BudgetHistoryPage() {
                 <div className="flex flex-wrap gap-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Φίλτρο με MIS..."
-                      value={misFilter}
-                      onChange={(e) => setMisFilter(e.target.value)}
+                      placeholder="Φίλτρο με NA853..."
+                      value={na853Filter}
+                      onChange={(e) => setNa853Filter(e.target.value)}
                       className="w-[180px]"
                     />
-                    <Button onClick={applyMisFilter} size="icon" variant="outline">
+                    <Button onClick={applyNa853Filter} size="icon" variant="outline">
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
@@ -979,9 +982,14 @@ export default function BudgetHistoryPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                      <SelectItem value="spending">Δαπάνη</SelectItem>
+                      <SelectItem value="refund">Επιστροφή</SelectItem>
                       <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                      <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
+                      <SelectItem value="quarter_change">Αλλαγή Τριμήνου</SelectItem>
+                      <SelectItem value="year_end_closure">Κλείσιμο Έτους</SelectItem>
                       <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
-                      <SelectItem value="import">Εισαγωγή</SelectItem>
+                      <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select

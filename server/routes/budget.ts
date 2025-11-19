@@ -311,7 +311,7 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
     // Parse query parameters
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const mis = req.query.mis as string | undefined;
+    const na853 = req.query.na853 as string | undefined;
     const changeType = req.query.change_type as string | undefined;
     const dateFrom = req.query.date_from as string | undefined;
     const dateTo = req.query.date_to as string | undefined;
@@ -320,11 +320,11 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
     // Get user unit IDs for access control - admins see all data, others see only their units
     const userUnitIds = req.user.role === 'admin' ? undefined : (req.user.unit_id || undefined);
     
-    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, mis=${mis || 'all'}, changeType=${changeType || 'all'}, userUnitIds=${userUnitIds?.join(',') || 'admin'}`);
+    console.log(`[Budget] Fetching history with params: page=${page}, limit=${limit}, na853=${na853 || 'all'}, changeType=${changeType || 'all'}, userUnitIds=${userUnitIds?.join(',') || 'admin'}`);
 
     try {
       // Use the enhanced storage method with pagination and user unit ID filtering
-      const result = await storage.getBudgetHistory(mis, page, limit, changeType, userUnitIds, dateFrom, dateTo, creator);
+      const result = await storage.getBudgetHistory(na853, page, limit, changeType, userUnitIds, dateFrom, dateTo, creator);
       
       console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
 
