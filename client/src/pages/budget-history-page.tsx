@@ -105,20 +105,65 @@ const useDocumentProtocolNumber = (documentId: number | null) => {
   };
 };
 
+// Helper function to get status label and styling
+const getDocumentStatusDetails = (status: string | undefined) => {
+  switch (status) {
+    case "draft":
+      return {
+        label: "Προσχέδιο",
+        className: "bg-gray-100 text-gray-800",
+      };
+    case "pending":
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+      };
+    case "approved":
+      return {
+        label: "Εγκεκριμένο",
+        className: "bg-green-100 text-green-800",
+      };
+    case "rejected":
+      return {
+        label: "Απορρίφθηκε",
+        className: "bg-red-100 text-red-800",
+      };
+    case "completed":
+      return {
+        label: "Ολοκληρώθηκε",
+        className: "bg-blue-100 text-blue-800",
+      };
+    // Legacy status support
+    case "ready":
+      return {
+        label: "Έτοιμο",
+        className: "bg-green-100 text-green-800",
+      };
+    case "sent":
+      return {
+        label: "Απεσταλμένο",
+        className: "bg-blue-100 text-blue-800",
+      };
+    default:
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+      };
+  }
+};
+
 // Component που εμφανίζει το document_id ή το protocol_number_input αν υπάρχει
 const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, status?: string }) => {
   const { protocolNumberInput, isLoading } = useDocumentProtocolNumber(documentId);
+  const statusDetails = getDocumentStatusDetails(status);
   
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={status === 'completed' ? "default" : "outline"}>
+          <Badge className={statusDetails.className}>
             <FileText className="h-3 w-3 mr-1" />
-            {status === 'completed' ? 'Ολοκληρωμένο' : 
-              protocolNumberInput ? `Αρ. Πρωτ.: ${protocolNumberInput}` :
-              status === 'pending' ? 'Σε εκκρεμότητα' : 
-              status || 'Σε εκκρεμότητα'}
+            {protocolNumberInput ? `Αρ. Πρωτ.: ${protocolNumberInput}` : statusDetails.label}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
@@ -1215,8 +1260,7 @@ export default function BudgetHistoryPage() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Badge 
-                                            variant={entry.document_status === 'completed' ? "default" : "outline"}
-                                            className="cursor-pointer hover:opacity-80"
+                                            className={`cursor-pointer hover:opacity-80 ${getDocumentStatusDetails(entry.document_status).className}`}
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setSelectedDocumentId(entry.document_id!);
@@ -1225,10 +1269,9 @@ export default function BudgetHistoryPage() {
                                             data-testid={`link-document-${entry.id}`}
                                           >
                                             <FileText className="h-3 w-3 mr-1" />
-                                            {entry.document_status === 'completed' ? 'Ολοκληρωμένο' : 
-                                             entry.protocol_number_input ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` :
-                                             entry.document_status === 'pending' ? 'Σε εκκρεμότητα' : 
-                                             entry.document_status || 'Σε εκκρεμότητα'}
+                                            {entry.protocol_number_input 
+                                              ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` 
+                                              : getDocumentStatusDetails(entry.document_status).label}
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent>
