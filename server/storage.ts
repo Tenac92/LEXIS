@@ -341,12 +341,18 @@ export class DatabaseStorage implements IStorage {
       const previousAvailableBudget = katanomesEtous - currentSpending;
       const newAvailableBudget = katanomesEtous - newSpending;
       
+      // Determine if this is spending (positive amount) or a refund (negative amount)
+      const isSpending = amount > 0;
+      const absoluteAmount = Math.abs(amount);
+      
       await this.createBudgetHistoryEntry({
         project_id: projectId,
         previous_amount: String(previousAvailableBudget),
         new_amount: String(newAvailableBudget),
-        change_type: 'spending',
-        change_reason: `Document-related spending: €${amount}`,
+        change_type: isSpending ? 'spending' : 'refund',
+        change_reason: isSpending 
+          ? `Δαπάνη εγγράφου: €${absoluteAmount.toFixed(2)}`
+          : `Επιστροφή λόγω επεξεργασίας ή διαγραφής εγγράφου: €${absoluteAmount.toFixed(2)}`,
         document_id: documentId,
         created_by: userId
       });
