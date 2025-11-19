@@ -4,6 +4,14 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-11-19: Document Status Display Consistency Fix
+Fixed document status display inconsistencies across the application. Changes:
+- **DocumentDetailsModal:** Updated `getStatusDetails` function to handle all current status values (draft, pending, approved, rejected, completed) plus legacy statuses (ready, sent) with proper Greek labels and color scheme matching EditDocumentModal
+- **Budget History Page:** Added `getDocumentStatusDetails` helper function with identical status mappings and applied to both BudgetHistoryDocument component and table cell badges
+- **Backend Bug Fix:** Fixed `server/storage.ts` line 891 - changed `entry.generated_documents?.[0]` to `entry.generated_documents` because Supabase returns a single object for foreign key joins, not an array. This bug caused document status to always be null in budget history.
+- **Color Scheme:** All status badges now use consistent Tailwind classes: gray (draft), yellow (pending), green (approved), red (rejected), blue (completed)
+- **Impact:** Document status now displays correctly and consistently across document details modal, edit modal, and budget history table
+
 ## 2025-11-18: Express Route Ordering Bug Fix - AFM Search NaN Error
 Fixed critical routing bug causing AFM document search to fail with "invalid input syntax for type bigint: 'NaN'" PostgreSQL error. Changes:
 - **Root Cause:** Express parameterized route `GET /:id` (line 2169) was defined BEFORE specific route `GET /search` (line 3209), causing Express to match "/search" as document ID and parse "search" → NaN
