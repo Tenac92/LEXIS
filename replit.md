@@ -4,6 +4,14 @@ This project is a full-stack TypeScript document management system for the Greek
 
 # Recent Changes
 
+## 2025-11-19: Budget History Transaction Categorization Fix
+Fixed budget history recording system to properly distinguish between spending and refunds. Changes:
+- **Root Cause:** All budget transactions were tagged as "spending" (`change_type: 'spending'`) regardless of whether money was being spent (positive amounts) or returned to budget (negative amounts from document edits/deletions)
+- **Solution:** Updated `updateProjectBudgetSpending` function in `server/storage.ts` to detect transaction direction using `amount > 0` check
+- **Transaction Types:** Positive amounts → `change_type: 'spending'` with "Δαπάνη εγγράφου: €X.XX", Negative amounts → `change_type: 'refund'` with "Επιστροφή λόγω επεξεργασίας ή διαγραφής εγγράφου: €X.XX"
+- **Improvements:** Uses `Math.abs()` and `.toFixed(2)` for clean numerical display, Greek text improved for natural reading per architect feedback
+- **Impact:** Budget history now provides accurate audit trail distinguishing document spending from fund returns, enabling proper financial oversight and reconciliation
+
 ## 2025-11-19: Document Status Display Consistency Fix
 Fixed document status display inconsistencies across the application. Changes:
 - **DocumentDetailsModal:** Updated `getStatusDetails` function to handle all current status values (draft, pending, approved, rejected, completed) plus legacy statuses (ready, sent) with proper Greek labels and color scheme matching EditDocumentModal
