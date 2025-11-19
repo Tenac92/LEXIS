@@ -884,7 +884,8 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Extract document information from the join
-        const documentData = entry.generated_documents?.[0] || null;
+        // Supabase returns a single object for foreign key joins, not an array
+        const documentData = entry.generated_documents || null;
         const documentStatus = documentData?.status || null;
         const protocolNumberInput = documentData?.protocol_number_input || null;
         
