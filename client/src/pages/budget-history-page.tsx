@@ -415,6 +415,10 @@ export default function BudgetHistoryPage() {
   // Function to get badge styling based on change type
   const getChangeTypeBadge = (type: string) => {
     switch (type) {
+      case 'spending':
+        return <Badge variant="destructive">Δαπάνη</Badge>;
+      case 'refund':
+        return <Badge className="bg-green-100 text-green-800">Επιστροφή</Badge>;
       case 'document_created':
         return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
       case 'document_creation':
