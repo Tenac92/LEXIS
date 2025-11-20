@@ -896,7 +896,7 @@ export default function BudgetHistoryPage() {
                         <SelectContent>
                           <SelectItem value="all">Όλοι οι τύποι</SelectItem>
                           {expenditureTypes?.map((type) => (
-                            <SelectItem key={type.id} value={type.expenditure_types}>
+                            <SelectItem key={type.id} value={type.id.toString()}>
                               {type.expenditure_types}
                             </SelectItem>
                           ))}
@@ -1016,7 +1016,7 @@ export default function BudgetHistoryPage() {
                     <SelectContent>
                       <SelectItem value="all">Όλοι οι τύποι</SelectItem>
                       {expenditureTypes?.map((type) => (
-                        <SelectItem key={type.id} value={type.expenditure_types}>
+                        <SelectItem key={type.id} value={type.id.toString()}>
                           {type.expenditure_types}
                         </SelectItem>
                       ))}
