@@ -1165,40 +1165,6 @@ export default function BudgetHistoryPage() {
                 </div>
               ) : (
                 <>
-
-                  {/* Recent Activity Summary for Managers */}
-                  {(isManager || isAdmin) && history.length > 0 && (
-                    <Card className="mb-6 bg-yellow-50/50 border-yellow-200">
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-yellow-900 mb-3">Πρόσφατη Δραστηριότητα</h3>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {history.slice(0, 5).map((entry) => {
-                            const change = parseFloat(entry.new_amount || '0') - parseFloat(entry.previous_amount || '0');
-                            return (
-                              <div key={entry.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-gray-500">
-                                    {entry.created_at ? format(new Date(entry.created_at), 'dd/MM HH:mm') : 'N/A'}
-                                  </span>
-                                  <span className="font-medium">MIS {entry.mis}</span>
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    change > 0 ? 'bg-green-100 text-green-700' : 
-                                    change < 0 ? 'bg-red-100 text-red-700' : 
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
-                                    {change > 0 ? '+' : ''}{formatCurrency(change)}
-                                  </span>
-                                </div>
-                                <div className="text-gray-600">
-                                  {entry.created_by || 'Σύστημα'}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </Card>
-                  )}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
