@@ -594,9 +594,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Apply expenditure type filter if specified
-      // When filtering by expenditure type, we want to show:
-      // 1. Budget entries with documents matching the expenditure type
-      // 2. Budget entries without documents (document_id is null) - these are system operations
+      // Simplified version: only shows entries with matching documents (excludes system operations)
       if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
         // Get document IDs that match the expenditure type
         const { data: documentsData, error: documentsError } = await supabase
@@ -606,11 +604,11 @@ export class DatabaseStorage implements IStorage {
           
         if (!documentsError && documentsData && documentsData.length > 0) {
           const documentIds = documentsData.map(d => d.id);
-          // Filter to include: rows with matching document IDs OR rows with null document_id
-          query = query.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          // Filter to only include rows with matching document IDs
+          query = query.in('document_id', documentIds);
         } else {
-          // No documents found - only show entries without documents (system operations)
-          query = query.is('document_id', null);
+          // No documents match - return empty results
+          query = query.eq('id', -1); // Impossible ID to ensure empty result
         }
       }
       
@@ -723,11 +721,11 @@ export class DatabaseStorage implements IStorage {
           
         if (!documentsError && documentsData && documentsData.length > 0) {
           const documentIds = documentsData.map(d => d.id);
-          // Include rows with matching documents OR null document_id
-          statsQuery = statsQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          // Filter to only include rows with matching document IDs
+          statsQuery = statsQuery.in('document_id', documentIds);
         } else {
-          // No documents found - only include entries without documents
-          statsQuery = statsQuery.is('document_id', null);
+          // No documents match - return empty stats
+          statsQuery = statsQuery.eq('id', -1);
         }
       }
       
@@ -846,11 +844,11 @@ export class DatabaseStorage implements IStorage {
           
         if (!documentsError && documentsData && documentsData.length > 0) {
           const documentIds = documentsData.map(d => d.id);
-          // Include rows with matching documents OR null document_id
-          countQuery = countQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          // Filter to only include rows with matching document IDs
+          countQuery = countQuery.in('document_id', documentIds);
         } else {
-          // No documents found - only include entries without documents
-          countQuery = countQuery.is('document_id', null);
+          // No documents match - return count of 0
+          countQuery = countQuery.eq('id', -1);
         }
       }
       
