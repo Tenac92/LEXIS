@@ -316,6 +316,7 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
     const dateFrom = req.query.date_from as string | undefined;
     const dateTo = req.query.date_to as string | undefined;
     const creator = req.query.creator as string | undefined;
+    const expenditureType = req.query.expenditure_type as string | undefined;
     
     // Get user unit IDs for access control - admins see all data, others see only their units
     const userUnitIds = req.user.role === 'admin' ? undefined : (req.user.unit_id || undefined);
@@ -324,7 +325,7 @@ router.get('/history', authenticateSession, async (req: AuthenticatedRequest, re
 
     try {
       // Use the enhanced storage method with pagination and user unit ID filtering
-      const result = await storage.getBudgetHistory(na853, page, limit, changeType, userUnitIds, dateFrom, dateTo, creator);
+      const result = await storage.getBudgetHistory(na853, page, limit, changeType, userUnitIds, dateFrom, dateTo, creator, expenditureType);
       
       console.log(`[Budget] Successfully fetched ${result.data.length} of ${result.pagination.total} history records`);
 

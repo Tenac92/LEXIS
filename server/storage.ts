@@ -438,9 +438,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getBudgetHistory(na853?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
+  async getBudgetHistory(na853?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string, expenditureType?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
     try {
-      console.log(`[Storage] Fetching budget history${na853 ? ` for NA853: ${na853}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
+      console.log(`[Storage] Fetching budget history${na853 ? ` for NA853: ${na853}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}, expenditureType: ${expenditureType || 'all'}`);
       
       const offset = (page - 1) * limit;
       
@@ -492,7 +492,8 @@ export class DatabaseStorage implements IStorage {
           ),
           generated_documents!budget_history_document_id_fkey (
             protocol_number_input,
-            status
+            status,
+            expenditure_type
           )
         `, { count: 'exact' });
       
@@ -589,6 +590,27 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           query = query.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter if specified
+      // When filtering by expenditure type, we want to show:
+      // 1. Budget entries with documents matching the expenditure type
+      // 2. Budget entries without documents (document_id is null) - these are system operations
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        // Get document IDs that match the expenditure type
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('generated_documents')
+          .select('id')
+          .eq('expenditure_type', expenditureType);
+          
+        if (!documentsError && documentsData && documentsData.length > 0) {
+          const documentIds = documentsData.map(d => d.id);
+          // Filter to include: rows with matching document IDs OR rows with null document_id
+          query = query.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        } else {
+          // No documents found - only show entries without documents (system operations)
+          query = query.is('document_id', null);
         }
       }
       
@@ -689,6 +711,23 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           statsQuery = statsQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter to stats query
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('generated_documents')
+          .select('id')
+          .eq('expenditure_type', expenditureType);
+          
+        if (!documentsError && documentsData && documentsData.length > 0) {
+          const documentIds = documentsData.map(d => d.id);
+          // Include rows with matching documents OR null document_id
+          statsQuery = statsQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        } else {
+          // No documents found - only include entries without documents
+          statsQuery = statsQuery.is('document_id', null);
         }
       }
       
@@ -795,6 +834,23 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           countQuery = countQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter to count query
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('generated_documents')
+          .select('id')
+          .eq('expenditure_type', expenditureType);
+          
+        if (!documentsError && documentsData && documentsData.length > 0) {
+          const documentIds = documentsData.map(d => d.id);
+          // Include rows with matching documents OR null document_id
+          countQuery = countQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        } else {
+          // No documents found - only include entries without documents
+          countQuery = countQuery.is('document_id', null);
         }
       }
       

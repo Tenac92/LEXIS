@@ -49,6 +49,7 @@ import { Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
 import { ProjectDetailsDialog } from "@/components/projects/ProjectDetailsDialog";
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 import type { GeneratedDocument } from "@shared/schema";
+import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
 
 // Hook to fetch users from the same unit for the creator filter
 const useUnitUsers = (userUnits: string[] | undefined) => {
@@ -224,6 +225,7 @@ export default function BudgetHistoryPage() {
   const [limit, setLimit] = useState(10);
   const [changeType, setChangeType] = useState<string>('all');
   const [na853Filter, setNa853Filter] = useState<string>('');
+  const [expenditureTypeFilter, setExpenditureTypeFilter] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [creatorFilter, setCreatorFilter] = useState<string>('');
@@ -236,6 +238,7 @@ export default function BudgetHistoryPage() {
 
   // Used to submit filters
   const [appliedNa853Filter, setAppliedNa853Filter] = useState<string>('');
+  const [appliedExpenditureTypeFilter, setAppliedExpenditureTypeFilter] = useState<string>('');
   const [appliedDateFilter, setAppliedDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [appliedCreatorFilter, setAppliedCreatorFilter] = useState<string>('');
 
@@ -244,6 +247,9 @@ export default function BudgetHistoryPage() {
 
   // Fetch users from the same unit for the creator dropdown
   const { unitUsers, isLoadingUsers } = useUnitUsers(user?.units);
+  
+  // Fetch expenditure types for the filter
+  const { data: expenditureTypes } = useExpenditureTypesForFilter();
 
   // Reset to page 1 when filters change
   const applyNa853Filter = () => {
@@ -255,6 +261,7 @@ export default function BudgetHistoryPage() {
   const applyAllFilters = () => {
     setPage(1);
     setAppliedNa853Filter(na853Filter);
+    setAppliedExpenditureTypeFilter(expenditureTypeFilter === 'all' ? '' : expenditureTypeFilter);
     setAppliedDateFilter(dateFilter);
     setAppliedCreatorFilter(creatorFilter === 'all' ? '' : creatorFilter);
   };
@@ -263,9 +270,11 @@ export default function BudgetHistoryPage() {
   const clearAllFilters = () => {
     setPage(1);
     setNa853Filter('');
+    setExpenditureTypeFilter('all');
     setDateFilter({ from: '', to: '' });
     setCreatorFilter('all');
     setAppliedNa853Filter('');
+    setAppliedExpenditureTypeFilter('');
     setAppliedDateFilter({ from: '', to: '' });
     setAppliedCreatorFilter('');
   };
@@ -284,7 +293,7 @@ export default function BudgetHistoryPage() {
   };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedDateFilter, appliedCreatorFilter],
+    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedExpenditureTypeFilter, appliedDateFilter, appliedCreatorFilter],
     staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
@@ -297,6 +306,10 @@ export default function BudgetHistoryPage() {
       
       if (appliedNa853Filter) {
         url += `&na853=${appliedNa853Filter}`;
+      }
+      
+      if (appliedExpenditureTypeFilter) {
+        url += `&expenditure_type=${appliedExpenditureTypeFilter}`;
       }
       
       if (appliedDateFilter.from) {
@@ -362,6 +375,10 @@ export default function BudgetHistoryPage() {
       
       if (appliedNa853Filter) {
         url += `na853=${appliedNa853Filter}&`;
+      }
+      
+      if (appliedExpenditureTypeFilter) {
+        url += `expenditure_type=${appliedExpenditureTypeFilter}&`;
       }
       
       if (changeType !== 'all') {
@@ -871,6 +888,22 @@ export default function BudgetHistoryPage() {
                       />
                     </div>
                     <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Τύπος Δαπάνης</label>
+                      <Select value={expenditureTypeFilter} onValueChange={setExpenditureTypeFilter}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Όλοι οι τύποι" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                          {expenditureTypes?.map((type) => (
+                            <SelectItem key={type.id} value={type.expenditure_types}>
+                              {type.expenditure_types}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Τύπος Αλλαγής</label>
                       <Select value={changeType} onValueChange={handleChangeTypeChange}>
                         <SelectTrigger>
@@ -976,6 +1009,19 @@ export default function BudgetHistoryPage() {
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
+                  <Select value={expenditureTypeFilter} onValueChange={setExpenditureTypeFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Τύπος δαπάνης" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                      {expenditureTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.expenditure_types}>
+                          {type.expenditure_types}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={changeType} onValueChange={handleChangeTypeChange}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Φίλτρο ανά τύπο" />
