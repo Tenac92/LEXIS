@@ -873,12 +873,12 @@ export default function BudgetHistoryPage() {
 
               {/* Enhanced Filters Section for Managers */}
               {(isManager || isAdmin) && (
-                <Card className="p-4 bg-blue-50/50 border-blue-200">
-                  <div className="flex items-center gap-2 mb-3">
+                <Card className="p-3 bg-blue-50/50 border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
                     <Search className="h-4 w-4 text-blue-600" />
                     <h3 className="font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Κωδικό ΝΑ853</label>
                       <Input
@@ -939,7 +939,7 @@ export default function BudgetHistoryPage() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Δημιουργήθηκε από</label>
                       <Select value={creatorFilter} onValueChange={setCreatorFilter}>
@@ -1060,31 +1060,31 @@ export default function BudgetHistoryPage() {
 
               {/* Statistics Section - Στατιστικά Περιόδου */}
               {statistics && (isManager || isAdmin) && (
-                <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="h-5 w-5 text-green-600" />
-                    <h3 className="font-semibold text-green-900">Στατιστικά Περιόδου</h3>
-                    <Badge variant="outline" className="bg-white">
+                <Card className="p-3 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-4 w-4 text-green-600" />
+                    <h3 className="font-medium text-green-900">Στατιστικά Περιόδου</h3>
+                    <Badge variant="outline" className="bg-white text-xs">
                       Ενημερώνονται με τα ενεργά φίλτρα
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {/* Total Entries */}
-                    <div className="bg-white p-4 rounded-lg border border-green-100">
+                    <div className="bg-white p-3 rounded-lg border border-green-100">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">Συνολικές Εγγραφές</p>
                           <p className="text-2xl font-bold text-green-700">{statistics.totalEntries}</p>
                         </div>
-                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-green-600" />
+                        <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <FileText className="h-4 w-4 text-green-600" />
                         </div>
                       </div>
                     </div>
 
                     {/* Total Amount Change */}
-                    <div className="bg-white p-4 rounded-lg border border-blue-100">
+                    <div className="bg-white p-3 rounded-lg border border-blue-100">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">Συνολική Μεταβολή</p>
@@ -1092,20 +1092,20 @@ export default function BudgetHistoryPage() {
                             {formatCurrency(statistics.totalAmountChange)}
                           </p>
                         </div>
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
                           statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
                         }`}>
                           {statistics.totalAmountChange >= 0 ? (
-                            <TrendingUp className="h-5 w-5 text-green-600" />
+                            <TrendingUp className="h-4 w-4 text-green-600" />
                           ) : (
-                            <TrendingDown className="h-5 w-5 text-red-600" />
+                            <TrendingDown className="h-4 w-4 text-red-600" />
                           )}
                         </div>
                       </div>
                     </div>
 
                     {/* Period Range */}
-                    <div className="bg-white p-4 rounded-lg border border-purple-100">
+                    <div className="bg-white p-3 rounded-lg border border-purple-100">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-gray-600">Χρονική Περίοδος</p>
@@ -1122,8 +1122,8 @@ export default function BudgetHistoryPage() {
                             <p className="text-sm text-gray-500">Δεν υπάρχουν δεδομένα</p>
                           )}
                         </div>
-                        <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Info className="h-5 w-5 text-purple-600" />
+                        <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                          <Info className="h-4 w-4 text-purple-600" />
                         </div>
                       </div>
                     </div>
@@ -1131,14 +1131,14 @@ export default function BudgetHistoryPage() {
 
                   {/* Change Types Distribution */}
                   {Object.keys(statistics.changeTypes).length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-700 mb-3">Κατανομή ανά Τύπο Αλλαγής</h4>
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Κατανομή ανά Τύπο Αλλαγής</h4>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {Object.entries(statistics.changeTypes).map(([type, count]) => (
-                          <div key={type} className="bg-white p-3 rounded-lg border border-gray-100">
+                          <div key={type} className="bg-white p-2 rounded-lg border border-gray-100">
                             <div className="text-center">
-                              <div className="mb-2">{getChangeTypeBadge(type)}</div>
-                              <p className="text-lg font-bold text-gray-800">{count as number}</p>
+                              <div className="mb-1">{getChangeTypeBadge(type)}</div>
+                              <p className="text-base font-bold text-gray-800">{count as number}</p>
                               <p className="text-xs text-gray-500">εγγραφές</p>
                             </div>
                           </div>
