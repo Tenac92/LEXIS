@@ -597,18 +597,31 @@ export class DatabaseStorage implements IStorage {
       // Uses correct relationship chain: budget_history -> generated_documents -> project_index -> expenditure_types
       // Preserves entries without documents (null document_id) for system operations
       if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
-        // Step 1: Get document IDs that match the expenditure type through project_index
-        const { data: documentsData, error: documentsError } = await supabase
-          .from('generated_documents')
-          .select('id, project_index!inner(expenditure_type_id)')
-          .eq('project_index.expenditure_type_id', parseInt(expenditureType));
+        // Step 1: Get project_index IDs that match the expenditure type
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
           
-        if (!documentsError && documentsData && documentsData.length > 0) {
-          const documentIds = documentsData.map(d => d.id);
-          // Step 2: Filter to include rows with matching document IDs OR null document_id (system operations)
-          query = query.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          // Step 2: Get document IDs that reference those project_index IDs
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Step 3: Filter to include rows with matching document IDs OR null document_id (system operations)
+            query = query.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            // No documents found - only show system operations (null document_id)
+            query = query.is('document_id', null);
+          }
         } else {
-          // No documents match - only show system operations (null document_id)
+          // No project_index entries match - only show system operations (null document_id)
           query = query.is('document_id', null);
         }
       }
@@ -715,17 +728,27 @@ export class DatabaseStorage implements IStorage {
       
       // Apply expenditure type filter to stats query
       if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
-        const { data: documentsData, error: documentsError } = await supabase
-          .from('generated_documents')
-          .select('id, project_index!inner(expenditure_type_id)')
-          .eq('project_index.expenditure_type_id', parseInt(expenditureType));
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
           
-        if (!documentsError && documentsData && documentsData.length > 0) {
-          const documentIds = documentsData.map(d => d.id);
-          // Filter to include rows with matching document IDs OR null document_id
-          statsQuery = statsQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Filter to include rows with matching document IDs OR null document_id
+            statsQuery = statsQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            statsQuery = statsQuery.is('document_id', null);
+          }
         } else {
-          // No documents match - only show system operations
           statsQuery = statsQuery.is('document_id', null);
         }
       }
@@ -838,17 +861,27 @@ export class DatabaseStorage implements IStorage {
       
       // Apply expenditure type filter to count query
       if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
-        const { data: documentsData, error: documentsError } = await supabase
-          .from('generated_documents')
-          .select('id, project_index!inner(expenditure_type_id)')
-          .eq('project_index.expenditure_type_id', parseInt(expenditureType));
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
           
-        if (!documentsError && documentsData && documentsData.length > 0) {
-          const documentIds = documentsData.map(d => d.id);
-          // Filter to include rows with matching document IDs OR null document_id
-          countQuery = countQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Filter to include rows with matching document IDs OR null document_id
+            countQuery = countQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            countQuery = countQuery.is('document_id', null);
+          }
         } else {
-          // No documents match - only count system operations
           countQuery = countQuery.is('document_id', null);
         }
       }
