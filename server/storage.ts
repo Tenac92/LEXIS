@@ -492,8 +492,7 @@ export class DatabaseStorage implements IStorage {
           ),
           generated_documents!budget_history_document_id_fkey (
             protocol_number_input,
-            status,
-            expenditure_type
+            status
           )
         `, { count: 'exact' });
       
