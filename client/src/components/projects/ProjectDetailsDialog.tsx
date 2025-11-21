@@ -142,6 +142,50 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexWithJoins[];
   }, [projectIndexData]);
 
+  // Helper function to format FEK data (handles JSONB object)
+  const formatFEK = React.useCallback((fekData: any): string => {
+    if (!fekData) return 'Δεν υπάρχει';
+    
+    // If it's an object with year and number properties
+    if (typeof fekData === 'object' && !Array.isArray(fekData)) {
+      const year = fekData.year || '';
+      const number = fekData.number || '';
+      if (year || number) {
+        return `${year}/${number}`.replace(/^\/|\/$/g, '').trim();
+      }
+    }
+    
+    // If it's already a string
+    if (typeof fekData === 'string') {
+      return fekData;
+    }
+    
+    // If it's an array, format first element
+    if (Array.isArray(fekData) && fekData.length > 0) {
+      return formatFEK(fekData[0]);
+    }
+    
+    return 'Δεν υπάρχει';
+  }, []);
+
+  // Helper function to get unit name from ID
+  const getUnitName = React.useCallback((unitId: number | string): string => {
+    const unit = (units || []).find((u: any) => u.id === unitId);
+    if (unit) {
+      return unit.unit || unit.unit_name || `ID: ${unitId}`;
+    }
+    return `ID: ${unitId}`;
+  }, [units]);
+
+  // Helper function to get expenditure type name from ID
+  const getExpenditureTypeName = React.useCallback((expenditureId: number | string): string => {
+    const expenditure = (expenditureTypes || []).find((e: any) => e.id === expenditureId);
+    if (expenditure) {
+      return expenditure.expenditure_types || `ID: ${expenditureId}`;
+    }
+    return `ID: ${expenditureId}`;
+  }, [expenditureTypes]);
+
   // Helper function to extract and format region display text from projectGeographicData
   const getRegionDisplayText = React.useCallback((): string => {
     try {
@@ -616,7 +660,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                 </div>
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">ΦΕΚ:</span>
-                                  <p className="text-purple-900">{safeText(decision.fek)}</p>
+                                  <p className="text-purple-900">{formatFEK(decision.fek)}</p>
                                 </div>
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">ΑΔΑ:</span>
@@ -628,7 +672,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <span className="font-medium text-purple-700 block text-sm">Φορέας Υλοποίησης:</span>
                                   <p className="text-purple-900">
                                     {Array.isArray(decision.implementing_agency) && decision.implementing_agency.length > 0 
-                                      ? decision.implementing_agency.map(id => `ID: ${id}`).join(', ') 
+                                      ? decision.implementing_agency.map(id => getUnitName(id)).join(', ') 
                                       : 'Δεν έχει καθοριστεί'}
                                   </p>
                                 </div>
@@ -640,7 +684,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <span className="font-medium text-purple-700 block text-sm">Δαπάνες που αφορά:</span>
                                   <p className="text-purple-900">
                                     {Array.isArray(decision.expenditure_type) && decision.expenditure_type.length > 0 
-                                      ? decision.expenditure_type.map(id => `ID: ${id}`).join(', ') 
+                                      ? decision.expenditure_type.map(id => getExpenditureTypeName(id)).join(', ') 
                                       : 'Δεν έχει καθοριστεί'}
                                   </p>
                                 </div>
