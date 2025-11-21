@@ -1307,12 +1307,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: error.message });
       }
       
-      // Transform the data to match the expected format
+      // Return units with proper field mapping for frontend lookup
       const transformedData = units.map(unit => ({
-        id: unit.unit || unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
-        unit: unit.id, // Numeric ID for filtering (e.g., 2)
+        id: unit.id, // Numeric ID for lookup
+        unit: unit.unit, // String identifier
         unit_name: unit.unit_name, // Full JSONB object
-        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || unit.id)
+        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || `Μονάδα ${unit.id}`)
       }));
       
       res.json(transformedData);
