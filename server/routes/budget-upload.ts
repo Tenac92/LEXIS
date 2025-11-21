@@ -93,12 +93,26 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
       
       // Parse CSV file
       const csvContent = req.file.buffer.toString('utf-8');
-      rawData = parse(csvContent, {
+      const parsedData = parse(csvContent, {
         columns: true, // Use first row as headers
         skip_empty_lines: true,
         trim: true,
         relax_column_count: true, // Allow rows with different number of columns
+      }) as any[];
+      
+      console.log(`[BudgetUpload] Raw parsed CSV rows: ${parsedData.length}`);
+      
+      // Normalize column names by trimming whitespace from all keys
+      rawData = parsedData.map((row: any) => {
+        const normalizedRow: Record<string, any> = {};
+        for (const [key, value] of Object.entries(row)) {
+          const trimmedKey = String(key).trim();
+          normalizedRow[trimmedKey] = value;
+        }
+        console.log(`[BudgetUpload] CSV Row keys after normalization:`, Object.keys(normalizedRow));
+        return normalizedRow;
       });
+      
       console.log(`[BudgetUpload] Extracted ${rawData.length} rows from CSV`);
     } else {
       console.log('[BudgetUpload] Processing Excel file upload');
