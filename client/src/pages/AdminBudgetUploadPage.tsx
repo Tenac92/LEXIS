@@ -18,13 +18,13 @@ import { useToast } from '@/hooks/use-toast';
 const formSchema = z.object({
   file: z.any()
     .refine((file) => file instanceof FileList && file.length > 0, {
-      message: 'Please select an Excel file (.xlsx or .xls)',
+      message: 'Please select an Excel or CSV file',
     })
     .refine((file) => {
       const fileName = file[0]?.name?.toLowerCase();
-      return fileName?.endsWith('.xlsx') || fileName?.endsWith('.xls');
+      return fileName?.endsWith('.xlsx') || fileName?.endsWith('.xls') || fileName?.endsWith('.csv');
     }, {
-      message: 'File must be an Excel file (.xlsx or .xls)',
+      message: 'File must be an Excel file (.xlsx, .xls) or CSV file (.csv)',
     }),
 });
 
@@ -145,7 +145,7 @@ export default function AdminBudgetUploadPage() {
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold mb-6">Budget Data Upload</h1>
         <p className="text-muted-foreground mb-8">
-          Upload Excel files to update budget data for projects. This tool processes Excel files and 
+          Upload Excel or CSV files to update budget data for projects. This tool processes files and 
           synchronizes the data with the project_budget table in the database.
         </p>
 
@@ -154,9 +154,9 @@ export default function AdminBudgetUploadPage() {
           <div className="md:col-span-5">
             <Card>
               <CardHeader>
-                <CardTitle>Upload Excel File</CardTitle>
+                <CardTitle>Upload Budget Data File</CardTitle>
                 <CardDescription>
-                  Upload an Excel file (.xlsx or .xls) containing budget data. 
+                  Upload an Excel (.xlsx, .xls) or CSV file containing budget data. 
                   The file should include MIS and NA853 columns along with budget values.
                 </CardDescription>
               </CardHeader>
@@ -168,13 +168,13 @@ export default function AdminBudgetUploadPage() {
                       name="file"
                       render={({ field: { onChange, value, ...field } }) => (
                         <FormItem>
-                          <FormLabel>Excel File</FormLabel>
+                          <FormLabel>Budget Data File</FormLabel>
                           <FormControl>
                             <div className="flex flex-col gap-2">
                               <Input
                                 {...field}
                                 type="file"
-                                accept=".xlsx,.xls"
+                                accept=".xlsx,.xls,.csv"
                                 onChange={(e) => onChange(e.target.files)}
                                 disabled={isUploading}
                                 className="cursor-pointer"
@@ -332,10 +332,11 @@ export default function AdminBudgetUploadPage() {
                     <AlertTitle>File Format Requirements</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc pl-4 mt-2 space-y-1">
-                        <li>File must be Excel format (.xlsx or .xls)</li>
+                        <li>File must be Excel format (.xlsx or .xls) or CSV format (.csv)</li>
                         <li>The file must contain columns for MIS and NA853 codes</li>
                         <li>Columns for budget data (quarterly and annual values) are required</li>
-                        <li>The first worksheet in the file will be processed</li>
+                        <li>For Excel files, the first worksheet in the file will be processed</li>
+                        <li>For CSV files, the first row should contain column headers</li>
                       </ul>
                     </AlertDescription>
                   </Alert>
