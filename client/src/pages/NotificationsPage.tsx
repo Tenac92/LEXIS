@@ -216,9 +216,9 @@ export const NotificationsPage = () => {
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Budget Notifications</h1>
+            <h1 className="text-2xl font-bold">Ειδοποιήσεις Προϋπολογισμού</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Monitor and manage budget-related notifications
+              Παρακολουθήστε και διαχειριστείτε τις ειδοποιήσεις που σχετίζονται με το προϋπολογισμό
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -246,9 +246,13 @@ export const NotificationsPage = () => {
           <CardContent className="p-6">
             <NotificationCenter 
               onNotificationClick={(notification) => {
+                const typeLabels: Record<string, string> = {
+                  'funding': 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ',
+                  'reallocation': 'ΑΝΑΠΡΟΣΑΡΜΟΓΗ'
+                };
                 toast({
-                  title: `${notification.type.replace('_', ' ').toUpperCase()}`,
-                  description: `${notification.reason}\nMIS: ${notification.mis} • Amount: €${notification.amount.toLocaleString()}`,
+                  title: typeLabels[notification.type] || 'ΕΙΔΟΠΟΙΗΣΗ',
+                  description: `${notification.reason}\nNA853: ${notification.na853} • Ποσό: €${notification.amount.toLocaleString()}`,
                   variant: notification.type === 'funding' ? 'destructive' : 'default'
                 });
               }}

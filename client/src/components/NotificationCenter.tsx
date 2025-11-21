@@ -357,22 +357,22 @@ export const NotificationCenter: FC<NotificationCenterProps> = ({ onNotification
               <Icon className="h-5 w-5" />
               <div className="flex-1">
                 <CardTitle className="text-sm font-medium">
-                  {notification.type?.replace('_', ' ').toUpperCase() || 'NOTIFICATION'}
+                  {notificationTypeLabels[notification.type as keyof typeof notificationTypeLabels] || 'ΕΙΔΟΠΟΙΗΣΗ'}
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {formattedDate}
                 </CardDescription>
               </div>
               <Badge variant="outline" className={cn(style.badge)}>
-                {notification.status || 'New'}
+                {notification.status === 'pending' ? 'εκκρεμές' : notification.status === 'approved' ? 'εγκεκριμένο' : notification.status || 'νέο'}
               </Badge>
             </CardHeader>
             <CardContent>
-              <p className="text-sm">{notification.reason || 'No details provided'}</p>
+              <p className="text-sm">{notification.reason || 'Δεν παρέχονται λεπτομέρειες'}</p>
               <div className="mt-2 text-xs text-muted-foreground">
-                MIS: {notification.mis || 'N/A'} • 
-                Budget: €{Number(notification.current_budget || 0).toLocaleString()} • 
-                Amount: €{Number(notification.amount || 0).toLocaleString()}
+                NA853: {notification.na853 || 'N/A'} • 
+                Προϋπολογισμός: €{Number(notification.current_budget || 0).toLocaleString()} • 
+                Ποσό: €{Number(notification.amount || 0).toLocaleString()}
               </div>
             </CardContent>
           </Card>
