@@ -227,4 +227,29 @@ router.post('/import', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+/**
+ * POST /api/employees/cleanup-duplicates
+ * Remove duplicate employees, keeping original records
+ */
+router.post('/cleanup-duplicates', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    logger.info('Starting cleanup of duplicate employees');
+    
+    const result = await storage.cleanupDuplicateEmployees();
+    
+    res.json({
+      success: result.errors.length === 0,
+      message: `Καθαρισμός ολοκληρώθηκε: ${result.deleted} διπλότυπα διαγράφηκαν, ${result.kept} υπάλληλοι διατηρήθηκαν`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error cleaning up duplicates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την αφαίρεση διπλοτύπων',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

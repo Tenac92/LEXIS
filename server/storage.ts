@@ -52,6 +52,7 @@ export interface IStorage {
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: number): Promise<void>;
   bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }>;
+  cleanupDuplicateEmployees(): Promise<{ deleted: number; kept: number; errors: string[] }>;
 
   // Beneficiary management operations - SECURITY: Unit-based access only
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
@@ -1342,6 +1343,77 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[Storage] Error in deleteEmployee:', error);
       throw error;
+    }
+  }
+
+  async cleanupDuplicateEmployees(): Promise<{ deleted: number; kept: number; errors: string[] }> {
+    try {
+      console.log('[Storage] Starting duplicate employee cleanup...');
+      
+      // Get all employees grouped by afm_hash to find duplicates
+      const { data: allEmployees, error: fetchError } = await supabase
+        .from('Employees')
+        .select('id, afm_hash');
+        
+      if (fetchError || !allEmployees) {
+        console.error('[Storage] Error fetching employees for cleanup:', fetchError);
+        return { deleted: 0, kept: 0, errors: [fetchError?.message || 'Failed to fetch employees'] };
+      }
+      
+      // Group by afm_hash to find duplicates
+      const groupsByHash = new Map<string, number[]>();
+      for (const emp of allEmployees) {
+        const hash = emp.afm_hash || '';
+        if (!groupsByHash.has(hash)) {
+          groupsByHash.set(hash, []);
+        }
+        groupsByHash.get(hash)!.push(emp.id);
+      }
+      
+      // Find duplicates and collect IDs to delete (keep lowest ID for each hash)
+      const idsToDelete: number[] = [];
+      for (const [hash, ids] of groupsByHash.entries()) {
+        if (ids.length > 1 && hash !== '') {
+          // Sort IDs, keep the lowest (original), delete the rest
+          ids.sort((a, b) => a - b);
+          const kept = ids[0];
+          const toDelete = ids.slice(1);
+          console.log(`[Storage] Duplicate hash ${hash}: keeping ID ${kept}, deleting ${toDelete.length} copies`);
+          idsToDelete.push(...toDelete);
+        }
+      }
+      
+      console.log(`[Storage] Total duplicates to delete: ${idsToDelete.length}`);
+      
+      if (idsToDelete.length === 0) {
+        console.log('[Storage] No duplicates found');
+        return { deleted: 0, kept: allEmployees.length, errors: [] };
+      }
+      
+      // Delete duplicates in batches
+      let deletedCount = 0;
+      const batchSize = 100;
+      for (let i = 0; i < idsToDelete.length; i += batchSize) {
+        const batch = idsToDelete.slice(i, i + batchSize);
+        const { error: deleteError } = await supabase
+          .from('Employees')
+          .delete()
+          .in('id', batch);
+          
+        if (deleteError) {
+          console.error('[Storage] Error deleting batch:', deleteError);
+          return { deleted: deletedCount, kept: allEmployees.length - idsToDelete.length, errors: [deleteError.message] };
+        }
+        deletedCount += batch.length;
+        console.log(`[Storage] Deleted batch of ${batch.length}, total: ${deletedCount}`);
+      }
+      
+      console.log(`[Storage] Successfully cleaned up duplicates. Deleted: ${deletedCount}`);
+      return { deleted: deletedCount, kept: allEmployees.length - idsToDelete.length, errors: [] };
+    } catch (error) {
+      console.error('[Storage] Error in cleanupDuplicateEmployees:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      return { deleted: 0, kept: 0, errors: [errorMsg] };
     }
   }
 
