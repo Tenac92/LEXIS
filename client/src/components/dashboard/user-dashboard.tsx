@@ -213,7 +213,7 @@ export function UserDashboard() {
   // Helper function to get unit name by ID
   const getUnitName = (unitId: number): string => {
     const unit = Array.isArray(units) ? units.find((u: any) => u.id === unitId) : null;
-    return unit?.fullName?.name || unit?.name || unit?.unit || unit?.abbr || unit?.shortName || `Μονάδα ${unitId}`;
+    return unit?.unit || `Μονάδα ${unitId}`;
   };
 
   // Helper function to get pending documents count for a specific unit
