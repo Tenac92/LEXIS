@@ -50,6 +50,7 @@ interface Filters {
   afm: string;
   expenditureType: string;
   na853: string;
+  protocolNumber: string;
 }
 
 interface User {
@@ -115,6 +116,7 @@ export default function DocumentsPage() {
         afm: "",
         expenditureType: "",
         na853: "",
+        protocolNumber: "",
       });
     }
   }, [location, setLocation]);
@@ -158,6 +160,7 @@ export default function DocumentsPage() {
     afm: "",
     expenditureType: "",
     na853: "",
+    protocolNumber: "",
   });
 
   // Fetch expenditure types for dropdown
@@ -185,6 +188,7 @@ export default function DocumentsPage() {
     afm: "",
     expenditureType: "",
     na853: "",
+    protocolNumber: "",
   });
 
   // For main category filters (unit, status, user) - apply immediately
@@ -309,6 +313,10 @@ export default function DocumentsPage() {
 
         if (filters.na853) {
           queryParams.append("na853", filters.na853);
+        }
+
+        if (filters.protocolNumber) {
+          queryParams.append("protocolNumber", filters.protocolNumber);
         }
 
         const url = `/api/documents?${queryParams.toString()}`;
@@ -532,7 +540,8 @@ export default function DocumentsPage() {
                     advancedFilters.recipient ||
                     advancedFilters.afm ||
                     advancedFilters.expenditureType ||
-                    advancedFilters.na853) && (
+                    advancedFilters.na853 ||
+                    advancedFilters.protocolNumber) && (
                     <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                       Ενεργά
                     </span>
@@ -673,6 +682,17 @@ export default function DocumentsPage() {
                       }
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Αριθμός Πρωτοκόλλου</label>
+                    <Input
+                      placeholder="Αναζήτηση με αριθμό πρωτοκόλλου"
+                      value={advancedFilters.protocolNumber}
+                      onChange={(e) =>
+                        setAdvancedFilterValues({ protocolNumber: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button
@@ -688,6 +708,7 @@ export default function DocumentsPage() {
                         afm: "",
                         expenditureType: "",
                         na853: "",
+                        protocolNumber: "",
                       });
                     }}
                   >
