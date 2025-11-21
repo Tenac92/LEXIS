@@ -142,6 +142,24 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexWithJoins[];
   }, [projectIndexData]);
 
+  // Helper function to extract and format region display text
+  const getRegionDisplayText = React.useCallback((): string => {
+    if (!indexEntries || indexEntries.length === 0) return 'Δεν υπάρχει';
+    
+    const firstEntry = indexEntries[0];
+    const regionObj = (firstEntry as any)?.region;
+    
+    if (!regionObj) return 'Δεν υπάρχει';
+    
+    // Build region text from available fields
+    const parts: string[] = [];
+    if (regionObj.perifereia) parts.push(regionObj.perifereia);
+    if (regionObj.perifereiaki_enotita) parts.push(regionObj.perifereiaki_enotita);
+    if (regionObj.dimos) parts.push(regionObj.dimos);
+    
+    return parts.length > 0 ? parts.join(' / ') : 'Δεν υπάρχει';
+  }, [indexEntries]);
+
   const decisions = React.useMemo(() => {
     if (!decisionsData) return [];
     return (Array.isArray(decisionsData) ? decisionsData : [decisionsData]) as ProjectDecision[];
@@ -329,11 +347,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Περιοχή (Περιφέρεια):</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {enhancedProjectData?.region 
-                                ? (typeof enhancedProjectData.region === 'string' 
-                                    ? enhancedProjectData.region 
-                                    : (enhancedProjectData.region as any)?.name || 'Δεν υπάρχει')
-                                : 'Δεν υπάρχει'}
+                              {getRegionDisplayText()}
                             </p>
                           </div>
                           
