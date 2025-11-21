@@ -24,7 +24,7 @@ const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(
           setDisplayValue('');
         } else {
           // Convert numeric value to European format when not focused
-          const numValue = typeof val === 'number' ? val : parseFloat(String(val));
+          const numValue = typeof val === 'number' ? val : parseEuropeanNumber(String(val));
           if (!isNaN(numValue) && numValue !== 0) {
             setDisplayValue(formatForDisplay(numValue));
           } else {

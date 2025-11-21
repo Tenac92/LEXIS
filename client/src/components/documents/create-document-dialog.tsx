@@ -3853,28 +3853,24 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(displayValue, numericValue) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
                                             );
                                             const totalExpense =
-                                              numValue +
+                                              numericValue +
                                               (typeof recipient.accommodation_expenses ===
                                               "number"
                                                 ? recipient.accommodation_expenses
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.accommodation_expenses as string,
                                                   ) || 0) +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.kilometers_traveled as string,
                                                   ) || 0) *
                                                 (recipient.price_per_km ||
@@ -3882,7 +3878,7 @@ export function CreateDocumentDialog({
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
                                             const deduction =
@@ -4005,12 +4001,8 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(displayValue, numericValue) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
@@ -4019,22 +4011,22 @@ export function CreateDocumentDialog({
                                               (typeof recipient.daily_compensation ===
                                               "number"
                                                 ? recipient.daily_compensation
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
                                               (typeof recipient.accommodation_expenses ===
                                               "number"
                                                 ? recipient.accommodation_expenses
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.accommodation_expenses as string,
                                                   ) || 0) +
-                                              numValue *
+                                              numericValue *
                                                 (recipient.price_per_km ||
                                                   DEFAULT_PRICE_PER_KM) +
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
                                             const deduction =
@@ -4082,12 +4074,8 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(displayValue, numericValue) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
@@ -4096,24 +4084,24 @@ export function CreateDocumentDialog({
                                               (typeof recipient.daily_compensation ===
                                               "number"
                                                 ? recipient.daily_compensation
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
                                               (typeof recipient.accommodation_expenses ===
                                               "number"
                                                 ? recipient.accommodation_expenses
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.accommodation_expenses as string,
                                                   ) || 0) +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.kilometers_traveled as string,
                                                   ) || 0) *
                                                 (recipient.price_per_km ||
                                                   DEFAULT_PRICE_PER_KM) +
-                                              numValue;
+                                              numericValue;
                                             const deduction =
                                               recipient.has_2_percent_deduction
                                                 ? totalExpense * 0.02
