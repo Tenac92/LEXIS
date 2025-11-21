@@ -1264,10 +1264,25 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Bulk importing ${employees.length} employees`);
       
+      // Get the max ID from existing employees to generate sequential IDs
+      const { data: maxIdData, error: maxIdError } = await supabase
+        .from('Employees')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+        
+      let nextId = 1;
+      if (!maxIdError && maxIdData && maxIdData.length > 0) {
+        nextId = (maxIdData[0].id as number) + 1;
+      }
+      
+      console.log(`[Storage] Starting bulk import from ID: ${nextId}`);
+      
       const employeesToInsert = employees.map((emp, idx) => {
         const afmString = emp.afm ? String(emp.afm) : '';
         return {
           ...emp,
+          id: nextId + idx,
           afm: afmString ? encryptAFM(afmString) : '',
           afm_hash: afmString ? hashAFM(afmString) : ''
         };
