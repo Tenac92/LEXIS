@@ -39,7 +39,7 @@ export const NotificationsPage = () => {
 
         const data = await response.json();
         console.log('[Auth] User data received:', data);
-        return data;
+        return data.user || data;
       } catch (error) {
         console.error('[Auth] Error fetching user:', error);
         throw error;
