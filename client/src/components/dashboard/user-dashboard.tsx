@@ -216,6 +216,11 @@ export function UserDashboard() {
     return unit?.fullName?.name || unit?.name || unit?.unit || unit?.abbr || unit?.shortName || `Μονάδα ${unitId}`;
   };
 
+  // Helper function to get pending documents count for a specific unit
+  const getPendingDocsForUnit = (unitId: number): number => {
+    return userDocuments.filter((doc: any) => doc.unit_id === unitId && doc.status === 'pending').length;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header with quick actions */}
@@ -411,7 +416,7 @@ export function UserDashboard() {
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                       <span className="text-xs text-muted-foreground">Εκκρεμή έγγραφα</span>
-                      <span className="text-sm font-semibold text-primary">{stats.pendingDocuments}</span>
+                      <span className="text-sm font-semibold text-primary">{getPendingDocsForUnit(unit)}</span>
                     </div>
                   </div>
                 ))

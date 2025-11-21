@@ -1300,7 +1300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: units, error } = await supabase
         .from('Monada')
         .select('id, unit, unit_name')
-        .order('id');
+        .order('unit');
       
       if (error) {
         console.error('[API] Error fetching units:', error);
