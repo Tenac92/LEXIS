@@ -272,15 +272,7 @@ export async function listProjects(req: Request, res: Response) {
                   name: monadaData_item.unit,
                 }
               : null,
-            enhanced_kallikratis: kallikratisData_item
-              ? {
-                  id: kallikratisData_item.id,
-                  name:
-                    kallikratisData_item.perifereia ||
-                    kallikratisData_item.onoma_dimou_koinotitas,
-                  level: kallikratisData_item.level || "municipality",
-                }
-              : null,
+            enhanced_kallikratis: null,
             // Add arrays for backward compatibility
             expenditure_types: uniqueExpenditureTypes,
             event_types: uniqueEventTypes,
@@ -411,7 +403,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         projectIndexItems.length > 0
           ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
           : null;
-      const kallikratisItem = null; // Kallikratis data not currently fetched
 
       return {
         ...project,
@@ -433,15 +424,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
               name: monadaItem.unit,
             }
           : null,
-        enhanced_kallikratis: kallikratisItem
-          ? {
-              id: kallikratisItem.id,
-              name:
-                kallikratisItem.perifereia ||
-                kallikratisItem.onoma_dimou_koinotitas,
-              level: kallikratisItem.level || "municipality",
-            }
-          : null,
+        enhanced_kallikratis: null,
         expenditure_types: uniqueExpenditureTypes,
         event_types: uniqueEventTypes,
       };

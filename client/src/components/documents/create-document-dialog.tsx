@@ -32,6 +32,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
+import { parseEuropeanNumber } from "@/lib/number-format";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -3659,7 +3660,7 @@ export function CreateDocumentDialog({
                                             }
 
                                             const amount =
-                                              parseFloat(amountStr) || 0;
+                                              parseEuropeanNumber(amountStr) || 0;
                                             const installments =
                                               firstPayment.installment || [
                                                 "ΕΦΑΠΑΞ",
@@ -3704,7 +3705,7 @@ export function CreateDocumentDialog({
                                       const installmentValue =
                                         enhancedData.installment || "";
                                       const amountValue =
-                                        parseFloat(
+                                        parseEuropeanNumber(
                                           enhancedData.amount || "0",
                                         ) || 0;
 
@@ -3934,7 +3935,7 @@ export function CreateDocumentDialog({
                                             const numValue =
                                               typeof value === "number"
                                                 ? value
-                                                : parseFloat(value) || 0;
+                                                : parseEuropeanNumber(value) || 0;
                                             field.onChange(numValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
@@ -3944,14 +3945,14 @@ export function CreateDocumentDialog({
                                               (typeof recipient.daily_compensation ===
                                               "number"
                                                 ? recipient.daily_compensation
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
                                               numValue +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.kilometers_traveled as string,
                                                   ) || 0) *
                                                 (recipient.price_per_km ||
@@ -3959,7 +3960,7 @@ export function CreateDocumentDialog({
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
                                             const deduction =

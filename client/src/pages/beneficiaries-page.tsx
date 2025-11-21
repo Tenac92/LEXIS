@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
+import { parseEuropeanNumber } from "@/lib/number-format";
 import {
   Dialog,
   DialogContent,
@@ -267,7 +268,7 @@ export default function BeneficiariesPage() {
 
       const data = paymentMap.get(id);
       data.payments.push(payment);
-      data.totalAmount += parseFloat(payment.amount) || 0;
+      data.totalAmount += parseEuropeanNumber(payment.amount) || 0;
       if (payment.expenditure_type) {
         data.expenditureTypes.add(payment.expenditure_type);
       }
@@ -1341,7 +1342,7 @@ function ExistingPaymentsDisplay({
   }
 
   const totalAmount = payments.reduce(
-    (sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0),
+    (sum: number, payment: any) => sum + (parseEuropeanNumber(payment.amount) || 0),
     0,
   );
 
@@ -1413,7 +1414,7 @@ function ExistingPaymentsDisplay({
                     Ποσό (€)
                   </span>
                   <span className="font-semibold text-green-700 text-sm">
-                    {parseFloat(payment.amount).toLocaleString("el-GR")} €
+                    {parseEuropeanNumber(payment.amount).toLocaleString("el-GR")} €
                   </span>
                 </div>
                 <div>
