@@ -319,18 +319,37 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       "[Projects] Generating Excel export with projects and budget data",
     );
 
-    // Fetch all projects with enhanced data using optimized schema
+    // Get filter parameters from query string
+    const na853Filter = req.query.na853 as string || "";
+    const expenditureTypeFilter = req.query.expenditureType as string || "";
+    const statusFilter = req.query.status as string || "";
+    const unitFilter = req.query.unit as string || "";
+
+    console.log(`[Export] Filters - NA853: ${na853Filter}, Expenditure: ${expenditureTypeFilter}, Status: ${statusFilter}, Unit: ${unitFilter}`);
+
+    // Build filter query for projects
+    let projectQuery = supabase
+      .from("Projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    // Apply filters
+    if (na853Filter) {
+      projectQuery = projectQuery.eq("na853", na853Filter);
+    }
+    if (statusFilter && statusFilter !== "all") {
+      projectQuery = projectQuery.eq("status", statusFilter);
+    }
+
+    const projectsRes = await projectQuery;
+
+    // Fetch all supporting data
     const [
-      projectsRes,
       monadaRes,
       eventTypesRes,
       expenditureTypesRes,
       indexRes,
     ] = await Promise.all([
-      supabase
-        .from("Projects")
-        .select("*")
-        .order("created_at", { ascending: false }),
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
@@ -500,9 +519,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
           "Γ΄ Τρίμηνο": "",
           "Δ΄ Τρίμηνο": "",
           "Κατανομές Έτους": "",
-          "Προβολή Χρήστη": "",
-          "Ημ/νία Δημ. Κατανομής": "",
-          "Ημ/νία Ενημ. Κατανομής": "",
+          [`Δαπάνες ${new Date().getFullYear()}`]: "",
         });
       } else {
         // For projects with splits, add one row per split with both project and split data
@@ -548,13 +565,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
             "Γ΄ Τρίμηνο": split.q3 || "",
             "Δ΄ Τρίμηνο": split.q4 || "",
             "Κατανομές Έτους": split.katanomes_etous || "",
-            "Προβολή Χρήστη": split.user_view || "",
-            "Ημ/νία Δημ. Κατανομής": split.created_at
-              ? new Date(split.created_at).toLocaleDateString("el-GR")
-              : "",
-            "Ημ/νία Ενημ. Κατανομής": split.updated_at
-              ? new Date(split.updated_at).toLocaleDateString("el-GR")
-              : "",
+            [`Δαπάνες ${new Date().getFullYear()}`]: split.user_view || "",
           });
         });
       }
@@ -573,13 +584,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
           "Γ΄ Τρίμηνο": split.q3 || "",
           "Δ΄ Τρίμηνο": split.q4 || "",
           "Κατανομές Έτους": split.katanomes_etous || "",
-          "Προβολή Χρήστη": split.user_view || "",
-          "Ημ/νία Δημιουργίας": split.created_at
-            ? new Date(split.created_at).toLocaleDateString("el-GR")
-            : "",
-          "Ημ/νία Ενημέρωσης": split.updated_at
-            ? new Date(split.updated_at).toLocaleDateString("el-GR")
-            : "",
+          [`Δαπάνες ${new Date().getFullYear()}`]: split.user_view || "",
         }))
       : [];
 
@@ -640,6 +645,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     // Helper function to apply European number formatting to worksheet
     const applyEuropeanNumberFormatting = (ws: XLSX.WorkSheet) => {
+      const currentYear = new Date().getFullYear();
       const numericColumns = [
         "Προϋπολογισμός ΝΑ853",
         "Προϋπολογισμός ΝΑ271",
@@ -651,7 +657,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         "Γ΄ Τρίμηνο",
         "Δ΄ Τρίμηνο",
         "Κατανομές Έτους",
-        "Προβολή Χρήστη",
+        `Δαπάνες ${currentYear}`,
       ];
 
       for (const cell in ws) {
