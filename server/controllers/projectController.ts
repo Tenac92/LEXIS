@@ -2708,7 +2708,8 @@ router.patch(
         }
 
         // Insert new project_index entries from combined project_lines
-        for (const line of projectLinesToProcess) {
+        for (let lineIndex = 0; lineIndex < projectLinesToProcess.length; lineIndex++) {
+          const line = projectLinesToProcess[lineIndex];
           try {
             // Find foreign key IDs from the provided data
             let eventTypeId = null;
@@ -2870,7 +2871,7 @@ router.patch(
             }
 
             console.log(
-              `[Projects] Processing line ${updateData.project_lines.indexOf(line) + 1}:`,
+              `[Projects] Processing line ${lineIndex + 1}:`,
             );
             console.log(`[Projects] - Event Type ID: ${eventTypeId}`);
             console.log(`[Projects] - Monada ID: ${monadaId}`);
