@@ -329,8 +329,10 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                           <div>
                             <span className="font-medium text-green-700 block mb-1">Περιοχή (Περιφέρεια):</span>
                             <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {indexEntries.length > 0 && indexEntries[0]?.kallikratis?.perifereia 
-                                ? indexEntries[0].kallikratis.perifereia 
+                              {enhancedProjectData?.region 
+                                ? (typeof enhancedProjectData.region === 'string' 
+                                    ? enhancedProjectData.region 
+                                    : (enhancedProjectData.region as any)?.name || 'Δεν υπάρχει')
                                 : 'Δεν υπάρχει'}
                             </p>
                           </div>
