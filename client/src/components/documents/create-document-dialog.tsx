@@ -196,6 +196,7 @@ const recipientSchema = z.object({
   kilometers_traveled: z.number().optional().default(0),
   price_per_km: z.number().optional().default(DEFAULT_PRICE_PER_KM),
   tickets_tolls_rental: z.number().optional().default(0),
+  tickets_tolls_rental_entries: z.array(z.number()).optional().default([]), // Array of individual amounts
   has_2_percent_deduction: z.boolean().optional().default(false),
   total_expense: z.number().optional(),
   deduction_2_percent: z.number().optional(),
@@ -2296,6 +2297,7 @@ export function CreateDocumentDialog({
               accommodation_expenses: r.accommodation_expenses || 0,
               kilometers_traveled: r.kilometers_traveled || 0,
               tickets_tolls_rental: r.tickets_tolls_rental || 0,
+              tickets_tolls_rental_entries: r.tickets_tolls_rental_entries || [], // Include array of entries
               net_payable: r.net_payable !== undefined && r.net_payable !== null ? r.net_payable : parseFloat(r.amount.toString()),
               amount: parseFloat(r.amount.toString()),
               secondary_text: r.secondary_text?.trim() || "",
@@ -2549,6 +2551,7 @@ export function CreateDocumentDialog({
         kilometers_traveled: 0,
         price_per_km: DEFAULT_PRICE_PER_KM,
         tickets_tolls_rental: 0,
+        tickets_tolls_rental_entries: [0], // Initialize with one empty entry
         has_2_percent_deduction: false,
       },
     ]);
@@ -4062,79 +4065,214 @@ export function CreateDocumentDialog({
                                   )}
                                 />
 
-                                {/* Tickets/Tolls/Rental */}
-                                <FormField
-                                  control={form.control}
-                                  name={`recipients.${index}.tickets_tolls_rental`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel className="text-sm">
-                                        Εισιτήρια/Διόδια/Ενοικίαση
-                                      </FormLabel>
-                                      <FormControl>
-                                        <NumberInput
-                                          {...field}
-                                          onChange={(displayValue, numericValue) => {
-                                            field.onChange(numericValue);
-                                            // Trigger recalculation
-                                            const recipient = form.getValues(
-                                              `recipients.${index}`,
-                                            );
-                                            const totalExpense =
-                                              (typeof recipient.daily_compensation ===
-                                              "number"
-                                                ? recipient.daily_compensation
-                                                : parseEuropeanNumber(
-                                                    recipient.daily_compensation as string,
-                                                  ) || 0) +
-                                              (typeof recipient.accommodation_expenses ===
-                                              "number"
-                                                ? recipient.accommodation_expenses
-                                                : parseEuropeanNumber(
-                                                    recipient.accommodation_expenses as string,
-                                                  ) || 0) +
-                                              (typeof recipient.kilometers_traveled ===
-                                              "number"
-                                                ? recipient.kilometers_traveled
-                                                : parseEuropeanNumber(
-                                                    recipient.kilometers_traveled as string,
-                                                  ) || 0) *
-                                                (recipient.price_per_km ||
-                                                  DEFAULT_PRICE_PER_KM) +
-                                              numericValue;
-                                            const deduction =
-                                              recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
-                                                : 0;
-                                            const netPayable =
-                                              totalExpense - deduction;
-                                            form.setValue(
-                                              `recipients.${index}.total_expense`,
-                                              totalExpense,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.deduction_2_percent`,
-                                              deduction,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.net_payable`,
-                                              netPayable,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.amount`,
-                                              netPayable,
-                                            );
-                                          }}
-                                          min={0}
-                                          step={0.01}
-                                          placeholder="0.00"
-                                          data-testid={`input-recipient-${index}-tickets-tolls`}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                {/* Tickets/Tolls/Rental - Dynamic Fields */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel className="text-sm">
+                                      Εισιτήρια/Διόδια/Ενοικίαση
+                                    </FormLabel>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentEntries = form.getValues(
+                                          `recipients.${index}.tickets_tolls_rental_entries`,
+                                        ) || [];
+                                        form.setValue(
+                                          `recipients.${index}.tickets_tolls_rental_entries`,
+                                          [...currentEntries, 0],
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0"
+                                      data-testid={`button-add-ticket-entry-${index}`}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {(() => {
+                                    const entries = form.watch(
+                                      `recipients.${index}.tickets_tolls_rental_entries`,
+                                    ) || [];
+                                    
+                                    // If no entries exist, initialize with one empty field
+                                    if (entries.length === 0) {
+                                      form.setValue(
+                                        `recipients.${index}.tickets_tolls_rental_entries`,
+                                        [0],
+                                      );
+                                      return null;
+                                    }
+
+                                    return (
+                                      <div className="space-y-1">
+                                        {entries.map((entry, entryIndex) => (
+                                          <div key={entryIndex} className="flex gap-1">
+                                            <NumberInput
+                                              value={entry}
+                                              onChange={(displayValue, numericValue) => {
+                                                const currentEntries = form.getValues(
+                                                  `recipients.${index}.tickets_tolls_rental_entries`,
+                                                ) || [];
+                                                const newEntries = [...currentEntries];
+                                                newEntries[entryIndex] = numericValue;
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental_entries`,
+                                                  newEntries,
+                                                );
+                                                
+                                                // Calculate sum and update tickets_tolls_rental
+                                                const sum = newEntries.reduce((a, b) => a + b, 0);
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental`,
+                                                  sum,
+                                                );
+                                                
+                                                // Trigger recalculation
+                                                const recipient = form.getValues(
+                                                  `recipients.${index}`,
+                                                );
+                                                const totalExpense =
+                                                  (typeof recipient.daily_compensation ===
+                                                  "number"
+                                                    ? recipient.daily_compensation
+                                                    : parseEuropeanNumber(
+                                                        recipient.daily_compensation as string,
+                                                      ) || 0) +
+                                                  (typeof recipient.accommodation_expenses ===
+                                                  "number"
+                                                    ? recipient.accommodation_expenses
+                                                    : parseEuropeanNumber(
+                                                        recipient.accommodation_expenses as string,
+                                                      ) || 0) +
+                                                  (typeof recipient.kilometers_traveled ===
+                                                  "number"
+                                                    ? recipient.kilometers_traveled
+                                                    : parseEuropeanNumber(
+                                                        recipient.kilometers_traveled as string,
+                                                      ) || 0) *
+                                                    (recipient.price_per_km ||
+                                                      DEFAULT_PRICE_PER_KM) +
+                                                  sum;
+                                                const deduction =
+                                                  recipient.has_2_percent_deduction
+                                                    ? totalExpense * 0.02
+                                                    : 0;
+                                                const netPayable =
+                                                  totalExpense - deduction;
+                                                form.setValue(
+                                                  `recipients.${index}.total_expense`,
+                                                  totalExpense,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.deduction_2_percent`,
+                                                  deduction,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.net_payable`,
+                                                  netPayable,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.amount`,
+                                                  netPayable,
+                                                );
+                                              }}
+                                              min={0}
+                                              step={0.01}
+                                              placeholder="0.00"
+                                              className="flex-1"
+                                              data-testid={`input-recipient-${index}-ticket-entry-${entryIndex}`}
+                                            />
+                                            {entries.length > 1 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                  const currentEntries = form.getValues(
+                                                    `recipients.${index}.tickets_tolls_rental_entries`,
+                                                  ) || [];
+                                                  const newEntries = currentEntries.filter(
+                                                    (_, i) => i !== entryIndex,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental_entries`,
+                                                    newEntries,
+                                                  );
+                                                  
+                                                  // Calculate sum and update tickets_tolls_rental
+                                                  const sum = newEntries.reduce((a, b) => a + b, 0);
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental`,
+                                                    sum,
+                                                  );
+                                                  
+                                                  // Trigger recalculation
+                                                  const recipient = form.getValues(
+                                                    `recipients.${index}`,
+                                                  );
+                                                  const totalExpense =
+                                                    (typeof recipient.daily_compensation ===
+                                                    "number"
+                                                      ? recipient.daily_compensation
+                                                      : parseEuropeanNumber(
+                                                          recipient.daily_compensation as string,
+                                                        ) || 0) +
+                                                    (typeof recipient.accommodation_expenses ===
+                                                    "number"
+                                                      ? recipient.accommodation_expenses
+                                                      : parseEuropeanNumber(
+                                                          recipient.accommodation_expenses as string,
+                                                        ) || 0) +
+                                                    (typeof recipient.kilometers_traveled ===
+                                                    "number"
+                                                      ? recipient.kilometers_traveled
+                                                      : parseEuropeanNumber(
+                                                          recipient.kilometers_traveled as string,
+                                                        ) || 0) *
+                                                      (recipient.price_per_km ||
+                                                        DEFAULT_PRICE_PER_KM) +
+                                                    sum;
+                                                  const deduction =
+                                                    recipient.has_2_percent_deduction
+                                                      ? totalExpense * 0.02
+                                                      : 0;
+                                                  const netPayable =
+                                                    totalExpense - deduction;
+                                                  form.setValue(
+                                                    `recipients.${index}.total_expense`,
+                                                    totalExpense,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.deduction_2_percent`,
+                                                    deduction,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.net_payable`,
+                                                    netPayable,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.amount`,
+                                                    netPayable,
+                                                  );
+                                                }}
+                                                className="h-8 w-8 p-0"
+                                                data-testid={`button-remove-ticket-entry-${index}-${entryIndex}`}
+                                              >
+                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ))}
+                                        {entries.length > 1 && (
+                                          <div className="text-xs text-muted-foreground pt-1 border-t">
+                                            Σύνολο: €{entries.reduce((a, b) => a + b, 0).toFixed(2)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
                               </div>
 
                               {/* 2% Deduction Checkbox */}

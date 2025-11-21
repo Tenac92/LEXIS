@@ -485,6 +485,7 @@ export const employeePayments = pgTable(
       precision: 10,
       scale: 2,
     }).default("0.00"),
+    tickets_tolls_rental_entries: jsonb("tickets_tolls_rental_entries"), // Array of individual ticket/toll/rental amounts
     has_2_percent_deduction: boolean("has_2_percent_deduction").default(false),
     total_expense: decimal("total_expense", {
       precision: 10,
@@ -1115,6 +1116,7 @@ export const recipientSchema = z.object({
   kilometers_traveled: z.number().optional(),
   price_per_km: z.number().optional(),
   tickets_tolls_rental: z.number().optional(),
+  tickets_tolls_rental_entries: z.array(z.number()).optional().default([]), // Array of individual amounts
   has_2_percent_deduction: z.boolean().optional(),
   total_expense: z.number().optional(),
   deduction_2_percent: z.number().optional(),
