@@ -141,8 +141,8 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
           }
 
           const name =
-            item.project_title ||
             item.event_description ||
+            item.project_title ||
             `Project ${item.mis}`;
 
           return {
