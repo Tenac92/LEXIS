@@ -62,6 +62,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Standalone subprojects routes
   app.use('/api/subprojects', subprojectsRouter);
+
+  // Register budget notifications controller
+  const { router: budgetNotificationsRouter } = await import('./controllers/budgetNotificationsController');
+  app.use('/api/budget-notifications', budgetNotificationsRouter);
   
   // Project Index endpoint - get project_index record by ID
   app.get('/api/project-index/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
