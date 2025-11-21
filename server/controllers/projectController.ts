@@ -921,38 +921,13 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
       `[ProjectComplete] Before kallikratis loading - got ${eventTypes.length} eventTypes, ${units.length} units, ${expenditureTypes.length} expenditureTypes`,
     );
 
-    // Load both old kallikratis data (for fallback) and new normalized geographic data
-    let kallikratis: any[] = [];
+    // Load normalized geographic data (new system replaces old kallikratis table)
+    let kallikratis: any[] = []; // Empty - table no longer exists
     let regions: any[] = [];
     let regionalUnits: any[] = [];
     let municipalities: any[] = [];
 
-    try {
-      console.log("[ProjectComplete] Attempting to load kallikratis data...");
-      const kallikratisResponse = await supabase
-        .from("kallikratis")
-        .select(
-          "id, perifereia, perifereiaki_enotita, onoma_neou_ota, kodikos_neou_ota, kodikos_perifereiakis_enotitas, kodikos_perifereias, eidos_neou_ota",
-        )
-        .limit(1000); // Reduced from 2000 for faster initial load
-
-      if (kallikratisResponse.error) {
-        console.error(
-          "[ProjectComplete] Kallikratis query error:",
-          kallikratisResponse.error,
-        );
-      } else {
-        kallikratis = kallikratisResponse.data || [];
-        console.log(
-          `[ProjectComplete] Successfully loaded ${kallikratis.length} kallikratis entries for complete data`,
-        );
-      }
-    } catch (kallikratisError) {
-      console.warn(
-        "[ProjectComplete] Kallikratis data load failed, continuing without:",
-        kallikratisError,
-      );
-    }
+    console.log("[ProjectComplete] Skipping old kallikratis table (no longer in use), loading normalized geographic data instead...");
 
     // Load normalized geographic data
     try {
@@ -1243,47 +1218,11 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
         supabase.from("project_index").select("kallikratis_id").limit(5000),
       ]);
 
-    // Extract unique kallikratis_ids from project_index
-    const indexData = projectIndexRes.data || [];
-    const kallikratisIdList = indexData
-      .map((item: any) => item.kallikratis_id)
-      .filter((id: any) => id !== null && id !== undefined);
-
-    const uniqueKallikratisIds = Array.from(new Set(kallikratisIdList));
-
-    // Fetch actual kallikratis data for these IDs
+    // Kallikratis table no longer exists - using normalized geographic data instead
     let kallikratisFromIndex: any[] = [];
-    if (uniqueKallikratisIds.length > 0) {
-      const kallikratisRes = await supabase
-        .from("kallikratis")
-        .select(
-          "id, perifereia, perifereiaki_enotita, onoma_neou_ota, kodikos_neou_ota, kodikos_perifereiakis_enotitas, kodikos_perifereias, eidos_neou_ota",
-        )
-        .in("id", uniqueKallikratisIds);
-
-      if (kallikratisRes.data && kallikratisRes.data.length > 0) {
-        kallikratisFromIndex = kallikratisRes.data.sort((a: any, b: any) => {
-          const levelOrder: { [key: string]: number } = {
-            region: 1,
-            prefecture: 2,
-            municipality: 3,
-            municipal_unit: 4,
-          };
-          if (levelOrder[a.level] !== levelOrder[b.level]) {
-            return levelOrder[a.level] - levelOrder[b.level];
-          }
-          const nameA =
-            a.perifereia || a.perifereiaki_enotita || a.onoma_neou_ota || "";
-          const nameB =
-            b.perifereia || b.perifereiaki_enotita || b.onoma_neou_ota || "";
-          return nameA.localeCompare(nameB, "el", { sensitivity: "base" });
-        });
-      }
-    } else {
-      console.log(
-        "[ProjectReference] No kallikratis IDs found in project_index",
-      );
-    }
+    console.log(
+      "[ProjectReference] Using normalized geographic tables instead of old kallikratis table",
+    );
 
     // Set reasonable caching headers
     res.set("Cache-Control", "public, max-age=300"); // 5 minutes cache
@@ -1296,7 +1235,7 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
     };
 
     console.log(
-      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, kallikratis=${referenceData.kallikratis.length}, expenditureTypes=${referenceData.expenditureTypes.length}`,
+      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, expenditureTypes=${referenceData.expenditureTypes.length}`,
     );
 
     res.json(referenceData);
@@ -2722,18 +2661,15 @@ router.patch(
               eventTypesRes,
               expenditureTypesRes,
               monadaRes,
-              kallikratisRes,
             ] = await Promise.all([
               supabase.from("event_types").select("*"),
               supabase.from("expenditure_types").select("*"),
               supabase.from("Monada").select("*"),
-              supabase.from("kallikratis").select("*"),
             ]);
 
             const eventTypes = eventTypesRes.data || [];
             const expenditureTypes = expenditureTypesRes.data || [];
             const monadaData = monadaRes.data || [];
-            const kallikratisData = kallikratisRes.data || [];
 
             // Find event type ID
             if (line.event_type) {
@@ -2793,82 +2729,10 @@ router.patch(
               }
             }
 
-            // Find kallikratis ID from region hierarchy
-            if (line.region) {
-              console.log(
-                `[Projects] DEBUG: Looking for kallikratis with region:`,
-                line.region,
-              );
-
-              if (line.region.kallikratis_id) {
-                // Use provided kallikratis_id
-                kallikratisId = line.region.kallikratis_id;
-                console.log(
-                  `[Projects] Using provided kallikratis_id: ${kallikratisId}`,
-                );
-              } else {
-                // Try to find kallikratis entry by matching region hierarchy
-                console.log(
-                  `[Projects] DEBUG: Searching kallikratis with criteria:`,
-                  {
-                    perifereia: line.region.perifereia,
-                    perifereiaki_enotita: line.region.perifereiaki_enotita,
-                    onoma_neou_ota: line.region.dimos,
-                    onoma_dimotikis_enotitas: line.region.dimotiki_enotita,
-                  },
-                );
-
-                // First try exact match
-                let kallikratis = kallikratisData.find(
-                  (k) =>
-                    k.perifereia === line.region.perifereia &&
-                    k.perifereiaki_enotita ===
-                      line.region.perifereiaki_enotita &&
-                    k.onoma_neou_ota === line.region.dimos &&
-                    k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita,
-                );
-
-                // If no exact match and no municipal community specified, try matching without it
-                if (!kallikratis && !line.region.dimotiki_enotita) {
-                  kallikratis = kallikratisData.find(
-                    (k) =>
-                      k.perifereia === line.region.perifereia &&
-                      k.perifereiaki_enotita ===
-                        line.region.perifereiaki_enotita &&
-                      k.onoma_neou_ota === line.region.dimos,
-                  );
-                  console.log(
-                    `[Projects] DEBUG: Trying municipal match without dimotiki_enotita`,
-                  );
-                }
-
-                // If still no match, try regional unit level
-                if (!kallikratis) {
-                  kallikratis = kallikratisData.find(
-                    (k) =>
-                      k.perifereia === line.region.perifereia &&
-                      k.perifereiaki_enotita ===
-                        line.region.perifereiaki_enotita,
-                  );
-                  console.log(
-                    `[Projects] DEBUG: Trying regional unit level match`,
-                  );
-                }
-
-                kallikratisId = kallikratis?.id || null;
-                console.log(
-                  `[Projects] Lookup found kallikratis_id: ${kallikratisId}`,
-                );
-                if (kallikratis) {
-                  console.log(
-                    `[Projects] DEBUG: Matched kallikratis:`,
-                    kallikratis,
-                  );
-                } else {
-                  console.log(`[Projects] WARNING: No kallikratis match found`);
-                }
-              }
-            }
+            // Geographic ID mapping skipped - using normalized geographic data instead
+            console.log(
+              `[Projects] Using normalized geographic system for location data`,
+            );
 
             console.log(
               `[Projects] Processing line ${lineIndex + 1}:`,
