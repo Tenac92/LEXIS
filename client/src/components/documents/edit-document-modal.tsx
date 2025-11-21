@@ -413,6 +413,7 @@ export function EditDocumentModal({
           accommodation_expenses: payment.accommodation_expenses || 0,
           kilometers_traveled: payment.kilometers_traveled || 0,
           tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+          tickets_tolls_rental_entries: payment.tickets_tolls_rental_entries || (payment.tickets_tolls_rental > 0 ? [payment.tickets_tolls_rental] : []),
           net_payable: parseFloat(payment.amount) || 0,
           status: payment.status || 'pending',
           secondary_text: payment.secondary_text || '',
@@ -435,6 +436,7 @@ export function EditDocumentModal({
         installment: installmentKey,
         installments: [installmentKey],
         installmentAmounts: { [installmentKey]: parseFloat(payment.amount) || 0 } as Record<string, number>,
+        tickets_tolls_rental_entries: [], // Empty array for beneficiary payments (not used for non-ΕΚΤΟΣ ΕΔΡΑΣ)
         status: payment.status || 'pending',
         secondary_text: payment.freetext || '',
       };
@@ -627,6 +629,7 @@ export function EditDocumentModal({
           accommodation_expenses: payment.accommodation_expenses || 0,
           kilometers_traveled: payment.kilometers_traveled || 0,
           tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+          tickets_tolls_rental_entries: payment.tickets_tolls_rental_entries || (payment.tickets_tolls_rental > 0 ? [payment.tickets_tolls_rental] : []),
           net_payable: parseFloat(payment.amount) || 0,
           status: payment.status || 'pending',
           secondary_text: payment.secondary_text || '',
@@ -649,6 +652,7 @@ export function EditDocumentModal({
         installment: installmentKey,
         installments: [installmentKey],
         installmentAmounts: { [installmentKey]: parseFloat(payment.amount) || 0 } as Record<string, number>,
+        tickets_tolls_rental_entries: [], // Empty array for beneficiary payments (not used for non-ΕΚΤΟΣ ΕΔΡΑΣ)
         status: payment.status || 'pending',
         secondary_text: payment.freetext || '',
       };
@@ -944,6 +948,7 @@ export function EditDocumentModal({
         installment: "ΕΦΑΠΑΞ",
         installments: ["ΕΦΑΠΑΞ"],
         installmentAmounts: { ΕΦΑΠΑΞ: 0 },
+        tickets_tolls_rental_entries: [],
         secondary_text: ""
       }
     ]);
@@ -1927,26 +1932,126 @@ export function EditDocumentModal({
                                 )}
                               />
 
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.tickets_tolls_rental` as any}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormLabel>Εισιτήρια/Διόδια/Ενοικίαση (€)</FormLabel>
-                                    <FormControl>
-                                      <Input 
-                                        {...field}
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                        data-testid={`input-recipient-tickets-${index}`}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                              {/* Tickets/Tolls/Rental - Dynamic Fields */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <FormLabel className="text-sm">
+                                    Εισιτήρια/Διόδια/Ενοικίαση (€)
+                                  </FormLabel>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const currentEntries = form.getValues(
+                                        `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                      ) || [];
+                                      form.setValue(
+                                        `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                        [...currentEntries, 0],
+                                      );
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    data-testid={`button-add-ticket-entry-${index}`}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {(() => {
+                                  const entries = form.watch(
+                                    `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                  ) || [];
+                                  
+                                  // If no entries exist, check for legacy value to migrate
+                                  if (entries.length === 0) {
+                                    const singleValue = form.getValues(`recipients.${index}.tickets_tolls_rental` as any);
+                                    // Only initialize if there's a legacy value, otherwise show nothing
+                                    if (singleValue && singleValue > 0) {
+                                      form.setValue(
+                                        `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                        [singleValue],
+                                      );
+                                      return null;
+                                    }
+                                    // Empty array - don't show any fields, user must click + to add
+                                    return (
+                                      <div className="text-xs text-muted-foreground italic">
+                                        Κλικ στο + για προσθήκη
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="space-y-1">
+                                      {entries.map((entry: number, entryIndex: number) => (
+                                        <div key={entryIndex} className="flex gap-1">
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={entry}
+                                            onChange={(e) => {
+                                              const currentEntries = form.getValues(
+                                                `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                              ) || [];
+                                              const newEntries = [...currentEntries];
+                                              newEntries[entryIndex] = parseFloat(e.target.value) || 0;
+                                              form.setValue(
+                                                `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                newEntries,
+                                              );
+                                              
+                                              // Calculate sum and update tickets_tolls_rental
+                                              const sum = newEntries.reduce((a: number, b: number) => a + b, 0);
+                                              form.setValue(
+                                                `recipients.${index}.tickets_tolls_rental` as any,
+                                                sum,
+                                              );
+                                            }}
+                                            className="flex-1"
+                                            data-testid={`input-recipient-ticket-entry-${index}-${entryIndex}`}
+                                          />
+                                          {entries.length > 1 && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => {
+                                                const currentEntries = form.getValues(
+                                                  `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                ) || [];
+                                                const newEntries = currentEntries.filter(
+                                                  (_: any, i: number) => i !== entryIndex,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                  newEntries,
+                                                );
+                                                
+                                                // Calculate sum and update tickets_tolls_rental
+                                                const sum = newEntries.reduce((a: number, b: number) => a + b, 0);
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental` as any,
+                                                  sum,
+                                                );
+                                              }}
+                                              className="h-10 w-10 p-0"
+                                              data-testid={`button-remove-ticket-entry-${index}-${entryIndex}`}
+                                            >
+                                              <Trash2 className="h-3 w-3 text-destructive" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ))}
+                                      {entries.length > 1 && (
+                                        <div className="text-xs text-muted-foreground pt-1 border-t">
+                                          Σύνολο: €{entries.reduce((a: number, b: number) => a + b, 0).toFixed(2)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                              </div>
                             </div>
 
                             <Separator className="my-4" />
