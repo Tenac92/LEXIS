@@ -1195,10 +1195,11 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new employee:', employee);
       
+      const afmString = employee.afm ? String(employee.afm) : '';
       const employeeToInsert = {
         ...employee,
-        afm: employee.afm ? encryptAFM(employee.afm) : '',
-        afm_hash: employee.afm ? hashAFM(employee.afm) : ''
+        afm: afmString ? encryptAFM(afmString) : '',
+        afm_hash: afmString ? hashAFM(afmString) : ''
       };
       
       const { data, error } = await supabase
@@ -1228,10 +1229,11 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating employee ${id}:`, employee);
       
+      const afmString = employee.afm ? String(employee.afm) : '';
       const employeeToUpdate = {
         ...employee,
-        afm: employee.afm ? encryptAFM(employee.afm) : undefined,
-        afm_hash: employee.afm ? hashAFM(employee.afm) : undefined
+        afm: afmString ? encryptAFM(afmString) : undefined,
+        afm_hash: afmString ? hashAFM(afmString) : undefined
       };
       
       const { data, error } = await supabase
@@ -1262,11 +1264,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Bulk importing ${employees.length} employees`);
       
-      const employeesToInsert = employees.map((emp, idx) => ({
-        ...emp,
-        afm: emp.afm ? encryptAFM(emp.afm) : '',
-        afm_hash: emp.afm ? hashAFM(emp.afm) : ''
-      }));
+      const employeesToInsert = employees.map((emp, idx) => {
+        const afmString = emp.afm ? String(emp.afm) : '';
+        return {
+          ...emp,
+          afm: afmString ? encryptAFM(afmString) : '',
+          afm_hash: afmString ? hashAFM(afmString) : ''
+        };
+      });
       
       const { data, error } = await supabase
         .from('Employees')
