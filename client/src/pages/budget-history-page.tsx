@@ -873,25 +873,50 @@ export default function BudgetHistoryPage() {
 
               {/* Enhanced Filters Section for Managers */}
               {(isManager || isAdmin) && (
-                <Card className="p-3 bg-blue-50/50 border-blue-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Search className="h-4 w-4 text-blue-600" />
-                    <h3 className="font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
+                <Card className="p-2 bg-blue-50/50 border-blue-200">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+                        <SelectTrigger className="h-9 w-[140px] text-xs">
+                          <SelectValue placeholder="Δημιουργός" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Όλοι οι χρήστες</SelectItem>
+                          {unitUsers.map((user: any) => (
+                            <SelectItem key={user.id} value={user.name}>
+                              <div className="flex items-center gap-2">
+                                <UserIcon className="h-3 w-3 text-gray-500" />
+                                {user.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={applyAllFilters} size="sm" className="h-9">
+                        <Search className="h-3 w-3 mr-1" />
+                        Εφαρμογή
+                      </Button>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                    <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Κωδικό ΝΑ853</label>
                       <Input
                         placeholder="π.χ. 2024ΝΑ853001"
                         value={na853Filter}
                         onChange={(e) => setNa853Filter(e.target.value)}
+                        className="h-10"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Τύπος Δαπάνης</label>
                       <Select value={expenditureTypeFilter} onValueChange={setExpenditureTypeFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Όλοι οι τύποι" />
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Όλοι" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Όλοι οι τύποι</SelectItem>
@@ -903,11 +928,11 @@ export default function BudgetHistoryPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Τύπος Αλλαγής</label>
                       <Select value={changeType} onValueChange={handleChangeTypeChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Επιλέξτε τύπο" />
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Όλες" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
@@ -922,74 +947,23 @@ export default function BudgetHistoryPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Από Ημερομηνία</label>
                       <Input
                         type="date"
                         value={dateFilter.from}
                         onChange={(e) => setDateFilter(prev => ({ ...prev, from: e.target.value }))}
+                        className="h-10"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Έως Ημερομηνία</label>
                       <Input
                         type="date"
                         value={dateFilter.to}
                         onChange={(e) => setDateFilter(prev => ({ ...prev, to: e.target.value }))}
+                        className="h-10"
                       />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Δημιουργήθηκε από</label>
-                      <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingUsers ? "Φόρτωση χρηστών..." : "Επιλέξτε χρήστη"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Όλοι οι χρήστες</SelectItem>
-                          {unitUsers.map((user: any) => (
-                            <SelectItem key={user.id} value={user.name}>
-                              <div className="flex items-center gap-2">
-                                <UserIcon className="h-3 w-3 text-gray-500" />
-                                {user.name}
-                                {user.role === 'manager' && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                    Διαχειριστής
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Αποτελέσματα ανά σελίδα</label>
-                      <Select
-                        value={limit.toString()}
-                        onValueChange={(value) => {
-                          setPage(1);
-                          setLimit(parseInt(value));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5">5 εγγραφές</SelectItem>
-                          <SelectItem value="10">10 εγγραφές</SelectItem>
-                          <SelectItem value="20">20 εγγραφές</SelectItem>
-                          <SelectItem value="50">50 εγγραφές</SelectItem>
-                          <SelectItem value="100">100 εγγραφές</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Button onClick={applyAllFilters} className="flex-1">
-                        <Search className="h-4 w-4 mr-2" />
-                        Εφαρμογή Φίλτρων
-                      </Button>
                     </div>
                   </div>
                 </Card>
@@ -1060,92 +1034,71 @@ export default function BudgetHistoryPage() {
 
               {/* Statistics Section - Στατιστικά Περιόδου */}
               {statistics && (isManager || isAdmin) && (
-                <Card className="p-3 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                  <div className="flex items-center gap-2 mb-2">
+                <Card className="p-2 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                  <div className="flex items-center gap-2 mb-2 px-1">
                     <BarChart3 className="h-4 w-4 text-green-600" />
-                    <h3 className="font-medium text-green-900">Στατιστικά Περιόδου</h3>
+                    <h3 className="text-sm font-medium text-green-900">Στατιστικά Περιόδου</h3>
                     <Badge variant="outline" className="bg-white text-xs">
                       Ενημερώνονται με τα ενεργά φίλτρα
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap gap-2">
                     {/* Total Entries */}
-                    <div className="bg-white p-3 rounded-lg border border-green-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Συνολικές Εγγραφές</p>
-                          <p className="text-2xl font-bold text-green-700">{statistics.totalEntries}</p>
-                        </div>
-                        <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                          <FileText className="h-4 w-4 text-green-600" />
-                        </div>
+                    <div className="bg-white px-2.5 py-2 rounded border border-green-100 flex items-center gap-2">
+                      <div className="h-7 w-7 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Εγγραφές</p>
+                        <p className="text-base font-bold text-green-700">{statistics.totalEntries}</p>
                       </div>
                     </div>
 
                     {/* Total Amount Change */}
-                    <div className="bg-white p-3 rounded-lg border border-blue-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Συνολική Μεταβολή</p>
-                          <p className={`text-2xl font-bold ${statistics.totalAmountChange >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                            {formatCurrency(statistics.totalAmountChange)}
-                          </p>
-                        </div>
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                          statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
-                        }`}>
-                          {statistics.totalAmountChange >= 0 ? (
-                            <TrendingUp className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <TrendingDown className="h-4 w-4 text-red-600" />
-                          )}
-                        </div>
+                    <div className="bg-white px-2.5 py-2 rounded border border-blue-100 flex items-center gap-2">
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {statistics.totalAmountChange >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Μεταβολή</p>
+                        <p className={`text-base font-bold ${statistics.totalAmountChange >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {formatCurrency(statistics.totalAmountChange)}
+                        </p>
                       </div>
                     </div>
 
                     {/* Period Range */}
-                    <div className="bg-white p-3 rounded-lg border border-purple-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Χρονική Περίοδος</p>
-                          {statistics.periodRange.start && statistics.periodRange.end ? (
-                            <div className="text-sm">
-                              <p className="font-medium text-purple-700">
-                                {format(new Date(statistics.periodRange.start), 'dd/MM/yyyy')}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                έως {format(new Date(statistics.periodRange.end), 'dd/MM/yyyy')}
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">Δεν υπάρχουν δεδομένα</p>
-                          )}
-                        </div>
-                        <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Info className="h-4 w-4 text-purple-600" />
-                        </div>
+                    <div className="bg-white px-2.5 py-2 rounded border border-purple-100 flex items-center gap-2 col-span-2 md:col-span-1">
+                      <div className="h-7 w-7 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Info className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600">Περίοδος</p>
+                        {statistics.periodRange.start && statistics.periodRange.end ? (
+                          <p className="text-xs font-medium text-purple-700">
+                            {format(new Date(statistics.periodRange.start), 'dd/MM/yy')} - {format(new Date(statistics.periodRange.end), 'dd/MM/yy')}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-500">N/A</p>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Change Types Distribution */}
-                  {Object.keys(statistics.changeTypes).length > 0 && (
-                    <div className="mt-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Κατανομή ανά Τύπο Αλλαγής</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {Object.entries(statistics.changeTypes).map(([type, count]) => (
-                          <div key={type} className="bg-white p-2 rounded-lg border border-gray-100">
-                            <div className="text-center">
-                              <div className="mb-1">{getChangeTypeBadge(type)}</div>
-                              <p className="text-base font-bold text-gray-800">{count as number}</p>
-                              <p className="text-xs text-gray-500">εγγραφές</p>
-                            </div>
-                          </div>
-                        ))}
+                    {/* Change Types Distribution */}
+                    {Object.keys(statistics.changeTypes).length > 0 && Object.entries(statistics.changeTypes).map(([type, count]) => (
+                      <div key={type} className="bg-white px-2 py-2 rounded border border-gray-100 flex items-center gap-1.5">
+                        <div className="flex-shrink-0">{getChangeTypeBadge(type)}</div>
+                        <p className="text-xs font-bold text-gray-800">{count as number}</p>
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </Card>
               )}
             </div>
