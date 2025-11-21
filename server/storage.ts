@@ -1303,10 +1303,11 @@ export class DatabaseStorage implements IStorage {
         };
       });
       
-      // Use upsert to update existing employees (by AFM) or insert new ones
+      // Use upsert to update existing employees (by AFM hash) or insert new ones
+      // Use afm_hash instead of afm because AFM encryption is randomized each time
       const { data, error } = await supabase
         .from('Employees')
-        .upsert(employeesToInsert, { onConflict: 'afm' })
+        .upsert(employeesToInsert, { onConflict: 'afm_hash' })
         .select();
         
       if (error) {
