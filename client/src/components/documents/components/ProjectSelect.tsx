@@ -222,6 +222,15 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             debouncedSearchQuery,
           );
 
+          // Split query and name into words for word-based matching
+          const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+          const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 0);
+          
+          // Check if any word from query matches any word in name (word contains match)
+          const wordMatch = queryWords.some(queryWord =>
+            nameWords.some(nameWord => nameWord.includes(queryWord))
+          );
+
           const matches =
             normalizedName.includes(normalizedQuery) ||
             normalizedMis.includes(normalizedQuery) ||
@@ -229,7 +238,8 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             normalizedNA853.includes(normalizedQuery) ||
             rawMisMatch ||
             rawIdMatch ||
-            rawNA853Match;
+            rawNA853Match ||
+            wordMatch;
 
           // Debug log for the specific project we're looking for
           if (String(project.mis) === "5222801") {
@@ -241,6 +251,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
               normalizedId,
               rawMisMatch,
               rawIdMatch,
+              wordMatch,
               matches,
             });
           }
