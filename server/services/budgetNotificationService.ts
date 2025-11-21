@@ -161,28 +161,6 @@ export async function validateBudgetAllocation(
       };
     }
 
-    // Check if requested amount exceeds quarter available
-    if (quarterAvailable > 0 && requestedAmount > quarterAvailable) {
-      await createBudgetNotification({
-        mis: budgetData.mis || 0,
-        type: 'quarter_exceeded',
-        amount: requestedAmount,
-        current_budget: quarterAvailable,
-        ethsia_pistosi: ethsiaPistosi,
-        reason: `Το ποσό ${requestedAmount.toFixed(2)}€ υπερβαίνει το διαθέσιμο ποσό τριμήνου ${quarterAvailable.toFixed(2)}€`,
-        user_id: userId
-      });
-
-      return {
-        isValid: false,
-        requiresNotification: true,
-        notificationType: 'quarter_exceeded',
-        message: 'Το ποσό υπερβαίνει το διαθέσιμο ποσό τριμήνου',
-        currentBudget: quarterAvailable,
-        ethsiaPistosi
-      };
-    }
-
     // Budget allocation is valid
     return {
       isValid: true,
@@ -484,20 +462,8 @@ export async function createTestReallocationNotifications(): Promise<void> {
       user_id: 49
     });
 
-    // Create sample quarter exceeded notification
-    const quarterNotification = await createBudgetNotification({
-      mis: projects[2].mis,
-      type: 'quarter_exceeded',
-      amount: 3000,
-      current_budget: 2500,
-      ethsia_pistosi: 8000,
-      reason: 'Το ποσό 3,000€ υπερβαίνει το διαθέσιμο ποσό τριμήνου 2,500€',
-      status: 'pending',
-      user_id: 49
-    });
-
-    if (reallocationNotification && fundingNotification && quarterNotification) {
-      log('[Budget] Successfully created 3 test notifications', 'info');
+    if (reallocationNotification && fundingNotification) {
+      log('[Budget] Successfully created test notifications', 'info');
     } else {
       log('[Budget] Some test notifications may have failed to create', 'warn');
     }
