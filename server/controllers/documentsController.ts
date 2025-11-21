@@ -9,6 +9,7 @@ import { broadcastDocumentUpdate } from "../services/websocketService";
 import { createLogger } from "../utils/logger";
 import { storage } from "../storage";
 import { encryptAFM, hashAFM, decryptAFM } from "../utils/crypto";
+import { validateBudgetAllocation } from "../services/budgetNotificationService";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
@@ -1223,6 +1224,19 @@ router.post(
           req.user?.id,
         );
         console.log("[DocumentsController] V2 Budget updated successfully");
+
+        // Validate budget and trigger notifications if needed
+        try {
+          await validateBudgetAllocation(
+            project_id,
+            parseFloat(String(total_amount)) || 0,
+            req.user?.id
+          );
+          console.log('[DocumentsController] V2 Budget validation completed and notifications triggered if applicable');
+        } catch (validationError) {
+          console.error('[DocumentsController] V2 Error during budget validation:', validationError);
+          // Don't fail document creation if validation fails
+        }
       } catch (budgetError) {
         console.error(
           "[DocumentsController] V2 Error updating budget:",
