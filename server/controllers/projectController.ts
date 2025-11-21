@@ -2772,49 +2772,10 @@ router.patch(
 
                   // Create project_index entry for each expenditure type
                   if (expenditureTypeId) {
-                    // Use geographic code from frontend if provided, otherwise calculate it
-                    let geographicCode = line.region?.geographic_code || null;
-
-                    if (!geographicCode && kallikratisData && kallikratisId) {
-                      // Fallback: calculate geographic code if not provided
-                      const kallikratisEntry = kallikratisData.find(
-                        (k) => k.id === kallikratisId,
-                      );
-                      if (kallikratisEntry && line.region) {
-                        // Determine geographic level automatically and get appropriate code
-                        if (line.region.dimos && line.region.dimotiki_enotita) {
-                          // Municipal Community level - use kodikos_dimotikis_enotitas
-                          geographicCode =
-                            kallikratisEntry.kodikos_dimotikis_enotitas;
-                          console.log(
-                            `[Projects] Municipal Community level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.dimos) {
-                          // Municipality level - use kodikos_neou_ota
-                          geographicCode = kallikratisEntry.kodikos_neou_ota;
-                          console.log(
-                            `[Projects] Municipality level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.perifereiaki_enotita) {
-                          // Regional unit level - use kodikos_perifereiakis_enotitas
-                          geographicCode =
-                            kallikratisEntry.kodikos_perifereiakis_enotitas;
-                          console.log(
-                            `[Projects] Regional unit level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.perifereia) {
-                          // Regional level - use kodikos_perifereias
-                          geographicCode = kallikratisEntry.kodikos_perifereias;
-                          console.log(
-                            `[Projects] Regional level, Code: ${geographicCode}`,
-                          );
-                        }
-                      }
-                    } else if (geographicCode) {
-                      console.log(
-                        `[Projects] Using geographic_code from frontend: ${geographicCode}`,
-                      );
-                    }
+                    // Using normalized geographic system instead of old kallikratis table
+                    console.log(
+                      `[Projects] Creating project_index entry for expenditure type: ${expType}`,
+                    );
 
                     // Create project_index entry - must have all required fields per database schema
                     if (monadaId && eventTypeId && expenditureTypeId) {
