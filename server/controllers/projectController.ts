@@ -392,6 +392,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         projectIndexItems.length > 0
           ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
           : null;
+      const kallikratisItem = null; // Kallikratis data not currently fetched
 
       return {
         ...project,
