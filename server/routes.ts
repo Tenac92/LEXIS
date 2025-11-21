@@ -6,6 +6,7 @@ import { log } from './vite';
 import { createServer } from 'http';
 import { storage } from './storage';
 import { getBudgetByMis } from './controllers/budgetController';
+import { validateBudgetAllocation } from './services/budgetNotificationService';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -549,6 +550,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('[DIRECT_ROUTE] Document created successfully:', data.id);
+      
+      // Trigger notification creation if document has a project_id and amount
+      if (project_id && total_amount && total_amount > 0) {
+        try {
+          // Get project MIS for budget validation
+          const { data: projectData } = await supabase
+            .from('Projects')
+            .select('mis')
+            .eq('id', project_id)
+            .single();
+          
+          if (projectData?.mis) {
+            // Validate budget and create notifications if needed
+            await validateBudgetAllocation(projectData.mis, total_amount, req.user?.id);
+            console.log('[DIRECT_ROUTE] Budget validation and notification creation completed for project:', project_id);
+          }
+        } catch (notificationError) {
+          console.error('[DIRECT_ROUTE] Error creating notifications:', notificationError);
+          // Don't fail the document creation if notifications fail
+        }
+      }
       
       res.status(201).json({ id: data.id });
     } catch (error) {
