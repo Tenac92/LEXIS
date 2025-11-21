@@ -178,9 +178,13 @@ export async function getDashboardStats(req: Request, res: Response) {
         : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
       
       // Create a more meaningful description using project data
-      const projectMis = activity.Projects?.[0]?.mis || activity.project_id;
-      const na853Code = activity.Projects?.[0]?.na853 || projectMis;
-      let description = `Έργο ${na853Code}: `;
+      // Handle Projects as either single object or array
+      const projectData = Array.isArray(activity.Projects) ? activity.Projects[0] : activity.Projects;
+      const na853 = projectData?.na853 || '';
+      const mis = projectData?.mis || '';
+      // Prioritize NA853, then MIS, then project_id
+      const projectIdentifier = na853.trim() || mis.trim() || activity.project_id;
+      let description = `Έργο ${projectIdentifier}: `;
       
       if (activity.change_type === 'admin_update') {
         description += `Διοικητική ενημέρωση προϋπολογισμού (${changeText})`;
@@ -206,8 +210,8 @@ export async function getDashboardStats(req: Request, res: Response) {
         date: activity.created_at,
         createdBy: userName,
         documentId: activity.document_id,
-        mis: projectMis,
-        na853: activity.Projects?.[0]?.na853 || null,
+        mis: mis || null,
+        na853: na853 || null,
         previousAmount,
         newAmount,
         changeAmount: difference
