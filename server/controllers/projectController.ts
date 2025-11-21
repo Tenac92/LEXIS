@@ -2961,20 +2961,17 @@ router.patch(
         eventTypesRes,
         expenditureTypesRes,
         monadaRes,
-        kallikratisRes,
         indexRes,
       ] = await Promise.all([
         supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
         supabase.from("Monada").select("*"),
-        supabase.from("kallikratis").select("*"),
         supabase.from("project_index").select("*"),
       ]);
 
       const eventTypes = eventTypesRes.data || [];
       const expenditureTypes = expenditureTypesRes.data || [];
       const monadaData = monadaRes.data || [];
-      const kallikratisData = kallikratisRes.data || [];
       const indexData = indexRes.data || [];
 
       // Find enhanced data for this project
@@ -2989,9 +2986,6 @@ router.patch(
         : null;
       const monada = indexItem
         ? monadaData.find((m) => m.id === indexItem.monada_id)
-        : null;
-      const kallikratis = indexItem
-        ? kallikratisData.find((k) => k.id === indexItem.kallikratis_id)
         : null;
 
       // Return the updated project with enhanced data
@@ -3013,14 +3007,6 @@ router.patch(
           ? {
               id: monada.id,
               name: monada.unit,
-            }
-          : null,
-        enhanced_kallikratis: kallikratis
-          ? {
-              id: kallikratis.id,
-              name:
-                kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
-              level: kallikratis.level || "municipality",
             }
           : null,
       };
@@ -3059,24 +3045,21 @@ router.get(
       const [
         eventTypesResult,
         unitsResult,
-        kallikratisResult,
         expenditureTypesResult,
       ] = await Promise.all([
         supabase.from("event_types").select("*").order("id"),
         supabase.from("Monada").select("*").order("id"),
-        supabase.from("kallikratis").select("*").order("id"),
         supabase.from("expenditure_types").select("*").order("id"),
       ]);
 
       const referenceData = {
         event_types: eventTypesResult.data || [],
         units: unitsResult.data || [],
-        kallikratis: kallikratisResult.data || [],
         expenditure_types: expenditureTypesResult.data || [],
       };
 
       console.log(
-        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.kallikratis.length} kallikratis entries, ${referenceData.expenditure_types.length} expenditure types`,
+        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.expenditure_types.length} expenditure types`,
       );
 
       res.json(referenceData);
@@ -3120,14 +3103,12 @@ router.get(
         eventTypesRes,
         expenditureTypesRes,
         monadaRes,
-        kallikratisRes,
         indexRes,
       ] = await Promise.all([
         supabase.from("Projects").select("*").eq("id", projectId).single(),
         supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
         supabase.from("Monada").select("*"),
-        supabase.from("kallikratis").select("*"),
         supabase.from("project_index").select("*"),
       ]);
 
@@ -3154,7 +3135,6 @@ router.get(
       const eventTypes = eventTypesRes.data || [];
       const expenditureTypes = expenditureTypesRes.data || [];
       const monadaData = monadaRes.data || [];
-      const kallikratisData = kallikratisRes.data || [];
       const indexData = indexRes.data || [];
 
       // Find enhanced data for this project
@@ -3167,9 +3147,6 @@ router.get(
         : null;
       const monada = indexItem
         ? monadaData.find((m) => m.id === indexItem.monada_id)
-        : null;
-      const kallikratis = indexItem
-        ? kallikratisData.find((k) => k.id === indexItem.kallikratis_id)
         : null;
 
       // Get decision data from project_history instead of duplicated columns
@@ -3212,14 +3189,6 @@ router.get(
           ? {
               id: monada.id,
               name: monada.unit,
-            }
-          : null,
-        enhanced_kallikratis: kallikratis
-          ? {
-              id: kallikratis.id,
-              name:
-                kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
-              level: kallikratis.level || "municipality",
             }
           : null,
 
