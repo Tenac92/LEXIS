@@ -51,6 +51,7 @@ export interface IStorage {
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: number): Promise<void>;
+  bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }>;
 
   // Beneficiary management operations - SECURITY: Unit-based access only
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
@@ -1252,6 +1253,35 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[Storage] Error in updateEmployee:', error);
       throw error;
+    }
+  }
+
+  async bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    try {
+      console.log(`[Storage] Bulk importing ${employees.length} employees`);
+      
+      const employeesToInsert = employees.map((emp, idx) => ({
+        ...emp,
+        afm: emp.afm ? encryptAFM(emp.afm) : '',
+        afm_hash: emp.afm ? hashAFM(emp.afm) : ''
+      }));
+      
+      const { data, error } = await supabase
+        .from('Employees')
+        .insert(employeesToInsert)
+        .select();
+        
+      if (error) {
+        console.error('[Storage] Error in bulk import:', error);
+        return { success: 0, failed: employees.length, errors: [error.message] };
+      }
+      
+      console.log(`[Storage] Successfully imported ${data?.length || 0} employees`);
+      return { success: data?.length || 0, failed: 0, errors: [] };
+    } catch (error) {
+      console.error('[Storage] Error in bulkImportEmployees:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      return { success: 0, failed: employees.length, errors: [errorMsg] };
     }
   }
 

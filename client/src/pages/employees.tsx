@@ -18,13 +18,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Users } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Users, Upload } from "lucide-react";
 
 export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { toast } = useToast();
 
@@ -104,6 +105,26 @@ export default function EmployeesPage() {
     }
   });
 
+  // Import employees mutation
+  const importEmployeesMutation = useMutation({
+    mutationFn: (employees: InsertEmployee[]) => apiRequest('/api/employees/import', 'POST', { employees }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      setIsImportDialogOpen(false);
+      toast({
+        title: "Επιτυχία",
+        description: data.message || "Η εισαγωγή ολοκληρώθηκε επιτυχώς",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Σφάλμα",
+        description: error.message || "Σφάλμα κατά την εισαγωγή των υπαλλήλων",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Filter employees based on search term
   const filteredEmployees = employees.filter((employee: Employee) => {
     if (!searchTerm) return true;
@@ -137,18 +158,26 @@ export default function EmployeesPage() {
             Διαχειριστείτε τον κατάλογο υπαλλήλων για αυτόματη συμπλήρωση στα έγγραφα
           </p>
         </div>
-        <EmployeeDialog
-          isOpen={isCreateDialogOpen}
-          onOpenChange={setIsCreateDialogOpen}
-          onSubmit={(data) => createEmployeeMutation.mutate(data)}
-          isLoading={createEmployeeMutation.isPending}
-          trigger={
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Νέος Υπάλληλος
-            </Button>
-          }
-        />
+        <div className="flex gap-2">
+          <EmployeeDialog
+            isOpen={isCreateDialogOpen}
+            onOpenChange={setIsCreateDialogOpen}
+            onSubmit={(data) => createEmployeeMutation.mutate(data)}
+            isLoading={createEmployeeMutation.isPending}
+            trigger={
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Νέος Υπάλληλος
+              </Button>
+            }
+          />
+          <ImportEmployeesDialog
+            isOpen={isImportDialogOpen}
+            onOpenChange={setIsImportDialogOpen}
+            onImport={(employees) => importEmployeesMutation.mutate(employees)}
+            isLoading={importEmployeesMutation.isPending}
+          />
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -266,6 +295,103 @@ export default function EmployeesPage() {
   );
 }
 
+// Import Dialog Component
+interface ImportEmployeesDialogProps {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  onImport: (employees: InsertEmployee[]) => void;
+  isLoading: boolean;
+}
+
+function ImportEmployeesDialog({ 
+  isOpen, 
+  onOpenChange, 
+  onImport, 
+  isLoading 
+}: ImportEmployeesDialogProps) {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(await file.arrayBuffer());
+      const worksheet = workbook.Sheets['ΥΠΑΛΛΗΛΟΙ ΓΔΑΕΦΚ'] || workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+
+      const employees: InsertEmployee[] = data
+        .map((row: any) => {
+          const fullName = row['ΤΑΕΦΚ Α.Α. - ΤΑΕΦΚ Δ.Α. - ΔΑΕΦΚ-Κ.Ε.'] || row['ΥΠΑΛΛΗΛΟΙ ΓΔΑΕΦΚ'] || '';
+          const [surname, ...nameParts] = fullName.split(' ').filter(Boolean);
+          const name = nameParts.join(' ');
+
+          return {
+            surname: surname || '',
+            name: name || '',
+            fathername: row['Π.Ε.'] || '',
+            afm: '',
+            klados: row['ΚΛΑΔΟΣ/ΕΙΔΙΚΟΤΗΤΑ'] || '',
+            attribute: row['_'] || '',
+            workaf: row['ΥΠΗΡΕΣΙΑ_1'] || row['ΥΠΗΡΕΣΙΑ'] || '',
+            monada: 'ΓΔΑΕΦΚ'
+          };
+        })
+        .filter((emp: InsertEmployee) => emp.surname); // Filter out empty rows
+
+      if (employees.length === 0) {
+        alert('Δεν βρέθηκαν έγκυρα δεδομένα υπαλλήλων στο αρχείο');
+        return;
+      }
+
+      onImport(employees);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert(`Σφάλμα κατά την ανάγνωση του αρχείου: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Upload className="h-4 w-4 mr-2" />
+          Εισαγωγή Excel
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Εισαγωγή Υπαλλήλων</DialogTitle>
+          <DialogDescription>
+            Επιλέξτε ένα αρχείο Excel με τα στοιχεία των υπαλλήλων
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center justify-center w-full">
+            <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-500">
+                  <span className="font-semibold">Κάντε κλικ για αποστολή</span> ή σύρετε αρχείο
+                </p>
+                <p className="text-xs text-gray-500">Excel ή CSV αρχεία</p>
+              </div>
+              <input 
+                type="file" 
+                className="hidden" 
+                accept=".xlsx,.xls,.csv" 
+                onChange={handleFileUpload}
+                disabled={isLoading}
+              />
+            </label>
+          </div>
+          {isLoading && <div className="text-center text-sm text-muted-foreground">Εισαγωγή σε εξέλιξη...</div>}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Employee Dialog Component
 interface EmployeeDialogProps {
   isOpen: boolean;
@@ -306,7 +432,7 @@ function EmployeeDialog({
   };
 
   const content = (
-    <DialogContent className="max-w-2xl">
+    <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>

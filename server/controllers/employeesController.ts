@@ -193,4 +193,38 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+/**
+ * POST /api/employees/import
+ * Bulk import employees from file
+ */
+router.post('/import', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { employees } = req.body;
+    
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Παρακαλώ δώστε έναν πίνακα με υπαλλήλους'
+      });
+    }
+    
+    logger.info(`Starting bulk import of ${employees.length} employees`);
+    
+    const result = await storage.bulkImportEmployees(employees);
+    
+    res.json({
+      success: result.failed === 0,
+      message: `Εισαγωγή ολοκληρώθηκε: ${result.success} επιτυχή, ${result.failed} αποτυχημένα`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error importing employees:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την εισαγωγή των υπαλλήλων',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
