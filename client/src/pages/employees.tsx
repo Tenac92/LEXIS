@@ -46,7 +46,10 @@ export default function EmployeesPage() {
 
   // Create employee mutation
   const createEmployeeMutation = useMutation({
-    mutationFn: (data: InsertEmployee) => apiRequest('/api/employees', 'POST', data),
+    mutationFn: (data: InsertEmployee) => apiRequest('/api/employees', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       setIsCreateDialogOpen(false);
@@ -67,7 +70,10 @@ export default function EmployeesPage() {
   // Update employee mutation
   const updateEmployeeMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<InsertEmployee> }) => 
-      apiRequest(`/api/employees/${id}`, 'PUT', data),
+      apiRequest(`/api/employees/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       setIsEditDialogOpen(false);
@@ -88,7 +94,9 @@ export default function EmployeesPage() {
 
   // Delete employee mutation
   const deleteEmployeeMutation = useMutation({
-    mutationFn: (id: number) => apiRequest(`/api/employees/${id}`, 'DELETE'),
+    mutationFn: (id: number) => apiRequest(`/api/employees/${id}`, {
+      method: 'DELETE'
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       toast({
@@ -107,7 +115,10 @@ export default function EmployeesPage() {
 
   // Import employees mutation
   const importEmployeesMutation = useMutation({
-    mutationFn: (employees: InsertEmployee[]) => apiRequest('/api/employees/import', 'POST', { employees }),
+    mutationFn: (employees: InsertEmployee[]) => apiRequest('/api/employees/import', {
+      method: 'POST',
+      body: JSON.stringify({ employees })
+    }),
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       setIsImportDialogOpen(false);
@@ -415,14 +426,14 @@ function EmployeeDialog({
   const form = useForm<InsertEmployee>({
     resolver: zodResolver(insertEmployeeSchema),
     defaultValues: {
-      surname: employee?.surname || "",
-      name: employee?.name || "",
-      fathername: employee?.fathername || "",
-      afm: employee?.afm || "",
-      klados: employee?.klados || "",
-      attribute: employee?.attribute || "",
-      workaf: employee?.workaf || "",
-      monada: employee?.monada || "",
+      surname: employee?.surname ?? "",
+      name: employee?.name ?? "",
+      fathername: employee?.fathername ?? "",
+      afm: employee?.afm ?? "",
+      klados: employee?.klados ?? "",
+      attribute: employee?.attribute ?? "",
+      workaf: employee?.workaf ?? "",
+      monada: employee?.monada ?? "",
     },
   });
 
@@ -449,7 +460,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Επώνυμο</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -462,7 +473,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Όνομα</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -478,7 +489,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Πατρώνυμο</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -491,7 +502,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>ΑΦΜ</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -507,7 +518,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Κλάδος</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -520,7 +531,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Ιδιότητα</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -536,7 +547,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Work AF</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -549,7 +560,7 @@ function EmployeeDialog({
                 <FormItem>
                   <FormLabel>Μονάδα</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

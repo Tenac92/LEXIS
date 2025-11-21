@@ -979,7 +979,9 @@ export class DatabaseStorage implements IStorage {
         
         // Extract document information from the join
         // Supabase returns a single object for foreign key joins, not an array
-        const documentData = entry.generated_documents || null;
+        const documentData: any = Array.isArray(entry.generated_documents) 
+          ? entry.generated_documents[0] 
+          : entry.generated_documents || null;
         const documentStatus = documentData?.status || null;
         const protocolNumberInput = documentData?.protocol_number_input || null;
         
@@ -1452,7 +1454,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('id, afm, afm_hash, surname, name, fathername, region')
+          .select('*')
           .eq('afm_hash', afmHash)
           .order('id', { ascending: false})
           .limit(100);
@@ -1475,7 +1477,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns and reduced batch size
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('id, afm, afm_hash, surname, name, fathername, region')
+          .select('*')
           .order('id', { ascending: false })
           .limit(300);
           
