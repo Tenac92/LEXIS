@@ -97,14 +97,16 @@ export default function DocumentsPage() {
     }
     
     // Check for highlight parameter to show specific document
-    const params = new URLSearchParams(location.split('?')[1] || '');
+    // Use window.location.search instead of wouter location (which doesn't include query params)
+    const params = new URLSearchParams(window.location.search);
     const highlightId = params.get('highlight');
     if (highlightId) {
+      console.log("[DocumentsPage] Highlight ID detected:", highlightId);
       // Clear default filters to show the document
       setFilters({
         unit: "",
         status: "",
-        user: "all",
+        user: "",
         dateFrom: "",
         dateTo: "",
         amountFrom: "",
