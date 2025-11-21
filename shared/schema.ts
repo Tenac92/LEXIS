@@ -1188,7 +1188,7 @@ export const insertProjectHistorySchema = createInsertSchema(projectHistory);
 export const insertBudgetNotificationSchema =
   createInsertSchema(budgetNotifications);
 
-export const insertEmployeeSchema = createInsertSchema(employees);
+export const insertEmployeeSchema = createInsertSchema(employees).omit({ id: true });
 
 export const insertBeneficiarySchema = createInsertSchema(beneficiaries, {
   surname: z.string().min(1, "Το επώνυμο είναι υποχρεωτικό"),
