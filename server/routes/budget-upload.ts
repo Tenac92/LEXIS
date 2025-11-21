@@ -5,6 +5,7 @@ import { supabase } from '../config/db';
 import { storage } from '../storage';
 import multer from 'multer';
 import * as xlsx from 'xlsx';
+import { parse } from 'csv-parse/sync';
 import { BudgetService } from '../services/budgetService';
 
 // Helper function to parse numerical values with European number formatting (e.g., 22.000,00 -> 22000.00)
@@ -83,18 +84,36 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
   }
 
   try {
-    console.log('[BudgetUpload] Processing Excel file upload');
+    let rawData: any[] = [];
+    const fileName = req.file.originalname.toLowerCase();
     
-    // Process the Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    
-    // Assume the first sheet contains the data
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    
-    // Convert worksheet to JSON (array of objects)
-    const rawData = xlsx.utils.sheet_to_json(worksheet);
-    console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
+    // Check if the file is CSV or Excel based on extension
+    if (fileName.endsWith('.csv')) {
+      console.log('[BudgetUpload] Processing CSV file upload');
+      
+      // Parse CSV file
+      const csvContent = req.file.buffer.toString('utf-8');
+      rawData = parse(csvContent, {
+        columns: true, // Use first row as headers
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true, // Allow rows with different number of columns
+      });
+      console.log(`[BudgetUpload] Extracted ${rawData.length} rows from CSV`);
+    } else {
+      console.log('[BudgetUpload] Processing Excel file upload');
+      
+      // Process the Excel file
+      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+      
+      // Assume the first sheet contains the data
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      // Convert worksheet to JSON (array of objects)
+      rawData = xlsx.utils.sheet_to_json(worksheet);
+      console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
+    }
 
     // Validate and transform the data
     const updates = [];
