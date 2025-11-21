@@ -1217,6 +1217,8 @@ export default function ComprehensiveEditFixed() {
             }
             return typedProjectData?.budget_na853 || null;
           })(),
+          // Location details to be processed as project_lines
+          location_details: data.location_details || [],
         };
 
         console.log("1. Updating core project data:", projectUpdateData);

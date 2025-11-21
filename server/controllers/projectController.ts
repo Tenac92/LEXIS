@@ -2672,16 +2672,22 @@ router.patch(
       }
 
       // Handle project_index table updates for proper foreign key relationships
-      if (updateData.project_lines && Array.isArray(updateData.project_lines)) {
+      // Combine location_details and project_lines into a single array to process
+      const projectLinesToProcess = [
+        ...(updateData.location_details || []),
+        ...(updateData.project_lines || [])
+      ];
+
+      if (projectLinesToProcess && Array.isArray(projectLinesToProcess) && projectLinesToProcess.length > 0) {
         console.log(
           `[Projects] Starting project_index update for project ID: ${updatedProject.id}`,
         );
         console.log(
-          `[Projects] Number of project_lines to process: ${updateData.project_lines.length}`,
+          `[Projects] Number of project_lines to process: ${projectLinesToProcess.length}`,
         );
         console.log(
           `[Projects] Project lines data:`,
-          JSON.stringify(updateData.project_lines, null, 2),
+          JSON.stringify(projectLinesToProcess, null, 2),
         );
 
         // First, delete existing project_index entries for this project
@@ -2701,8 +2707,8 @@ router.patch(
           );
         }
 
-        // Insert new project_index entries from project_lines
-        for (const line of updateData.project_lines) {
+        // Insert new project_index entries from combined project_lines
+        for (const line of projectLinesToProcess) {
           try {
             // Find foreign key IDs from the provided data
             let eventTypeId = null;
