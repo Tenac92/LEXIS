@@ -1264,6 +1264,20 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Bulk importing ${employees.length} employees`);
       
+      // Deduplicate by AFM - keep only the last occurrence of each AFM
+      const afmMap = new Map<string, InsertEmployee>();
+      for (const emp of employees) {
+        const afmString = emp.afm ? String(emp.afm) : '';
+        if (afmString) {
+          afmMap.set(afmString, emp);
+        } else if (!afmMap.has('')) {
+          afmMap.set('', emp);
+        }
+      }
+      
+      const deduplicatedEmployees = Array.from(afmMap.values());
+      console.log(`[Storage] Deduplicated from ${employees.length} to ${deduplicatedEmployees.length} employees`);
+      
       // Get the max ID from existing employees to generate sequential IDs
       const { data: maxIdData, error: maxIdError } = await supabase
         .from('Employees')
@@ -1278,7 +1292,7 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`[Storage] Starting bulk import from ID: ${nextId}`);
       
-      const employeesToInsert = employees.map((emp, idx) => {
+      const employeesToInsert = deduplicatedEmployees.map((emp, idx) => {
         const afmString = emp.afm ? String(emp.afm) : '';
         const encryptedAfm = afmString ? encryptAFM(afmString) : '';
         return {
@@ -1297,7 +1311,7 @@ export class DatabaseStorage implements IStorage {
         
       if (error) {
         console.error('[Storage] Error in bulk import:', error);
-        return { success: 0, failed: employees.length, errors: [error.message] };
+        return { success: 0, failed: deduplicatedEmployees.length, errors: [error.message] };
       }
       
       console.log(`[Storage] Successfully imported/updated ${data?.length || 0} employees`);
