@@ -190,65 +190,93 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     return `ID: ${expenditureId}`;
   }, [expenditureTypesData]);
 
-  // Helper function to extract and format region display text from projectGeographicData
-  const getRegionDisplayText = React.useCallback((): string => {
+  // Helper component to display region hierarchy nicely
+  const RegionHierarchyDisplay: React.FC = () => {
     try {
-      if (!completeProjectData?.projectGeographicData) return 'Δεν υπάρχει';
+      if (!completeProjectData?.projectGeographicData) return <span>Δεν υπάρχει</span>;
       
       const { regions: regionData, regionalUnits, municipalities } = completeProjectData.projectGeographicData;
       
-      if (!regionData || regionData.length === 0) return 'Δεν υπάρχει';
+      if (!regionData || regionData.length === 0) return <span>Δεν υπάρχει</span>;
       
-      // Extract unique regions, units, and municipalities
-      const regionNames = new Set<string>();
-      const unitNames = new Set<string>();
-      const muniNames = new Set<string>();
+      // Build hierarchy structure: Region -> Units -> Municipalities
+      const hierarchy = new Map<string, { units: Set<string>; municipalities: Set<string> }>();
       
-      // Get region names from region relationships
+      // Map regions to their units and municipalities
       regionData.forEach((item: any) => {
-        if (item.regions?.name) {
-          regionNames.add(item.regions.name);
+        const regionName = item.regions?.name;
+        if (regionName) {
+          if (!hierarchy.has(regionName)) {
+            hierarchy.set(regionName, { units: new Set(), municipalities: new Set() });
+          }
         }
       });
       
-      // Get unit names from regional unit relationships
+      // Add units to their regions
       regionalUnits?.forEach((item: any) => {
-        if (item.regional_units?.name) {
-          unitNames.add(item.regional_units.name);
+        const unitName = item.regional_units?.name;
+        const regionCode = item.regional_units?.region_code;
+        
+        if (unitName && regionCode) {
+          // Find region with this code
+          const region = regionData.find((r: any) => r.regions?.code === regionCode);
+          if (region) {
+            const regionName = region.regions?.name;
+            if (regionName && hierarchy.has(regionName)) {
+              hierarchy.get(regionName)!.units.add(unitName);
+            }
+          }
         }
       });
       
-      // Get municipality names from municipality relationships
+      // Add municipalities to their units
       municipalities?.forEach((item: any) => {
-        if (item.municipalities?.name) {
-          muniNames.add(item.municipalities.name);
+        const muniName = item.municipalities?.name;
+        const unitCode = item.municipalities?.unit_code;
+        
+        if (muniName && unitCode) {
+          // Find unit and region for this municipality
+          const unit = regionalUnits?.find((u: any) => u.regional_units?.code === unitCode);
+          if (unit) {
+            const regionCode = unit.regional_units?.region_code;
+            const region = regionData.find((r: any) => r.regions?.code === regionCode);
+            if (region) {
+              const regionName = region.regions?.name;
+              if (regionName && hierarchy.has(regionName)) {
+                hierarchy.get(regionName)!.municipalities.add(muniName);
+              }
+            }
+          }
         }
       });
       
-      // Build display text with available data
-      const parts: string[] = [];
-      
-      // Add regions
-      if (regionNames.size > 0) {
-        parts.push(Array.from(regionNames).join(', '));
-      }
-      
-      // Add units if different from regions
-      if (unitNames.size > 0) {
-        parts.push(Array.from(unitNames).join(', '));
-      }
-      
-      // Add municipalities if different
-      if (muniNames.size > 0) {
-        parts.push(Array.from(muniNames).join(', '));
-      }
-      
-      return parts.length > 0 ? parts.join(' / ') : 'Δεν υπάρχει';
+      // Render hierarchy
+      return (
+        <div className="space-y-2">
+          {Array.from(hierarchy.entries()).map(([region, data]) => (
+            <div key={region} className="text-sm">
+              <div className="font-semibold text-green-800">{region}</div>
+              {data.units.size > 0 && (
+                <div className="ml-4 text-green-700">
+                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
+                  <div className="ml-2 text-green-600">{Array.from(data.units).join(', ')}</div>
+                </div>
+              )}
+              {data.municipalities.size > 0 && (
+                <div className="ml-4 text-green-700">
+                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
+                  <div className="ml-2 text-green-600">{Array.from(data.municipalities).join(', ')}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
     } catch (error) {
-      console.error('Error extracting region data:', error);
-      return 'Δεν υπάρχει';
+      console.error('Error rendering region hierarchy:', error);
+      return <span>Δεν υπάρχει</span>;
     }
-  }, [completeProjectData]);
+  };
 
   const decisions = React.useMemo(() => {
     if (!decisionsData) return [];
@@ -434,11 +462,11 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                             </p>
                           </div>
                           
-                          <div>
-                            <span className="font-medium text-green-700 block mb-1">Περιοχή (Περιφέρεια):</span>
-                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {getRegionDisplayText()}
-                            </p>
+                          <div className="col-span-full">
+                            <span className="font-medium text-green-700 block mb-2">Περιοχή (Περιφέρεια):</span>
+                            <div className="text-gray-900 bg-green-50 p-3 rounded text-sm border border-green-200">
+                              <RegionHierarchyDisplay />
+                            </div>
                           </div>
                           
                           <div>
