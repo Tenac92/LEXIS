@@ -1292,6 +1292,7 @@ router.get("/", async (req: Request, res: Response) => {
       afm: req.query.afm as string,
       expenditureType: req.query.expenditureType as string,
       na853: req.query.na853 as string,
+      protocolNumber: req.query.protocolNumber as string,
     };
 
     // Get documents from database directly, ordered by most recent first
@@ -1649,6 +1650,14 @@ router.get("/", async (req: Request, res: Response) => {
             recipient.afm && recipient.afm.includes(filters.afm),
         );
       });
+    }
+
+    // Filter by protocol number
+    if (filters.protocolNumber) {
+      filteredDocuments = filteredDocuments.filter((doc) =>
+        doc.protocol_number_input &&
+        doc.protocol_number_input.toLowerCase().includes(filters.protocolNumber.toLowerCase())
+      );
     }
 
     // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ documents

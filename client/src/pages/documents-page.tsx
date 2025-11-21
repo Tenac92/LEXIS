@@ -171,12 +171,13 @@ export default function DocumentsPage() {
   useEffect(() => {
     if (user?.unit_id?.[0] && !filters.unit && userUnits.length > 0) {
       const defaultUnit = userUnits[0];
+      console.log("[DocumentsPage] Setting default unit filter to:", defaultUnit.unit);
       setFilters((prev) => ({
         ...prev,
         unit: defaultUnit.unit.toString(), // Use unit ID as filter value
       }));
     }
-  }, [user?.unit_id, filters.unit, userUnits.length]);
+  }, [user?.unit_id, userUnits.length]);
 
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
