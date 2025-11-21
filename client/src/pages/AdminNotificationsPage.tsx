@@ -113,9 +113,9 @@ export default function AdminNotificationsPage() {
     });
   };
   
-  const handleApprove = async (id: number) => {
+  const handleApprove = async (na853: string) => {
     try {
-      const response = await fetch(`/api/budget-notifications/${id}/approve`, {
+      const response = await fetch(`/api/budget-notifications/${na853}/approve`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -139,9 +139,9 @@ export default function AdminNotificationsPage() {
     }
   };
   
-  const handleReject = async (id: number) => {
+  const handleReject = async (na853: string) => {
     try {
-      const response = await fetch(`/api/budget-notifications/${id}/reject`, {
+      const response = await fetch(`/api/budget-notifications/${na853}/reject`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -234,7 +234,7 @@ export default function AdminNotificationsPage() {
                   
                   return (
                     <div 
-                      key={notification.id}
+                      key={notification.na853 || String(notification.id)}
                       className={cn(
                         "rounded-lg border p-4 transition-colors",
                         style.bg,
@@ -291,7 +291,7 @@ export default function AdminNotificationsPage() {
                               size="sm"
                               variant="outline"
                               className="flex items-center gap-1"
-                              onClick={() => handleApprove(notification.id)}
+                              onClick={() => handleApprove(notification.na853 || String(notification.id))}
                             >
                               <CheckCircle className="h-4 w-4" />
                               Έγκριση
@@ -300,7 +300,7 @@ export default function AdminNotificationsPage() {
                               size="sm"
                               variant="outline"
                               className="flex items-center gap-1"
-                              onClick={() => handleReject(notification.id)}
+                              onClick={() => handleReject(notification.na853 || String(notification.id))}
                             >
                               <XCircle className="h-4 w-4" />
                               Απόρριψη
