@@ -176,7 +176,6 @@ export async function listProjects(req: Request, res: Response) {
       monadaRes,
       eventTypesRes,
       expenditureTypesRes,
-      kallikratisRes,
       indexRes,
     ] = await Promise.all([
       supabase
@@ -187,7 +186,6 @@ export async function listProjects(req: Request, res: Response) {
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
-      supabase.from("kallikratis").select("*"),
       supabase.from("project_index").select("*"),
     ]);
 
@@ -207,7 +205,6 @@ export async function listProjects(req: Request, res: Response) {
     const monadaData = monadaRes.data || [];
     const eventTypes = eventTypesRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
-    const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
     // Enhance projects with optimized schema data
@@ -235,12 +232,6 @@ export async function listProjects(req: Request, res: Response) {
           const monadaData_item =
             projectIndexItems.length > 0
               ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
-              : null;
-          const kallikratisData_item =
-            projectIndexItems.length > 0
-              ? kallikratisData.find(
-                  (k) => k.id === projectIndexItems[0].kallikratis_id,
-                )
               : null;
 
           // Get all expenditure types for this project
@@ -334,7 +325,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       monadaRes,
       eventTypesRes,
       expenditureTypesRes,
-      kallikratisRes,
       indexRes,
     ] = await Promise.all([
       supabase
@@ -344,7 +334,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
-      supabase.from("kallikratis").select("*"),
       supabase.from("project_index").select("*"),
     ]);
 
@@ -363,7 +352,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const monadaData = monadaRes.data || [];
     const eventTypes = eventTypesRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
-    const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
 
     // Enhance projects with optimized schema data
@@ -403,12 +391,6 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       const monadaItem =
         projectIndexItems.length > 0
           ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
-          : null;
-      const kallikratisItem =
-        projectIndexItems.length > 0
-          ? kallikratisData.find(
-              (k) => k.id === projectIndexItems[0].kallikratis_id,
-            )
           : null;
 
       return {
@@ -1044,10 +1026,6 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
       projectIndex.length > 0
         ? units.find((u) => u.id === projectIndex[0].monada_id)
         : null;
-    const mostCommonKallikratis =
-      projectIndex.length > 0
-        ? kallikratis.find((k) => k.id === projectIndex[0].kallikratis_id)
-        : null;
     const mostCommonExpenditure =
       projectIndex.length > 0
         ? expenditureTypes.find(
@@ -1079,15 +1057,6 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
         ? {
             id: mostCommonUnit.id,
             name: mostCommonUnit.unit || mostCommonUnit.unit_name,
-          }
-        : null,
-      enhanced_kallikratis: mostCommonKallikratis
-        ? {
-            id: mostCommonKallikratis.id,
-            name:
-              mostCommonKallikratis.perifereia ||
-              mostCommonKallikratis.onoma_dimou_koinotitas,
-            level: mostCommonKallikratis.level || "municipality",
           }
         : null,
     };
