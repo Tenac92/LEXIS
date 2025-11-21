@@ -210,11 +210,25 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
   try {
     log(`[Budget] Creating notification for MIS: ${notification.mis}, Type: ${notification.type}`, 'info');
 
+    // Determine project_id: if notification has mis, find the project; otherwise use 0
+    let projectId = 0;
+    if (notification.mis) {
+      const { data: projectData, error: projError } = await supabase
+        .from('Projects')
+        .select('id')
+        .eq('mis', notification.mis)
+        .single();
+      
+      if (!projError && projectData?.id) {
+        projectId = projectData.id;
+      }
+    }
+
     // Check if a similar notification already exists to avoid duplicates
     const { data: existingNotifications, error: checkError } = await supabase
       .from('budget_notifications')
       .select('id')
-      .eq('mis', notification.mis)
+      .eq('project_id', projectId)
       .eq('type', notification.type)
       .eq('status', 'pending')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Within last 24 hours
@@ -254,7 +268,7 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
     const { data, error } = await supabase
       .from('budget_notifications')
       .insert({
-        mis: notification.mis,
+        project_id: projectId,
         type: notification.type,
         amount: notification.amount,
         current_budget: notification.current_budget,
@@ -387,7 +401,7 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
       .from('budget_notifications')
       .select(`
         id,
-        mis,
+        project_id,
         type,
         amount,
         current_budget,
@@ -407,7 +421,14 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
     }
 
     log(`[Budget] Successfully fetched ${data?.length || 0} notifications`, 'info');
-    return data || [];
+    
+    // Map project_id to mis for backwards compatibility
+    const mappedData = data?.map(notif => ({
+      ...notif,
+      mis: notif.project_id
+    })) || [];
+
+    return mappedData;
 
   } catch (error) {
     log(`[Budget] Error getting all notifications: ${error}`, 'error');
@@ -422,6 +443,17 @@ export async function createTestReallocationNotifications(): Promise<void> {
   try {
     log('[Budget] Creating test reallocation notifications...', 'info');
 
+    // Get first 3 projects to use as test projects
+    const { data: projects, error: projError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .limit(3);
+
+    if (projError || !projects || projects.length < 3) {
+      log('[Budget] Could not find enough projects for test notifications', 'warn');
+      return;
+    }
+
     // Clear existing test notifications first
     await supabase
       .from('budget_notifications')
@@ -430,7 +462,7 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample reallocation notification
     const reallocationNotification = await createBudgetNotification({
-      mis: 5174692,
+      mis: projects[0].mis,
       type: 'reallocation',
       amount: 1500,
       current_budget: 4489,
@@ -442,7 +474,7 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample funding notification
     const fundingNotification = await createBudgetNotification({
-      mis: 5174693,
+      mis: projects[1].mis,
       type: 'funding',
       amount: 12000,
       current_budget: 8000,
@@ -454,7 +486,7 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample quarter exceeded notification
     const quarterNotification = await createBudgetNotification({
-      mis: 5174694,
+      mis: projects[2].mis,
       type: 'quarter_exceeded',
       amount: 3000,
       current_budget: 2500,
