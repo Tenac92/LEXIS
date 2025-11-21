@@ -16,6 +16,12 @@ import { cn } from '@/lib/utils';
 import type { BudgetNotification } from '@shared/schema';
 import { useStableWebSocket } from '@/hooks/use-stable-websocket';
 
+const notificationTypeLabels = {
+  funding: 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ',
+  reallocation: 'ΑΝΑΠΡΟΣΑΡΜΟΓΗ',
+  default: 'ΕΙΔΟΠΟΙΗΣΗ'
+};
+
 const notificationStyles = {
   funding: {
     bg: 'bg-red-50 hover:bg-red-100',

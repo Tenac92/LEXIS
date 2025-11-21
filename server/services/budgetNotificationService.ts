@@ -9,6 +9,7 @@ import { log } from '../vite';
 export interface BudgetNotification {
   id?: number;
   mis: number;
+  na853?: string;
   type: string;
   amount: number;
   current_budget: number;
@@ -116,10 +117,22 @@ export async function validateBudgetAllocation(
 
     log(`[Budget] Budget analysis: Available: ${availableBudget}, Yearly: ${yearlyAvailable}, Quarter: ${quarterAvailable}, Requested: ${requestedAmount}`, 'debug');
 
+    // Get NA853 code for display
+    let na853Code = '';
+    if (projectId) {
+      const { data: projectData } = await supabase
+        .from('Projects')
+        .select('na853')
+        .eq('id', projectId)
+        .single();
+      na853Code = projectData?.na853 || '';
+    }
+
     // Check if requested amount exceeds ethsia_pistosi (funding required)
     if (requestedAmount > ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
+        na853: na853Code,
         type: 'funding',
         amount: requestedAmount,
         current_budget: availableBudget,
@@ -143,6 +156,7 @@ export async function validateBudgetAllocation(
     if (requestedAmount > reallocationThreshold && requestedAmount <= ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
+        na853: na853Code,
         type: 'reallocation',
         amount: requestedAmount,
         current_budget: availableBudget,
@@ -400,11 +414,25 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
 
     log(`[Budget] Successfully fetched ${data?.length || 0} notifications`, 'info');
     
-    // Map project_id to mis for backwards compatibility
-    const mappedData = data?.map(notif => ({
-      ...notif,
-      mis: notif.project_id
-    })) || [];
+    // Fetch project details and map project_id to mis and NA853 for backwards compatibility
+    const mappedData = await Promise.all(
+      (data || []).map(async (notif) => {
+        let na853 = notif.na853 || '';
+        if (!na853 && notif.project_id) {
+          const { data: projectData } = await supabase
+            .from('Projects')
+            .select('na853')
+            .eq('id', notif.project_id)
+            .single();
+          na853 = projectData?.na853 || '';
+        }
+        return {
+          ...notif,
+          mis: notif.project_id,
+          na853
+        };
+      })
+    );
 
     return mappedData;
 
