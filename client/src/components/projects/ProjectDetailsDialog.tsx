@@ -142,23 +142,65 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexWithJoins[];
   }, [projectIndexData]);
 
-  // Helper function to extract and format region display text
+  // Helper function to extract and format region display text from projectGeographicData
   const getRegionDisplayText = React.useCallback((): string => {
-    if (!indexEntries || indexEntries.length === 0) return 'Δεν υπάρχει';
-    
-    const firstEntry = indexEntries[0];
-    const regionObj = (firstEntry as any)?.region;
-    
-    if (!regionObj) return 'Δεν υπάρχει';
-    
-    // Build region text from available fields
-    const parts: string[] = [];
-    if (regionObj.perifereia) parts.push(regionObj.perifereia);
-    if (regionObj.perifereiaki_enotita) parts.push(regionObj.perifereiaki_enotita);
-    if (regionObj.dimos) parts.push(regionObj.dimos);
-    
-    return parts.length > 0 ? parts.join(' / ') : 'Δεν υπάρχει';
-  }, [indexEntries]);
+    try {
+      if (!completeProjectData?.projectGeographicData) return 'Δεν υπάρχει';
+      
+      const { regions: regionData, regionalUnits, municipalities } = completeProjectData.projectGeographicData;
+      
+      if (!regionData || regionData.length === 0) return 'Δεν υπάρχει';
+      
+      // Extract unique regions, units, and municipalities
+      const regionNames = new Set<string>();
+      const unitNames = new Set<string>();
+      const muniNames = new Set<string>();
+      
+      // Get region names from region relationships
+      regionData.forEach((item: any) => {
+        if (item.regions?.name) {
+          regionNames.add(item.regions.name);
+        }
+      });
+      
+      // Get unit names from regional unit relationships
+      regionalUnits?.forEach((item: any) => {
+        if (item.regional_units?.name) {
+          unitNames.add(item.regional_units.name);
+        }
+      });
+      
+      // Get municipality names from municipality relationships
+      municipalities?.forEach((item: any) => {
+        if (item.municipalities?.name) {
+          muniNames.add(item.municipalities.name);
+        }
+      });
+      
+      // Build display text with available data
+      const parts: string[] = [];
+      
+      // Add regions
+      if (regionNames.size > 0) {
+        parts.push(Array.from(regionNames).join(', '));
+      }
+      
+      // Add units if different from regions
+      if (unitNames.size > 0) {
+        parts.push(Array.from(unitNames).join(', '));
+      }
+      
+      // Add municipalities if different
+      if (muniNames.size > 0) {
+        parts.push(Array.from(muniNames).join(', '));
+      }
+      
+      return parts.length > 0 ? parts.join(' / ') : 'Δεν υπάρχει';
+    } catch (error) {
+      console.error('Error extracting region data:', error);
+      return 'Δεν υπάρχει';
+    }
+  }, [completeProjectData]);
 
   const decisions = React.useMemo(() => {
     if (!decisionsData) return [];
