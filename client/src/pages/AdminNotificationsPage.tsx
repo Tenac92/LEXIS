@@ -23,6 +23,19 @@ interface BudgetNotification extends BaseBudgetNotification {
   } | null;
 }
 
+const notificationTypeLabels = {
+  funding: 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ',
+  reallocation: 'ΑΝΑΠΡΟΣΑΡΜΟΓΗ',
+  low_budget: 'ΧΑΜΗΛΟ ΥΠΟΛΟΙΠΟ',
+  default: 'ΕΙΔΟΠΟΙΗΣΗ'
+};
+
+const statusLabels = {
+  pending: 'εκκρεμές',
+  approved: 'εγκεκριμένο',
+  rejected: 'απορριφθέν'
+};
+
 const notificationStyles = {
   funding: {
     bg: 'bg-red-50 hover:bg-red-100',
@@ -162,9 +175,9 @@ export default function AdminNotificationsPage() {
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Budget Notifications</h1>
+            <h1 className="text-2xl font-bold">Ειδοποιήσεις Προϋπολογισμού</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Monitor and manage budget-related notifications
+              Παρακολούθηση και διαχείριση ειδοποιήσεων προϋπολογισμού
             </p>
           </div>
           <Button 
@@ -182,37 +195,37 @@ export default function AdminNotificationsPage() {
             className={cn("cursor-pointer", statusFilter === 'all' ? "bg-primary" : "bg-secondary")}
             onClick={() => setStatusFilter('all')}
           >
-            All
+            Όλα
           </Badge>
           <Badge 
             className={cn("cursor-pointer", statusFilter === 'pending' ? "bg-primary" : "bg-secondary")}
             onClick={() => setStatusFilter('pending')}
           >
-            Pending
+            Εκκρεμές
           </Badge>
           <Badge 
             className={cn("cursor-pointer", statusFilter === 'approved' ? "bg-primary" : "bg-secondary")}
             onClick={() => setStatusFilter('approved')}
           >
-            Approved
+            Εγκεκριμένο
           </Badge>
           <Badge 
             className={cn("cursor-pointer", statusFilter === 'rejected' ? "bg-primary" : "bg-secondary")}
             onClick={() => setStatusFilter('rejected')}
           >
-            Rejected
+            Απορριφθέν
           </Badge>
         </div>
 
         <Card className="bg-card">
           <CardContent className="p-6">
             {isLoading ? (
-              <div className="text-center py-8">Loading notifications...</div>
+              <div className="text-center py-8">Φόρτωση ειδοποιήσεων...</div>
             ) : filteredNotifications.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {statusFilter === 'all' 
-                  ? 'No budget notifications found.' 
-                  : `No ${statusFilter} notifications found.`}
+                  ? 'Δεν βρέθηκαν ειδοποιήσεις προϋπολογισμού.' 
+                  : `Δεν βρέθηκαν ειδοποιήσεις με κατάσταση "${statusFilter}".`}
               </div>
             ) : (
               <div className="space-y-4">
@@ -231,9 +244,9 @@ export default function AdminNotificationsPage() {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <Badge className={style.badge}>
-                            {notification.type.replace('_', ' ').toUpperCase()}
+                            {notificationTypeLabels[notification.type as keyof typeof notificationTypeLabels] || notificationTypeLabels.default}
                           </Badge>
-                          <span className="text-sm font-medium">MIS: {notification.mis}</span>
+                          <span className="text-sm font-medium">NA853: {notification.na853 || notification.mis}</span>
                           <span className="text-sm">
                             {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true })}
                           </span>
@@ -245,7 +258,7 @@ export default function AdminNotificationsPage() {
                               ? 'destructive' 
                               : 'outline'
                         }>
-                          {notification.status.toUpperCase()}
+                          {statusLabels[notification.status as keyof typeof statusLabels] || notification.status}
                         </Badge>
                       </div>
                       
@@ -255,7 +268,7 @@ export default function AdminNotificationsPage() {
                       
                       {notification.user && (
                         <div className="mb-2 text-xs text-muted-foreground">
-                          <span className="font-semibold">Requested by:</span> {notification.user.name || 'Unknown user'} 
+                          <span className="font-semibold">Ζητήθηκε από:</span> {notification.user.name || 'Άγνωστος χρήστης'} 
                           {notification.user.email && (
                             <span> ({notification.user.email})</span>
                           )}
@@ -267,12 +280,9 @@ export default function AdminNotificationsPage() {
                       
                       <div className="flex justify-between items-center text-sm">
                         <div>
-                          <span className="font-semibold">Amount:</span> €{notification.amount.toLocaleString()} | 
-                          <span className="font-semibold ml-2">Current Budget:</span> €{notification.current_budget.toLocaleString()} | 
-                          <span className="font-semibold ml-2">Annual Credit:</span> €{notification.ethsia_pistosi.toLocaleString()}
-                          {notification.na853 && (
-                            <span className="ml-2">| <span className="font-semibold">NA853:</span> {notification.na853}</span>
-                          )}
+                          <span className="font-semibold">Ποσό:</span> €{notification.amount.toLocaleString()} | 
+                          <span className="font-semibold ml-2">Τρέχων Προϋπολογισμός:</span> €{notification.current_budget.toLocaleString()} | 
+                          <span className="font-semibold ml-2">Ετήσια Πίστωση:</span> €{notification.ethsia_pistosi.toLocaleString()}
                         </div>
                         
                         {notification.status === 'pending' && (
@@ -284,7 +294,7 @@ export default function AdminNotificationsPage() {
                               onClick={() => handleApprove(notification.id)}
                             >
                               <CheckCircle className="h-4 w-4" />
-                              Approve
+                              Έγκριση
                             </Button>
                             <Button
                               size="sm"
@@ -293,7 +303,7 @@ export default function AdminNotificationsPage() {
                               onClick={() => handleReject(notification.id)}
                             >
                               <XCircle className="h-4 w-4" />
-                              Reject
+                              Απόρριψη
                             </Button>
                           </div>
                         )}
