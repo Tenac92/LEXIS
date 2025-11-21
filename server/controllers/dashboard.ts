@@ -117,7 +117,7 @@ export async function getDashboardStats(req: Request, res: Response) {
       .from('budget_history')
       .select(`
         id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
-        Projects!budget_history_project_id_fkey(mis, project_title)
+        Projects!budget_history_project_id_fkey(mis, project_title, na853)
       `);
     
     // For non-admin users, filter by unit_id through project_index relationship
@@ -206,6 +206,7 @@ export async function getDashboardStats(req: Request, res: Response) {
         createdBy: userName,
         documentId: activity.document_id,
         mis: projectMis,
+        na853: activity.Projects?.[0]?.na853 || null,
         previousAmount,
         newAmount,
         changeAmount: difference
