@@ -271,19 +271,22 @@ export default function EmployeesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">ID</TableHead>
                   <TableHead>Επώνυμο</TableHead>
                   <TableHead>Όνομα</TableHead>
                   <TableHead>Πατρώνυμο</TableHead>
                   <TableHead>ΑΦΜ</TableHead>
                   <TableHead>Κλάδος</TableHead>
                   <TableHead>Ιδιότητα</TableHead>
+                  <TableHead>Χώρος Εργασίας</TableHead>
                   <TableHead>Μονάδα</TableHead>
-                  <TableHead>Ενέργειες</TableHead>
+                  <TableHead className="w-24">Ενέργειες</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredEmployees.map((employee: Employee) => (
                   <TableRow key={employee.id}>
+                    <TableCell className="text-xs text-muted-foreground">{employee.id}</TableCell>
                     <TableCell className="font-medium">{employee.surname}</TableCell>
                     <TableCell>{employee.name}</TableCell>
                     <TableCell>{employee.fathername}</TableCell>
@@ -292,6 +295,7 @@ export default function EmployeesPage() {
                     </TableCell>
                     <TableCell>{employee.klados}</TableCell>
                     <TableCell>{employee.attribute}</TableCell>
+                    <TableCell>{employee.workaf}</TableCell>
                     <TableCell>{employee.monada}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -299,6 +303,7 @@ export default function EmployeesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEdit(employee)}
+                          data-testid={`button-edit-employee-${employee.id}`}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -306,6 +311,7 @@ export default function EmployeesPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleDelete(employee)}
+                          data-testid={`button-delete-employee-${employee.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
