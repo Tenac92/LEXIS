@@ -587,10 +587,10 @@ export function UserDashboard() {
                         
                         <div className="flex flex-wrap items-center gap-2">
                           {activity.documentId && (
-                            <Link href={`/documents/${activity.documentId}`}>
+                            <Link href={`/documents?highlight=${activity.documentId}`}>
                               <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">
                                 <FileText className="w-3 h-3 mr-1" />
-                                Έγγραφο #{activity.documentId}
+                                {(activity as any).protocolNumber || `Έγγραφο #${activity.documentId}`}
                               </Badge>
                             </Link>
                           )}
