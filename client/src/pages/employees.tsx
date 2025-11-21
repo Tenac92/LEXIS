@@ -332,22 +332,18 @@ function ImportEmployeesDialog({
 
       const employees: InsertEmployee[] = data
         .map((row: any) => {
-          const fullName = row['ΤΑΕΦΚ Α.Α. - ΤΑΕΦΚ Δ.Α. - ΔΑΕΦΚ-Κ.Ε.'] || row['ΥΠΑΛΛΗΛΟΙ ΓΔΑΕΦΚ'] || '';
-          const [surname, ...nameParts] = fullName.split(' ').filter(Boolean);
-          const name = nameParts.join(' ');
-
           return {
-            surname: surname || '',
-            name: name || '',
-            fathername: row['Π.Ε.'] || '',
-            afm: '',
-            klados: row['ΚΛΑΔΟΣ/ΕΙΔΙΚΟΤΗΤΑ'] || '',
-            attribute: row['_'] || '',
-            workaf: row['ΥΠΗΡΕΣΙΑ_1'] || row['ΥΠΗΡΕΣΙΑ'] || '',
-            monada: 'ΓΔΑΕΦΚ'
+            surname: row.surname || row.Surname || '',
+            name: row.name || row.Name || '',
+            fathername: row.fathername || row.Fathername || '',
+            afm: row.afm || row.AFM || '',
+            klados: row.klados || row.Klados || '',
+            attribute: row.attribute || row.Attribute || '',
+            workaf: row.workaf || row.Workaf || '',
+            monada: row.monada || row.Monada || ''
           };
         })
-        .filter((emp: InsertEmployee) => emp.surname); // Filter out empty rows
+        .filter((emp: InsertEmployee) => emp.surname && emp.name); // Filter out empty rows
 
       if (employees.length === 0) {
         alert('Δεν βρέθηκαν έγκυρα δεδομένα υπαλλήλων στο αρχείο');
