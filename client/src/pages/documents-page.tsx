@@ -88,12 +88,32 @@ export default function DocumentsPage() {
     delete: false,
   });
 
-  // Check if URL is /documents/new and open create dialog
+  // Check if URL is /documents/new and open create dialog, or handle highlight parameter
   useEffect(() => {
     if (location === "/documents/new") {
       setShowCreateDialog(true);
       // Change URL to /documents without triggering a reload
       setLocation("/documents", { replace: true });
+    }
+    
+    // Check for highlight parameter to show specific document
+    const params = new URLSearchParams(location.split('?')[1] || '');
+    const highlightId = params.get('highlight');
+    if (highlightId) {
+      // Clear default filters to show the document
+      setFilters({
+        unit: "",
+        status: "",
+        user: "all",
+        dateFrom: "",
+        dateTo: "",
+        amountFrom: "",
+        amountTo: "",
+        recipient: "",
+        afm: "",
+        expenditureType: "",
+        na853: "",
+      });
     }
   }, [location, setLocation]);
 
