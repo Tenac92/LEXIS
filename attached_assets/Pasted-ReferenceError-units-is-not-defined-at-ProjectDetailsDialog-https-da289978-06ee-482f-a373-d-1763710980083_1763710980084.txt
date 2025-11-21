@@ -1,0 +1,24 @@
+ReferenceError: units is not defined
+    at ProjectDetailsDialog (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/ProjectDetailsDialog.tsx:28:3)
+    at OptimizedProjectCard (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/projects/OptimizedProjectCard.tsx:39:40)
+    at div
+    at div
+    at div
+    at _c (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at div
+    at ProjectsPage (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/pages/projects/index.tsx:40:21)
+    at Route (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ad2b7b46:190:16)
+    at ProtectedRoute (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/lib/protected-route.tsx:22:3)
+    at Switch (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=ad2b7b46:246:17)
+    at div
+    at MotionComponent (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ad2b7b46:6537:40)
+    at PresenceChild (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ad2b7b46:7743:24)
+    at AnimatePresence (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=ad2b7b46:7801:26)
+    at PageTransition (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/ui/page-transition.tsx:44:34)
+    at Router
+    at DocumentFormProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/contexts/document-form-context.tsx:68:40)
+    at AuthProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/hooks/use-auth.tsx:142:32)
+    at QueryClientProvider (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=ad2b7b46:2789:3)
+    at ErrorBoundary (https://da289978-06ee-482f-a373-d5c4a20b06ab-00-2tuv81vlix3iv.riker.replit.dev/src/components/common/ErrorBoundary.tsx:10:5)
+    at App

@@ -168,23 +168,27 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     return 'Δεν υπάρχει';
   }, []);
 
+  // Extract units and expenditure types from complete project data
+  const unitsData = completeProjectData?.units || [];
+  const expenditureTypesData = completeProjectData?.expenditureTypes || [];
+
   // Helper function to get unit name from ID
   const getUnitName = React.useCallback((unitId: number | string): string => {
-    const unit = (units || []).find((u: any) => u.id === unitId);
+    const unit = unitsData.find((u: any) => u.id === unitId);
     if (unit) {
       return unit.unit || unit.unit_name || `ID: ${unitId}`;
     }
     return `ID: ${unitId}`;
-  }, [units]);
+  }, [unitsData]);
 
   // Helper function to get expenditure type name from ID
   const getExpenditureTypeName = React.useCallback((expenditureId: number | string): string => {
-    const expenditure = (expenditureTypes || []).find((e: any) => e.id === expenditureId);
+    const expenditure = expenditureTypesData.find((e: any) => e.id === expenditureId);
     if (expenditure) {
       return expenditure.expenditure_types || `ID: ${expenditureId}`;
     }
     return `ID: ${expenditureId}`;
-  }, [expenditureTypes]);
+  }, [expenditureTypesData]);
 
   // Helper function to extract and format region display text from projectGeographicData
   const getRegionDisplayText = React.useCallback((): string => {
