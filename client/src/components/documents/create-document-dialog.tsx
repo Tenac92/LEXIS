@@ -3931,12 +3931,8 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseEuropeanNumber(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(displayValue, numericValue) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
@@ -3948,7 +3944,7 @@ export function CreateDocumentDialog({
                                                 : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
-                                              numValue +
+                                              numericValue +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
