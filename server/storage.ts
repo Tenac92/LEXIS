@@ -1280,17 +1280,19 @@ export class DatabaseStorage implements IStorage {
       
       const employeesToInsert = employees.map((emp, idx) => {
         const afmString = emp.afm ? String(emp.afm) : '';
+        const encryptedAfm = afmString ? encryptAFM(afmString) : '';
         return {
           ...emp,
           id: nextId + idx,
-          afm: afmString ? encryptAFM(afmString) : '',
+          afm: encryptedAfm,
           afm_hash: afmString ? hashAFM(afmString) : ''
         };
       });
       
+      // Use upsert to update existing employees (by AFM) or insert new ones
       const { data, error } = await supabase
         .from('Employees')
-        .insert(employeesToInsert)
+        .upsert(employeesToInsert, { onConflict: 'afm' })
         .select();
         
       if (error) {
@@ -1298,7 +1300,7 @@ export class DatabaseStorage implements IStorage {
         return { success: 0, failed: employees.length, errors: [error.message] };
       }
       
-      console.log(`[Storage] Successfully imported ${data?.length || 0} employees`);
+      console.log(`[Storage] Successfully imported/updated ${data?.length || 0} employees`);
       return { success: data?.length || 0, failed: 0, errors: [] };
     } catch (error) {
       console.error('[Storage] Error in bulkImportEmployees:', error);
