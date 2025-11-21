@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Trash2, Users, Upload } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Users, Upload, Trash } from "lucide-react";
 
 export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -136,6 +136,27 @@ export default function EmployeesPage() {
     }
   });
 
+  // Cleanup duplicates mutation
+  const cleanupDuplicatesMutation = useMutation({
+    mutationFn: () => apiRequest('/api/employees/cleanup-duplicates', {
+      method: 'POST'
+    }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
+      toast({
+        title: "Επιτυχία",
+        description: data.message || "Ο καθαρισμός ολοκληρώθηκε επιτυχώς",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Σφάλμα",
+        description: error.message || "Σφάλμα κατά τον καθαρισμό διπλοτύπων",
+        variant: "destructive",
+      });
+    }
+  });
+
   // Filter employees based on search term
   const filteredEmployees = employees.filter((employee: Employee) => {
     if (!searchTerm) return true;
@@ -188,6 +209,18 @@ export default function EmployeesPage() {
             onImport={(employees) => importEmployeesMutation.mutate(employees)}
             isLoading={importEmployeesMutation.isPending}
           />
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (window.confirm('Θέλετε να αφαιρέσετε τα διπλότυπα υπαλλήλων;')) {
+                cleanupDuplicatesMutation.mutate();
+              }
+            }}
+            disabled={cleanupDuplicatesMutation.isPending}
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            {cleanupDuplicatesMutation.isPending ? 'Γίνεται καθαρισμός...' : 'Αφαίρεση Διπλοτύπων'}
+          </Button>
         </div>
       </div>
 

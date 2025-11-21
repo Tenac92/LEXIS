@@ -1372,10 +1372,10 @@ export class DatabaseStorage implements IStorage {
       
       // Find duplicates and collect IDs to delete (keep lowest ID for each hash)
       const idsToDelete: number[] = [];
-      for (const [hash, ids] of groupsByHash.entries()) {
+      for (const [hash, ids] of Array.from(groupsByHash.entries())) {
         if (ids.length > 1 && hash !== '') {
           // Sort IDs, keep the lowest (original), delete the rest
-          ids.sort((a, b) => a - b);
+          ids.sort((a: number, b: number) => a - b);
           const kept = ids[0];
           const toDelete = ids.slice(1);
           console.log(`[Storage] Duplicate hash ${hash}: keeping ID ${kept}, deleting ${toDelete.length} copies`);
