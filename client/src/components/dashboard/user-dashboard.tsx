@@ -408,9 +408,6 @@ export function UserDashboard() {
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <p className="font-medium text-sm">{getUnitName(unit)}</p>
                       </div>
-                      <Badge variant="outline" className="text-xs">
-                        {getUnitName(unit)}
-                      </Badge>
                     </div>
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                       <span className="text-xs text-muted-foreground">Εκκρεμή έγγραφα</span>
@@ -477,10 +474,10 @@ export function UserDashboard() {
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             {doc.created_at && new Date(doc.created_at).toLocaleDateString('el-GR')}
-                            {doc.mis && (
+                            {(doc as any).project_na853 && (
                               <>
                                 <span>•</span>
-                                <span>MIS: {doc.mis}</span>
+                                <span>NA853: {(doc as any).project_na853}</span>
                               </>
                             )}
                           </div>
@@ -608,10 +605,10 @@ export function UserDashboard() {
                             </Badge>
                           )}
                           
-                          {activity.mis && (
+                          {(activity as any).na853 && (
                             <Badge variant="secondary" className="text-xs">
                               <Target className="w-3 h-3 mr-1" />
-                              MIS: {activity.mis}
+                              NA853: {(activity as any).na853}
                             </Badge>
                           )}
                           
