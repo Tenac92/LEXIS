@@ -638,6 +638,46 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     wsBudgets["!cols"] = colWidthsBudgets;
     XLSX.utils.book_append_sheet(wb, wsBudgets, "Μόνο Κατανομές");
 
+    // Helper function to apply European number formatting to worksheet
+    const applyEuropeanNumberFormatting = (ws: XLSX.WorkSheet) => {
+      const numericColumns = [
+        "Προϋπολογισμός ΝΑ853",
+        "Προϋπολογισμός ΝΑ271",
+        "Προϋπολογισμός Ε069",
+        "ΠΡΟΙΠ",
+        "Ετήσια Πίστωση",
+        "Α΄ Τρίμηνο",
+        "Β΄ Τρίμηνο",
+        "Γ΄ Τρίμηνο",
+        "Δ΄ Τρίμηνο",
+        "Κατανομές Έτους",
+        "Προβολή Χρήστη",
+      ];
+
+      for (const cell in ws) {
+        if (cell.startsWith("!")) continue; // Skip metadata
+
+        const cellRef = XLSX.utils.decode_cell(cell);
+        const col = XLSX.utils.encode_col(cellRef.c);
+        const row = cellRef.r;
+
+        // Get the header from the first row to identify numeric columns
+        const headerCell = ws[`${col}1`];
+        if (headerCell && numericColumns.includes(headerCell.v)) {
+          // Apply European number format: #,##0.00 with comma as decimal separator
+          if (!ws[cell]) ws[cell] = {};
+          if (typeof ws[cell].v === "number") {
+            ws[cell].z = "#,##0.00"; // Format code for European-style numbers
+          }
+        }
+      }
+    };
+
+    // Apply European formatting to all worksheets
+    applyEuropeanNumberFormatting(wsIntegrated);
+    applyEuropeanNumberFormatting(wsProjects);
+    applyEuropeanNumberFormatting(wsBudgets);
+
     // Generate buffer and send the response
     const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
