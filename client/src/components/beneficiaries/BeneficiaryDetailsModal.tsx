@@ -92,37 +92,51 @@ const beneficiaryEditSchema = insertBeneficiarySchema.omit({
 type BeneficiaryEditForm = z.infer<typeof beneficiaryEditSchema>;
 
 // Helper function to format regiondet JSONB data for display
-const formatRegiondet = (regiondet: Record<string, unknown> | null | undefined): { regions: string[], regionalUnits: string[], municipalities: string[] } => {
-  if (!regiondet || typeof regiondet !== 'object') return { regions: [], regionalUnits: [], municipalities: [] };
+const formatRegiondet = (regiondet: any): { regions: string[], regionalUnits: string[], municipalities: string[] } => {
+  if (!regiondet) return { regions: [], regionalUnits: [], municipalities: [] };
   
   const result = { regions: [] as string[], regionalUnits: [] as string[], municipalities: [] as string[] };
+  const regiondetArray = Array.isArray(regiondet) ? regiondet : [regiondet];
   
-  // Extract region names
-  if (regiondet.regions && Array.isArray(regiondet.regions)) {
-    regiondet.regions.forEach((region: any) => {
-      if (region.name) {
-        result.regions.push(region.name);
-      }
-    });
-  }
+  // Use Sets to avoid duplicates when merging multiple entries
+  const regionSet = new Set<string>();
+  const unitSet = new Set<string>();
+  const municSet = new Set<string>();
   
-  // Extract regional unit names
-  if (regiondet.regional_units && Array.isArray(regiondet.regional_units)) {
-    regiondet.regional_units.forEach((unit: any) => {
-      if (unit.name) {
-        result.regionalUnits.push(unit.name);
-      }
-    });
-  }
+  regiondetArray.forEach((entry: any) => {
+    if (!entry || typeof entry !== 'object') return;
+    
+    // Extract region names
+    if (entry.regions && Array.isArray(entry.regions)) {
+      entry.regions.forEach((region: any) => {
+        if (region.name) {
+          regionSet.add(region.name);
+        }
+      });
+    }
+    
+    // Extract regional unit names
+    if (entry.regional_units && Array.isArray(entry.regional_units)) {
+      entry.regional_units.forEach((unit: any) => {
+        if (unit.name) {
+          unitSet.add(unit.name);
+        }
+      });
+    }
+    
+    // Extract municipality names
+    if (entry.municipalities && Array.isArray(entry.municipalities)) {
+      entry.municipalities.forEach((muni: any) => {
+        if (muni.name) {
+          municSet.add(muni.name);
+        }
+      });
+    }
+  });
   
-  // Extract municipality names
-  if (regiondet.municipalities && Array.isArray(regiondet.municipalities)) {
-    regiondet.municipalities.forEach((muni: any) => {
-      if (muni.name) {
-        result.municipalities.push(muni.name);
-      }
-    });
-  }
+  result.regions = Array.from(regionSet);
+  result.regionalUnits = Array.from(unitSet);
+  result.municipalities = Array.from(municSet);
   
   return result;
 };
@@ -943,25 +957,26 @@ export function BeneficiaryDetailsModal({
                     ) : (
                       <div className="bg-white/70 p-4 rounded-lg border border-green-200">
                         <div className="space-y-3">
-                          {regionData.regions.map((region, idx) => (
-                            <div key={idx} className="text-sm">
-                              <div className="font-semibold text-green-800">{region}</div>
-                              {regionData.regionalUnits.length > 0 && (
-                                <div className="ml-4 text-green-700">
-                                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
-                                  <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
-                                </div>
-                              )}
-                              {regionData.municipalities.length > 0 && (
-                                <div className="ml-4 text-green-700">
-                                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
-                                  <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {regionData.regions.length === 0 && (regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0) && (
-                            <div className="text-sm">
+                          {regionData.regions.length > 0 ? (
+                            regionData.regions.map((region, idx) => (
+                              <div key={idx} className="text-sm">
+                                <div className="font-semibold text-green-800">{region}</div>
+                                {regionData.regionalUnits.length > 0 && (
+                                  <div className="ml-4 text-green-700">
+                                    <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
+                                    <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
+                                  </div>
+                                )}
+                                {regionData.municipalities.length > 0 && (
+                                  <div className="ml-4 text-green-700">
+                                    <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
+                                    <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm space-y-2">
                               {regionData.regionalUnits.length > 0 && (
                                 <div className="text-green-700">
                                   <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
@@ -969,7 +984,7 @@ export function BeneficiaryDetailsModal({
                                 </div>
                               )}
                               {regionData.municipalities.length > 0 && (
-                                <div className="text-green-700 mt-2">
+                                <div className="text-green-700">
                                   <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
                                   <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
                                 </div>
