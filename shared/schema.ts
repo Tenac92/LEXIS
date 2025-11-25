@@ -393,7 +393,6 @@ export const beneficiaries = pgTable(
     surname: text("surname").notNull(),
     name: text("name").notNull(),
     fathername: text("fathername"),
-    region: text("region"),
     adeia: integer("adeia"), // License/permit number
     ceng1: integer("ceng1").references(() => employees.id), // Engineer 1 foreign key
     ceng2: integer("ceng2").references(() => employees.id), // Engineer 2 foreign key

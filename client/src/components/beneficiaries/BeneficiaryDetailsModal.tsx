@@ -71,7 +71,6 @@ const beneficiaryEditSchema = insertBeneficiarySchema.omit({
   created_at: true, 
   updated_at: true 
 }).extend({
-  region: z.string().optional(), // Allow optional region
   fathername: z.string().optional(), // Allow optional fathername
   adeia: z.number().optional(), // Allow optional adeia (license number)
   ceng1: z.number().nullable().optional(), // Engineer 1 foreign key
@@ -118,7 +117,6 @@ export function BeneficiaryDetailsModal({
       surname: "",
       name: "",
       fathername: "",
-      region: "",
       adeia: undefined,
       ceng1: null,
       ceng2: null,
@@ -134,7 +132,6 @@ export function BeneficiaryDetailsModal({
         surname: beneficiary.surname || "",
         name: beneficiary.name || "",
         fathername: beneficiary.fathername || "",
-        region: beneficiary.region || "",
         adeia: beneficiary.adeia || undefined,
         ceng1: beneficiary.ceng1 ?? null,
         ceng2: beneficiary.ceng2 ?? null,
@@ -203,7 +200,7 @@ export function BeneficiaryDetailsModal({
     onSuccess: () => {
       // More granular cache invalidation for immediate UI reflection
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", beneficiary.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", beneficiary?.id] });
       setIsEditing(false);
       toast({
         title: "Επιτυχία",
@@ -228,7 +225,6 @@ export function BeneficiaryDetailsModal({
     const normalizedData = {
       ...data,
       afm: String(data.afm ?? "").trim(), // Ensure AFM is always string
-      region: data.region === "" ? null : (data.region ? String(data.region) : null), // Ensure region is string or null
     };
     
     console.log("Form submission data (after normalization):", normalizedData);
@@ -561,46 +557,6 @@ export function BeneficiaryDetailsModal({
                       />
                     ) : (
                       <p className="text-blue-900 font-mono font-bold text-lg mt-1">{beneficiary.afm}</p>
-                    )}
-                  </div>
-                  <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
-                    <label className="text-sm font-medium text-blue-700 flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      Περιφέρεια:
-                    </label>
-                    {isEditing ? (
-                      <FormField
-                        control={form.control}
-                        name="region"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Select
-                                value={field.value || 'none'}
-                                onValueChange={(value) => field.onChange(value === 'none' ? '' : value)}
-                                disabled={!availableRegions.length}
-                              >
-                                <SelectTrigger className="mt-1" data-testid="select-region">
-                                  <SelectValue placeholder={availableRegions.length ? "Επιλέξτε περιφέρεια..." : "Φόρτωση γεωγραφικών δεδομένων..."} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">Καμία επιλογή</SelectItem>
-                                  {availableRegions.map((region) => (
-                                    <SelectItem key={region.code} value={region.code}>
-                                      {region.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ) : (
-                      <p className="text-blue-900 font-medium mt-1">
-                        {getRegionNameFromCode(beneficiary.region)}
-                      </p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">

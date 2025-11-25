@@ -70,7 +70,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { resolveRegionName } from "@shared/utils/geographic-utils";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
@@ -79,7 +78,6 @@ interface Beneficiary {
   surname: string;
   name: string;
   fathername: string | null;
-  region: string | null;
   adeia: number | null;
   ceng1: number | null;
   ceng2: number | null;
@@ -123,7 +121,6 @@ const beneficiaryFormSchema = z.object({
   // Project & Location Information
   project: z.string().optional(),
   expenditure_type: z.string().optional(),
-  region: z.string().optional(),
   monada: z.string().optional(),
 
   // License Information
@@ -462,9 +459,7 @@ export default function BeneficiariesPage() {
     return beneficiaries.filter((beneficiary) => {
       return (
         beneficiary.surname?.toLowerCase().includes(searchLower) ||
-        beneficiary.name?.toLowerCase().includes(searchLower) ||
-        beneficiary.region?.toLowerCase().includes(searchLower)
-        // Note: AFM client-side filtering removed since it won't work with encrypted data
+        beneficiary.name?.toLowerCase().includes(searchLower)
       );
     });
   }, [beneficiaries, searchTerm, afmSearchResults]);
@@ -621,14 +616,6 @@ export default function BeneficiariesPage() {
                                     <User className="w-4 h-4" />
                                     <span>ΑΦΜ: {beneficiary.afm}</span>
                                   </div>
-                                  {beneficiary.region && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <Building className="w-4 h-4" />
-                                      <span>
-                                        {getRegionName(beneficiary.region)}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="space-y-1">
                                   {getExpenditureTypesForBeneficiary(
@@ -850,20 +837,6 @@ export default function BeneficiariesPage() {
 
                               {/* Location and Project Info */}
                               <div className="grid grid-cols-1 gap-2">
-                                {beneficiary.region && (
-                                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                    <div>
-                                      <span className="text-xs text-blue-600 font-medium">
-                                        Περιοχή
-                                      </span>
-                                      <p className="text-sm text-blue-900 font-medium">
-                                        {getRegionName(beneficiary.region)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-
                                 {getExpenditureTypesForBeneficiary(
                                   beneficiary.id,
                                 ).length > 0 && (
@@ -1363,12 +1336,6 @@ function ExistingPaymentsDisplay({
           <span className="text-sm font-medium text-muted-foreground">ΑΦΜ</span>
           <p className="text-lg font-mono">{beneficiary.afm}</p>
         </div>
-        <div>
-          <span className="text-sm font-medium text-muted-foreground">
-            Περιοχή
-          </span>
-          <p className="text-lg">{beneficiary.region || "—"}</p>
-        </div>
       </div>
 
       <div className="border rounded-lg overflow-hidden">
@@ -1506,7 +1473,6 @@ function BeneficiaryForm({
       afm: beneficiary?.afm?.toString() || "",
       project: "",
       expenditure_type: "",
-      region: beneficiary?.region || "",
       monada: "",
       adeia: beneficiary?.adeia?.toString() || "",
       ceng1: beneficiary?.ceng1 ?? null,
@@ -1585,7 +1551,6 @@ function BeneficiaryForm({
       afm: "",
       project: "",
       expenditure_type: "",
-      region: "",
       monada: "",
       adeia: "",
       ceng1: null,
@@ -1839,54 +1804,6 @@ function BeneficiaryForm({
                 <FormDescription className="text-xs">
                   Εισάγετε έγκυρο ελληνικό ΑΦΜ (9 ψηφία)
                 </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="region"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-purple-600" />
-                  Περιοχή
-                </FormLabel>
-                <FormControl>
-                  <Select
-                    value={field.value || "none"}
-                    onValueChange={(value) =>
-                      field.onChange(value === "none" ? "" : value)
-                    }
-                    disabled={!(geographicData as any)?.regions?.length}
-                  >
-                    <SelectTrigger data-testid="select-beneficiary-region">
-                      <SelectValue
-                        placeholder={
-                          (geographicData as any)?.regions?.length
-                            ? "Επιλέξτε περιφέρεια..."
-                            : "Φόρτωση γεωγραφικών δεδομένων..."
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Καμία επιλογή</SelectItem>
-                      {((geographicData as any)?.regions || [])
-                        .map((r: any) => ({
-                          code: String(r.code),
-                          name: r.name,
-                        }))
-                        .sort((a: any, b: any) =>
-                          a.name.localeCompare(b.name, "el"),
-                        )
-                        .map((region: any) => (
-                          <SelectItem key={region.code} value={region.code}>
-                            {region.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

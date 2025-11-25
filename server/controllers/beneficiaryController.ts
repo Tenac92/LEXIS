@@ -565,20 +565,6 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       monada: assignedMonada
     };
 
-    // Convert region name to region code if provided
-    if (req.body.region && typeof req.body.region === 'string') {
-      console.log(`[Beneficiaries] Converting region name "${req.body.region}" to code`);
-      const regionCode = await getRegionCodeFromName(req.body.region);
-      if (regionCode) {
-        transformedData.region = regionCode;
-        console.log(`[Beneficiaries] Successfully converted region "${req.body.region}" to code "${regionCode}"`);
-      } else {
-        console.log(`[Beneficiaries] Could not find region code for "${req.body.region}", keeping original value`);
-        // Keep the original value if no mapping is found
-        transformedData.region = req.body.region;
-      }
-    }
-
     // If we have financial data, structure it properly for the oikonomika field
     if (req.body.paymentType && req.body.amount && req.body.installment) {
       // Parse European decimal format (e.g., "10.286,06" -> 10286.06)
@@ -709,29 +695,6 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       // SECURITY: Use authorized unit code only - no client fallback
       monada: assignedMonada
     };
-
-    // Handle region: detect if it's a numeric code vs name
-    if (req.body.region && typeof req.body.region === 'string') {
-      const regionString = String(req.body.region);
-      
-      // Check if it's already a numeric code (e.g., "1", "2", etc.)
-      if (/^\d+$/.test(regionString)) {
-        console.log(`[Beneficiaries] Region "${regionString}" detected as numeric code, using directly`);
-        transformedData.region = regionString;
-      } else {
-        // It's a region name, do lookup
-        console.log(`[Beneficiaries] Converting region name "${req.body.region}" to code for update`);
-        const regionCode = await getRegionCodeFromName(req.body.region);
-        if (regionCode) {
-          transformedData.region = regionCode;
-          console.log(`[Beneficiaries] Successfully converted region "${req.body.region}" to code "${regionCode}" for update`);
-        } else {
-          console.log(`[Beneficiaries] Could not find region code for "${req.body.region}" during update, keeping original value`);
-          // Keep the original value if no mapping is found
-          transformedData.region = req.body.region;
-        }
-      }
-    }
 
     // If we have financial data, structure it properly for the oikonomika field
     if (req.body.paymentType && req.body.amount && req.body.installment) {
