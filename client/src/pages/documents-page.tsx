@@ -153,7 +153,7 @@ export default function DocumentsPage() {
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
     unit: "",
-    status: "pending",
+    status: "all",
     user: "current",
     dateFrom: "",
     dateTo: "",
