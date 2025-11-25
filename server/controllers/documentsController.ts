@@ -1349,7 +1349,6 @@ router.get("/", async (req: Request, res: Response) => {
                 accommodation_expenses,
                 kilometers_traveled,
                 tickets_tolls_rental,
-                tickets_tolls_rental_entries,
                 has_2_percent_deduction,
                 total_expense,
                 deduction_2_percent,
@@ -1390,7 +1389,7 @@ router.get("/", async (req: Request, res: Response) => {
                   accommodation_expenses: payment.accommodation_expenses || 0,
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
-                  tickets_tolls_rental_entries: payment.tickets_tolls_rental_entries || [],
+                  tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
                   has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
                   total_expense: payment.total_expense ?? 0,
                   deduction_2_percent: payment.deduction_2_percent ?? 0,
@@ -1787,7 +1786,6 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                 accommodation_expenses,
                 kilometers_traveled,
                 tickets_tolls_rental,
-                tickets_tolls_rental_entries,
                 has_2_percent_deduction,
                 total_expense,
                 deduction_2_percent,
@@ -1828,7 +1826,7 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   accommodation_expenses: payment.accommodation_expenses || 0,
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
-                  tickets_tolls_rental_entries: payment.tickets_tolls_rental_entries || [],
+                  tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
                   has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
                   total_expense: payment.total_expense ?? 0,
                   deduction_2_percent: payment.deduction_2_percent ?? 0,
@@ -3484,6 +3482,7 @@ router.get(
             accommodation_expenses: payment.accommodation_expenses || 0,
             kilometers_traveled: payment.kilometers_traveled || 0,
             tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+            tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
             has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
             total_expense: payment.total_expense ?? 0,
             deduction_2_percent: payment.deduction_2_percent ?? 0,
