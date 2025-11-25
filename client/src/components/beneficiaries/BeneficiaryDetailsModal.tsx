@@ -160,9 +160,10 @@ interface EngineerComboboxProps {
   onValueChange: (value: number | null) => void;
   placeholder?: string;
   testId?: string;
+  isLoading?: boolean;
 }
 
-function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId }: EngineerComboboxProps) {
+function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId, isLoading = false }: EngineerComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -223,13 +224,20 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
         className="w-full justify-between"
         data-testid={testId}
         onClick={handleToggle}
+        disabled={isLoading}
       >
         <span className="truncate">
-          {selectedEngineer 
-            ? `${selectedEngineer.surname} ${selectedEngineer.name}`
-            : placeholder}
+          {isLoading 
+            ? "Φόρτωση μηχανικών..."
+            : selectedEngineer 
+              ? `${selectedEngineer.surname} ${selectedEngineer.name}`
+              : placeholder}
         </span>
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        {isLoading ? (
+          <div className="ml-2 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : (
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        )}
       </Button>
       
       {isOpen && (
@@ -343,7 +351,7 @@ export function BeneficiaryDetailsModal({
 
   // Fetch engineers directly from optimized endpoint (already filtered and sorted server-side)
   // Data is prefetched on the beneficiaries page, so this uses cached data
-  const { data: engineersResponse } = useQuery({
+  const { data: engineersResponse, isLoading: isEngineersLoading } = useQuery({
     queryKey: ["/api/employees/engineers"],
     queryFn: async () => {
       const response = await fetch('/api/employees/engineers', { credentials: 'include' });
@@ -1090,6 +1098,7 @@ export function BeneficiaryDetailsModal({
                                 onValueChange={field.onChange}
                                 placeholder="Επιλέξτε μηχανικό..."
                                 testId="select-ceng1"
+                                isLoading={isEngineersLoading}
                               />
                               <FormMessage />
                             </FormItem>
@@ -1118,6 +1127,7 @@ export function BeneficiaryDetailsModal({
                                 onValueChange={field.onChange}
                                 placeholder="Επιλέξτε μηχανικό..."
                                 testId="select-ceng2"
+                                isLoading={isEngineersLoading}
                               />
                               <FormMessage />
                             </FormItem>
