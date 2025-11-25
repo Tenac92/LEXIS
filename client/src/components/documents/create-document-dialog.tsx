@@ -413,12 +413,18 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
 
-    // Match by unit code (e.g., "ΔΑΕΦΚ-ΚΕ") since that's what the form stores
+    // Check if selectedUnit is a numeric ID
+    const parsedUnitId = parseInt(String(selectedUnit));
+    const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(selectedUnit).trim();
+
+    // Match by unit ID if numeric, or by unit code if text
     return monada
-      .filter(
-        (unit: any) =>
-          unit.unit === selectedUnit && unit.director && unit.director.name,
-      )
+      .filter((unit: any) => {
+        const matchCondition = isNumericUnit 
+          ? unit.id === parsedUnitId 
+          : unit.unit === selectedUnit;
+        return matchCondition && unit.director && unit.director.name;
+      })
       .map((unit: any) => ({
         unit: unit.unit, // Use the unit code, not the numeric ID
         director: unit.director,
@@ -437,11 +443,19 @@ export function CreateDocumentDialog({
       return [];
     }
 
+    // Check if selectedUnit is a numeric ID
+    const parsedUnitId = parseInt(String(selectedUnit));
+    const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(selectedUnit).trim();
+
     monada.forEach((unit: any) => {
-      // Match by unit code (e.g., "ΔΑΕΦΚ-ΚΕ") since that's what the form stores
+      // Match by unit ID if numeric, or by unit code if text
+      const matchCondition = isNumericUnit 
+        ? unit.id === parsedUnitId 
+        : unit.unit === selectedUnit;
+        
       if (
         unit &&
-        unit.unit === selectedUnit &&
+        matchCondition &&
         unit.parts &&
         typeof unit.parts === "object"
       ) {
