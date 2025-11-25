@@ -142,6 +142,7 @@ export default function DocumentsPage() {
   });
 
   // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
+  // Note: Using allUnits directly now - backend handles authorization
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
     return allUnits.filter((unit) => user.unit_id?.includes(unit.unit));
@@ -171,7 +172,6 @@ export default function DocumentsPage() {
   useEffect(() => {
     if (user?.unit_id?.[0] && !filters.unit && userUnits.length > 0) {
       const defaultUnit = userUnits[0];
-      console.log("[DocumentsPage] Setting default unit filter to:", defaultUnit.unit);
       setFilters((prev) => ({
         ...prev,
         unit: defaultUnit.unit.toString(), // Use unit ID as filter value
@@ -443,11 +443,17 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    {userUnits.map((unit) => (
-                      <SelectItem key={unit.unit} value={unit.unit.toString()}>
-                        {unit.name}
+                    {allUnits.length > 0 ? (
+                      allUnits.map((unit) => (
+                        <SelectItem key={unit.unit} value={unit.unit.toString()}>
+                          {unit.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="" disabled>
+                        Φόρτωση μονάδων...
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>
