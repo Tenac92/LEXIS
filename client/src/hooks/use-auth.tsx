@@ -128,15 +128,12 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
-      // Immediately clear user data and navigate for instant UI response
-      queryClient.setQueryData(["/api/auth/me"], null);
+      // Clear ALL cached queries to prevent stale data from previous user
+      // This is critical for security and proper user experience when switching accounts
+      queryClient.clear();
       
       // Use client-side navigation instead of full page reload
       navigate('/auth');
-      
-      // Clear specific auth-related queries only for better performance
-      queryClient.removeQueries({ queryKey: ["/api/auth/me"] });
-      queryClient.removeQueries({ queryKey: ["/api/dashboard"] });
       
       // Show success message after navigation
       setTimeout(() => {
