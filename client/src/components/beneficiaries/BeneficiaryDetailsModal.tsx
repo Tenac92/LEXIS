@@ -63,6 +63,8 @@ interface BeneficiaryDetailsModalProps {
   beneficiary: Beneficiary | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialEditMode?: boolean;
+  onCreateBeneficiary?: (data: any) => void;
 }
 
 // Form schema for editing beneficiaries (omit auto-generated fields)
@@ -133,10 +135,15 @@ interface PaymentRecord {
 export function BeneficiaryDetailsModal({ 
   beneficiary, 
   open, 
-  onOpenChange 
+  onOpenChange,
+  initialEditMode = false,
+  onCreateBeneficiary
 }: BeneficiaryDetailsModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Determine if this is a create operation (no beneficiary provided)
+  const isCreateMode = !beneficiary;
   
   // Edit state management
   const [isEditing, setIsEditing] = useState(false);
@@ -162,21 +169,37 @@ export function BeneficiaryDetailsModal({
 
   // Initialize form values when modal opens or beneficiary changes
   useEffect(() => {
-    if (beneficiary && open) {
-      form.reset({
-        afm: beneficiary.afm || "",
-        surname: beneficiary.surname || "",
-        name: beneficiary.name || "",
-        fathername: beneficiary.fathername || "",
-        adeia: beneficiary.adeia || undefined,
-        ceng1: beneficiary.ceng1 ?? null,
-        ceng2: beneficiary.ceng2 ?? null,
-        freetext: beneficiary.freetext || "",
-      });
-      setIsEditing(false);
+    if (open) {
+      if (beneficiary) {
+        // Edit existing beneficiary
+        form.reset({
+          afm: beneficiary.afm || "",
+          surname: beneficiary.surname || "",
+          name: beneficiary.name || "",
+          fathername: beneficiary.fathername || "",
+          adeia: beneficiary.adeia || undefined,
+          ceng1: beneficiary.ceng1 ?? null,
+          ceng2: beneficiary.ceng2 ?? null,
+          freetext: beneficiary.freetext || "",
+        });
+      } else {
+        // Create new beneficiary - start with empty form
+        form.reset({
+          afm: "",
+          surname: "",
+          name: "",
+          fathername: "",
+          adeia: undefined,
+          ceng1: null,
+          ceng2: null,
+          freetext: "",
+        });
+      }
+      // Set edit mode based on initialEditMode prop or create mode
+      setIsEditing(initialEditMode || isCreateMode);
       setEditingPayment(null);
     }
-  }, [beneficiary, open, form]);
+  }, [beneficiary, open, form, initialEditMode, isCreateMode]);
 
   // Fetch all payments for this specific beneficiary
   const { data: allPayments = [], isLoading: paymentsLoading } = useQuery({
@@ -264,7 +287,14 @@ export function BeneficiaryDetailsModal({
     };
     
     console.log("Form submission data (after normalization):", normalizedData);
-    updateBeneficiaryMutation.mutate(normalizedData as BeneficiaryEditForm);
+    
+    if (isCreateMode && onCreateBeneficiary) {
+      // Create new beneficiary using the callback
+      onCreateBeneficiary(normalizedData);
+    } else {
+      // Update existing beneficiary
+      updateBeneficiaryMutation.mutate(normalizedData as BeneficiaryEditForm);
+    }
   };
 
   // Update payment mutation
@@ -322,14 +352,17 @@ export function BeneficiaryDetailsModal({
     },
   });
 
-  // CONDITIONAL RETURN AFTER ALL HOOKS
-  if (!beneficiary) return null;
-
   // Handler functions
   const handleCancelEdit = () => {
-    form.reset();
-    setIsEditing(false);
-    setEditingPayment(null);
+    if (isCreateMode) {
+      // In create mode, cancel closes the modal
+      onOpenChange(false);
+    } else {
+      // In edit mode, cancel reverts to view mode
+      form.reset();
+      setIsEditing(false);
+      setEditingPayment(null);
+    }
   };
 
   const handleUpdatePayment = (paymentId: number, data: Partial<PaymentRecord>) => {
@@ -423,28 +456,38 @@ export function BeneficiaryDetailsModal({
             <div>
               <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                 <User className="w-7 h-7 text-blue-600" />
-                Λεπτομέρειες & Επεξεργασία Δικαιούχου
+                {isCreateMode ? "Νέος Δικαιούχος" : "Λεπτομέρειες & Επεξεργασία Δικαιούχου"}
               </DialogTitle>
               <DialogDescription className="text-gray-600 mt-2">
-                Προβολή και επεξεργασία στοιχείων για{" "}
-                <span className="font-semibold text-gray-800">
-                  {beneficiary.surname} {beneficiary.name}
-                </span>
+                {isCreateMode ? (
+                  "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"
+                ) : (
+                  <>
+                    Προβολή και επεξεργασία στοιχείων για{" "}
+                    <span className="font-semibold text-gray-800">
+                      {beneficiary?.surname} {beneficiary?.name}
+                    </span>
+                  </>
+                )}
               </DialogDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-sm">
-                ID: {beneficiary.id}
-              </Badge>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => copyToClipboard(beneficiary.afm, "ΑΦΜ")}
-                className="text-xs"
-              >
-                <Copy className="w-3 h-3 mr-1" />
-                ΑΦΜ
-              </Button>
+              {!isCreateMode && beneficiary && (
+                <>
+                  <Badge variant="outline" className="text-sm">
+                    ID: {beneficiary.id}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyToClipboard(beneficiary.afm, "ΑΦΜ")}
+                    className="text-xs"
+                  >
+                    <Copy className="w-3 h-3 mr-1" />
+                    ΑΦΜ
+                  </Button>
+                </>
+              )}
               {isEditing ? (
                 <div className="flex gap-1">
                   <Button
@@ -463,7 +506,7 @@ export function BeneficiaryDetailsModal({
                     disabled={updateBeneficiaryMutation.isPending}
                   >
                     <Save className="w-3 h-3 mr-1" />
-                    Αποθήκευση
+                    {isCreateMode ? "Δημιουργία" : "Αποθήκευση"}
                   </Button>
                 </div>
               ) : (
@@ -526,7 +569,7 @@ export function BeneficiaryDetailsModal({
                         )}
                       />
                     ) : (
-                      <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary.surname}</p>
+                      <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary?.surname}</p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
@@ -548,7 +591,7 @@ export function BeneficiaryDetailsModal({
                         )}
                       />
                     ) : (
-                      <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary.name}</p>
+                      <p className="text-blue-900 font-semibold text-lg mt-1">{beneficiary?.name}</p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
@@ -570,7 +613,7 @@ export function BeneficiaryDetailsModal({
                         )}
                       />
                     ) : (
-                      <p className="text-blue-900 font-medium mt-1">{beneficiary.fathername || 'Δεν έχει καθοριστεί'}</p>
+                      <p className="text-blue-900 font-medium mt-1">{beneficiary?.fathername || 'Δεν έχει καθοριστεί'}</p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
@@ -592,7 +635,7 @@ export function BeneficiaryDetailsModal({
                         )}
                       />
                     ) : (
-                      <p className="text-blue-900 font-mono font-bold text-lg mt-1">{beneficiary.afm}</p>
+                      <p className="text-blue-900 font-mono font-bold text-lg mt-1">{beneficiary?.afm}</p>
                     )}
                   </div>
                   <div className="bg-white/70 p-4 rounded-lg border border-blue-200">
@@ -601,7 +644,7 @@ export function BeneficiaryDetailsModal({
                       Ημερομηνία Εγγραφής:
                     </label>
                     <p className="text-blue-900 font-medium mt-1">
-                      {beneficiary.date ? new Date(beneficiary.date).toLocaleDateString('el-GR') : 'Δεν έχει καθοριστεί'}
+                      {beneficiary?.date ? new Date(beneficiary.date).toLocaleDateString('el-GR') : 'Δεν έχει καθοριστεί'}
                     </p>
                   </div>
                 </div>
@@ -609,7 +652,7 @@ export function BeneficiaryDetailsModal({
 
               {/* Geographic Information from regiondet */}
               {(() => {
-                const regionData = formatRegiondet(beneficiary.regiondet as Record<string, unknown> | null | undefined);
+                const regionData = formatRegiondet(beneficiary?.regiondet as Record<string, unknown> | null | undefined);
                 const hasRegionData = regionData.regions.length > 0 || regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0;
                 
                 if (!hasRegionData) return null;
@@ -703,7 +746,7 @@ export function BeneficiaryDetailsModal({
                       />
                     ) : (
                       <p className="text-gray-900 font-mono font-medium text-lg mt-1">
-                        {beneficiary.adeia || 'Δεν έχει καθοριστεί'}
+                        {beneficiary?.adeia || 'Δεν έχει καθοριστεί'}
                       </p>
                     )}
                   </div>
@@ -727,7 +770,7 @@ export function BeneficiaryDetailsModal({
                       />
                     ) : (
                       <p className="text-gray-900 font-mono font-medium text-lg mt-1">
-                        {beneficiary.onlinefoldernumber || 'Δεν έχει καθοριστεί'}
+                        {beneficiary?.onlinefoldernumber || 'Δεν έχει καθοριστεί'}
                       </p>
                     )}
                   </div>
@@ -735,14 +778,14 @@ export function BeneficiaryDetailsModal({
               </div>
 
               {/* Engineering Information */}
-              {(beneficiary.ceng1 || beneficiary.ceng2) && (
+              {(beneficiary?.ceng1 || beneficiary?.ceng2) && (
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
                     <Building2 className="w-5 h-5" />
                     Στοιχεία Μηχανικών
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {beneficiary.ceng1 && (
+                    {beneficiary?.ceng1 && (
                       <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
                         <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
                           <Building2 className="w-4 h-4" />
@@ -769,12 +812,12 @@ export function BeneficiaryDetailsModal({
                           />
                         ) : (
                           <p className="text-orange-900 font-medium mt-1">
-                            ID: {beneficiary.ceng1}
+                            ID: {beneficiary?.ceng1}
                           </p>
                         )}
                       </div>
                     )}
-                    {beneficiary.ceng2 && (
+                    {beneficiary?.ceng2 && (
                       <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
                         <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
                           <Building2 className="w-4 h-4" />
@@ -801,7 +844,7 @@ export function BeneficiaryDetailsModal({
                           />
                         ) : (
                           <p className="text-orange-900 font-medium mt-1">
-                            ID: {beneficiary.ceng2}
+                            ID: {beneficiary?.ceng2}
                           </p>
                         )}
                       </div>
@@ -837,7 +880,7 @@ export function BeneficiaryDetailsModal({
                     />
                   ) : (
                     <p className="text-purple-900 whitespace-pre-wrap min-h-[60px]">
-                      {beneficiary.freetext || 'Δεν υπάρχουν σημειώσεις'}
+                      {beneficiary?.freetext || 'Δεν υπάρχουν σημειώσεις'}
                     </p>
                   )}
                 </div>
