@@ -682,7 +682,7 @@ export function CreateDocumentDialog({
     if (!hasExistingFormData) {
       // Don't reset the unit if user has one assigned - preserve auto-selection
       let defaultUnit = "";
-      if (userUnitIds.length > 0) {
+      if (userUnitIds.length > 0 && units && units.length > 0) {
         // Convert user's unit ID to unit name for form
         devLog(
           "UserSetup",
@@ -691,8 +691,9 @@ export function CreateDocumentDialog({
           "available:",
           units.length,
         );
+        const userUnitIdStr = String(userUnitIds[0]);
         const userUnitData = units.find(
-          (item: any) => item.id === userUnitIds[0],
+          (item: any) => item.id === userUnitIdStr,
         );
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
@@ -4872,34 +4873,43 @@ export function CreateDocumentDialog({
   const unitInitializedRef = useRef(false);
 
   useEffect(() => {
+    // Wait for units to load before attempting auto-selection
+    if (unitsLoading || !units || units.length === 0) {
+      return;
+    }
+
     // Only run this once to avoid infinite loops
     if (userUnitIds.length === 1 && !unitInitializedRef.current) {
       unitInitializedRef.current = true;
 
+      // Convert numeric unit ID to string for matching
+      const userUnitIdStr = String(userUnitIds[0]);
+      
       // Set the unit value immediately without delay
       // Convert user's unit ID to unit name for display
-      const userUnitData = units.find((u: any) => u.id === userUnitIds[0]);
-      const unitValue = userUnitData?.name || "";
-      form.setValue("unit", unitValue, {
-        shouldDirty: false,
-        shouldValidate: false,
-      });
+      const userUnitData = units.find((u: any) => u.id === userUnitIdStr);
+      const unitValue = userUnitData?.id || "";
+      
+      if (unitValue) {
+        form.setValue("unit", unitValue, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
 
-      // Also update form context data to ensure consistency
-      updateFormData({
-        ...formData,
-        unit: unitValue,
-      });
+        // Also update form context data to ensure consistency
+        updateFormData({
+          ...formData,
+          unit: unitValue,
+        });
 
-      // Mark unit initialization as completed to prevent overrides
-      if (unitInitializationRef.current) {
-        unitInitializationRef.current.isCompleted = true;
-        unitInitializationRef.current.defaultUnit = unitValue;
+        // Mark unit initialization as completed to prevent overrides
+        if (unitInitializationRef.current) {
+          unitInitializationRef.current.isCompleted = true;
+          unitInitializationRef.current.defaultUnit = unitValue;
+        }
       }
-
-      // Auto-selected the only available unit
     }
-  }, [user?.units]); // Removed form, formData, updateFormData from dependencies
+  }, [units, unitsLoading, userUnitIds, form, formData, updateFormData]); // Wait for units to be loaded
 
   useEffect(() => {
     if (regions.length === 1) {
