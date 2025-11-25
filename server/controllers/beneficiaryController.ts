@@ -7,6 +7,49 @@ import { supabase } from '../config/db';
 
 export const router = Router();
 
+// In-memory cache for beneficiaries list (per user units combination)
+interface CacheEntry {
+  data: any[];
+  timestamp: number;
+}
+const beneficiariesCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+function getCacheKey(unitIds: number[]): string {
+  return `beneficiaries_${unitIds.sort().join('_')}`;
+}
+
+function getCachedBeneficiaries(unitIds: number[]): any[] | null {
+  const key = getCacheKey(unitIds);
+  const cached = beneficiariesCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[Beneficiaries] CACHE HIT for units: ${unitIds.join(', ')}`);
+    return cached.data;
+  }
+  if (cached) {
+    beneficiariesCache.delete(key); // Remove stale cache
+  }
+  return null;
+}
+
+function setCachedBeneficiaries(unitIds: number[], data: any[]): void {
+  const key = getCacheKey(unitIds);
+  beneficiariesCache.set(key, { data, timestamp: Date.now() });
+  console.log(`[Beneficiaries] CACHE SET for units: ${unitIds.join(', ')} (${data.length} items)`);
+}
+
+// Clear cache for specific units (call after create/update/delete)
+export function invalidateBeneficiariesCache(unitIds?: number[]): void {
+  if (unitIds) {
+    const key = getCacheKey(unitIds);
+    beneficiariesCache.delete(key);
+    console.log(`[Beneficiaries] CACHE INVALIDATED for units: ${unitIds.join(', ')}`);
+  } else {
+    beneficiariesCache.clear();
+    console.log('[Beneficiaries] CACHE CLEARED (all units)');
+  }
+}
+
 // Helper function to map region name to region code
 async function getRegionCodeFromName(regionName: string): Promise<string | null> {
   try {
@@ -134,6 +177,13 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       });
     }
     
+    // PERFORMANCE: Check cache first
+    const cachedData = getCachedBeneficiaries(userUnits);
+    if (cachedData) {
+      console.log(`[Beneficiaries] Returning ${cachedData.length} cached beneficiaries for units: ${userUnits.join(', ')}`);
+      return res.json(cachedData);
+    }
+    
     // SECURITY: Get beneficiaries ONLY for user's assigned units
     // OPTIMIZATION: Use optimized method that skips AFM decryption for much faster loading
     // PERFORMANCE: Fetch all units in PARALLEL instead of sequentially
@@ -150,6 +200,9 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     
     const beneficiaryArrays = await Promise.all(beneficiaryPromises);
     const allBeneficiaries = beneficiaryArrays.flat();
+    
+    // Cache the results
+    setCachedBeneficiaries(userUnits, allBeneficiaries);
     
     console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries (OPTIMIZED - AFM masked) from ${userUnits.length} authorized units only`);
     
