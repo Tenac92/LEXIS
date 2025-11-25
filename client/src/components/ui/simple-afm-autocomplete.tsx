@@ -136,34 +136,65 @@ export function SimpleAFMAutocomplete({
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
   
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
+  // Uses cached endpoint first for instant response, falls back to regular search
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
+      
+      // Try cached endpoint first (instant if prefetch completed)
+      try {
+        const cachedResponse = await fetch(`/api/beneficiaries/search-cached?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`);
+        const cachedData = await cachedResponse.json();
+        
+        if (cachedData.success && cachedData.source === 'cache' && cachedData.data.length > 0) {
+          console.log(`[SimpleAFM] CACHE HIT - Employee results for "${debouncedSearchTerm}":`, cachedData.data.length);
+          return cachedData.data;
+        }
+      } catch (err) {
+        console.log(`[SimpleAFM] Cache check failed for employees, falling back to regular search`);
+      }
+      
+      // Fallback to regular search if cache miss or empty
       const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Employee search results for "${debouncedSearchTerm}":`, data);
+      console.log(`[SimpleAFM] Regular employee search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
     enabled: useEmployeeData && debouncedSearchTerm.length >= 4,
-    staleTime: 30 * 1000, // Cache for 30 seconds to reduce API calls while staying fresh
-    gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (increased from 30s)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (increased from 2 min)
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
+  // Uses cached endpoint first for instant response, falls back to regular search
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
-      // Fast search without financial data for instant autocomplete
+      
+      // Try cached endpoint first (instant if prefetch completed)
+      try {
+        const cachedResponse = await fetch(`/api/beneficiaries/search-cached?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const cachedData = await cachedResponse.json();
+        
+        if (cachedData.success && cachedData.source === 'cache' && cachedData.data.length > 0) {
+          console.log(`[SimpleAFM] CACHE HIT - Beneficiary results for "${debouncedSearchTerm}":`, cachedData.data.length);
+          return cachedData.data;
+        }
+      } catch (err) {
+        console.log(`[SimpleAFM] Cache check failed, falling back to regular search`);
+      }
+      
+      // Fallback to regular search if cache miss or empty
       const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Beneficiary search results for "${debouncedSearchTerm}":`, data);
+      console.log(`[SimpleAFM] Regular beneficiary search results for "${debouncedSearchTerm}":`, data);
       return data.success ? data.data : [];
     },
     enabled: !useEmployeeData && debouncedSearchTerm.length >= 4,
-    staleTime: 30 * 1000, // Cache for 30 seconds to reduce API calls while staying fresh
-    gcTime: 2 * 60 * 1000, // Keep in cache for 2 minutes
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (increased from 30s)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (increased from 2 min)
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;

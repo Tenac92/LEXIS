@@ -93,6 +93,18 @@ function useLoginMutation() {
       queryClient.setQueryData(["/api/auth/me"], processedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       
+      // BACKGROUND PREFETCH: Start prefetching beneficiary/employee AFM data in the background
+      // This runs silently while user navigates, making autocomplete instant later
+      fetch('/api/beneficiaries/prefetch', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+          console.log('[Auth] Background AFM prefetch initiated:', data);
+        })
+        .catch(err => {
+          // Silent failure - prefetch is optional optimization
+          console.log('[Auth] Background prefetch failed (non-critical):', err);
+        });
+      
       toast({
         title: "Login successful",
         description: `Welcome back, ${processedUser.name}!`,
@@ -244,6 +256,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
     }
   }, [user, refetch]);
+
+  // BACKGROUND PREFETCH: Trigger prefetch when user is already logged in (page refresh/app load)
+  useEffect(() => {
+    if (user && !isLoading) {
+      // Use a flag to prevent multiple prefetch calls
+      const prefetchKey = `afm_prefetch_${user.id}`;
+      const lastPrefetch = sessionStorage.getItem(prefetchKey);
+      const now = Date.now();
+      
+      // Only prefetch if we haven't done it in the last 5 minutes
+      if (!lastPrefetch || now - parseInt(lastPrefetch) > 5 * 60 * 1000) {
+        sessionStorage.setItem(prefetchKey, now.toString());
+        
+        fetch('/api/beneficiaries/prefetch', { credentials: 'include' })
+          .then(res => res.json())
+          .then(data => {
+            console.log('[Auth] Background AFM prefetch on app load:', data);
+          })
+          .catch(err => {
+            console.log('[Auth] Background prefetch failed (non-critical):', err);
+          });
+      }
+    }
+  }, [user, isLoading]);
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
