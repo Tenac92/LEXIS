@@ -142,10 +142,16 @@ export default function DocumentsPage() {
   });
 
   // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
-  // Note: Using allUnits directly now - backend handles authorization
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
-    return allUnits.filter((unit) => user.unit_id?.includes(unit.unit));
+    console.log("[DocumentsPage] Filtering units - user.unit_id:", user.unit_id, "allUnits count:", allUnits.length);
+    const filtered = allUnits.filter((unit) => {
+      const unitValue = typeof unit.unit === 'string' ? parseInt(unit.unit, 10) : unit.unit;
+      const isIncluded = user.unit_id?.includes(unitValue);
+      return isIncluded;
+    });
+    console.log("[DocumentsPage] Filtered userUnits count:", filtered.length, "units:", filtered.map(u => ({unit: u.unit, name: u.name})));
+    return filtered;
   }, [allUnits, user?.unit_id]);
 
   // Initialize both main filters and advanced filters states
@@ -443,17 +449,16 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUnits.length > 0 ? (
-                      allUnits.map((unit) => (
+                    {allUnits.map((unit) => {
+                      // Filter to show only user's assigned units
+                      const unitNum = typeof unit.unit === 'string' ? parseInt(unit.unit, 10) : unit.unit;
+                      const isUserUnit = user?.unit_id?.includes(unitNum);
+                      return isUserUnit ? (
                         <SelectItem key={unit.unit} value={unit.unit.toString()}>
                           {unit.name}
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>
-                        Φόρτωση μονάδων...
-                      </SelectItem>
-                    )}
+                      ) : null;
+                    })}
                   </SelectContent>
                 </Select>
               </div>
