@@ -18,11 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { 
   User, 
   MapPin, 
@@ -54,7 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -154,8 +149,10 @@ interface EngineerComboboxProps {
 }
 
 function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId }: EngineerComboboxProps) {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const selectedEngineer = value && engineers?.length > 0 
     ? engineers.find((eng) => eng?.id === value)
@@ -173,65 +170,70 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
     });
   }, [engineers, searchTerm]);
 
-  const handleSelect = (e: React.MouseEvent, engId: number | null) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleSelect = useCallback((engId: number | null) => {
     onValueChange(engId);
-    setOpen(false);
+    setIsOpen(false);
     setSearchTerm("");
-  };
-  
-  const handleInputKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setOpen(false);
+  }, [onValueChange]);
+
+  const handleToggle = useCallback(() => {
+    setIsOpen(prev => !prev);
+    if (!isOpen) {
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-  };
-  
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          data-testid={testId}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpen(!open);
-          }}
-        >
-          <span className="truncate">
-            {selectedEngineer 
-              ? `${selectedEngineer.surname} ${selectedEngineer.name}`
-              : placeholder}
-          </span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-[280px] p-0 z-[9999]" 
-        align="start" 
-        sideOffset={4}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onInteractOutside={(e) => {
-          e.preventDefault();
-        }}
-        onPointerDownOutside={(e) => {
-          e.preventDefault();
-        }}
+    <div ref={dropdownRef} className="relative w-full">
+      <Button
+        type="button"
+        variant="outline"
+        role="combobox"
+        aria-expanded={isOpen}
+        className="w-full justify-between"
+        data-testid={testId}
+        onClick={handleToggle}
       >
-        <div className="flex flex-col">
+        <span className="truncate">
+          {selectedEngineer 
+            ? `${selectedEngineer.surname} ${selectedEngineer.name}`
+            : placeholder}
+        </span>
+        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-full bg-popover border rounded-md shadow-lg z-[9999]">
           <div className="flex items-center border-b px-3 py-2">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <input
+              ref={inputRef}
               type="text"
               placeholder="Αναζήτηση μηχανικού..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={handleInputKeyDown}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setIsOpen(false);
+                  setSearchTerm("");
+                }
+              }}
               className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
@@ -249,11 +251,7 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
                 <button
                   type="button"
                   className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleSelect(e, null);
-                  }}
+                  onClick={() => handleSelect(null)}
                 >
                   <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
                   Κανένας
@@ -263,11 +261,7 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
                     type="button"
                     key={eng.id}
                     className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleSelect(e, eng.id);
-                    }}
+                    onClick={() => handleSelect(eng.id)}
                   >
                     <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
                     {eng.surname} {eng.name}
@@ -277,8 +271,8 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
             )}
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }
 
