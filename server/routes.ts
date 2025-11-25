@@ -1329,6 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: error.message });
       }
       
+      
       // Return units with proper field mapping for frontend lookup
       const transformedData = units.map(unit => ({
         id: unit.id, // Numeric ID for lookup

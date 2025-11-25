@@ -544,9 +544,6 @@ export function CreateDocumentDialog({
           data.length,
         );
         
-        // Debug: Log actual API data and user's unit_id array
-        console.log("[CreateDocument:DEBUG] User unit_id array:", userUnitIds);
-        console.log("[CreateDocument:DEBUG] API units data sample:", data.slice(0, 3).map((u: any) => ({ id: u.id, unit: u.unit, type_id: typeof u.id })));
 
         const filteredUnits = data.filter((item: any) => {
           // If user has no unit restrictions, show all units (admin case)
@@ -555,11 +552,9 @@ export function CreateDocumentDialog({
           }
 
           // Check if the unit ID matches any of the user's allowed units
-          // user.unit_id contains numeric unit IDs that match the 'id' field in the API response
-          const matches = userUnitIds.includes(item.id);
-          if (!matches) {
-            console.log("[CreateDocument:DEBUG] No match for unit:", item.id, "type:", typeof item.id, "in userUnitIds:", userUnitIds);
-          }
+          // Handle type mismatches - both could be strings or numbers
+          const itemId = Number(item.id);
+          const matches = userUnitIds.some((uid: any) => Number(uid) === itemId);
           return matches;
         });
 
