@@ -395,15 +395,14 @@ export const beneficiaries = pgTable(
     fathername: text("fathername"),
     region: text("region"),
     adeia: integer("adeia"), // License/permit number
-    cengsur1: text("cengsur1"), // Engineer 1 surname
-    cengname1: text("cengname1"), // Engineer 1 name
-    cengsur2: text("cengsur2"), // Engineer 2 surname
-    cengname2: text("cengname2"), // Engineer 2 name
+    ceng1: integer("ceng1").references(() => employees.id), // Engineer 1 foreign key
+    ceng2: integer("ceng2").references(() => employees.id), // Engineer 2 foreign key
     onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
     freetext: text("freetext"), // Additional free text
+    regiondet: jsonb("regiondet"), // Region details as JSON
     date: date("date").defaultNow(),
     created_at: timestamp("created_at").defaultNow(),
-    updated_at: timestamp("updated_at"),
+    updated_at: timestamp("updated_at").defaultNow(),
   },
   (table) => ({
     afmHashIndex: index("idx_beneficiaries_afm_hash").on(table.afm_hash),
