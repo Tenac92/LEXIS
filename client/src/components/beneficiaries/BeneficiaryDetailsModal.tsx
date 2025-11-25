@@ -902,8 +902,8 @@ export function BeneficiaryDetailsModal({
                           render={({ field }) => (
                             <FormItem>
                               <Select
-                                value={field.value?.toString() || ""}
-                                onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                                value={field.value?.toString() || "none"}
+                                onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
                               >
                                 <FormControl>
                                   <SelectTrigger className="mt-1" data-testid="select-ceng1">
@@ -911,7 +911,7 @@ export function BeneficiaryDetailsModal({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent className="max-h-60">
-                                  <SelectItem value="">Κανένας</SelectItem>
+                                  <SelectItem value="none">Κανένας</SelectItem>
                                   {engineers.map((eng: any) => (
                                     <SelectItem key={eng.id} value={eng.id.toString()}>
                                       {eng.surname} {eng.name}
@@ -941,8 +941,8 @@ export function BeneficiaryDetailsModal({
                           render={({ field }) => (
                             <FormItem>
                               <Select
-                                value={field.value?.toString() || ""}
-                                onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                                value={field.value?.toString() || "none"}
+                                onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
                               >
                                 <FormControl>
                                   <SelectTrigger className="mt-1" data-testid="select-ceng2">
@@ -950,7 +950,7 @@ export function BeneficiaryDetailsModal({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent className="max-h-60">
-                                  <SelectItem value="">Κανένας</SelectItem>
+                                  <SelectItem value="none">Κανένας</SelectItem>
                                   {engineers.map((eng: any) => (
                                     <SelectItem key={eng.id} value={eng.id.toString()}>
                                       {eng.surname} {eng.name}
