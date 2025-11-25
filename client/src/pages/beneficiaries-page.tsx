@@ -75,15 +75,15 @@ import { resolveRegionName } from "@shared/utils/geographic-utils";
 interface Beneficiary {
   id: number;
   afm: string;
+  afm_hash: string;
   surname: string;
   name: string;
   fathername: string | null;
   region: string | null;
   adeia: number | null;
-  cengsur1: string | null;
-  cengname1: string | null;
-  cengsur2: string | null;
-  cengname2: string | null;
+  ceng1: number | null;
+  ceng2: number | null;
+  regiondet: Record<string, unknown> | null;
   onlinefoldernumber: string | null;
   freetext: string | null;
   date: string | null;
@@ -130,11 +130,9 @@ const beneficiaryFormSchema = z.object({
   adeia: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
 
-  // Engineer Information
-  cengsur1: z.string().optional(),
-  cengname1: z.string().optional(),
-  cengsur2: z.string().optional(),
-  cengname2: z.string().optional(),
+  // Engineer Information (foreign keys to Employees table)
+  ceng1: z.number().nullable().optional(),
+  ceng2: z.number().nullable().optional(),
 
   // Financial Information - Multiple payment entries with complex structure
   selectedUnit: z.string().optional(),
@@ -1094,8 +1092,8 @@ export default function BeneficiariesPage() {
                               )}
 
                               {/* Engineering Information */}
-                              {(beneficiary.cengsur1 ||
-                                beneficiary.cengsur2) && (
+                              {(beneficiary.ceng1 ||
+                                beneficiary.ceng2) && (
                                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Building2 className="w-5 h-5 text-orange-600" />
@@ -1104,25 +1102,23 @@ export default function BeneficiariesPage() {
                                     </span>
                                   </div>
                                   <div className="space-y-2">
-                                    {beneficiary.cengsur1 && (
+                                    {beneficiary.ceng1 && (
                                       <div className="bg-white/70 p-3 rounded border">
                                         <div className="text-xs text-orange-600 font-medium">
                                           Μηχανικός 1
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur1}{" "}
-                                          {beneficiary.cengname1}
+                                          ID: {beneficiary.ceng1}
                                         </div>
                                       </div>
                                     )}
-                                    {beneficiary.cengsur2 && (
+                                    {beneficiary.ceng2 && (
                                       <div className="bg-white/70 p-3 rounded border">
                                         <div className="text-xs text-orange-600 font-medium">
                                           Μηχανικός 2
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur2}{" "}
-                                          {beneficiary.cengname2}
+                                          ID: {beneficiary.ceng2}
                                         </div>
                                       </div>
                                     )}
@@ -1513,11 +1509,8 @@ function BeneficiaryForm({
       region: beneficiary?.region || "",
       monada: "",
       adeia: beneficiary?.adeia?.toString() || "",
-      // onlinefoldernumber: removed due to database schema issues
-      cengsur1: beneficiary?.cengsur1 || "",
-      cengname1: beneficiary?.cengname1 || "",
-      cengsur2: beneficiary?.cengsur2 || "",
-      cengname2: beneficiary?.cengname2 || "",
+      ceng1: beneficiary?.ceng1 ?? null,
+      ceng2: beneficiary?.ceng2 ?? null,
       selectedUnit: "",
       selectedNA853: "",
       amount: "",
@@ -1595,11 +1588,8 @@ function BeneficiaryForm({
       region: "",
       monada: "",
       adeia: "",
-      // onlinefoldernumber: removed due to database schema issues
-      cengsur1: "",
-      cengname1: "",
-      cengsur2: "",
-      cengname2: "",
+      ceng1: null,
+      ceng2: null,
       selectedUnit: userUnits.length === 1 ? userUnits[0].id : "",
       selectedNA853: "",
       amount: "",
@@ -1921,18 +1911,26 @@ function BeneficiaryForm({
           {/* Note: onlinefoldernumber field removed due to database schema compatibility issues */}
         </div>
 
-        {/* Engineer Information */}
+        {/* Engineer Information - Now uses employee foreign keys */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Στοιχεία Μηχανικών</h3>
+          <p className="text-sm text-muted-foreground">
+            Οι μηχανικοί συνδέονται μέσω του πίνακα υπαλλήλων.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="cengsur1"
+              name="ceng1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Επώνυμο Μηχανικού 1</FormLabel>
+                  <FormLabel>ID Μηχανικού 1</FormLabel>
                   <FormControl>
-                    <Input placeholder="Επώνυμο μηχανικού" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="ID μηχανικού" 
+                      value={field.value ?? ""} 
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1940,40 +1938,17 @@ function BeneficiaryForm({
             />
             <FormField
               control={form.control}
-              name="cengname1"
+              name="ceng2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Όνομα Μηχανικού 1</FormLabel>
+                  <FormLabel>ID Μηχανικού 2</FormLabel>
                   <FormControl>
-                    <Input placeholder="Όνομα μηχανικού" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="cengsur2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Επώνυμο Μηχανικού 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Επώνυμο μηχανικού" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cengname2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Όνομα Μηχανικού 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Όνομα μηχανικού" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="ID μηχανικού" 
+                      value={field.value ?? ""} 
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

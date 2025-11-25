@@ -74,10 +74,8 @@ const beneficiaryEditSchema = insertBeneficiarySchema.omit({
   region: z.string().optional(), // Allow optional region
   fathername: z.string().optional(), // Allow optional fathername
   adeia: z.number().optional(), // Allow optional adeia (license number)
-  cengsur1: z.string().optional(),
-  cengname1: z.string().optional(),
-  cengsur2: z.string().optional(),
-  cengname2: z.string().optional(),
+  ceng1: z.number().nullable().optional(), // Engineer 1 foreign key
+  ceng2: z.number().nullable().optional(), // Engineer 2 foreign key
   onlinefoldernumber: z.string().optional(),
   freetext: z.string().optional(),
 });
@@ -122,10 +120,8 @@ export function BeneficiaryDetailsModal({
       fathername: "",
       region: "",
       adeia: undefined,
-      cengsur1: "",
-      cengname1: "",
-      cengsur2: "",
-      cengname2: "",
+      ceng1: null,
+      ceng2: null,
       freetext: "",
     },
   });
@@ -140,10 +136,8 @@ export function BeneficiaryDetailsModal({
         fathername: beneficiary.fathername || "",
         region: beneficiary.region || "",
         adeia: beneficiary.adeia || undefined,
-        cengsur1: beneficiary.cengsur1 || "",
-        cengname1: beneficiary.cengname1 || "",
-        cengsur2: beneficiary.cengsur2 || "",
-        cengname2: beneficiary.cengname2 || "",
+        ceng1: beneficiary.ceng1 ?? null,
+        ceng2: beneficiary.ceng2 ?? null,
         freetext: beneficiary.freetext || "",
       });
       setIsEditing(false);
@@ -688,89 +682,73 @@ export function BeneficiaryDetailsModal({
               </div>
 
               {/* Engineering Information */}
-              {(beneficiary.cengsur1 || beneficiary.cengsur2) && (
+              {(beneficiary.ceng1 || beneficiary.ceng2) && (
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
                     <Building2 className="w-5 h-5" />
                     Στοιχεία Μηχανικών
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {beneficiary.cengsur1 && (
+                    {beneficiary.ceng1 && (
                       <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
                         <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
                           <Building2 className="w-4 h-4" />
                           Μηχανικός 1:
                         </label>
                         {isEditing ? (
-                          <div className="space-y-2 mt-1">
-                            <FormField
-                              control={form.control}
-                              name="cengsur1"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Επώνυμο μηχανικού" data-testid="input-cengsur1" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="cengname1"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Όνομα μηχανικού" data-testid="input-cengname1" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                          <FormField
+                            control={form.control}
+                            name="ceng1"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    type="number"
+                                    value={field.value ?? ""} 
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                    placeholder="ID μηχανικού" 
+                                    data-testid="input-ceng1" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         ) : (
                           <p className="text-orange-900 font-medium mt-1">
-                            {beneficiary.cengsur1} {beneficiary.cengname1}
+                            ID: {beneficiary.ceng1}
                           </p>
                         )}
                       </div>
                     )}
-                    {beneficiary.cengsur2 && (
+                    {beneficiary.ceng2 && (
                       <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
                         <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
                           <Building2 className="w-4 h-4" />
                           Μηχανικός 2:
                         </label>
                         {isEditing ? (
-                          <div className="space-y-2 mt-1">
-                            <FormField
-                              control={form.control}
-                              name="cengsur2"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Επώνυμο μηχανικού" data-testid="input-cengsur2" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name="cengname2"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input {...field} placeholder="Όνομα μηχανικού" data-testid="input-cengname2" />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                          <FormField
+                            control={form.control}
+                            name="ceng2"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl>
+                                  <Input 
+                                    type="number"
+                                    value={field.value ?? ""} 
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                                    placeholder="ID μηχανικού" 
+                                    data-testid="input-ceng2" 
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         ) : (
                           <p className="text-orange-900 font-medium mt-1">
-                            {beneficiary.cengsur2} {beneficiary.cengname2}
+                            ID: {beneficiary.ceng2}
                           </p>
                         )}
                       </div>
