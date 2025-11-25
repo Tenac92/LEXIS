@@ -60,6 +60,8 @@ import {
 import type { Beneficiary } from "@shared/schema";
 import { insertBeneficiarySchema } from "@shared/schema";
 import { z } from "zod";
+import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
+import { convertGeographicDataToKallikratis } from "@shared/utils/geographic-utils";
 
 interface BeneficiaryDetailsModalProps {
   beneficiary: Beneficiary | null;
@@ -81,6 +83,7 @@ const beneficiaryEditSchema = insertBeneficiarySchema.omit({
   ceng2: z.number().nullable().optional(), // Engineer 2 foreign key
   onlinefoldernumber: z.string().optional(),
   freetext: z.string().optional(),
+  geographic_areas: z.array(z.string()).optional(), // Geographic selections for regiondet
 });
 
 type BeneficiaryEditForm = z.infer<typeof beneficiaryEditSchema>;
@@ -166,6 +169,7 @@ export function BeneficiaryDetailsModal({
       ceng1: null,
       ceng2: null,
       freetext: "",
+      geographic_areas: [],
     },
   });
 
@@ -209,6 +213,29 @@ export function BeneficiaryDetailsModal({
       
       if (dataSource) {
         // Edit existing beneficiary - use unmasked AFM from full data
+        // Convert regiondet to geographic_areas format for form
+        const regiondet = dataSource.regiondet as Record<string, any> | null;
+        const geographicAreas: string[] = [];
+        if (regiondet) {
+          // Convert stored regions to selection format
+          if (Array.isArray(regiondet.regions)) {
+            regiondet.regions.forEach((r: any) => {
+              if (r.name) geographicAreas.push(`${r.name}||`);
+            });
+          }
+          if (Array.isArray(regiondet.regional_units)) {
+            regiondet.regional_units.forEach((ru: any) => {
+              if (ru.name && ru.region_name) geographicAreas.push(`${ru.region_name}|${ru.name}|`);
+            });
+          }
+          if (Array.isArray(regiondet.municipalities)) {
+            regiondet.municipalities.forEach((m: any) => {
+              if (m.name && m.regional_unit_name && m.region_name) {
+                geographicAreas.push(`${m.region_name}|${m.regional_unit_name}|${m.name}`);
+              }
+            });
+          }
+        }
         form.reset({
           afm: dataSource.afm || "",
           surname: dataSource.surname || "",
@@ -218,6 +245,7 @@ export function BeneficiaryDetailsModal({
           ceng1: dataSource.ceng1 ?? null,
           ceng2: dataSource.ceng2 ?? null,
           freetext: dataSource.freetext || "",
+          geographic_areas: geographicAreas,
         });
       } else {
         // Create new beneficiary - start with empty form
@@ -230,6 +258,7 @@ export function BeneficiaryDetailsModal({
           ceng1: null,
           ceng2: null,
           freetext: "",
+          geographic_areas: [],
         });
       }
       // Set edit mode based on initialEditMode prop or create mode
@@ -270,6 +299,17 @@ export function BeneficiaryDetailsModal({
     return regions
       .map((r: any) => ({ code: String(r.code), name: r.name }))
       .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'));
+  }, [geographicData]);
+
+  // Convert geographic data to kallikratis format for SmartGeographicMultiSelect
+  const kallikratisData = useMemo(() => {
+    if (!geographicData) return [];
+    const data = geographicData as any;
+    return convertGeographicDataToKallikratis({
+      regions: data?.regions || [],
+      regionalUnits: data?.regionalUnits || [],
+      municipalities: data?.municipalities || []
+    });
   }, [geographicData]);
 
   // Helper function to get region name from region code (for display)
@@ -694,63 +734,84 @@ export function BeneficiaryDetailsModal({
                 </div>
               </div>
 
-              {/* Geographic Information from regiondet */}
+              {/* Geographic Information - Show in edit mode or when data exists */}
               {(() => {
                 const regionData = formatRegiondet(beneficiary?.regiondet as Record<string, unknown> | null | undefined);
                 const hasRegionData = regionData.regions.length > 0 || regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0;
                 
-                if (!hasRegionData) return null;
+                // Always show in edit mode, or when there's data to display
+                if (!isEditing && !hasRegionData) return null;
                 
                 return (
                   <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200 shadow-sm">
                     <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center gap-2">
                       <MapPin className="w-5 h-5" />
-                      Γεωγραφικές Πληροφορίες (από πληρωμές)
+                      Γεωγραφικές Πληροφορίες
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {regionData.regions.length > 0 && (
-                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                          <label className="text-sm font-medium text-indigo-700 block mb-2">
-                            Περιφέρειες:
-                          </label>
-                          <div className="flex flex-wrap gap-1">
-                            {regionData.regions.map((region, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-indigo-100 text-indigo-800 text-xs">
-                                {region}
-                              </Badge>
-                            ))}
+                    {isEditing ? (
+                      <FormField
+                        control={form.control}
+                        name="geographic_areas"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <SmartGeographicMultiSelect
+                                value={field.value || []}
+                                onChange={field.onChange}
+                                kallikratisData={kallikratisData}
+                                placeholder="Επιλέξτε γεωγραφικές περιοχές..."
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {regionData.regions.length > 0 && (
+                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                            <label className="text-sm font-medium text-indigo-700 block mb-2">
+                              Περιφέρειες:
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {regionData.regions.map((region, idx) => (
+                                <Badge key={idx} variant="secondary" className="bg-indigo-100 text-indigo-800 text-xs">
+                                  {region}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {regionData.regionalUnits.length > 0 && (
-                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                          <label className="text-sm font-medium text-indigo-700 block mb-2">
-                            Περιφ. Ενότητες:
-                          </label>
-                          <div className="flex flex-wrap gap-1">
-                            {regionData.regionalUnits.map((unit, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                                {unit}
-                              </Badge>
-                            ))}
+                        )}
+                        {regionData.regionalUnits.length > 0 && (
+                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                            <label className="text-sm font-medium text-indigo-700 block mb-2">
+                              Περιφ. Ενότητες:
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {regionData.regionalUnits.map((unit, idx) => (
+                                <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                  {unit}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {regionData.municipalities.length > 0 && (
-                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                          <label className="text-sm font-medium text-indigo-700 block mb-2">
-                            Δήμοι:
-                          </label>
-                          <div className="flex flex-wrap gap-1">
-                            {regionData.municipalities.map((muni, idx) => (
-                              <Badge key={idx} variant="secondary" className="bg-teal-100 text-teal-800 text-xs">
-                                {muni}
-                              </Badge>
-                            ))}
+                        )}
+                        {regionData.municipalities.length > 0 && (
+                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                            <label className="text-sm font-medium text-indigo-700 block mb-2">
+                              Δήμοι:
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {regionData.municipalities.map((muni, idx) => (
+                                <Badge key={idx} variant="secondary" className="bg-teal-100 text-teal-800 text-xs">
+                                  {muni}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}
