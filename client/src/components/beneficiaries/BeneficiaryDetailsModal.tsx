@@ -40,7 +40,9 @@ import {
   Plus,
   Trash2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  HardHat,
+  Search
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -167,20 +169,55 @@ export function BeneficiaryDetailsModal({
     },
   });
 
+  // Fetch the full beneficiary data with unmasked AFM when modal opens
+  const { data: fullBeneficiaryData } = useQuery({
+    queryKey: ["/api/beneficiaries", beneficiary?.id],
+    queryFn: async () => {
+      if (!beneficiary?.id) return null;
+      const response = await fetch(`/api/beneficiaries/${beneficiary.id}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error("Failed to fetch beneficiary");
+      return response.json();
+    },
+    enabled: open && !!beneficiary?.id,
+    staleTime: 0, // Always fetch fresh data for unmasked AFM
+  });
+
+  // Fetch all employees and filter for engineers (attribute = "Μηχανικός")
+  const { data: allEmployees = [] } = useQuery({
+    queryKey: ["/api/employees"],
+    staleTime: 10 * 60 * 1000, // 10 minutes cache
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled: open,
+  });
+
+  // Filter employees to only show engineers
+  const engineers = useMemo(() => {
+    if (!Array.isArray(allEmployees)) return [];
+    return allEmployees.filter((emp: any) => emp.attribute === "Μηχανικός")
+      .sort((a: any, b: any) => `${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'el'));
+  }, [allEmployees]);
+
   // Initialize form values when modal opens or beneficiary changes
+  // Use fullBeneficiaryData when available (has unmasked AFM)
   useEffect(() => {
     if (open) {
-      if (beneficiary) {
-        // Edit existing beneficiary
+      // Use fullBeneficiaryData if available (has decrypted AFM), otherwise use passed beneficiary
+      const dataSource = fullBeneficiaryData || beneficiary;
+      
+      if (dataSource) {
+        // Edit existing beneficiary - use unmasked AFM from full data
         form.reset({
-          afm: beneficiary.afm || "",
-          surname: beneficiary.surname || "",
-          name: beneficiary.name || "",
-          fathername: beneficiary.fathername || "",
-          adeia: beneficiary.adeia || undefined,
-          ceng1: beneficiary.ceng1 ?? null,
-          ceng2: beneficiary.ceng2 ?? null,
-          freetext: beneficiary.freetext || "",
+          afm: dataSource.afm || "",
+          surname: dataSource.surname || "",
+          name: dataSource.name || "",
+          fathername: dataSource.fathername || "",
+          adeia: dataSource.adeia || undefined,
+          ceng1: dataSource.ceng1 ?? null,
+          ceng2: dataSource.ceng2 ?? null,
+          freetext: dataSource.freetext || "",
         });
       } else {
         // Create new beneficiary - start with empty form
@@ -199,7 +236,7 @@ export function BeneficiaryDetailsModal({
       setIsEditing(initialEditMode || isCreateMode);
       setEditingPayment(null);
     }
-  }, [beneficiary, open, form, initialEditMode, isCreateMode]);
+  }, [beneficiary, fullBeneficiaryData, open, form, initialEditMode, isCreateMode]);
 
   // Fetch all payments for this specific beneficiary
   const { data: allPayments = [], isLoading: paymentsLoading } = useQuery({
@@ -242,6 +279,13 @@ export function BeneficiaryDetailsModal({
     // Look up region name by code
     const region = availableRegions.find(r => r.code === regionCode);
     return region?.name || regionCode;
+  };
+
+  // Helper function to get engineer name from ID (for display)
+  const getEngineerName = (engineerId: number | null | undefined): string => {
+    if (!engineerId) return 'Δεν έχει καθοριστεί';
+    const engineer = engineers.find((e: any) => e.id === engineerId);
+    return engineer ? `${engineer.surname} ${engineer.name}` : 'Δεν έχει καθοριστεί';
   };
 
   // Update beneficiary mutation with react-hook-form integration
@@ -777,78 +821,92 @@ export function BeneficiaryDetailsModal({
                 </div>
               </div>
 
-              {/* Engineering Information */}
-              {(beneficiary?.ceng1 || beneficiary?.ceng2) && (
+              {/* Engineering Information - Always show in edit mode, or when engineers are assigned */}
+              {(isEditing || beneficiary?.ceng1 || beneficiary?.ceng2) && (
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
-                    <Building2 className="w-5 h-5" />
-                    Στοιχεία Μηχανικών
+                    <HardHat className="w-5 h-5" />
+                    Μηχανικοί
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {beneficiary?.ceng1 && (
-                      <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
-                        <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
-                          <Building2 className="w-4 h-4" />
-                          Μηχανικός 1:
-                        </label>
-                        {isEditing ? (
-                          <FormField
-                            control={form.control}
-                            name="ceng1"
-                            render={({ field }) => (
-                              <FormItem>
+                    <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
+                      <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
+                        <HardHat className="w-4 h-4" />
+                        Μηχανικός 1:
+                      </label>
+                      {isEditing ? (
+                        <FormField
+                          control={form.control}
+                          name="ceng1"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select
+                                value={field.value?.toString() || ""}
+                                onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                              >
                                 <FormControl>
-                                  <Input 
-                                    type="number"
-                                    value={field.value ?? ""} 
-                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                    placeholder="ID μηχανικού" 
-                                    data-testid="input-ceng1" 
-                                  />
+                                  <SelectTrigger className="mt-1" data-testid="select-ceng1">
+                                    <SelectValue placeholder="Επιλέξτε μηχανικό..." />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        ) : (
-                          <p className="text-orange-900 font-medium mt-1">
-                            ID: {beneficiary?.ceng1}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {beneficiary?.ceng2 && (
-                      <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
-                        <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
-                          <Building2 className="w-4 h-4" />
-                          Μηχανικός 2:
-                        </label>
-                        {isEditing ? (
-                          <FormField
-                            control={form.control}
-                            name="ceng2"
-                            render={({ field }) => (
-                              <FormItem>
+                                <SelectContent className="max-h-60">
+                                  <SelectItem value="">Κανένας</SelectItem>
+                                  {engineers.map((eng: any) => (
+                                    <SelectItem key={eng.id} value={eng.id.toString()}>
+                                      {eng.surname} {eng.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <p className="text-orange-900 font-medium mt-1">
+                          {getEngineerName(beneficiary?.ceng1)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
+                      <label className="text-sm font-medium text-orange-700 flex items-center gap-1">
+                        <HardHat className="w-4 h-4" />
+                        Μηχανικός 2:
+                      </label>
+                      {isEditing ? (
+                        <FormField
+                          control={form.control}
+                          name="ceng2"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select
+                                value={field.value?.toString() || ""}
+                                onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                              >
                                 <FormControl>
-                                  <Input 
-                                    type="number"
-                                    value={field.value ?? ""} 
-                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
-                                    placeholder="ID μηχανικού" 
-                                    data-testid="input-ceng2" 
-                                  />
+                                  <SelectTrigger className="mt-1" data-testid="select-ceng2">
+                                    <SelectValue placeholder="Επιλέξτε μηχανικό..." />
+                                  </SelectTrigger>
                                 </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        ) : (
-                          <p className="text-orange-900 font-medium mt-1">
-                            ID: {beneficiary?.ceng2}
-                          </p>
-                        )}
-                      </div>
-                    )}
+                                <SelectContent className="max-h-60">
+                                  <SelectItem value="">Κανένας</SelectItem>
+                                  {engineers.map((eng: any) => (
+                                    <SelectItem key={eng.id} value={eng.id.toString()}>
+                                      {eng.surname} {eng.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : (
+                        <p className="text-orange-900 font-medium mt-1">
+                          {getEngineerName(beneficiary?.ceng2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
