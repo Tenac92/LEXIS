@@ -81,6 +81,42 @@ const beneficiaryEditSchema = insertBeneficiarySchema.omit({
 
 type BeneficiaryEditForm = z.infer<typeof beneficiaryEditSchema>;
 
+// Helper function to format regiondet JSONB data for display
+const formatRegiondet = (regiondet: Record<string, unknown> | null | undefined): { regions: string[], regionalUnits: string[], municipalities: string[] } => {
+  if (!regiondet || typeof regiondet !== 'object') return { regions: [], regionalUnits: [], municipalities: [] };
+  
+  const result = { regions: [] as string[], regionalUnits: [] as string[], municipalities: [] as string[] };
+  
+  // Extract region names
+  if (regiondet.regions && Array.isArray(regiondet.regions)) {
+    regiondet.regions.forEach((region: any) => {
+      if (region.name) {
+        result.regions.push(region.name);
+      }
+    });
+  }
+  
+  // Extract regional unit names
+  if (regiondet.regional_units && Array.isArray(regiondet.regional_units)) {
+    regiondet.regional_units.forEach((unit: any) => {
+      if (unit.name) {
+        result.regionalUnits.push(unit.name);
+      }
+    });
+  }
+  
+  // Extract municipality names
+  if (regiondet.municipalities && Array.isArray(regiondet.municipalities)) {
+    regiondet.municipalities.forEach((muni: any) => {
+      if (muni.name) {
+        result.municipalities.push(muni.name);
+      }
+    });
+  }
+  
+  return result;
+};
+
 interface PaymentRecord {
   id: number;
   beneficiary_id: number;
@@ -570,6 +606,67 @@ export function BeneficiaryDetailsModal({
                   </div>
                 </div>
               </div>
+
+              {/* Geographic Information from regiondet */}
+              {(() => {
+                const regionData = formatRegiondet(beneficiary.regiondet);
+                const hasRegionData = regionData.regions.length > 0 || regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0;
+                
+                if (!hasRegionData) return null;
+                
+                return (
+                  <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Γεωγραφικές Πληροφορίες (από πληρωμές)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {regionData.regions.length > 0 && (
+                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                          <label className="text-sm font-medium text-indigo-700 block mb-2">
+                            Περιφέρειες:
+                          </label>
+                          <div className="flex flex-wrap gap-1">
+                            {regionData.regions.map((region, idx) => (
+                              <Badge key={idx} variant="secondary" className="bg-indigo-100 text-indigo-800 text-xs">
+                                {region}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {regionData.regionalUnits.length > 0 && (
+                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                          <label className="text-sm font-medium text-indigo-700 block mb-2">
+                            Περιφ. Ενότητες:
+                          </label>
+                          <div className="flex flex-wrap gap-1">
+                            {regionData.regionalUnits.map((unit, idx) => (
+                              <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                                {unit}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {regionData.municipalities.length > 0 && (
+                        <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
+                          <label className="text-sm font-medium text-indigo-700 block mb-2">
+                            Δήμοι:
+                          </label>
+                          <div className="flex flex-wrap gap-1">
+                            {regionData.municipalities.map((muni, idx) => (
+                              <Badge key={idx} variant="secondary" className="bg-teal-100 text-teal-800 text-xs">
+                                {muni}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Administrative Information */}
               <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200 shadow-sm">
