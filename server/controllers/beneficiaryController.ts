@@ -136,17 +136,20 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     
     // SECURITY: Get beneficiaries ONLY for user's assigned units
     // OPTIMIZATION: Use optimized method that skips AFM decryption for much faster loading
-    const allBeneficiaries = [];
-    for (const unitId of userUnits) {
+    // PERFORMANCE: Fetch all units in PARALLEL instead of sequentially
+    const beneficiaryPromises = userUnits.map(async (unitId) => {
       const userUnit = await getUnitCodeById(unitId);
       if (userUnit) {
-        console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries ONLY for authorized unit: ${userUnit} (mapped from unit ID: ${unitId})`);
-        const unitBeneficiaries = await storage.getBeneficiariesByUnitOptimized(userUnit);
-        allBeneficiaries.push(...unitBeneficiaries);
+        console.log(`[Beneficiaries] SECURITY: Fetching beneficiaries for authorized unit: ${userUnit} (mapped from unit ID: ${unitId})`);
+        return storage.getBeneficiariesByUnitOptimized(userUnit);
       } else {
         console.log(`[Beneficiaries] WARNING: Could not map unit ID ${unitId} to unit code, skipping`);
+        return [];
       }
-    }
+    });
+    
+    const beneficiaryArrays = await Promise.all(beneficiaryPromises);
+    const allBeneficiaries = beneficiaryArrays.flat();
     
     console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries (OPTIMIZED - AFM masked) from ${userUnits.length} authorized units only`);
     
