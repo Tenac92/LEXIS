@@ -18,6 +18,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { 
   User, 
   MapPin, 
@@ -42,8 +55,11 @@ import {
   CheckCircle,
   AlertCircle,
   HardHat,
-  Search
+  Search,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from "react";
@@ -137,6 +153,88 @@ interface PaymentRecord {
   protocol?: string;
 }
 
+interface EngineerComboboxProps {
+  engineers: any[];
+  value: number | null | undefined;
+  onValueChange: (value: number | null) => void;
+  placeholder?: string;
+  testId?: string;
+}
+
+function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId }: EngineerComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  const selectedEngineer = engineers.find((eng) => eng.id === value);
+  
+  const filteredEngineers = useMemo(() => {
+    if (!searchTerm) return engineers;
+    const term = searchTerm.toLowerCase();
+    return engineers.filter((eng: any) => 
+      `${eng.surname} ${eng.name}`.toLowerCase().includes(term) ||
+      `${eng.name} ${eng.surname}`.toLowerCase().includes(term)
+    );
+  }, [engineers, searchTerm]);
+  
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          data-testid={testId}
+        >
+          {selectedEngineer 
+            ? `${selectedEngineer.surname} ${selectedEngineer.name}`
+            : placeholder}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Αναζήτηση μηχανικού..." 
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+          />
+          <CommandList>
+            <CommandEmpty>Δεν βρέθηκαν μηχανικοί</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="none"
+                onSelect={() => {
+                  onValueChange(null);
+                  setOpen(false);
+                  setSearchTerm("");
+                }}
+              >
+                <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
+                Κανένας
+              </CommandItem>
+              {filteredEngineers.map((eng: any) => (
+                <CommandItem
+                  key={eng.id}
+                  value={eng.id.toString()}
+                  onSelect={() => {
+                    onValueChange(eng.id);
+                    setOpen(false);
+                    setSearchTerm("");
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
+                  {eng.surname} {eng.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function BeneficiaryDetailsModal({ 
   beneficiary, 
   open, 
@@ -189,20 +287,27 @@ export function BeneficiaryDetailsModal({
   });
 
   // Fetch all employees and filter for engineers (attribute = "Μηχανικός")
-  const { data: allEmployees = [] } = useQuery({
+  const { data: employeesResponse } = useQuery({
     queryKey: ["/api/employees"],
+    queryFn: async () => {
+      const response = await fetch('/api/employees', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    },
     staleTime: 10 * 60 * 1000, // 10 minutes cache
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
     enabled: open,
   });
 
-  // Filter employees to only show engineers
+  // Filter employees to only show engineers (attribute = "Μηχανικός")
   const engineers = useMemo(() => {
-    if (!Array.isArray(allEmployees)) return [];
-    return allEmployees.filter((emp: any) => emp.attribute === "Μηχανικός")
+    // Handle nested response structure: { success: true, data: [...], count: N }
+    const employeesData = employeesResponse?.data || employeesResponse || [];
+    if (!Array.isArray(employeesData)) return [];
+    return employeesData.filter((emp: any) => emp.attribute === "Μηχανικός")
       .sort((a: any, b: any) => `${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'el'));
-  }, [allEmployees]);
+  }, [employeesResponse]);
 
   // Initialize form values when modal opens or beneficiary changes
   // Use fullBeneficiaryData when available (has unmasked AFM)
@@ -917,7 +1022,7 @@ export function BeneficiaryDetailsModal({
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 shadow-sm">
                   <h3 className="text-lg font-semibold text-orange-900 mb-4 flex items-center gap-2">
                     <HardHat className="w-5 h-5" />
-                    Μηχανικοί
+                    Μηχανικοί {engineers.length > 0 && <span className="text-sm font-normal text-orange-600">({engineers.length} διαθέσιμοι)</span>}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-white/70 p-4 rounded-lg border border-orange-200">
@@ -930,25 +1035,14 @@ export function BeneficiaryDetailsModal({
                           control={form.control}
                           name="ceng1"
                           render={({ field }) => (
-                            <FormItem>
-                              <Select
-                                value={field.value?.toString() || "none"}
-                                onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="mt-1" data-testid="select-ceng1">
-                                    <SelectValue placeholder="Επιλέξτε μηχανικό..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="max-h-60">
-                                  <SelectItem value="none">Κανένας</SelectItem>
-                                  {engineers.map((eng: any) => (
-                                    <SelectItem key={eng.id} value={eng.id.toString()}>
-                                      {eng.surname} {eng.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            <FormItem className="flex flex-col mt-1">
+                              <EngineerCombobox
+                                engineers={engineers}
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                placeholder="Επιλέξτε μηχανικό..."
+                                testId="select-ceng1"
+                              />
                               <FormMessage />
                             </FormItem>
                           )}
@@ -969,25 +1063,14 @@ export function BeneficiaryDetailsModal({
                           control={form.control}
                           name="ceng2"
                           render={({ field }) => (
-                            <FormItem>
-                              <Select
-                                value={field.value?.toString() || "none"}
-                                onValueChange={(value) => field.onChange(value === "none" ? null : parseInt(value))}
-                              >
-                                <FormControl>
-                                  <SelectTrigger className="mt-1" data-testid="select-ceng2">
-                                    <SelectValue placeholder="Επιλέξτε μηχανικό..." />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent className="max-h-60">
-                                  <SelectItem value="none">Κανένας</SelectItem>
-                                  {engineers.map((eng: any) => (
-                                    <SelectItem key={eng.id} value={eng.id.toString()}>
-                                      {eng.surname} {eng.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                            <FormItem className="flex flex-col mt-1">
+                              <EngineerCombobox
+                                engineers={engineers}
+                                value={field.value}
+                                onValueChange={field.onChange}
+                                placeholder="Επιλέξτε μηχανικό..."
+                                testId="select-ceng2"
+                              />
                               <FormMessage />
                             </FormItem>
                           )}
