@@ -179,6 +179,20 @@ export default function BeneficiariesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Prefetch engineers data in the background for modal use
+  // This ensures engineers are cached before any modal opens
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["/api/employees/engineers"],
+      queryFn: async () => {
+        const response = await fetch('/api/employees/engineers', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch engineers');
+        return response.json();
+      },
+      staleTime: 30 * 60 * 1000, // 30 minutes cache
+    });
+  }, [queryClient]);
+
   // Fetch beneficiaries with caching
   const {
     data: beneficiaries = [],

@@ -342,6 +342,7 @@ export function BeneficiaryDetailsModal({
   });
 
   // Fetch engineers directly from optimized endpoint (already filtered and sorted server-side)
+  // Data is prefetched on the beneficiaries page, so this uses cached data
   const { data: engineersResponse } = useQuery({
     queryKey: ["/api/employees/engineers"],
     queryFn: async () => {
@@ -349,10 +350,10 @@ export function BeneficiaryDetailsModal({
       if (!response.ok) throw new Error('Failed to fetch engineers');
       return response.json();
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    gcTime: 30 * 60 * 1000,
+    staleTime: 30 * 60 * 1000, // 30 minutes cache - engineers list changes rarely
+    gcTime: 60 * 60 * 1000, // 1 hour cache retention
     refetchOnWindowFocus: false,
-    enabled: open,
+    refetchOnMount: false, // Use existing cache
   });
 
   // Extract engineers from response (already filtered and sorted server-side)
