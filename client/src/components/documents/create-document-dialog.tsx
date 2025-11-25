@@ -2967,7 +2967,11 @@ export function CreateDocumentDialog({
                                   ? "Αυτόματη επιλογή μονάδας"
                                   : "Επιλέξτε μονάδα"
                               }
-                            />
+                            >
+                              {field.value && Array.isArray(units) && units.length > 0
+                                ? units.find((u: any) => u.id === field.value)?.name || field.value
+                                : undefined}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
