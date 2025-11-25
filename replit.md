@@ -56,6 +56,7 @@ Preferred communication style: Simple, everyday language.
 - **Caching**: Session-based caching and client-side query caching (e.g., TanStack Query).
 - **Bundle Optimization**: Vite-based code splitting.
 - **AFM Search**: Reduced batch sizes, early exit logic during decryption, and optimized column selection.
+- **Background AFM Prefetch**: On login and app load, the system prefetches and caches all decrypted AFMs in the background. This makes autocomplete searches instant when creating documents, as data is already in memory. The cache persists for 10 minutes server-side and uses React Query client-side caching (5 min stale, 10 min gc). Falls back to regular search if cache is not available.
 
 # External Dependencies
 
