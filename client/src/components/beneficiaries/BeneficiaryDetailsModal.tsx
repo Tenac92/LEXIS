@@ -438,7 +438,7 @@ export function BeneficiaryDetailsModal({
   // Parse financial data (legacy support)
   let financialData = null;
   try {
-    const oikonomika = (beneficiary as any).oikonomika;
+    const oikonomika = beneficiary ? (beneficiary as any).oikonomika : null;
     if (oikonomika && typeof oikonomika === 'string') {
       financialData = JSON.parse(oikonomika);
     } else if (oikonomika && typeof oikonomika === 'object') {
