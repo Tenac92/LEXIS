@@ -272,50 +272,24 @@ export default function BeneficiariesPage() {
     return paymentMap;
   }, [beneficiaryPayments]);
 
-  // REGION MAPPING: Helper function to get region name from region ID
-  const getRegionName = useCallback(
-    (regionId: string | null) => {
-      if (!regionId) return regionId;
-
-      if (kallikratisData.length === 0) {
-        console.log("[RegionMapping] No kallikratis data available");
-        return regionId;
-      }
-
-      console.log(
-        "[RegionMapping] Looking for region ID:",
-        regionId,
-        "in",
-        kallikratisData.length,
-        "regions",
-      );
-      console.log(
-        "[RegionMapping] Sample regions:",
-        kallikratisData.slice(0, 3),
-      );
-
-      const regionMapping = kallikratisData.find(
-        (region) => region.id === regionId.toString(),
-      );
-
-      if (regionMapping) {
-        console.log(
-          "[RegionMapping] Found mapping:",
-          regionId,
-          "->",
-          regionMapping.name,
-        );
-        return regionMapping.name;
-      } else {
-        console.log(
-          "[RegionMapping] No mapping found for region ID:",
-          regionId,
-        );
-        return regionId;
-      }
-    },
-    [kallikratisData],
-  );
+  // Helper function to format regiondet JSONB data for display
+  const formatRegiondet = useCallback((regiondet: Record<string, unknown> | null): string[] => {
+    if (!regiondet || typeof regiondet !== 'object') return [];
+    
+    const regionNames: string[] = [];
+    
+    // regiondet structure: { regions: [...], regional_units: [...], municipalities: [...] }
+    // Extract region names
+    if (regiondet.regions && Array.isArray(regiondet.regions)) {
+      regiondet.regions.forEach((region: any) => {
+        if (region.name) {
+          regionNames.push(region.name);
+        }
+      });
+    }
+    
+    return regionNames;
+  }, []);
 
   // Optimized helper functions using memoized data
   const getPaymentsForBeneficiary = (beneficiaryId: number) => {
@@ -641,6 +615,21 @@ export default function BeneficiariesPage() {
                                       </span>
                                     </div>
                                   )}
+                                  {formatRegiondet(beneficiary.regiondet).length > 0 && (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <MapPin className="w-4 h-4 flex-shrink-0 text-blue-600" />
+                                      <span
+                                        className="truncate text-blue-700"
+                                        title={formatRegiondet(beneficiary.regiondet).join(", ")}
+                                      >
+                                        {formatRegiondet(beneficiary.regiondet)
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {formatRegiondet(beneficiary.regiondet).length > 2 &&
+                                          ` +${formatRegiondet(beneficiary.regiondet).length - 2} άλλες`}
+                                      </span>
+                                    </div>
+                                  )}
                                   {getTotalAmountForBeneficiary(
                                     beneficiary.id,
                                   ) > 0 && (
@@ -856,6 +845,25 @@ export default function BeneficiariesPage() {
                                           beneficiary.id,
                                         ).length > 2 &&
                                           ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Region Info from regiondet */}
+                                {formatRegiondet(beneficiary.regiondet).length > 0 && (
+                                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        Περιφέρειες
+                                      </span>
+                                      <p className="text-sm text-blue-900 font-medium leading-tight">
+                                        {formatRegiondet(beneficiary.regiondet)
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {formatRegiondet(beneficiary.regiondet).length > 2 &&
+                                          ` +${formatRegiondet(beneficiary.regiondet).length - 2} άλλες`}
                                       </p>
                                     </div>
                                   </div>
