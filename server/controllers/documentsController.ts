@@ -108,19 +108,45 @@ router.post(
         });
       }
 
-      // SECURITY: Resolve unit string to numeric ID and verify authorization
+      // The frontend may send unit as either:
+      // 1. A numeric ID (like "2" or 2)
+      // 2. A text string (like "ΔΑΕΦΚ-ΚΕ")
+      // We need to resolve this to the numeric unit_id
       let numericUnitId: number;
       try {
-        const { data: unitData, error: unitError } = await supabase
-          .from("Monada")
-          .select("id")
-          .eq("unit", unit)
-          .single();
+        // Check if unit is already a numeric ID
+        const parsedUnitId = parseInt(String(unit));
+        const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(unit).trim();
+        
+        let unitData: { id: number } | null = null;
+        let unitError: any = null;
+        
+        if (isNumericUnit) {
+          // Unit is a numeric ID, lookup by id column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("id", parsedUnitId)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V1 Looking up unit by numeric ID:", parsedUnitId);
+        } else {
+          // Unit is a text string, lookup by unit column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("unit", unit)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V1 Looking up unit by string:", unit);
+        }
 
         if (unitData) {
           numericUnitId = unitData.id;
           console.log(
-            "[DocumentsController] V1 Resolved unit string",
+            "[DocumentsController] V1 Resolved unit",
             unit,
             "to numeric ID:",
             numericUnitId,
@@ -375,20 +401,45 @@ router.post(
       
       console.log("[DocumentsController] V2 DEBUG - Recipients from request:", JSON.stringify(recipients, null, 2));
 
-      // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
-      // Let's resolve this by looking up the unit from the Monada table
+      // The frontend may send unit as either:
+      // 1. A numeric ID (like "2" or 2)
+      // 2. A text string (like "ΔΑΕΦΚ-ΚΕ")
+      // We need to resolve this to the numeric unit_id
       let numericUnitId: number;
       try {
-        const { data: unitData, error: unitError } = await supabase
-          .from("Monada")
-          .select("id")
-          .eq("unit", unit)
-          .single();
+        // Check if unit is already a numeric ID
+        const parsedUnitId = parseInt(String(unit));
+        const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(unit).trim();
+        
+        let unitData: { id: number } | null = null;
+        let unitError: any = null;
+        
+        if (isNumericUnit) {
+          // Unit is a numeric ID, lookup by id column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("id", parsedUnitId)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V2 Looking up unit by numeric ID:", parsedUnitId);
+        } else {
+          // Unit is a text string, lookup by unit column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("unit", unit)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V2 Looking up unit by string:", unit);
+        }
 
         if (unitData) {
           numericUnitId = unitData.id;
           console.log(
-            "[DocumentsController] V2 Resolved unit string",
+            "[DocumentsController] V2 Resolved unit",
             unit,
             "to numeric ID:",
             numericUnitId,
