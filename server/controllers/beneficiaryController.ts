@@ -505,17 +505,16 @@ router.get('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
     }
 
     // Get unique monada_ids from payments
-    const beneficiaryMonadaIds = [...new Set(
-      (payments || [])
-        .map((p: any) => p.project_index?.monada_id)
-        .filter((id: number | null) => id !== null && id !== undefined)
-    )];
+    const allMonadaIds = (payments || [])
+      .map((p: any) => p.project_index?.monada_id)
+      .filter((id: number | null) => id !== null && id !== undefined);
+    const beneficiaryMonadaIds = Array.from(new Set(allMonadaIds)) as number[];
 
     console.log(`[Beneficiaries] Beneficiary ${id} is associated with monada IDs:`, beneficiaryMonadaIds);
 
     // Check if user has access to any of the beneficiary's units
     const hasAccess = beneficiaryMonadaIds.length === 0 || 
-      beneficiaryMonadaIds.some((monadaId: number) => userUnits.includes(monadaId));
+      beneficiaryMonadaIds.some(monadaId => userUnits.includes(monadaId));
     
     if (!hasAccess) {
       console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} denied access to beneficiary ${id} - user units [${userUnits.join(', ')}] not in beneficiary units [${beneficiaryMonadaIds.join(', ')}]`);
