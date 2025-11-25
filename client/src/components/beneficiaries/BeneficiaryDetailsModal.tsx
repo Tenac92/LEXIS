@@ -188,14 +188,20 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
   };
   
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
           data-testid={testId}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(!open);
+          }}
         >
           <span className="truncate">
             {selectedEngineer 
@@ -205,9 +211,20 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[280px] p-0" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <div className="flex flex-col" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center border-b px-3 py-2" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent 
+        className="w-[280px] p-0 z-[9999]" 
+        align="start" 
+        sideOffset={4}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onInteractOutside={(e) => {
+          e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <div className="flex flex-col">
+          <div className="flex items-center border-b px-3 py-2">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <input
               type="text"
@@ -215,12 +232,10 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyDown={handleInputKeyDown}
-              onClick={(e) => e.stopPropagation()}
               className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-              autoFocus
             />
           </div>
-          <div className="max-h-[200px] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="max-h-[200px] overflow-y-auto">
             {!Array.isArray(engineers) || engineers.length === 0 ? (
               <div className="py-4 text-center text-sm text-muted-foreground">
                 Φόρτωση μηχανικών...
@@ -230,27 +245,33 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
                 Δεν βρέθηκαν μηχανικοί
               </div>
             ) : (
-              <div className="p-1" onClick={(e) => e.stopPropagation()}>
-                <div
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                  onMouseDown={(e) => handleSelect(e, null)}
-                  role="button"
-                  tabIndex={0}
+              <div className="p-1">
+                <button
+                  type="button"
+                  className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSelect(e, null);
+                  }}
                 >
                   <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
                   Κανένας
-                </div>
+                </button>
                 {filteredEngineers.map((eng: any) => (
-                  <div
+                  <button
+                    type="button"
                     key={eng.id}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors"
-                    onMouseDown={(e) => handleSelect(e, eng.id)}
-                    role="button"
-                    tabIndex={0}
+                    className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelect(e, eng.id);
+                    }}
                   >
                     <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
                     {eng.surname} {eng.name}
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
