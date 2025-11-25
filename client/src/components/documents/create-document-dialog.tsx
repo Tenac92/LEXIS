@@ -536,7 +536,7 @@ export function CreateDocumentDialog({
         }
 
         // Filter units based on user's assigned unit_id array
-        const userAllowedUnits = userUnitIds;
+        const userAllowedUnits = userUnitIds.map(id => String(id));
         devLog(
           "UserUnits",
           "Allowed:",
