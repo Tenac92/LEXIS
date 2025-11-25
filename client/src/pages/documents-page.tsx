@@ -62,7 +62,7 @@ interface User {
 
 interface Unit {
   id: number;
-  unit: number;
+  unit: string;
   unit_name: any;
   name: string;
 }
@@ -142,15 +142,11 @@ export default function DocumentsPage() {
   });
 
   // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
+  // Filter by unit.id which matches the values in user.unit_id
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
-    console.log("[DocumentsPage] Filtering units - user.unit_id:", user.unit_id, "allUnits count:", allUnits.length);
-    const filtered = allUnits.filter((unit) => {
-      const unitValue = typeof unit.unit === 'string' ? parseInt(unit.unit, 10) : unit.unit;
-      const isIncluded = user.unit_id?.includes(unitValue);
-      return isIncluded;
-    });
-    console.log("[DocumentsPage] Filtered userUnits count:", filtered.length, "units:", filtered.map(u => ({unit: u.unit, name: u.name})));
+    const filtered = allUnits.filter((unit) => user.unit_id?.includes(unit.id));
+    console.log("[DocumentsPage] Filtered userUnits:", filtered.length, "from", allUnits.length);
     return filtered;
   }, [allUnits, user?.unit_id]);
 
@@ -180,7 +176,7 @@ export default function DocumentsPage() {
       const defaultUnit = userUnits[0];
       setFilters((prev) => ({
         ...prev,
-        unit: defaultUnit.unit.toString(), // Use unit ID as filter value
+        unit: defaultUnit.id.toString(), // Use unit.id as filter value
       }));
     }
   }, [user?.unit_id, userUnits.length]);
@@ -450,9 +446,9 @@ export default function DocumentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {allUnits
-                      .filter((unit) => user?.unit_id?.includes(unit.unit))
+                      .filter((unit) => user?.unit_id?.includes(unit.id))
                       .map((unit) => (
-                        <SelectItem key={unit.unit} value={unit.unit.toString()}>
+                        <SelectItem key={unit.id} value={unit.id.toString()}>
                           {unit.name}
                         </SelectItem>
                       ))}
