@@ -609,7 +609,7 @@ export function BeneficiaryDetailsModal({
 
               {/* Geographic Information from regiondet */}
               {(() => {
-                const regionData = formatRegiondet(beneficiary.regiondet);
+                const regionData = formatRegiondet(beneficiary.regiondet as Record<string, unknown> | null | undefined);
                 const hasRegionData = regionData.regions.length > 0 || regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0;
                 
                 if (!hasRegionData) return null;
