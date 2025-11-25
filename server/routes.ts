@@ -489,6 +489,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Backfill beneficiary regiondet data from existing payments (admin only)
+  app.post('/api/admin/backfill-regiondet', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Only allow admins to run the backfill
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('[Admin] Starting regiondet backfill...');
+      const result = await storage.backfillBeneficiaryRegiondet();
+      
+      console.log('[Admin] Regiondet backfill completed:', result);
+      res.json({ 
+        message: 'Regiondet backfill completed', 
+        ...result 
+      });
+    } catch (error) {
+      console.error('[Admin] Error in regiondet backfill:', error);
+      res.status(500).json({ message: 'Failed to run regiondet backfill' });
+    }
+  });
+  
   // Basic document creation endpoint (legacy)
   app.post('/api/documents', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {

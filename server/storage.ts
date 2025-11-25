@@ -89,6 +89,10 @@ export interface IStorage {
   createEPAFinancials(financial: InsertEpaFinancials): Promise<EpaFinancials>;
   updateEPAFinancials(id: number, financial: Partial<InsertEpaFinancials>): Promise<EpaFinancials>;
   deleteEPAFinancials(id: number): Promise<void>;
+  
+  // Region data operations
+  updateBeneficiaryRegiondet(beneficiaryId: number, projectIndexId: number): Promise<void>;
+  backfillBeneficiaryRegiondet(): Promise<{ processed: number; updated: number; errors: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2108,6 +2112,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created beneficiary payment with ID:', data.id);
+      
+      // Update beneficiary's regiondet with accumulated unique regions
+      if (payment.beneficiary_id && payment.project_index_id) {
+        await this.updateBeneficiaryRegiondet(payment.beneficiary_id, payment.project_index_id);
+      }
+      
       return data;
     } catch (error) {
       console.error('[Storage] Error in createBeneficiaryPayment:', error);
@@ -2135,6 +2145,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated beneficiary payment:', data);
+      
+      // Update beneficiary's regiondet if project_index_id was changed
+      if (data.beneficiary_id && payment.project_index_id) {
+        await this.updateBeneficiaryRegiondet(data.beneficiary_id, payment.project_index_id);
+      }
+      
       return data;
     } catch (error) {
       console.error('[Storage] Error in updateBeneficiaryPayment:', error);
@@ -2159,6 +2175,203 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully deleted beneficiary payment ${id}`);
     } catch (error) {
       console.error('[Storage] Error in deleteBeneficiaryPayment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Updates beneficiary's regiondet field with accumulated unique regions from project_index
+   * Fetches region data from project_index junction tables and merges with existing regiondet
+   */
+  async updateBeneficiaryRegiondet(beneficiaryId: number, projectIndexId: number): Promise<void> {
+    try {
+      console.log(`[Storage] Updating regiondet for beneficiary ${beneficiaryId} with project_index ${projectIndexId}`);
+      
+      // Fetch region data from project_index junction tables with names
+      const { data: regionData, error: regionError } = await supabase
+        .from('project_index_regions')
+        .select(`
+          region_code,
+          regions!inner(code, name)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      const { data: unitData, error: unitError } = await supabase
+        .from('project_index_units')
+        .select(`
+          unit_code,
+          regional_units!inner(code, name, region_code)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      const { data: muniData, error: muniError } = await supabase
+        .from('project_index_munis')
+        .select(`
+          muni_code,
+          municipalities!inner(code, name, unit_code)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      if (regionError || unitError || muniError) {
+        console.error('[Storage] Error fetching geographic data:', { regionError, unitError, muniError });
+        return; // Don't fail the payment creation, just log and continue
+      }
+      
+      // Build region entry object from the fetched data
+      const newRegionEntry: Record<string, unknown> = {
+        project_index_id: projectIndexId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add regions if available
+      if (regionData && regionData.length > 0) {
+        newRegionEntry.regions = regionData.map((r: any) => ({
+          code: r.region_code,
+          name: r.regions?.name || 'Unknown'
+        }));
+      }
+      
+      // Add regional units if available
+      if (unitData && unitData.length > 0) {
+        newRegionEntry.regional_units = unitData.map((u: any) => ({
+          code: u.unit_code,
+          name: u.regional_units?.name || 'Unknown',
+          region_code: u.regional_units?.region_code
+        }));
+      }
+      
+      // Add municipalities if available
+      if (muniData && muniData.length > 0) {
+        newRegionEntry.municipalities = muniData.map((m: any) => ({
+          code: m.muni_code,
+          name: m.municipalities?.name || 'Unknown',
+          unit_code: m.municipalities?.unit_code
+        }));
+      }
+      
+      // Skip if no geographic data found
+      if (!newRegionEntry.regions && !newRegionEntry.regional_units && !newRegionEntry.municipalities) {
+        console.log(`[Storage] No geographic data found for project_index ${projectIndexId}, skipping regiondet update`);
+        return;
+      }
+      
+      // Get current beneficiary regiondet
+      const { data: beneficiary, error: fetchError } = await supabase
+        .from('beneficiaries')
+        .select('regiondet')
+        .eq('id', beneficiaryId)
+        .single();
+      
+      if (fetchError) {
+        console.error('[Storage] Error fetching beneficiary for regiondet update:', fetchError);
+        return;
+      }
+      
+      // Parse existing regiondet or initialize as empty array
+      let existingRegiondet: Record<string, unknown>[] = [];
+      if (beneficiary?.regiondet) {
+        if (Array.isArray(beneficiary.regiondet)) {
+          existingRegiondet = beneficiary.regiondet as Record<string, unknown>[];
+        } else {
+          // If it was a single object, convert to array
+          existingRegiondet = [beneficiary.regiondet as Record<string, unknown>];
+        }
+      }
+      
+      // Check if this project_index_id already exists in regiondet
+      const existingIndex = existingRegiondet.findIndex(
+        (entry) => entry.project_index_id === projectIndexId
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing entry
+        existingRegiondet[existingIndex] = newRegionEntry;
+        console.log(`[Storage] Updated existing region entry for project_index ${projectIndexId}`);
+      } else {
+        // Add new entry
+        existingRegiondet.push(newRegionEntry);
+        console.log(`[Storage] Added new region entry for project_index ${projectIndexId}`);
+      }
+      
+      // Update beneficiary with new regiondet
+      const { error: updateError } = await supabase
+        .from('beneficiaries')
+        .update({ 
+          regiondet: existingRegiondet,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', beneficiaryId);
+      
+      if (updateError) {
+        console.error('[Storage] Error updating beneficiary regiondet:', updateError);
+        return;
+      }
+      
+      console.log(`[Storage] Successfully updated regiondet for beneficiary ${beneficiaryId} with ${existingRegiondet.length} region entries`);
+    } catch (error) {
+      console.error('[Storage] Error in updateBeneficiaryRegiondet:', error);
+      // Don't throw - this is a non-critical update
+    }
+  }
+
+  /**
+   * Backfill regiondet for all beneficiaries based on their existing payment data
+   * This is a one-time migration helper
+   */
+  async backfillBeneficiaryRegiondet(): Promise<{ processed: number; updated: number; errors: number }> {
+    try {
+      console.log('[Storage] Starting regiondet backfill for all beneficiaries...');
+      
+      // Get all beneficiary payments with project_index_id
+      const { data: payments, error: paymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id, project_index_id')
+        .not('project_index_id', 'is', null);
+      
+      if (paymentsError) {
+        console.error('[Storage] Error fetching payments for backfill:', paymentsError);
+        throw paymentsError;
+      }
+      
+      if (!payments || payments.length === 0) {
+        console.log('[Storage] No payments with project_index_id found');
+        return { processed: 0, updated: 0, errors: 0 };
+      }
+      
+      // Group by beneficiary_id to process each beneficiary once per project_index
+      const beneficiaryPayments = new Map<number, Set<number>>();
+      for (const payment of payments) {
+        if (payment.beneficiary_id && payment.project_index_id) {
+          if (!beneficiaryPayments.has(payment.beneficiary_id)) {
+            beneficiaryPayments.set(payment.beneficiary_id, new Set());
+          }
+          beneficiaryPayments.get(payment.beneficiary_id)!.add(payment.project_index_id);
+        }
+      }
+      
+      let processed = 0;
+      let updated = 0;
+      let errors = 0;
+      
+      const beneficiaryEntries = Array.from(beneficiaryPayments.entries());
+      for (const [beneficiaryId, projectIndexIds] of beneficiaryEntries) {
+        const projectIndexArray = Array.from(projectIndexIds);
+        for (const projectIndexId of projectIndexArray) {
+          processed++;
+          try {
+            await this.updateBeneficiaryRegiondet(beneficiaryId, projectIndexId);
+            updated++;
+          } catch (err) {
+            console.error(`[Storage] Error updating regiondet for beneficiary ${beneficiaryId}:`, err);
+            errors++;
+          }
+        }
+      }
+      
+      console.log(`[Storage] Regiondet backfill complete: processed=${processed}, updated=${updated}, errors=${errors}`);
+      return { processed, updated, errors };
+    } catch (error) {
+      console.error('[Storage] Error in backfillBeneficiaryRegiondet:', error);
       throw error;
     }
   }
