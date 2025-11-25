@@ -214,27 +214,57 @@ export function BeneficiaryDetailsModal({
       if (dataSource) {
         // Edit existing beneficiary - use unmasked AFM from full data
         // Convert regiondet to geographic_areas format for form
-        const regiondet = dataSource.regiondet as Record<string, any> | null;
+        // regiondet can be an array (one entry per project_index_id) or a single object
+        const rawRegiondet = dataSource.regiondet;
         const geographicAreas: string[] = [];
-        if (regiondet) {
-          // Convert stored regions to selection format
-          if (Array.isArray(regiondet.regions)) {
-            regiondet.regions.forEach((r: any) => {
-              if (r.name) geographicAreas.push(`${r.name}||`);
-            });
-          }
-          if (Array.isArray(regiondet.regional_units)) {
-            regiondet.regional_units.forEach((ru: any) => {
-              if (ru.name && ru.region_name) geographicAreas.push(`${ru.region_name}|${ru.name}|`);
-            });
-          }
-          if (Array.isArray(regiondet.municipalities)) {
-            regiondet.municipalities.forEach((m: any) => {
-              if (m.name && m.regional_unit_name && m.region_name) {
-                geographicAreas.push(`${m.region_name}|${m.regional_unit_name}|${m.name}`);
-              }
-            });
-          }
+        
+        if (rawRegiondet) {
+          // Handle array format: merge all entries
+          const regiondetEntries = Array.isArray(rawRegiondet) ? rawRegiondet : [rawRegiondet];
+          
+          // Use Sets to avoid duplicates when merging multiple project entries
+          const seenRegions = new Set<string>();
+          const seenRegionalUnits = new Set<string>();
+          const seenMunicipalities = new Set<string>();
+          
+          regiondetEntries.forEach((regiondet: any) => {
+            if (!regiondet || typeof regiondet !== 'object') return;
+            
+            // Convert stored regions to selection format
+            if (Array.isArray(regiondet.regions)) {
+              regiondet.regions.forEach((r: any) => {
+                if (r.name) {
+                  const key = `${r.name}||`;
+                  if (!seenRegions.has(key)) {
+                    seenRegions.add(key);
+                    geographicAreas.push(key);
+                  }
+                }
+              });
+            }
+            if (Array.isArray(regiondet.regional_units)) {
+              regiondet.regional_units.forEach((ru: any) => {
+                if (ru.name && ru.region_name) {
+                  const key = `${ru.region_name}|${ru.name}|`;
+                  if (!seenRegionalUnits.has(key)) {
+                    seenRegionalUnits.add(key);
+                    geographicAreas.push(key);
+                  }
+                }
+              });
+            }
+            if (Array.isArray(regiondet.municipalities)) {
+              regiondet.municipalities.forEach((m: any) => {
+                if (m.name && m.regional_unit_name && m.region_name) {
+                  const key = `${m.region_name}|${m.regional_unit_name}|${m.name}`;
+                  if (!seenMunicipalities.has(key)) {
+                    seenMunicipalities.add(key);
+                    geographicAreas.push(key);
+                  }
+                }
+              });
+            }
+          });
         }
         form.reset({
           afm: dataSource.afm || "",
