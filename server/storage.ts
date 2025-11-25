@@ -1517,7 +1517,7 @@ export class DatabaseStorage implements IStorage {
         // Select only needed fields, exclude encrypted AFM field
         const { data, error } = await supabase
           .from('beneficiaries')
-          .select('id, surname, name, fathername, region, cengsur1, cengname1, cengsur2, cengname2, freetext, date, created_at, updated_at, afm_hash')
+          .select('id, surname, name, fathername, region, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash')
           .in('id', idBatch);
           
         if (error) {
