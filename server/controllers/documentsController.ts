@@ -1417,6 +1417,8 @@ router.get("/", async (req: Request, res: Response) => {
           doc.beneficiary_payments_id.length > 0
         ) {
           try {
+            console.log(`[DocumentsController] Fetching beneficiary payments for document ${doc.id} with IDs:`, doc.beneficiary_payments_id);
+            
             const { data: payments, error: paymentsError } = await supabase
               .from("beneficiary_payments")
               .select(
@@ -1432,11 +1434,16 @@ router.get("/", async (req: Request, res: Response) => {
                   surname,
                   name,
                   fathername,
-                  region
+                  regiondet
                 )
               `,
               )
               .in("id", doc.beneficiary_payments_id);
+
+            console.log(`[DocumentsController] Beneficiary payments query result for doc ${doc.id}:`, {
+              error: paymentsError,
+              paymentsCount: payments?.length || 0
+            });
 
             if (!paymentsError && payments) {
               // Transform payments into recipients format
@@ -1452,15 +1459,18 @@ router.get("/", async (req: Request, res: Response) => {
                   afm: beneficiary?.afm ? String(beneficiary.afm) : "",
                   amount: parseFloat(payment.amount) || 0,
                   installment: payment.installment || "",
-                  region: beneficiary?.region || "",
+                  region: beneficiary?.regiondet || "",
                   status: payment.status || "pending",
                   freetext: payment.freetext || null,
                 };
               });
+              console.log(`[DocumentsController] Transformed ${recipients.length} beneficiary payments into recipients for doc ${doc.id}`);
+            } else if (paymentsError) {
+              console.error(`[DocumentsController] Error fetching beneficiary payments for doc ${doc.id}:`, paymentsError);
             }
           } catch (err) {
             console.error(
-              "Error fetching payments for document",
+              "Error fetching beneficiary payments for document",
               doc.id,
               ":",
               err,
@@ -1854,6 +1864,8 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
           doc.beneficiary_payments_id.length > 0
         ) {
           try {
+            console.log(`[DocumentsController] Fetching beneficiary payments for user document ${doc.id} with IDs:`, doc.beneficiary_payments_id);
+            
             const { data: payments, error: paymentsError } = await supabase
               .from("beneficiary_payments")
               .select(
@@ -1868,11 +1880,16 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   surname,
                   name,
                   fathername,
-                  region
+                  regiondet
                 )
               `,
               )
               .in("id", doc.beneficiary_payments_id);
+
+            console.log(`[DocumentsController] Beneficiary payments query result for user doc ${doc.id}:`, {
+              error: paymentsError,
+              paymentsCount: payments?.length || 0
+            });
 
             if (!paymentsError && payments) {
               recipients = payments.map((payment) => {
@@ -1887,14 +1904,17 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   afm: beneficiary?.afm ? String(beneficiary.afm) : "",
                   amount: parseFloat(payment.amount) || 0,
                   installment: payment.installment || "",
-                  region: beneficiary?.region || "",
+                  region: beneficiary?.regiondet || "",
                   status: payment.status || "pending",
                 };
               });
+              console.log(`[DocumentsController] Transformed ${recipients.length} beneficiary payments into recipients for user doc ${doc.id}`);
+            } else if (paymentsError) {
+              console.error(`[DocumentsController] Error fetching beneficiary payments for user doc ${doc.id}:`, paymentsError);
             }
           } catch (err) {
             console.error(
-              "Error fetching payments for user document",
+              "Error fetching beneficiary payments for user document",
               doc.id,
               ":",
               err,
