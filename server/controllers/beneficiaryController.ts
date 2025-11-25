@@ -514,6 +514,257 @@ router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedReq
   }
 });
 
+// BACKGROUND PREFETCH: Prefetch and cache all beneficiaries with decrypted AFMs for instant autocomplete
+// NOTE: This route MUST be before /:id to avoid Express matching "prefetch" as an ID
+router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const userUnits = req.user.unit_id || [];
+    if (userUnits.length === 0) {
+      return res.status(403).json({ success: false, message: 'No assigned units' });
+    }
+
+    // Check if already cached
+    const cached = getCachedAFMData(userUnits);
+    if (cached) {
+      console.log(`[Prefetch] Cache HIT - returning cached data for units: ${userUnits.join(', ')}`);
+      return res.json({
+        success: true,
+        source: 'cache',
+        beneficiaryCount: cached.beneficiaries.length,
+        employeeCount: cached.employees.length
+      });
+    }
+
+    // Check if already loading
+    if (isCacheLoading(userUnits)) {
+      console.log(`[Prefetch] Already loading for units: ${userUnits.join(', ')}`);
+      return res.json({
+        success: true,
+        source: 'loading',
+        message: 'Prefetch already in progress'
+      });
+    }
+
+    // Start background prefetch
+    setLoadingState(userUnits, true);
+    console.log(`[Prefetch] Starting background prefetch for units: ${userUnits.join(', ')}`);
+
+    // Get unit codes for the user's units
+    const unitCodes: string[] = [];
+    for (const unitId of userUnits) {
+      const unitCode = await getUnitCodeById(unitId);
+      if (unitCode) {
+        unitCodes.push(unitCode);
+      }
+    }
+
+    if (unitCodes.length === 0) {
+      setLoadingState(userUnits, false);
+      return res.status(500).json({ success: false, message: 'Could not map unit IDs' });
+    }
+
+    // Respond immediately to not block the client
+    res.json({
+      success: true,
+      source: 'started',
+      message: 'Background prefetch started',
+      units: unitCodes
+    });
+
+    // Continue prefetching in background
+    (async () => {
+      try {
+        const startTime = Date.now();
+        const beneficiaryCache: any[] = [];
+        const employeeCache: any[] = [];
+        const beneficiariesListCache: any[] = []; // For beneficiaries page list
+
+        // Fetch beneficiaries with decrypted AFMs for each unit
+        for (const unitCode of unitCodes) {
+          console.log(`[Prefetch] Fetching beneficiaries for unit: ${unitCode}`);
+          
+          // Get unit ID for this unit code
+          const { data: monadaData } = await supabase
+            .from('Monada')
+            .select('id')
+            .eq('unit', unitCode)
+            .single();
+
+          if (!monadaData) continue;
+
+          // Get unique beneficiary IDs that have payments for this unit
+          const { data: paymentsBeneficiaryIds } = await supabase
+            .from('beneficiary_payments')
+            .select('beneficiary_id')
+            .eq('unit_id', monadaData.id);
+
+          const uniqueBeneficiaryIds = Array.from(new Set(
+            paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []
+          ));
+
+          if (uniqueBeneficiaryIds.length === 0) continue;
+
+          // Fetch beneficiaries in batches - fetch ALL fields for list cache
+          const batchSize = 500;
+          for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
+            const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
+            
+            // Fetch full beneficiary data for list view
+            const { data } = await supabase
+              .from('beneficiaries')
+              .select('id, afm, surname, name, fathername, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash, adeia, onlinefoldernumber')
+              .in('id', idBatch);
+
+            if (data) {
+              for (const b of data) {
+                const decryptedAFM = decryptAFM(b.afm);
+                
+                // Add to AFM autocomplete cache (with decrypted AFM)
+                if (decryptedAFM) {
+                  beneficiaryCache.push({
+                    decryptedAFM,
+                    beneficiaryId: b.id,
+                    surname: b.surname,
+                    name: b.name,
+                    fathername: b.fathername,
+                    timestamp: Date.now()
+                  });
+                }
+                
+                // Add to beneficiaries list cache (with decrypted AFM for display)
+                beneficiariesListCache.push({
+                  ...b,
+                  afm: decryptedAFM || '***ERROR***',
+                  monada: unitCode
+                });
+              }
+            }
+          }
+        }
+
+        // Fetch employees for ΕΚΤΟΣ ΕΔΡΑΣ (they are unit-independent but still needed)
+        console.log(`[Prefetch] Fetching employees for all units`);
+        const { data: employeesData } = await supabase
+          .from('Employees')
+          .select('id, afm, surname, name, fathername, monada')
+          .in('monada', unitCodes)
+          .limit(2000);
+
+        if (employeesData) {
+          for (const e of employeesData) {
+            const decryptedAFM = decryptAFM(e.afm);
+            if (decryptedAFM) {
+              employeeCache.push({
+                decryptedAFM,
+                beneficiaryId: e.id,
+                surname: e.surname,
+                name: e.name,
+                fathername: e.fathername,
+                timestamp: Date.now()
+              });
+            }
+          }
+        }
+
+        // Store in AFM autocomplete cache
+        setCachedAFMData(userUnits, beneficiaryCache, employeeCache);
+        
+        // Store in beneficiaries list cache (for faster page loading)
+        setCachedBeneficiaries(userUnits, beneficiariesListCache);
+        
+        setLoadingState(userUnits, false);
+
+        const elapsed = Date.now() - startTime;
+        console.log(`[Prefetch] COMPLETED in ${elapsed}ms - ${beneficiaryCache.length} AFM entries, ${beneficiariesListCache.length} list entries, ${employeeCache.length} employees cached for units: ${userUnits.join(', ')}`);
+      } catch (error) {
+        console.error('[Prefetch] Background prefetch error:', error);
+        setLoadingState(userUnits, false);
+      }
+    })();
+
+  } catch (error) {
+    console.error('[Prefetch] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to start prefetch',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get cache stats (for debugging)
+router.get('/prefetch/stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  const stats = getCacheStats();
+  res.json({ success: true, stats });
+});
+
+// Search from prefetched cache (fast path)
+router.get('/search-cached', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { afm, type } = req.query;
+    
+    if (!afm || typeof afm !== 'string' || afm.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'AFM must be at least 4 characters'
+      });
+    }
+
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      return res.status(403).json({ success: false, message: 'No assigned units' });
+    }
+
+    // Try to get from cache
+    const cached = getCachedAFMData(userUnits);
+    if (!cached) {
+      // Cache miss - fallback to regular search
+      console.log(`[SearchCached] Cache MISS for units: ${userUnits.join(', ')} - falling back to regular search`);
+      return res.json({
+        success: true,
+        source: 'fallback',
+        data: [],
+        message: 'Cache not available, use /search endpoint'
+      });
+    }
+
+    // Search in cached data
+    const isEmployeeSearch = type === 'employee';
+    const searchData = isEmployeeSearch ? cached.employees : cached.beneficiaries;
+    
+    const results = searchData
+      .filter(item => item.decryptedAFM.startsWith(afm))
+      .slice(0, 20)
+      .map(item => ({
+        id: item.beneficiaryId,
+        afm: item.decryptedAFM,
+        surname: item.surname,
+        name: item.name,
+        fathername: item.fathername
+      }));
+
+    console.log(`[SearchCached] Found ${results.length} ${isEmployeeSearch ? 'employees' : 'beneficiaries'} for AFM prefix: ${afm}`);
+
+    res.json({
+      success: true,
+      source: 'cache',
+      data: results,
+      count: results.length
+    });
+  } catch (error) {
+    console.error('[SearchCached] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Search failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get single beneficiary by ID - SECURITY: Only allow access to user's assigned units
 router.get('/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -939,256 +1190,6 @@ router.post('/bulk-import', authenticateSession, async (req: AuthenticatedReques
     console.error('[Beneficiaries] Error in bulk import:', error);
     res.status(500).json({ 
       message: 'Failed to bulk import beneficiaries',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// BACKGROUND PREFETCH: Prefetch and cache all beneficiaries with decrypted AFMs for instant autocomplete
-router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Unauthorized' });
-    }
-
-    const userUnits = req.user.unit_id || [];
-    if (userUnits.length === 0) {
-      return res.status(403).json({ success: false, message: 'No assigned units' });
-    }
-
-    // Check if already cached
-    const cached = getCachedAFMData(userUnits);
-    if (cached) {
-      console.log(`[Prefetch] Cache HIT - returning cached data for units: ${userUnits.join(', ')}`);
-      return res.json({
-        success: true,
-        source: 'cache',
-        beneficiaryCount: cached.beneficiaries.length,
-        employeeCount: cached.employees.length
-      });
-    }
-
-    // Check if already loading
-    if (isCacheLoading(userUnits)) {
-      console.log(`[Prefetch] Already loading for units: ${userUnits.join(', ')}`);
-      return res.json({
-        success: true,
-        source: 'loading',
-        message: 'Prefetch already in progress'
-      });
-    }
-
-    // Start background prefetch
-    setLoadingState(userUnits, true);
-    console.log(`[Prefetch] Starting background prefetch for units: ${userUnits.join(', ')}`);
-
-    // Get unit codes for the user's units
-    const unitCodes: string[] = [];
-    for (const unitId of userUnits) {
-      const unitCode = await getUnitCodeById(unitId);
-      if (unitCode) {
-        unitCodes.push(unitCode);
-      }
-    }
-
-    if (unitCodes.length === 0) {
-      setLoadingState(userUnits, false);
-      return res.status(500).json({ success: false, message: 'Could not map unit IDs' });
-    }
-
-    // Respond immediately to not block the client
-    res.json({
-      success: true,
-      source: 'started',
-      message: 'Background prefetch started',
-      units: unitCodes
-    });
-
-    // Continue prefetching in background
-    (async () => {
-      try {
-        const startTime = Date.now();
-        const beneficiaryCache: any[] = [];
-        const employeeCache: any[] = [];
-        const beneficiariesListCache: any[] = []; // For beneficiaries page list
-
-        // Fetch beneficiaries with decrypted AFMs for each unit
-        for (const unitCode of unitCodes) {
-          console.log(`[Prefetch] Fetching beneficiaries for unit: ${unitCode}`);
-          
-          // Get unit ID for this unit code
-          const { data: monadaData } = await supabase
-            .from('Monada')
-            .select('id')
-            .eq('unit', unitCode)
-            .single();
-
-          if (!monadaData) continue;
-
-          // Get unique beneficiary IDs that have payments for this unit
-          const { data: paymentsBeneficiaryIds } = await supabase
-            .from('beneficiary_payments')
-            .select('beneficiary_id')
-            .eq('unit_id', monadaData.id);
-
-          const uniqueBeneficiaryIds = Array.from(new Set(
-            paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []
-          ));
-
-          if (uniqueBeneficiaryIds.length === 0) continue;
-
-          // Fetch beneficiaries in batches - fetch ALL fields for list cache
-          const batchSize = 500;
-          for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
-            const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
-            
-            // Fetch full beneficiary data for list view
-            const { data } = await supabase
-              .from('beneficiaries')
-              .select('id, afm, surname, name, fathername, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash, adeia, onlinefoldernumber')
-              .in('id', idBatch);
-
-            if (data) {
-              for (const b of data) {
-                const decryptedAFM = decryptAFM(b.afm);
-                
-                // Add to AFM autocomplete cache (with decrypted AFM)
-                if (decryptedAFM) {
-                  beneficiaryCache.push({
-                    decryptedAFM,
-                    beneficiaryId: b.id,
-                    surname: b.surname,
-                    name: b.name,
-                    fathername: b.fathername,
-                    timestamp: Date.now()
-                  });
-                }
-                
-                // Add to beneficiaries list cache (with decrypted AFM for display)
-                beneficiariesListCache.push({
-                  ...b,
-                  afm: decryptedAFM || '***ERROR***',
-                  monada: unitCode
-                });
-              }
-            }
-          }
-        }
-
-        // Fetch employees for ΕΚΤΟΣ ΕΔΡΑΣ (they are unit-independent but still needed)
-        console.log(`[Prefetch] Fetching employees for all units`);
-        const { data: employeesData } = await supabase
-          .from('Employees')
-          .select('id, afm, surname, name, fathername, monada')
-          .in('monada', unitCodes)
-          .limit(2000);
-
-        if (employeesData) {
-          for (const e of employeesData) {
-            const decryptedAFM = decryptAFM(e.afm);
-            if (decryptedAFM) {
-              employeeCache.push({
-                decryptedAFM,
-                beneficiaryId: e.id,
-                surname: e.surname,
-                name: e.name,
-                fathername: e.fathername,
-                timestamp: Date.now()
-              });
-            }
-          }
-        }
-
-        // Store in AFM autocomplete cache
-        setCachedAFMData(userUnits, beneficiaryCache, employeeCache);
-        
-        // Store in beneficiaries list cache (for faster page loading)
-        setCachedBeneficiaries(userUnits, beneficiariesListCache);
-        
-        setLoadingState(userUnits, false);
-
-        const elapsed = Date.now() - startTime;
-        console.log(`[Prefetch] COMPLETED in ${elapsed}ms - ${beneficiaryCache.length} AFM entries, ${beneficiariesListCache.length} list entries, ${employeeCache.length} employees cached for units: ${userUnits.join(', ')}`);
-      } catch (error) {
-        console.error('[Prefetch] Background prefetch error:', error);
-        setLoadingState(userUnits, false);
-      }
-    })();
-
-  } catch (error) {
-    console.error('[Prefetch] Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to start prefetch',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get cache stats (for debugging)
-router.get('/prefetch/stats', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-  const stats = getCacheStats();
-  res.json({ success: true, stats });
-});
-
-// Search from prefetched cache (fast path)
-router.get('/search-cached', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { afm, type } = req.query;
-    
-    if (!afm || typeof afm !== 'string' || afm.length < 4) {
-      return res.status(400).json({
-        success: false,
-        message: 'AFM must be at least 4 characters'
-      });
-    }
-
-    const userUnits = req.user?.unit_id || [];
-    if (userUnits.length === 0) {
-      return res.status(403).json({ success: false, message: 'No assigned units' });
-    }
-
-    // Try to get from cache
-    const cached = getCachedAFMData(userUnits);
-    if (!cached) {
-      // Cache miss - fallback to regular search
-      console.log(`[SearchCached] Cache MISS for units: ${userUnits.join(', ')} - falling back to regular search`);
-      return res.json({
-        success: true,
-        source: 'fallback',
-        data: [],
-        message: 'Cache not available, use /search endpoint'
-      });
-    }
-
-    // Search in cached data
-    const isEmployeeSearch = type === 'employee';
-    const searchData = isEmployeeSearch ? cached.employees : cached.beneficiaries;
-    
-    const results = searchData
-      .filter(item => item.decryptedAFM.startsWith(afm))
-      .slice(0, 20)
-      .map(item => ({
-        id: item.beneficiaryId,
-        afm: item.decryptedAFM,
-        surname: item.surname,
-        name: item.name,
-        fathername: item.fathername
-      }));
-
-    console.log(`[SearchCached] Found ${results.length} ${isEmployeeSearch ? 'employees' : 'beneficiaries'} for AFM prefix: ${afm}`);
-
-    res.json({
-      success: true,
-      source: 'cache',
-      data: results,
-      count: results.length
-    });
-  } catch (error) {
-    console.error('[SearchCached] Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Search failed',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
