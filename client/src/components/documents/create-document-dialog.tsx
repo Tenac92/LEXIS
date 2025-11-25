@@ -536,11 +536,10 @@ export function CreateDocumentDialog({
         }
 
         // Filter units based on user's assigned unit_id array
-        const userAllowedUnits = userUnitIds.map(id => String(id));
         devLog(
           "UserUnits",
           "Allowed:",
-          userAllowedUnits.length,
+          userUnitIds.length,
           "Available:",
           data.length,
         );
@@ -552,16 +551,15 @@ export function CreateDocumentDialog({
           }
 
           // Check if the unit ID matches any of the user's allowed units
-          // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
-          const unitId = String(item.unit);
-          return userAllowedUnits.includes(unitId);
+          // user.unit_id contains numeric unit IDs that match the 'id' field in the API response
+          return userUnitIds.includes(item.id);
         });
 
         devLog(
           "FilteredUnits",
           filteredUnits.length,
           "restrictions:",
-          userAllowedUnits.length,
+          userUnitIds.length,
         );
 
         const processedUnits = filteredUnits.map((item: any) => {
