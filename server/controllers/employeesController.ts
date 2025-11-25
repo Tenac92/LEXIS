@@ -46,6 +46,43 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/employees/engineers
+ * Get only engineers (employees with attribute = "Μηχανικός")
+ * Optimized endpoint for faster loading in dropdowns
+ */
+router.get('/engineers', async (req: Request, res: Response) => {
+  try {
+    logger.info('Fetching engineers only (attribute = Μηχανικός)');
+    const allEmployees = await storage.getAllEmployees();
+    
+    const engineers = allEmployees
+      .filter((emp: Employee) => emp.attribute === "Μηχανικός")
+      .map((emp: Employee) => ({
+        id: emp.id,
+        name: emp.name,
+        surname: emp.surname,
+        attribute: emp.attribute
+      }))
+      .sort((a, b) => `${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'el'));
+    
+    logger.info(`Found ${engineers.length} engineers`);
+    
+    res.json({
+      success: true,
+      data: engineers,
+      count: engineers.length
+    });
+  } catch (error) {
+    logger.error('Error fetching engineers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την ανάκτηση των μηχανικών',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/employees/search
  * Search employees by AFM
  */

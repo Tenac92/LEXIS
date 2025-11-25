@@ -23,14 +23,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { 
   User, 
   MapPin, 
@@ -180,9 +172,18 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
       return fullName.includes(term) || reverseName.includes(term);
     });
   }, [engineers, searchTerm]);
+
+  const handleSelect = (engId: number | null) => {
+    onValueChange(engId);
+    setOpen(false);
+    setSearchTerm("");
+  };
   
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) setSearchTerm("");
+    }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -199,51 +200,51 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Αναζήτηση..." 
-            value={searchTerm}
-            onValueChange={setSearchTerm}
-            className="h-9"
-          />
-          <CommandList>
-            {filteredEngineers.length === 0 && searchTerm === "" && (!Array.isArray(engineers) || engineers.length === 0) ? (
-              <CommandEmpty>Φόρτωση μηχανικών...</CommandEmpty>
+      <PopoverContent className="w-[280px] p-0" align="start">
+        <div className="flex flex-col">
+          <div className="flex items-center border-b px-3 py-2">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <input
+              type="text"
+              placeholder="Αναζήτηση μηχανικού..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-[200px] overflow-y-auto">
+            {!Array.isArray(engineers) || engineers.length === 0 ? (
+              <div className="py-4 text-center text-sm text-muted-foreground">
+                Φόρτωση μηχανικών...
+              </div>
             ) : filteredEngineers.length === 0 ? (
-              <CommandEmpty>Δεν βρέθηκαν μηχανικοί</CommandEmpty>
-            ) : null}
-            <CommandGroup>
-              <CommandItem
-                value="_none"
-                onSelect={() => {
-                  onValueChange(null);
-                  setOpen(false);
-                  setSearchTerm("");
-                }}
-                className="cursor-pointer"
-              >
-                <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
-                Κανένας
-              </CommandItem>
-              {filteredEngineers.map((eng: any) => (
-                <CommandItem
-                  key={eng.id}
-                  value={eng.id.toString()}
-                  onSelect={() => {
-                    onValueChange(eng.id);
-                    setOpen(false);
-                    setSearchTerm("");
-                  }}
-                  className="cursor-pointer"
+              <div className="py-4 text-center text-sm text-muted-foreground">
+                Δεν βρέθηκαν μηχανικοί
+              </div>
+            ) : (
+              <div className="p-1">
+                <div
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => handleSelect(null)}
                 >
-                  <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
-                  {eng.surname} {eng.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
+                  <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
+                  Κανένας
+                </div>
+                {filteredEngineers.map((eng: any) => (
+                  <div
+                    key={eng.id}
+                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => handleSelect(eng.id)}
+                  >
+                    <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
+                    {eng.surname} {eng.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </PopoverContent>
     </Popover>
   );
@@ -300,12 +301,12 @@ export function BeneficiaryDetailsModal({
     staleTime: 0, // Always fetch fresh data for unmasked AFM
   });
 
-  // Fetch all employees and filter for engineers (attribute = "Μηχανικός")
-  const { data: employeesResponse } = useQuery({
-    queryKey: ["/api/employees"],
+  // Fetch engineers directly from optimized endpoint (already filtered and sorted server-side)
+  const { data: engineersResponse } = useQuery({
+    queryKey: ["/api/employees/engineers"],
     queryFn: async () => {
-      const response = await fetch('/api/employees', { credentials: 'include' });
-      if (!response.ok) throw new Error('Failed to fetch employees');
+      const response = await fetch('/api/employees/engineers', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch engineers');
       return response.json();
     },
     staleTime: 10 * 60 * 1000, // 10 minutes cache
@@ -314,14 +315,12 @@ export function BeneficiaryDetailsModal({
     enabled: open,
   });
 
-  // Filter employees to only show engineers (attribute = "Μηχανικός")
+  // Extract engineers from response (already filtered and sorted server-side)
   const engineers = useMemo(() => {
-    // Handle nested response structure: { success: true, data: [...], count: N }
-    const employeesData = employeesResponse?.data || employeesResponse || [];
-    if (!Array.isArray(employeesData)) return [];
-    return employeesData.filter((emp: any) => emp.attribute === "Μηχανικός")
-      .sort((a: any, b: any) => `${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'el'));
-  }, [employeesResponse]);
+    const engineersData = engineersResponse?.data || [];
+    if (!Array.isArray(engineersData)) return [];
+    return engineersData;
+  }, [engineersResponse]);
 
   // Initialize form values when modal opens or beneficiary changes
   // Use fullBeneficiaryData when available (has unmasked AFM)
