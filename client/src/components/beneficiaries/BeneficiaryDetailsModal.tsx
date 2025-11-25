@@ -917,8 +917,8 @@ export function BeneficiaryDetailsModal({
                 if (!isEditing && !hasRegionData) return null;
                 
                 return (
-                  <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl border border-indigo-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-indigo-900 mb-4 flex items-center gap-2">
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200 shadow-sm">
+                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
                       <MapPin className="w-5 h-5" />
                       Γεωγραφικές Πληροφορίες
                     </h3>
@@ -941,49 +941,42 @@ export function BeneficiaryDetailsModal({
                         )}
                       />
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {regionData.regions.length > 0 && (
-                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                            <label className="text-sm font-medium text-indigo-700 block mb-2">
-                              Περιφέρειες:
-                            </label>
-                            <div className="flex flex-wrap gap-1">
-                              {regionData.regions.map((region, idx) => (
-                                <Badge key={idx} variant="secondary" className="bg-indigo-100 text-indigo-800 text-xs">
-                                  {region}
-                                </Badge>
-                              ))}
+                      <div className="bg-white/70 p-4 rounded-lg border border-green-200">
+                        <div className="space-y-3">
+                          {regionData.regions.map((region, idx) => (
+                            <div key={idx} className="text-sm">
+                              <div className="font-semibold text-green-800">{region}</div>
+                              {regionData.regionalUnits.length > 0 && (
+                                <div className="ml-4 text-green-700">
+                                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
+                                  <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
+                                </div>
+                              )}
+                              {regionData.municipalities.length > 0 && (
+                                <div className="ml-4 text-green-700">
+                                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
+                                  <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
-                        {regionData.regionalUnits.length > 0 && (
-                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                            <label className="text-sm font-medium text-indigo-700 block mb-2">
-                              Περιφ. Ενότητες:
-                            </label>
-                            <div className="flex flex-wrap gap-1">
-                              {regionData.regionalUnits.map((unit, idx) => (
-                                <Badge key={idx} variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
-                                  {unit}
-                                </Badge>
-                              ))}
+                          ))}
+                          {regionData.regions.length === 0 && (regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0) && (
+                            <div className="text-sm">
+                              {regionData.regionalUnits.length > 0 && (
+                                <div className="text-green-700">
+                                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
+                                  <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
+                                </div>
+                              )}
+                              {regionData.municipalities.length > 0 && (
+                                <div className="text-green-700 mt-2">
+                                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
+                                  <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        )}
-                        {regionData.municipalities.length > 0 && (
-                          <div className="bg-white/70 p-4 rounded-lg border border-indigo-200">
-                            <label className="text-sm font-medium text-indigo-700 block mb-2">
-                              Δήμοι:
-                            </label>
-                            <div className="flex flex-wrap gap-1">
-                              {regionData.municipalities.map((muni, idx) => (
-                                <Badge key={idx} variant="secondary" className="bg-teal-100 text-teal-800 text-xs">
-                                  {muni}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
