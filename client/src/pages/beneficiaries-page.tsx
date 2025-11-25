@@ -1214,38 +1214,23 @@ export default function BeneficiariesPage() {
         onOpenChange={setDetailsModalOpen}
       />
 
-      {/* Create/Edit Modal */}
+      {/* Create New Beneficiary Modal */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
-              {selectedBeneficiary ? (
-                <>
-                  <Edit className="w-5 h-5 text-blue-600" />
-                  Επεξεργασία Δικαιούχου
-                </>
-              ) : (
-                <>
-                  <Plus className="w-5 h-5 text-green-600" />
-                  Νέος Δικαιούχος
-                </>
-              )}
+              <Plus className="w-5 h-5 text-green-600" />
+              Νέος Δικαιούχος
             </DialogTitle>
             <DialogDescription>
-              {selectedBeneficiary
-                ? "Επεξεργαστείτε τα στοιχεία του δικαιούχου και πατήστε αποθήκευση"
-                : "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"}
+              Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο
             </DialogDescription>
           </DialogHeader>
           <BeneficiaryForm
-            beneficiary={selectedBeneficiary}
+            beneficiary={undefined}
             dialogOpen={dialogOpen}
             onSubmit={(data) => {
-              if (selectedBeneficiary) {
-                updateMutation.mutate({ id: selectedBeneficiary.id, data });
-              } else {
-                createMutation.mutate(data);
-              }
+              createMutation.mutate(data);
             }}
             onCancel={() => {
               setDialogOpen(false);
