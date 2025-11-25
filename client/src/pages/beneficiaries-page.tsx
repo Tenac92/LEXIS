@@ -167,6 +167,7 @@ export default function BeneficiariesPage() {
   const [detailsBeneficiary, setDetailsBeneficiary] =
     useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [detailsInitialEditMode, setDetailsInitialEditMode] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
@@ -378,8 +379,10 @@ export default function BeneficiariesPage() {
   });
 
   const handleEdit = (beneficiary: Beneficiary) => {
-    // Redirect edit to the Details Modal which has built-in editing capability
-    handleShowDetails(beneficiary);
+    // Open Details Modal with edit mode active
+    setDetailsBeneficiary(beneficiary);
+    setDetailsInitialEditMode(true);
+    setDetailsModalOpen(true);
   };
 
   const handleDelete = (beneficiary: Beneficiary) => {
@@ -392,6 +395,13 @@ export default function BeneficiariesPage() {
 
   const handleShowDetails = (beneficiary: Beneficiary) => {
     setDetailsBeneficiary(beneficiary);
+    setDetailsInitialEditMode(false);  // Open in view mode
+    setDetailsModalOpen(true);
+  };
+
+  const handleCreateNewBeneficiary = () => {
+    setDetailsBeneficiary(null);  // No beneficiary = create mode
+    setDetailsInitialEditMode(true);  // Start in edit mode for new entry
     setDetailsModalOpen(true);
   };
 
@@ -528,19 +538,10 @@ export default function BeneficiariesPage() {
                     </>
                   )}
                 </Button>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        setSelectedBeneficiary(undefined);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Νέος Δικαιούχος
-                    </Button>
-                  </DialogTrigger>
-                </Dialog>
+                <Button onClick={handleCreateNewBeneficiary}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Νέος Δικαιούχος
+                </Button>
               </div>
             </div>
 
@@ -1200,7 +1201,7 @@ export default function BeneficiariesPage() {
         </Card>
       </div>
 
-      {/* Details Modal */}
+      {/* Details Modal - also handles create and edit */}
       <BeneficiaryDetailsModal
         beneficiary={
           detailsBeneficiary
@@ -1212,33 +1213,12 @@ export default function BeneficiariesPage() {
         }
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
+        initialEditMode={detailsInitialEditMode}
+        onCreateBeneficiary={(data) => {
+          createMutation.mutate(data);
+          setDetailsModalOpen(false);
+        }}
       />
-
-      {/* Create New Beneficiary Modal */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Plus className="w-5 h-5 text-green-600" />
-              Νέος Δικαιούχος
-            </DialogTitle>
-            <DialogDescription>
-              Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο
-            </DialogDescription>
-          </DialogHeader>
-          <BeneficiaryForm
-            beneficiary={undefined}
-            dialogOpen={dialogOpen}
-            onSubmit={(data) => {
-              createMutation.mutate(data);
-            }}
-            onCancel={() => {
-              setDialogOpen(false);
-              setSelectedBeneficiary(undefined);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Existing Payments Modal */}
       <Dialog
