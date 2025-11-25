@@ -739,48 +739,6 @@ export const projectIndexMunis = pgTable(
 );
 
 /**
- * Legacy Beneficiary Table (for backward compatibility during migration)
- */
-export const beneficiariesLegacy = pgTable(
-  "Beneficiary",
-  {
-    id: serial("id").primaryKey(),
-    aa: integer("a / a"), // Serial number
-    region: text("region"),
-    adeia: integer("adeia"), // License/permit number
-    surname: text("surname"),
-    name: text("name"),
-    fathername: text("fathername"),
-    freetext: text("freetext"), // Additional free text
-    afm: integer("afm"), // Tax ID (AFM)
-    date: text("date"), // Date as text
-    monada: text("monada"), // Unit/Organization
-    cengsur1: text("cengsur1"), // Engineer 1 surname
-    cengname1: text("cengname1"), // Engineer 1 name
-    cengsur2: text("cengsur2"), // Engineer 2 surname
-    cengname2: text("cengname2"), // Engineer 2 name
-    onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-    project: integer("project"), // Legacy project reference (MIS code)
-    project_id: integer("project_id").references(() => projects.id, {
-      onDelete: "set null",
-    }), // New project reference by id
-    oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
-    created_at: timestamp("created_at").defaultNow(),
-    updated_at: timestamp("updated_at"),
-  },
-  (table) => ({
-    monadaReference: foreignKey({
-      columns: [table.monada],
-      foreignColumns: [monada.unit],
-    }),
-    projectReference: foreignKey({
-      columns: [table.project],
-      foreignColumns: [projects.mis],
-    }),
-  }),
-);
-
-/**
  * Normalized Project Decisions Table - "Αποφάσεις που τεκμηριώνουν το έργο"
  * Separate table for project decisions with proper foreign key relationships
  */
