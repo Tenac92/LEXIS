@@ -724,6 +724,10 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       monada: assignedMonada
     };
 
+    // Remove geographic_areas from transformedData since it's not part of the database schema
+    // (It's handled by the frontend form but not persisted separately)
+    delete transformedData.geographic_areas;
+
     // If we have financial data, structure it properly for the oikonomika field
     if (req.body.paymentType && req.body.amount && req.body.installment) {
       // Parse European decimal format (e.g., "10.286,06" -> 10286.06)
