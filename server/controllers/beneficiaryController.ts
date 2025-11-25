@@ -1006,6 +1006,7 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
         const startTime = Date.now();
         const beneficiaryCache: any[] = [];
         const employeeCache: any[] = [];
+        const beneficiariesListCache: any[] = []; // For beneficiaries page list
 
         // Fetch beneficiaries with decrypted AFMs for each unit
         for (const unitCode of unitCodes) {
@@ -1032,19 +1033,22 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
 
           if (uniqueBeneficiaryIds.length === 0) continue;
 
-          // Fetch beneficiaries in batches with AFM decryption
+          // Fetch beneficiaries in batches - fetch ALL fields for list cache
           const batchSize = 500;
           for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
             const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
             
+            // Fetch full beneficiary data for list view
             const { data } = await supabase
               .from('beneficiaries')
-              .select('id, afm, surname, name, fathername')
+              .select('id, afm, surname, name, fathername, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash, adeia, onlinefoldernumber')
               .in('id', idBatch);
 
             if (data) {
               for (const b of data) {
                 const decryptedAFM = decryptAFM(b.afm);
+                
+                // Add to AFM autocomplete cache (with decrypted AFM)
                 if (decryptedAFM) {
                   beneficiaryCache.push({
                     decryptedAFM,
@@ -1055,6 +1059,13 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
                     timestamp: Date.now()
                   });
                 }
+                
+                // Add to beneficiaries list cache (with decrypted AFM for display)
+                beneficiariesListCache.push({
+                  ...b,
+                  afm: decryptedAFM || '***ERROR***',
+                  monada: unitCode
+                });
               }
             }
           }
@@ -1084,12 +1095,16 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
           }
         }
 
-        // Store in cache
+        // Store in AFM autocomplete cache
         setCachedAFMData(userUnits, beneficiaryCache, employeeCache);
+        
+        // Store in beneficiaries list cache (for faster page loading)
+        setCachedBeneficiaries(userUnits, beneficiariesListCache);
+        
         setLoadingState(userUnits, false);
 
         const elapsed = Date.now() - startTime;
-        console.log(`[Prefetch] COMPLETED in ${elapsed}ms - ${beneficiaryCache.length} beneficiaries, ${employeeCache.length} employees cached for units: ${userUnits.join(', ')}`);
+        console.log(`[Prefetch] COMPLETED in ${elapsed}ms - ${beneficiaryCache.length} AFM entries, ${beneficiariesListCache.length} list entries, ${employeeCache.length} employees cached for units: ${userUnits.join(', ')}`);
       } catch (error) {
         console.error('[Prefetch] Background prefetch error:', error);
         setLoadingState(userUnits, false);
