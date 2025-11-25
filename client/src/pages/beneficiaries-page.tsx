@@ -378,8 +378,8 @@ export default function BeneficiariesPage() {
   });
 
   const handleEdit = (beneficiary: Beneficiary) => {
-    setSelectedBeneficiary(beneficiary);
-    setDialogOpen(true);
+    // Redirect edit to the Details Modal which has built-in editing capability
+    handleShowDetails(beneficiary);
   };
 
   const handleDelete = (beneficiary: Beneficiary) => {
