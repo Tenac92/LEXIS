@@ -61,7 +61,7 @@ interface User {
 }
 
 interface Unit {
-  id: string;
+  id: number;
   unit: number;
   unit_name: any;
   name: string;
@@ -449,16 +449,13 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    {allUnits.map((unit) => {
-                      // Filter to show only user's assigned units
-                      const unitNum = typeof unit.unit === 'string' ? parseInt(unit.unit, 10) : unit.unit;
-                      const isUserUnit = user?.unit_id?.includes(unitNum);
-                      return isUserUnit ? (
+                    {allUnits
+                      .filter((unit) => user?.unit_id?.includes(unit.unit))
+                      .map((unit) => (
                         <SelectItem key={unit.unit} value={unit.unit.toString()}>
                           {unit.name}
                         </SelectItem>
-                      ) : null;
-                    })}
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
