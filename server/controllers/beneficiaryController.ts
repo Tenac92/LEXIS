@@ -479,23 +479,52 @@ router.get('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       });
     }
 
-    console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} fetching beneficiary ${id} - authorized for units: ${authorizedUnitCodes.join(', ')}`);
+    console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} fetching beneficiary ${id} - authorized for units: ${authorizedUnitCodes.join(', ')} (unit IDs: ${userUnits.join(', ')})`);
     const beneficiary = await storage.getBeneficiaryById(id);
     
     if (!beneficiary) {
       return res.status(404).json({ message: 'Beneficiary not found' });
     }
 
-    // SECURITY: Verify user has access to this beneficiary's unit
-    const beneficiaryMonada = (beneficiary as any).monada;
-    if (!authorizedUnitCodes.includes(beneficiaryMonada)) {
-      console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} denied access to beneficiary ${id} - unit ${beneficiaryMonada} not in authorized units`);
+    // SECURITY: Verify user has access to this beneficiary through their payments → project_index → monada
+    // The unit association comes through payments, not directly on the beneficiary
+    const { data: payments, error: paymentsError } = await supabase
+      .from('beneficiary_payments')
+      .select(`
+        id,
+        project_index_id,
+        project_index!inner(
+          monada_id
+        )
+      `)
+      .eq('beneficiary_id', id);
+    
+    if (paymentsError) {
+      console.error(`[Beneficiaries] Error fetching payments for authorization:`, paymentsError);
+      return res.status(500).json({ message: 'Error verifying access' });
+    }
+
+    // Get unique monada_ids from payments
+    const beneficiaryMonadaIds = [...new Set(
+      (payments || [])
+        .map((p: any) => p.project_index?.monada_id)
+        .filter((id: number | null) => id !== null && id !== undefined)
+    )];
+
+    console.log(`[Beneficiaries] Beneficiary ${id} is associated with monada IDs:`, beneficiaryMonadaIds);
+
+    // Check if user has access to any of the beneficiary's units
+    const hasAccess = beneficiaryMonadaIds.length === 0 || 
+      beneficiaryMonadaIds.some((monadaId: number) => userUnits.includes(monadaId));
+    
+    if (!hasAccess) {
+      console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} denied access to beneficiary ${id} - user units [${userUnits.join(', ')}] not in beneficiary units [${beneficiaryMonadaIds.join(', ')}]`);
       return res.status(403).json({
         message: 'Δεν έχετε πρόσβαση σε αυτόν τον δικαιούχο'
       });
     }
     
-    console.log(`[Beneficiaries] SECURITY: Access granted to beneficiary ${id} in unit ${beneficiaryMonada}`);
+    console.log(`[Beneficiaries] SECURITY: Access granted to beneficiary ${id} - user has access to one of the beneficiary's units`);
     res.json(beneficiary);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiary by ID:', error);
