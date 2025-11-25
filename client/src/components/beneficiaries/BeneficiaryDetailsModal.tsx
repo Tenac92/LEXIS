@@ -165,15 +165,20 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  const selectedEngineer = engineers.find((eng) => eng.id === value);
+  const selectedEngineer = value && engineers?.length > 0 
+    ? engineers.find((eng) => eng?.id === value)
+    : null;
   
   const filteredEngineers = useMemo(() => {
+    if (!Array.isArray(engineers) || engineers.length === 0) return [];
     if (!searchTerm) return engineers;
+    
     const term = searchTerm.toLowerCase();
-    return engineers.filter((eng: any) => 
-      `${eng.surname} ${eng.name}`.toLowerCase().includes(term) ||
-      `${eng.name} ${eng.surname}`.toLowerCase().includes(term)
-    );
+    return engineers.filter((eng: any) => {
+      const fullName = `${eng?.surname || ''} ${eng?.name || ''}`.toLowerCase();
+      const reverseName = `${eng?.name || ''} ${eng?.surname || ''}`.toLowerCase();
+      return fullName.includes(term) || reverseName.includes(term);
+    });
   }, [engineers, searchTerm]);
   
   return (
@@ -186,29 +191,37 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
           className="w-full justify-between"
           data-testid={testId}
         >
-          {selectedEngineer 
-            ? `${selectedEngineer.surname} ${selectedEngineer.name}`
-            : placeholder}
+          <span className="truncate">
+            {selectedEngineer 
+              ? `${selectedEngineer.surname} ${selectedEngineer.name}`
+              : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
-        <Command shouldFilter={false}>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command>
           <CommandInput 
-            placeholder="Αναζήτηση μηχανικού..." 
+            placeholder="Αναζήτηση..." 
             value={searchTerm}
             onValueChange={setSearchTerm}
+            className="h-9"
           />
           <CommandList>
-            <CommandEmpty>Δεν βρέθηκαν μηχανικοί</CommandEmpty>
+            {filteredEngineers.length === 0 && searchTerm === "" && (!Array.isArray(engineers) || engineers.length === 0) ? (
+              <CommandEmpty>Φόρτωση μηχανικών...</CommandEmpty>
+            ) : filteredEngineers.length === 0 ? (
+              <CommandEmpty>Δεν βρέθηκαν μηχανικοί</CommandEmpty>
+            ) : null}
             <CommandGroup>
               <CommandItem
-                value="none"
+                value="_none"
                 onSelect={() => {
                   onValueChange(null);
                   setOpen(false);
                   setSearchTerm("");
                 }}
+                className="cursor-pointer"
               >
                 <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
                 Κανένας
@@ -222,6 +235,7 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
                     setOpen(false);
                     setSearchTerm("");
                   }}
+                  className="cursor-pointer"
                 >
                   <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
                   {eng.surname} {eng.name}
