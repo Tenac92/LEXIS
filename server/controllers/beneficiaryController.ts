@@ -10,7 +10,8 @@ import {
   setCachedAFMData, 
   setLoadingState, 
   isLoading as isCacheLoading,
-  getCacheStats 
+  getCacheStats,
+  invalidateAFMCache
 } from '../utils/afm-cache';
 
 export const router = Router();
@@ -47,14 +48,17 @@ function setCachedBeneficiaries(unitIds: number[], data: any[]): void {
 }
 
 // Clear cache for specific units (call after create/update/delete)
+// Clears BOTH the beneficiaries list cache AND the AFM autocomplete cache
 export function invalidateBeneficiariesCache(unitIds?: number[]): void {
   if (unitIds) {
     const key = getCacheKey(unitIds);
     beneficiariesCache.delete(key);
-    console.log(`[Beneficiaries] CACHE INVALIDATED for units: ${unitIds.join(', ')}`);
+    invalidateAFMCache(unitIds); // Also clear AFM cache
+    console.log(`[Beneficiaries] BOTH CACHES INVALIDATED for units: ${unitIds.join(', ')}`);
   } else {
     beneficiariesCache.clear();
-    console.log('[Beneficiaries] CACHE CLEARED (all units)');
+    invalidateAFMCache(); // Clear all AFM cache
+    console.log('[Beneficiaries] BOTH CACHES CLEARED (all units)');
   }
 }
 
