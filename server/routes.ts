@@ -68,6 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: budgetNotificationsRouter } = await import('./controllers/budgetNotificationsController');
   app.use('/api/budget-notifications', budgetNotificationsRouter);
   
+  // Register notifications router for budget reallocation requests
+  const { default: notificationsRouter } = await import('./routes/api/notifications');
+  app.use('/api/notifications', notificationsRouter);
+  
   // Project Index endpoint - get project_index record by ID
   app.get('/api/project-index/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
