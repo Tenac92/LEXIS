@@ -1068,7 +1068,6 @@ router.post(
                 surname: recipient.lastname,
                 name: recipient.firstname,
                 fathername: recipient.fathername,
-                region: "1", // Region should be text according to schema
                 date: new Date().toISOString().split("T")[0],
                 created_at: now,
                 updated_at: now,
@@ -2895,7 +2894,6 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
                 name: recipient.firstname,
                 surname: recipient.lastname,
                 fathername: recipient.fathername || null,
-                region: "1",
                 date: new Date().toISOString().split("T")[0],
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
