@@ -57,6 +57,8 @@ Preferred communication style: Simple, everyday language.
 - **Bundle Optimization**: Vite-based code splitting.
 - **AFM Search**: Reduced batch sizes, early exit logic during decryption, and optimized column selection.
 - **Background AFM Prefetch**: On login and app load, the system prefetches and caches all decrypted AFMs in the background. This makes autocomplete searches instant when creating documents, as data is already in memory. The cache persists for 10 minutes server-side and uses React Query client-side caching (5 min stale, 10 min gc). Falls back to regular search if cache is not available.
+- **Reference Data Cache**: Static reference data (Monada units, event_types, expenditure_types) is cached in memory with 10-minute TTL. Preloaded on server startup, reducing repeated database queries for unchanging reference data.
+- **Project Loading Optimization**: The `/api/projects-working` endpoint now queries only unit-specific project IDs first, then fetches those specific projects. Combined with cached reference data, this significantly reduces database load. The `listProjects` function similarly fetches only project_index rows for the current page's projects.
 
 # External Dependencies
 
