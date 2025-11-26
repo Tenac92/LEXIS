@@ -2950,6 +2950,13 @@ export function CreateDocumentDialog({
                             if (!unitInitializationRef.current.isCompleted) {
                               unitInitializationRef.current.isCompleted = true;
                             }
+                            
+                            // CRITICAL: Also update unitAutoSelectionRef to track manual selections
+                            // This ensures the selection persists through session refresh
+                            unitAutoSelectionRef.current = {
+                              hasSelected: true,
+                              selectedUnit: value,
+                            };
 
                             // Always save the form context after unit change
                             const formValues = form.getValues();
