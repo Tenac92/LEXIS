@@ -389,6 +389,7 @@ router.post(
         esdian,
         director_signature,
         region,
+        needs_xrimatodotisi = false, // Flag for documents exceeding Κατανομή έτους budget
       } = req.body;
 
       console.log("[DocumentsController] V2 Request summary:", {
@@ -883,6 +884,7 @@ router.post(
         region: regionJsonb, // Geographic region data (parsed from Region|RegionalUnit|Municipality format)
         created_at: now,
         updated_at: now,
+        needs_xrimatodotisi: needs_xrimatodotisi === true, // Flag for documents exceeding Κατανομή έτους budget (blocks DOCX export)
       };
 
       console.log(
@@ -3169,6 +3171,67 @@ router.get(
       if (!document) {
         console.error("[DocumentsController] Document not found:", id);
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      // BUDGET VALIDATION CHECK: Block DOCX export if document needs χρηματοδότηση approval
+      // This happens when the document was saved while exceeding Κατανομή έτους budget
+      if (document.needs_xrimatodotisi === true) {
+        console.log("[DocumentsController] Export blocked - document needs χρηματοδότηση approval (saved flag):", id);
+        return res.status(403).json({ 
+          error: "DOCX export blocked",
+          message: "Δεν είναι δυνατή η εξαγωγή DOCX. Το έγγραφο χρειάζεται έγκριση χρηματοδότησης επειδή υπερβαίνει την κατανομή έτους.",
+          code: "NEEDS_XRIMATODOTISI"
+        });
+      }
+
+      // REAL-TIME BUDGET VALIDATION: Also check current budget state for documents without the flag
+      // This handles older documents or edited documents where the flag wasn't set
+      if (document.project_index_id && document.total_amount) {
+        try {
+          // Get the project MIS from project_index
+          const { data: projectIndexData } = await supabase
+            .from("project_index")
+            .select("project_id, Projects:project_id(mis)")
+            .eq("id", document.project_index_id)
+            .single();
+          
+          const projectsData = projectIndexData?.Projects as any;
+          if (projectsData?.mis) {
+            const projectMis = projectsData.mis;
+            const documentAmount = parseFloat(document.total_amount) || 0;
+            
+            // Fetch current budget for the project
+            const { data: budgetData } = await supabase
+              .from("Budget")
+              .select("katanomes_etous, ethsia_pistosi, user_view")
+              .eq("mis", projectMis)
+              .single();
+            
+            if (budgetData) {
+              const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
+              const userView = parseFloat(budgetData.user_view) || 0;
+              
+              // Check if document amount + current spending exceeds Κατανομή
+              // Note: The document is already included in user_view, so we just check if user_view > katanomesEtous
+              if (userView > katanomesEtous) {
+                console.log("[DocumentsController] Export blocked - current budget exceeds Κατανομή έτους:", {
+                  id,
+                  katanomesEtous,
+                  userView,
+                  documentAmount
+                });
+                return res.status(403).json({ 
+                  error: "DOCX export blocked",
+                  message: "Δεν είναι δυνατή η εξαγωγή DOCX. Ο προϋπολογισμός υπερβαίνει την κατανομή έτους. Απαιτείται έγκριση χρηματοδότησης.",
+                  code: "NEEDS_XRIMATODOTISI"
+                });
+              }
+            }
+          }
+        } catch (budgetCheckError) {
+          console.warn("[DocumentsController] Failed to validate budget for export:", budgetCheckError);
+          // Continue with export if budget check fails - don't block on validation errors
+        }
       }
 
       // Prepare document data with user name and contact information

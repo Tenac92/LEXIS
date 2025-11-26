@@ -178,6 +178,23 @@ const DocumentCard = memo(function DocumentCard({
       );
 
       if (!response.ok) {
+        // Check for budget validation block (403 with NEEDS_XRIMATODOTISI code)
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json();
+            if (errorData.code === "NEEDS_XRIMATODOTISI") {
+              toast({
+                title: "Εξαγωγή DOCX Μπλοκαρισμένη",
+                description: errorData.message || "Το έγγραφο χρειάζεται έγκριση χρηματοδότησης για εξαγωγή.",
+                variant: "destructive",
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse error response:", parseError);
+          }
+        }
         const errorText = await response.text();
         console.error("Export failed:", errorText);
         throw new Error("Failed to export document");

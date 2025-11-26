@@ -2488,6 +2488,9 @@ export function CreateDocumentDialog({
                 (field) => field.trim() !== "",
               ),
         director_signature: data.director_signature || null,
+        // BUDGET FLAG: Set to true if document is saved while exceeding Κατανομή έτους
+        // This blocks DOCX export until χρηματοδότηση is approved
+        needs_xrimatodotisi: localBudgetValidation?.budgetType === 'katanomi' || false,
       };
 
       // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ
