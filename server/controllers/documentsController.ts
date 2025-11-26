@@ -884,7 +884,6 @@ router.post(
         region: regionJsonb, // Geographic region data (parsed from Region|RegionalUnit|Municipality format)
         created_at: now,
         updated_at: now,
-        needs_xrimatodotisi: needs_xrimatodotisi === true, // Flag for documents exceeding Κατανομή έτους budget (blocks DOCX export)
       };
 
       console.log(
