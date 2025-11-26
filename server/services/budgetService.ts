@@ -468,9 +468,8 @@ export class BudgetService {
         };
       }
 
-      // Parse MIS based on format
-      let misToSearch: string | number = mis;
-      let numericalMis: number | null = null;
+      // Parse MIS based on format - we need to resolve to project_id for querying project_budget
+      let projectIdToUse: number | null = null;
       
       // Check if MIS is numeric or follows the pattern of project codes
       const isNumericString = /^\d+$/.test(mis);
@@ -495,72 +494,58 @@ export class BudgetService {
             console.error(`[BudgetService] Validation - Supabase error looking up project: ${projectError.message}`);
           }
             
-          if (projectData?.mis) {
-            console.log(`[BudgetService] Validation - Found project with numeric MIS ${projectData.mis} for project code ${mis}`);
-            // Convert to number since MIS is now int4 in the database
-            numericalMis = parseInt(projectData.mis.toString());
-            misToSearch = String(numericalMis); // Convert to string for consistency in search
+          if (projectData?.id) {
+            console.log(`[BudgetService] Validation - Found project ID ${projectData.id} for project code ${mis}`);
+            // Use the project ID (not MIS) for querying project_budget
+            projectIdToUse = projectData.id;
           } else {
-            console.log(`[BudgetService] Validation - No project found with ID/code: ${mis}, will try to find by direct match`);
+            console.log(`[BudgetService] Validation - No project found with code: ${mis}`);
           }
         } catch (projectLookupError) {
-          console.log(`[BudgetService] Validation - Error looking up project by ID/code ${mis}:`, projectLookupError);
-          // Continue with other strategies if lookup fails
+          console.log(`[BudgetService] Validation - Error looking up project by code ${mis}:`, projectLookupError);
         }
       }
       
-      // CASE 2: Numeric MIS (either direct input or found from case 1)
-      if (isNumericString || numericalMis !== null) {
-        // If we don't already have a numerical MIS from case 1, parse it now
-        if (numericalMis === null) {
-          numericalMis = parseInt(mis);
-          misToSearch = String(numericalMis); // Convert to string for consistency in search
-        }
-        console.log(`[BudgetService] Validation - Using numerical MIS: ${misToSearch}`);
-      } else {
-        console.log(`[BudgetService] Validation - Using original MIS string: ${misToSearch}`);
+      // CASE 2: Numeric input - this is already the project_id (passed from frontend)
+      if (isNumericString && projectIdToUse === null) {
+        projectIdToUse = parseInt(mis);
+        console.log(`[BudgetService] Validation - Using numeric input as project_id: ${projectIdToUse}`);
       }
       
-      // Try to get current budget data with the determined MIS value
-      let { data: budgetData, error } = await supabase
-        .from('project_budget')
-        .select('*')
-        .eq('mis', misToSearch)
-        .single();
-      
-      if (error) {
-        console.log(`[BudgetService] Validation - Error fetching budget data: ${error.message}`);
-        
-        // If it's just a "not found" error, try to use the original MIS value as fallback
-        if (error.code === 'PGRST116' && error.message.includes('no rows')) {
-          console.log(`[BudgetService] Validation - No budget found with converted MIS, trying original: ${mis}`);
-          
-          // Try original MIS as fallback
-          const fallbackResult = await supabase
-            .from('project_budget')
-            .select('*')
-            .eq('mis', mis)
-            .single();
-            
-          if (!fallbackResult.error) {
-            console.log(`[BudgetService] Validation - Found budget with original MIS: ${mis}`);
-            budgetData = fallbackResult.data;
-            error = null;
-          } else {
-            console.log(`[BudgetService] Validation - No budget found with original MIS either: ${mis}`);
-          }
-        }
-      }
-      
-      // If budget data still not found after all attempts
-      if (!budgetData) {
-        console.log(`[BudgetService] Validation - Budget not found for MIS: ${misToSearch}`);
+      if (projectIdToUse === null) {
+        console.log(`[BudgetService] Validation - Could not determine project_id from: ${mis}`);
         return {
           status: 'error',
           canCreate: false,
           message: 'Δεν βρέθηκαν στοιχεία προϋπολογισμού για το έργο',
           metadata: {
-            details: `No budget data found for MIS: ${misToSearch}`
+            details: `Could not resolve project ID from: ${mis}`
+          }
+        };
+      }
+      
+      // Query project_budget using project_id
+      console.log(`[BudgetService] Validation - Querying project_budget with project_id: ${projectIdToUse}`);
+      
+      let { data: budgetData, error } = await supabase
+        .from('project_budget')
+        .select('*')
+        .eq('project_id', projectIdToUse)
+        .single();
+      
+      if (error) {
+        console.log(`[BudgetService] Validation - Error fetching budget data: ${error.message}`);
+      }
+      
+      // If budget data still not found after all attempts
+      if (!budgetData) {
+        console.log(`[BudgetService] Validation - Budget not found for project_id: ${projectIdToUse}`);
+        return {
+          status: 'error',
+          canCreate: false,
+          message: 'Δεν βρέθηκαν στοιχεία προϋπολογισμού για το έργο',
+          metadata: {
+            details: `No budget data found for project_id: ${projectIdToUse}`
           }
         };
       }
