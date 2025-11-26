@@ -6,7 +6,7 @@ export interface UserDetails {
   department?: string;
   descr?: string;
   details?: {
-    gender?: 'male' | 'female';
+    gender?: "male" | "female";
     specialty?: string;
   };
 }
@@ -15,6 +15,7 @@ export interface UnitDetails {
   unit: string;
   name?: string;
   unit_name?: {
+    title: string;
     name: string;
     prop: string;
     propgen?: string; // Genitive case (γενική πτώση) for ΕΚΤΟΣ ΕΔΡΑΣ documents
