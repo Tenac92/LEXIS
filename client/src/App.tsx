@@ -10,7 +10,6 @@ import DocumentsPage from "@/pages/documents-page";
 import ProjectsPage from "@/pages/projects";
 import NewProjectPage from "@/pages/projects/new";
 import ProjectDetailsPage from "@/pages/projects/[mis]";
-import EditProjectPage from "@/pages/projects/[mis]/edit";
 import ComprehensiveEditProjectPage from "@/pages/projects/[mis]/ComprehensiveEditFixed";
 import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
