@@ -415,13 +415,15 @@ export function CreateDocumentDialog({
 
     // Check if selectedUnit is a numeric ID
     const parsedUnitId = parseInt(String(selectedUnit));
-    const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(selectedUnit).trim();
+    const isNumericUnit =
+      !isNaN(parsedUnitId) &&
+      String(parsedUnitId) === String(selectedUnit).trim();
 
     // Match by unit ID if numeric, or by unit code if text
     return monada
       .filter((unit: any) => {
-        const matchCondition = isNumericUnit 
-          ? unit.id === parsedUnitId 
+        const matchCondition = isNumericUnit
+          ? unit.id === parsedUnitId
           : unit.unit === selectedUnit;
         return matchCondition && unit.director && unit.director.name;
       })
@@ -445,14 +447,16 @@ export function CreateDocumentDialog({
 
     // Check if selectedUnit is a numeric ID
     const parsedUnitId = parseInt(String(selectedUnit));
-    const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(selectedUnit).trim();
+    const isNumericUnit =
+      !isNaN(parsedUnitId) &&
+      String(parsedUnitId) === String(selectedUnit).trim();
 
     monada.forEach((unit: any) => {
       // Match by unit ID if numeric, or by unit code if text
-      const matchCondition = isNumericUnit 
-        ? unit.id === parsedUnitId 
+      const matchCondition = isNumericUnit
+        ? unit.id === parsedUnitId
         : unit.unit === selectedUnit;
-        
+
       if (
         unit &&
         matchCondition &&
@@ -557,7 +561,6 @@ export function CreateDocumentDialog({
           "Available:",
           data.length,
         );
-        
 
         const filteredUnits = data.filter((item: any) => {
           // If user has no unit restrictions, show all units (admin case)
@@ -568,7 +571,9 @@ export function CreateDocumentDialog({
           // Check if the unit ID matches any of the user's allowed units
           // Handle type mismatches - both could be strings or numbers
           const itemId = Number(item.id);
-          const matches = userUnitIds.some((uid: any) => Number(uid) === itemId);
+          const matches = userUnitIds.some(
+            (uid: any) => Number(uid) === itemId,
+          );
           return matches;
         });
 
@@ -2024,22 +2029,34 @@ export function CreateDocumentDialog({
 
         // Check required fields with specific error messages
         if (!r.firstname || r.firstname.trim() === "") {
-          throw new Error(`Δικαιούχος #${index + 1}: Το όνομα είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το όνομα είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`,
+          );
         }
         if (!r.lastname || r.lastname.trim() === "") {
-          throw new Error(`Δικαιούχος #${index + 1}: Το επώνυμο είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το επώνυμο είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`,
+          );
         }
         if (!r.afm || r.afm.trim() === "") {
-          throw new Error(`Δικαιούχος #${index + 1}: Το ΑΦΜ είναι υποχρεωτικό.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ΑΦΜ είναι υποχρεωτικό.`,
+          );
         }
         if (r.afm.trim().length !== 9) {
-          throw new Error(`Δικαιούχος #${index + 1}: Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία.`,
+          );
         }
         if (typeof r.amount !== "number" || r.amount <= 0) {
-          throw new Error(`Δικαιούχος #${index + 1}: Το ποσό πρέπει να είναι μεγαλύτερο από 0.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ποσό πρέπει να είναι μεγαλύτερο από 0.`,
+          );
         }
         if (!isEktosEdras && (!r.installments || r.installments.length === 0)) {
-          throw new Error(`Δικαιούχος #${index + 1}: Πρέπει να επιλέξετε τουλάχιστον μία δόση.`);
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Πρέπει να επιλέξετε τουλάχιστον μία δόση.`,
+          );
         }
       }
 
@@ -2077,10 +2094,13 @@ export function CreateDocumentDialog({
       // Validate that all installments have amounts entered (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
       if (data.expenditure_type !== EKTOS_EDRAS_TYPE) {
         console.log("[HandleSubmit] Checking installment amounts...");
-        
+
         // Find recipients with missing installment amounts
-        const recipientsWithMissingAmounts: { index: number; missingInstallments: string[] }[] = [];
-        
+        const recipientsWithMissingAmounts: {
+          index: number;
+          missingInstallments: string[];
+        }[] = [];
+
         data.recipients.forEach((recipient, index) => {
           console.log(
             `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
@@ -2089,14 +2109,14 @@ export function CreateDocumentDialog({
               installmentAmounts: recipient.installmentAmounts,
             },
           );
-          
+
           const missingInstallments: string[] = [];
           recipient.installments.forEach((installment) => {
-            const hasAmount = 
+            const hasAmount =
               recipient.installmentAmounts &&
               typeof recipient.installmentAmounts[installment] === "number" &&
               recipient.installmentAmounts[installment] > 0;
-            
+
             console.log(
               `[HandleSubmit] Installment ${installment} validation:`,
               {
@@ -2106,12 +2126,12 @@ export function CreateDocumentDialog({
                 hasAmount: hasAmount,
               },
             );
-            
+
             if (!hasAmount) {
               missingInstallments.push(installment);
             }
           });
-          
+
           if (missingInstallments.length > 0) {
             recipientsWithMissingAmounts.push({ index, missingInstallments });
           }
@@ -2121,13 +2141,13 @@ export function CreateDocumentDialog({
           "[HandleSubmit] Recipients with missing amounts:",
           recipientsWithMissingAmounts,
         );
-        
+
         if (recipientsWithMissingAmounts.length > 0) {
           const firstMissing = recipientsWithMissingAmounts[0];
           const recipientName = `${data.recipients[firstMissing.index].firstname} ${data.recipients[firstMissing.index].lastname}`;
           const missingList = firstMissing.missingInstallments.join(", ");
           throw new Error(
-            `Ο δικαιούχος "${recipientName}" έχει επιλεγμένες δόσεις χωρίς ποσά: ${missingList}. Παρακαλώ συμπληρώστε το ποσό για κάθε δόση.`
+            `Ο δικαιούχος "${recipientName}" έχει επιλεγμένες δόσεις χωρίς ποσά: ${missingList}. Παρακαλώ συμπληρώστε το ποσό για κάθε δόση.`,
           );
         }
       }
@@ -2270,7 +2290,7 @@ export function CreateDocumentDialog({
             const quarterNumbers = r.installments.map((q) =>
               q.replace("ΤΡΙΜΗΝΟ ", ""),
             );
-            
+
             // Rebuild installmentAmounts from ONLY the selected installments
             // This prevents stale data from previously selected but now unselected installments
             const quarterAmountsWithNumbers: Record<string, number> = {};
@@ -2315,8 +2335,12 @@ export function CreateDocumentDialog({
               accommodation_expenses: r.accommodation_expenses || 0,
               kilometers_traveled: r.kilometers_traveled || 0,
               tickets_tolls_rental: r.tickets_tolls_rental || 0,
-              tickets_tolls_rental_entries: r.tickets_tolls_rental_entries || [], // Include array of entries
-              net_payable: r.net_payable !== undefined && r.net_payable !== null ? r.net_payable : parseFloat(r.amount.toString()),
+              tickets_tolls_rental_entries:
+                r.tickets_tolls_rental_entries || [], // Include array of entries
+              net_payable:
+                r.net_payable !== undefined && r.net_payable !== null
+                  ? r.net_payable
+                  : parseFloat(r.amount.toString()),
               amount: parseFloat(r.amount.toString()),
               secondary_text: r.secondary_text?.trim() || "",
               installment:
@@ -2327,8 +2351,10 @@ export function CreateDocumentDialog({
               // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
               installmentAmounts: Object.fromEntries(
                 r.installments
-                  .map(inst => [inst, r.installmentAmounts?.[inst]])
-                  .filter(([, amount]) => typeof amount === "number" && amount > 0)
+                  .map((inst) => [inst, r.installmentAmounts?.[inst]])
+                  .filter(
+                    ([, amount]) => typeof amount === "number" && amount > 0,
+                  ),
               ),
             };
           }
@@ -2350,8 +2376,10 @@ export function CreateDocumentDialog({
             // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
             installmentAmounts: Object.fromEntries(
               r.installments
-                .map(inst => [inst, r.installmentAmounts?.[inst]])
-                .filter(([, amount]) => typeof amount === "number" && amount > 0)
+                .map((inst) => [inst, r.installmentAmounts?.[inst]])
+                .filter(
+                  ([, amount]) => typeof amount === "number" && amount > 0,
+                ),
             ),
           };
         }),
@@ -2950,7 +2978,7 @@ export function CreateDocumentDialog({
                             if (!unitInitializationRef.current.isCompleted) {
                               unitInitializationRef.current.isCompleted = true;
                             }
-                            
+
                             // CRITICAL: Also update unitAutoSelectionRef to track manual selections
                             // This ensures the selection persists through session refresh
                             unitAutoSelectionRef.current = {
@@ -2993,8 +3021,11 @@ export function CreateDocumentDialog({
                                   : "Επιλέξτε μονάδα"
                               }
                             >
-                              {field.value && Array.isArray(units) && units.length > 0
-                                ? units.find((u: any) => u.id === field.value)?.name || field.value
+                              {field.value &&
+                              Array.isArray(units) &&
+                              units.length > 0
+                                ? units.find((u: any) => u.id === field.value)
+                                    ?.name || field.value
                                 : undefined}
                             </SelectValue>
                           </SelectTrigger>
@@ -3092,7 +3123,7 @@ export function CreateDocumentDialog({
                   />
 
                   {/* Subproject Selection */}
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name="subproject_id"
                     render={({ field }) => (
@@ -3120,7 +3151,7 @@ export function CreateDocumentDialog({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
 
                   {currentStep === 1 && selectedProject && (
                     <FormField
@@ -3692,7 +3723,8 @@ export function CreateDocumentDialog({
                                             }
 
                                             const amount =
-                                              parseEuropeanNumber(amountStr) || 0;
+                                              parseEuropeanNumber(amountStr) ||
+                                              0;
                                             const installments =
                                               firstPayment.installment || [
                                                 "ΕΦΑΠΑΞ",
@@ -3885,7 +3917,10 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(displayValue, numericValue) => {
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
                                             field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
@@ -3959,7 +3994,10 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(displayValue, numericValue) => {
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
                                             field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
@@ -4033,7 +4071,10 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(displayValue, numericValue) => {
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
                                             field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
@@ -4105,9 +4146,10 @@ export function CreateDocumentDialog({
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => {
-                                        const currentEntries = form.getValues(
-                                          `recipients.${index}.tickets_tolls_rental_entries`,
-                                        ) || [];
+                                        const currentEntries =
+                                          form.getValues(
+                                            `recipients.${index}.tickets_tolls_rental_entries`,
+                                          ) || [];
                                         form.setValue(
                                           `recipients.${index}.tickets_tolls_rental_entries`,
                                           [...currentEntries, 0],
@@ -4120,10 +4162,11 @@ export function CreateDocumentDialog({
                                     </Button>
                                   </div>
                                   {(() => {
-                                    const entries = form.watch(
-                                      `recipients.${index}.tickets_tolls_rental_entries`,
-                                    ) || [];
-                                    
+                                    const entries =
+                                      form.watch(
+                                        `recipients.${index}.tickets_tolls_rental_entries`,
+                                      ) || [];
+
                                     // If no entries exist, initialize with one empty field
                                     if (entries.length === 0) {
                                       form.setValue(
@@ -4136,31 +4179,45 @@ export function CreateDocumentDialog({
                                     return (
                                       <div className="space-y-1">
                                         {entries.map((entry, entryIndex) => (
-                                          <div key={entryIndex} className="flex gap-1">
+                                          <div
+                                            key={entryIndex}
+                                            className="flex gap-1"
+                                          >
                                             <NumberInput
                                               value={entry}
-                                              onChange={(displayValue, numericValue) => {
-                                                const currentEntries = form.getValues(
-                                                  `recipients.${index}.tickets_tolls_rental_entries`,
-                                                ) || [];
-                                                const newEntries = [...currentEntries];
-                                                newEntries[entryIndex] = numericValue;
+                                              onChange={(
+                                                displayValue,
+                                                numericValue,
+                                              ) => {
+                                                const currentEntries =
+                                                  form.getValues(
+                                                    `recipients.${index}.tickets_tolls_rental_entries`,
+                                                  ) || [];
+                                                const newEntries = [
+                                                  ...currentEntries,
+                                                ];
+                                                newEntries[entryIndex] =
+                                                  numericValue;
                                                 form.setValue(
                                                   `recipients.${index}.tickets_tolls_rental_entries`,
                                                   newEntries,
                                                 );
-                                                
+
                                                 // Calculate sum and update tickets_tolls_rental
-                                                const sum = newEntries.reduce((a, b) => a + b, 0);
+                                                const sum = newEntries.reduce(
+                                                  (a, b) => a + b,
+                                                  0,
+                                                );
                                                 form.setValue(
                                                   `recipients.${index}.tickets_tolls_rental`,
                                                   sum,
                                                 );
-                                                
+
                                                 // Trigger recalculation
-                                                const recipient = form.getValues(
-                                                  `recipients.${index}`,
-                                                );
+                                                const recipient =
+                                                  form.getValues(
+                                                    `recipients.${index}`,
+                                                  );
                                                 const totalExpense =
                                                   (typeof recipient.daily_compensation ===
                                                   "number"
@@ -4218,28 +4275,35 @@ export function CreateDocumentDialog({
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => {
-                                                  const currentEntries = form.getValues(
-                                                    `recipients.${index}.tickets_tolls_rental_entries`,
-                                                  ) || [];
-                                                  const newEntries = currentEntries.filter(
-                                                    (_, i) => i !== entryIndex,
-                                                  );
+                                                  const currentEntries =
+                                                    form.getValues(
+                                                      `recipients.${index}.tickets_tolls_rental_entries`,
+                                                    ) || [];
+                                                  const newEntries =
+                                                    currentEntries.filter(
+                                                      (_, i) =>
+                                                        i !== entryIndex,
+                                                    );
                                                   form.setValue(
                                                     `recipients.${index}.tickets_tolls_rental_entries`,
                                                     newEntries,
                                                   );
-                                                  
+
                                                   // Calculate sum and update tickets_tolls_rental
-                                                  const sum = newEntries.reduce((a, b) => a + b, 0);
+                                                  const sum = newEntries.reduce(
+                                                    (a, b) => a + b,
+                                                    0,
+                                                  );
                                                   form.setValue(
                                                     `recipients.${index}.tickets_tolls_rental`,
                                                     sum,
                                                   );
-                                                  
+
                                                   // Trigger recalculation
-                                                  const recipient = form.getValues(
-                                                    `recipients.${index}`,
-                                                  );
+                                                  const recipient =
+                                                    form.getValues(
+                                                      `recipients.${index}`,
+                                                    );
                                                   const totalExpense =
                                                     (typeof recipient.daily_compensation ===
                                                     "number"
@@ -4295,7 +4359,10 @@ export function CreateDocumentDialog({
                                         ))}
                                         {entries.length > 1 && (
                                           <div className="text-xs text-muted-foreground pt-1 border-t">
-                                            Σύνολο: €{entries.reduce((a, b) => a + b, 0).toFixed(2)}
+                                            Σύνολο: €
+                                            {entries
+                                              .reduce((a, b) => a + b, 0)
+                                              .toFixed(2)}
                                           </div>
                                         )}
                                       </div>
@@ -4908,12 +4975,12 @@ export function CreateDocumentDialog({
 
       // Convert numeric unit ID to string for matching
       const userUnitIdStr = String(userUnitIds[0]);
-      
+
       // Set the unit value immediately without delay
       // Convert user's unit ID to unit name for display
       const userUnitData = units.find((u: any) => u.id === userUnitIdStr);
       const unitValue = userUnitData?.id || "";
-      
+
       if (unitValue) {
         form.setValue("unit", unitValue, {
           shouldDirty: false,
