@@ -255,6 +255,7 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
       const { data: updatedData, error: updateError } = await supabase
         .from('budget_notifications')
         .update({
+          type: notification.type,
           amount: notification.amount,
           current_budget: notification.current_budget,
           ethsia_pistosi: notification.ethsia_pistosi,
