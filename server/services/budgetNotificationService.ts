@@ -200,19 +200,37 @@ export async function validateBudgetAllocation(
  */
 export async function createBudgetNotification(notification: Omit<BudgetNotification, 'id' | 'created_at' | 'updated_at'>): Promise<BudgetNotification | null> {
   try {
-    log(`[Budget] Creating notification for MIS: ${notification.mis}, Type: ${notification.type}`, 'info');
+    log(`[Budget] Creating notification for project identifier: ${notification.mis}, Type: ${notification.type}`, 'info');
 
-    // Determine project_id: if notification has mis, find the project; otherwise use 0
+    // Determine project_id: notification.mis can be either a project_id or a MIS code
+    // First try to find the project by id (since frontend usually passes project_id)
+    // Then fall back to looking up by MIS if that fails
     let projectId = 0;
     if (notification.mis) {
-      const { data: projectData, error: projError } = await supabase
+      // First, try to find by project id directly (most common case from frontend)
+      const { data: projectById, error: idError } = await supabase
         .from('Projects')
-        .select('id')
-        .eq('mis', notification.mis)
+        .select('id, mis')
+        .eq('id', notification.mis)
         .single();
       
-      if (!projError && projectData?.id) {
-        projectId = projectData.id;
+      if (!idError && projectById?.id) {
+        projectId = projectById.id;
+        log(`[Budget] Found project by id: ${projectId}`, 'debug');
+      } else {
+        // Fall back to MIS lookup (for legacy cases)
+        const { data: projectByMis, error: misError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', notification.mis)
+          .single();
+        
+        if (!misError && projectByMis?.id) {
+          projectId = projectByMis.id;
+          log(`[Budget] Found project by MIS: ${projectId}`, 'debug');
+        } else {
+          log(`[Budget] Could not find project for identifier: ${notification.mis}`, 'warn');
+        }
       }
     }
 
