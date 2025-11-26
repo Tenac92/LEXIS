@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -513,16 +514,17 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
               Enter the details for the new user below
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+          <ScrollArea className="flex-1 overflow-hidden">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-4">
+                <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
@@ -708,20 +710,21 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setNewUserDialogOpen(false)}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createUserMutation.isPending}>
-                  {createUserMutation.isPending ? "Creating..." : "Create User"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </ScrollArea>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setNewUserDialogOpen(false)}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createUserMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              {createUserMutation.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -736,16 +739,17 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
               Update the user details below
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+          <ScrollArea className="flex-1 overflow-hidden">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-4">
+                <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
@@ -939,20 +943,21 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditUserDialogOpen(false)}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateUserMutation.isPending}>
-                  {updateUserMutation.isPending ? "Updating..." : "Update User"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </ScrollArea>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditUserDialogOpen(false)}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateUserMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              {updateUserMutation.isPending ? "Updating..." : "Update User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
