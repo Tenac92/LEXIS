@@ -825,6 +825,40 @@ router.post(
         console.log('[DocumentsController] V2 Parsed region data:', regionJsonb);
       }
 
+      // PRE-VALIDATE BUDGET BEFORE CREATING DOCUMENT
+      // This ensures we don't create documents that would exceed budget limits
+      const spendingAmount = parseFloat(String(total_amount)) || 0;
+      if (spendingAmount > 0 && project_id) {
+        console.log('[DocumentsController] V2 Pre-validating budget before document creation');
+        console.log('[DocumentsController] V2 Project ID:', project_id, 'Amount:', spendingAmount);
+        
+        try {
+          const { storage } = await import("../storage");
+          const budgetCheck = await storage.checkBudgetAvailability(project_id, spendingAmount);
+          
+          if (!budgetCheck.isAvailable) {
+            console.log('[DocumentsController] V2 BUDGET PRE-VALIDATION FAILED:', budgetCheck.message);
+            return res.status(400).json({
+              message: "Ανεπαρκής προϋπολογισμός",
+              error: budgetCheck.message,
+              budget_error: true,
+              available_budget: budgetCheck.availableBudget,
+              requested_amount: spendingAmount
+            });
+          }
+          
+          console.log('[DocumentsController] V2 Budget pre-validation PASSED. Available:', budgetCheck.availableBudget);
+        } catch (budgetCheckError) {
+          console.error('[DocumentsController] V2 Error during budget pre-validation:', budgetCheckError);
+          // If we can't validate budget, we should still block the document creation for safety
+          return res.status(500).json({
+            message: "Σφάλμα ελέγχου προϋπολογισμού",
+            error: budgetCheckError instanceof Error ? budgetCheckError.message : "Unknown error",
+            budget_error: true
+          });
+        }
+      }
+
       // Create document with exact schema match and default values where needed
       const documentPayload = {
         unit_id: numericUnitId, // Use resolved numeric unit ID
@@ -1293,7 +1327,55 @@ router.post(
           "[DocumentsController] V2 Error updating budget:",
           budgetError,
         );
-        // Don't fail the document creation if budget update fails, just log the error
+        
+        // Since we have pre-validation, a failure here is unexpected
+        // We should rollback by deleting the document and payments
+        const errorMessage = budgetError instanceof Error ? budgetError.message : "Unknown budget error";
+        
+        // Check if this is a budget exceeded error
+        if (errorMessage.includes('BUDGET_EXCEEDED')) {
+          console.log('[DocumentsController] V2 Budget exceeded - rolling back document creation');
+          
+          try {
+            // Delete beneficiary payments first
+            if (beneficiaryPaymentsIds.length > 0) {
+              await supabase
+                .from("BeneficiaryPayments")
+                .delete()
+                .in("id", beneficiaryPaymentsIds);
+              console.log('[DocumentsController] V2 Rollback: Deleted beneficiary payments:', beneficiaryPaymentsIds);
+            }
+            
+            // Delete employee payments if any
+            if (employeePaymentsIds.length > 0) {
+              await supabase
+                .from("EmployeePayments")
+                .delete()
+                .in("id", employeePaymentsIds);
+              console.log('[DocumentsController] V2 Rollback: Deleted employee payments:', employeePaymentsIds);
+            }
+            
+            // Delete the document
+            await supabase
+              .from("generated_documents")
+              .delete()
+              .eq("id", data.id);
+            console.log('[DocumentsController] V2 Rollback: Deleted document:', data.id);
+            
+          } catch (rollbackError) {
+            console.error('[DocumentsController] V2 Rollback failed:', rollbackError);
+          }
+          
+          // Return error to client
+          return res.status(400).json({
+            message: "Ανεπαρκής προϋπολογισμός",
+            error: errorMessage.replace('BUDGET_EXCEEDED: ', ''),
+            budget_error: true
+          });
+        }
+        
+        // For non-budget errors, log but continue (document already created)
+        console.warn('[DocumentsController] V2 Non-budget error during update, document created but budget not updated');
       }
 
       // Broadcast document update to all connected clients
