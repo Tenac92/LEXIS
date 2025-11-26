@@ -128,12 +128,12 @@ export async function validateBudgetAllocation(
       na853Code = projectData?.na853 || '';
     }
 
-    // Check if requested amount exceeds ethsia_pistosi (funding required)
+    // Check if requested amount exceeds ethsia_pistosi (funding required - xrimatodotisi_request)
     if (requestedAmount > ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
         na853: na853Code,
-        type: 'funding',
+        type: 'xrimatodotisi_request',
         amount: requestedAmount,
         current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
@@ -144,20 +144,20 @@ export async function validateBudgetAllocation(
       return {
         isValid: false,
         requiresNotification: true,
-        notificationType: 'funding',
+        notificationType: 'xrimatodotisi_request',
         message: 'Απαιτείται χρηματοδότηση - το ποσό υπερβαίνει την ετήσια πίστωση',
         currentBudget: availableBudget,
         ethsiaPistosi
       };
     }
 
-    // Check if requested amount exceeds 20% of annual allocation (reallocation required)
+    // Check if requested amount exceeds 20% of annual allocation (reallocation required - anakatanom_request)
     const reallocationThreshold = katanomesEtous * 0.2;
     if (requestedAmount > reallocationThreshold && requestedAmount <= ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
         na853: na853Code,
-        type: 'reallocation',
+        type: 'anakatanom_request',
         amount: requestedAmount,
         current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
@@ -168,7 +168,7 @@ export async function validateBudgetAllocation(
       return {
         isValid: true,
         requiresNotification: true,
-        notificationType: 'reallocation',
+        notificationType: 'anakatanom_request',
         message: 'Απαιτείται ανακατανομή - το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
         currentBudget: availableBudget,
         ethsiaPistosi
@@ -487,7 +487,7 @@ export async function createTestReallocationNotifications(): Promise<void> {
     // Create sample reallocation notification
     const reallocationNotification = await createBudgetNotification({
       mis: projects[0].mis,
-      type: 'reallocation',
+      type: 'anakatanom_request',
       amount: 1500,
       current_budget: 4489,
       ethsia_pistosi: 5000,
@@ -499,7 +499,7 @@ export async function createTestReallocationNotifications(): Promise<void> {
     // Create sample funding notification
     const fundingNotification = await createBudgetNotification({
       mis: projects[1].mis,
-      type: 'funding',
+      type: 'xrimatodotisi_request',
       amount: 12000,
       current_budget: 8000,
       ethsia_pistosi: 10000,
