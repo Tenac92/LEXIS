@@ -28,6 +28,7 @@ router.get('/admin', authenticateSession, async (req: AuthRequest, res: Response
     const notifications = await getAllNotifications();
     
     console.log(`[BudgetNotificationsController] Successfully fetched ${notifications.length} notifications`);
+    console.log('[BudgetNotificationsController] Notification types:', notifications.map(n => ({ id: n.id, type: n.type })));
     
     return res.json(notifications);
 

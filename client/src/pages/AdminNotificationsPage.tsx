@@ -110,6 +110,7 @@ export default function AdminNotificationsPage() {
         
         const data = await response.json();
         console.log('[AdminNotificationsPage] Received notifications:', data);
+        console.log('[AdminNotificationsPage] Notification types:', data.map((n: any) => ({ id: n.id, type: n.type })));
         
         if (!Array.isArray(data)) {
           console.warn('[AdminNotificationsPage] Expected array but got:', typeof data);
@@ -254,7 +255,9 @@ export default function AdminNotificationsPage() {
             ) : (
               <div className="space-y-4">
                 {filteredNotifications.map((notification) => {
+                  console.log(`[AdminNotificationsPage] Rendering notification id=${notification.id}, type="${notification.type}", found style key=${notification.type in notificationStyles}`);
                   const style = notificationStyles[notification.type as keyof typeof notificationStyles] || notificationStyles.default;
+                  console.log(`[AdminNotificationsPage] Applied style for type="${notification.type}":`, style);
                   
                   return (
                     <div 

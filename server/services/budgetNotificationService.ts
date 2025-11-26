@@ -433,6 +433,11 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
 
     log(`[Budget] Successfully fetched ${data?.length || 0} notifications`, 'info');
     
+    // Debug: Log each notification's type
+    (data || []).forEach((notif, i) => {
+      log(`[Budget] Notification ${i}: id=${notif.id}, type="${notif.type}", status="${notif.status}"`, 'debug');
+    });
+    
     // Fetch project details and map project_id to mis and NA853 for backwards compatibility
     const mappedData = await Promise.all(
       (data || []).map(async (notif) => {
