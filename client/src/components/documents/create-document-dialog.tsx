@@ -679,6 +679,8 @@ export function CreateDocumentDialog({
     }
 
     // CRITICAL: Block reinitialization if dialog is already open and in use
+    // Use formData from context (not form.getValues()) since form may not be initialized yet
+    // Only block when we have meaningful form data AND dialog is currently in use
     if (open && currentStep > 0) {
       return;
     }

@@ -748,10 +748,12 @@ export { router as subprojectsRouter };
 /**
  * GET /api/projects/:projectId/subprojects
  * Get all subprojects for a specific project
+ * OPTIMIZED: Uses two-step query to avoid expensive joins
  */
 router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const projectId = parseInt(req.params.projectId);
+    const startTime = Date.now();
     
     if (!projectId || isNaN(projectId)) {
       return res.status(400).json({
@@ -761,7 +763,33 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
 
     log(`[Subprojects] Fetching subprojects for project ID: ${projectId}`);
 
-    // Get subprojects for this project through EPA versions
+    // OPTIMIZED: Step 1 - Get EPA version IDs for this project (simple, fast query)
+    const { data: epaVersions, error: epaError } = await supabase
+      .from('project_budget_versions')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('budget_type', 'ΕΠΑ');
+
+    if (epaError) {
+      log(`[Subprojects] Error fetching EPA versions:`, epaError.message);
+      return res.status(500).json({
+        error: 'Failed to fetch EPA versions'
+      });
+    }
+
+    // If no EPA versions, return empty array immediately
+    if (!epaVersions || epaVersions.length === 0) {
+      log(`[Subprojects] No EPA versions found for project ${projectId} in ${Date.now() - startTime}ms`);
+      return res.json({
+        success: true,
+        subprojects: []
+      });
+    }
+
+    const epaVersionIds = epaVersions.map(v => v.id);
+
+    // OPTIMIZED: Step 2 - Get subprojects for these EPA version IDs with financials
+    // Using .in() instead of inner join for better performance
     const { data: subprojects, error } = await supabase
       .from('Subprojects')
       .select(`
@@ -779,15 +807,9 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
           eligible_public,
           created_at,
           updated_at
-        ),
-        project_budget_versions!inner (
-          id,
-          project_id,
-          budget_type
         )
       `)
-      .eq('project_budget_versions.project_id', projectId)
-      .eq('project_budget_versions.budget_type', 'ΕΠΑ')
+      .in('epa_version_id', epaVersionIds)
       .order('title');
 
     if (error) {
@@ -797,11 +819,30 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId}`);
+    // Transform subprojects to include yearly_budgets for UI compatibility
+    const transformedSubprojects = (subprojects || []).map(subproject => {
+      // Convert subproject_financials array to yearly_budgets object
+      const yearlyBudgets: Record<number, { sdd?: number; edd?: number }> = {};
+      if (Array.isArray(subproject.subproject_financials)) {
+        for (const financial of subproject.subproject_financials) {
+          yearlyBudgets[financial.year] = {
+            sdd: parseFloat(financial.total_public?.toString() || '0') || 0,
+            edd: parseFloat(financial.eligible_public?.toString() || '0') || 0
+          };
+        }
+      }
+      
+      return {
+        ...subproject,
+        yearly_budgets: yearlyBudgets
+      };
+    });
+
+    log(`[Subprojects] Found ${transformedSubprojects.length} subprojects for project ${projectId} in ${Date.now() - startTime}ms`);
 
     res.json({
       success: true,
-      subprojects: subprojects || []
+      subprojects: transformedSubprojects
     });
 
   } catch (error) {

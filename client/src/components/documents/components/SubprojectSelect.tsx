@@ -5,12 +5,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Circle, Loader2, FileText, Calendar, Euro, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ProjectSubproject } from "@shared/schema";
 import { SubprojectSelectionDialog } from "@/components/projects/SubprojectSelectionDialog";
+
+interface SubprojectData {
+  id: number;
+  epa_version_id: number;
+  title: string;
+  description?: string | null;
+  status?: string | null;
+  code?: string;
+  version?: string;
+  type?: string;
+  yearly_budgets?: Record<number, { sdd?: number; edd?: number }>;
+  created_at?: Date | null;
+  updated_at?: Date | null;
+}
 
 interface SubprojectSelectProps {
   projectId: string | null;
-  onSubprojectSelect: (subproject: ProjectSubproject | null) => void;
+  onSubprojectSelect: (subproject: SubprojectData | null) => void;
   selectedSubprojectId?: string | null;
   disabled?: boolean;
 }
@@ -78,7 +91,7 @@ export function SubprojectSelect({
 
   const subprojects = subprojectsData?.subprojects || [];
 
-  const handleSubprojectClick = (subproject: ProjectSubproject) => {
+  const handleSubprojectClick = (subproject: SubprojectData) => {
     if (disabled) return;
 
     const newSelectedId = localSelectedId === String(subproject.id) ? null : String(subproject.id);
@@ -154,7 +167,7 @@ export function SubprojectSelect({
       </div>
       
       <div className="grid gap-3">
-        {subprojects.map((subproject: ProjectSubproject) => {
+        {subprojects.map((subproject: SubprojectData) => {
           const isSelected = localSelectedId === String(subproject.id);
           const currentYear = new Date().getFullYear();
           const yearlyBudget = (subproject.yearly_budgets as any)?.[currentYear] || {};
@@ -188,8 +201,8 @@ export function SubprojectSelect({
                         <Badge variant="outline" className="font-mono text-xs">
                           {subproject.code}
                         </Badge>
-                        <Badge className={cn("text-xs", getStatusColor(subproject.status))}>
-                          {subproject.status}
+                        <Badge className={cn("text-xs", getStatusColor(subproject.status || ""))}>
+                          {subproject.status || "Άγνωστο"}
                         </Badge>
                         {subproject.version && (
                           <Badge variant="secondary" className="text-xs">
