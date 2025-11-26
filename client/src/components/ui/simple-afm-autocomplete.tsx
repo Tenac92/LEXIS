@@ -101,14 +101,24 @@ export function SimpleAFMAutocomplete({
   }, [value]);
   
   // Debounce search term to reduce API calls
+  // OPTIMIZATION: Skip debounce for exact 9-digit AFM (paste operation) for instant response
   useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
     
-    debounceTimerRef.current = setTimeout(() => {
+    // Check if this is a complete 9-digit AFM (likely pasted)
+    const isExactAFM = searchTerm.length === 9 && /^\d{9}$/.test(searchTerm);
+    
+    if (isExactAFM) {
+      // No debounce for exact AFM - search immediately
       setDebouncedSearchTerm(searchTerm);
-    }, 150); // 150ms debounce for faster response
+    } else {
+      // Normal debounce for typing
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedSearchTerm(searchTerm);
+      }, 150); // 150ms debounce for faster response
+    }
     
     return () => {
       if (debounceTimerRef.current) {
@@ -136,65 +146,73 @@ export function SimpleAFMAutocomplete({
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
   
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
-  // Uses cached endpoint first for instant response, falls back to regular search
+  // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
-    queryKey: ['/api/employees/search', debouncedSearchTerm],
+    queryKey: ['/api/employees/search-fast', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       
-      // Try cached endpoint first (instant if prefetch completed)
-      try {
-        const cachedResponse = await fetch(`/api/beneficiaries/search-cached?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`);
-        const cachedData = await cachedResponse.json();
-        
-        if (cachedData.success && cachedData.source === 'cache' && cachedData.data.length > 0) {
-          console.log(`[SimpleAFM] CACHE HIT - Employee results for "${debouncedSearchTerm}":`, cachedData.data.length);
-          return cachedData.data;
-        }
-      } catch (err) {
-        console.log(`[SimpleAFM] Cache check failed for employees, falling back to regular search`);
+      const startTime = performance.now();
+      
+      // Use the optimized fast search endpoint
+      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`);
+      const data = await response.json();
+      
+      const elapsed = Math.round(performance.now() - startTime);
+      
+      if (data.success && data.data.length > 0) {
+        console.log(`[SimpleAFM] Employee search (${data.source}) for "${debouncedSearchTerm}": ${data.data.length} results in ${elapsed}ms`);
+        return data.data;
       }
       
-      // Fallback to regular search if cache miss or empty
-      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
-      const data = await response.json();
-      console.log(`[SimpleAFM] Regular employee search results for "${debouncedSearchTerm}":`, data);
-      return data.success ? data.data : [];
+      // If cache miss (fallback), try regular search only for prefix searches
+      if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
+        console.log(`[SimpleAFM] Cache miss, falling back to regular employee search`);
+        const fallbackResponse = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackData = await fallbackResponse.json();
+        return fallbackData.success ? fallbackData.data : [];
+      }
+      
+      return data.data || [];
     },
     enabled: useEmployeeData && debouncedSearchTerm.length >= 4,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (increased from 30s)
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (increased from 2 min)
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
-  // Uses cached endpoint first for instant response, falls back to regular search
+  // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
-    queryKey: ['/api/beneficiaries/search', debouncedSearchTerm],
+    queryKey: ['/api/beneficiaries/search-fast', debouncedSearchTerm],
     queryFn: async () => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       
-      // Try cached endpoint first (instant if prefetch completed)
-      try {
-        const cachedResponse = await fetch(`/api/beneficiaries/search-cached?afm=${encodeURIComponent(debouncedSearchTerm)}`);
-        const cachedData = await cachedResponse.json();
-        
-        if (cachedData.success && cachedData.source === 'cache' && cachedData.data.length > 0) {
-          console.log(`[SimpleAFM] CACHE HIT - Beneficiary results for "${debouncedSearchTerm}":`, cachedData.data.length);
-          return cachedData.data;
-        }
-      } catch (err) {
-        console.log(`[SimpleAFM] Cache check failed, falling back to regular search`);
+      const startTime = performance.now();
+      
+      // Use the optimized fast search endpoint
+      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+      const data = await response.json();
+      
+      const elapsed = Math.round(performance.now() - startTime);
+      
+      if (data.success && data.data.length > 0) {
+        console.log(`[SimpleAFM] Beneficiary search (${data.source}) for "${debouncedSearchTerm}": ${data.data.length} results in ${elapsed}ms`);
+        return data.data;
       }
       
-      // Fallback to regular search if cache miss or empty
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
-      const data = await response.json();
-      console.log(`[SimpleAFM] Regular beneficiary search results for "${debouncedSearchTerm}":`, data);
-      return data.success ? data.data : [];
+      // If cache miss (fallback), try regular search only for prefix searches
+      if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
+        console.log(`[SimpleAFM] Cache miss, falling back to regular beneficiary search`);
+        const fallbackResponse = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackData = await fallbackResponse.json();
+        return fallbackData.success ? fallbackData.data : [];
+      }
+      
+      return data.data || [];
     },
     enabled: !useEmployeeData && debouncedSearchTerm.length >= 4,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes (increased from 30s)
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (increased from 2 min)
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;

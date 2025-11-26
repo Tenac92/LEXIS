@@ -702,6 +702,167 @@ router.get('/prefetch/stats', authenticateSession, async (req: AuthenticatedRequ
   res.json({ success: true, stats });
 });
 
+// FAST SEARCH: Optimized endpoint that handles both exact 9-digit AFM (hash lookup) and prefix search (cache)
+// This is the preferred endpoint for autocomplete - combines both strategies
+router.get('/search-fast', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { afm, type } = req.query;
+    const startTime = Date.now();
+    
+    if (!afm || typeof afm !== 'string' || afm.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'AFM must be at least 4 characters'
+      });
+    }
+
+    const userUnits = req.user?.unit_id || [];
+    if (userUnits.length === 0) {
+      return res.status(403).json({ success: false, message: 'No assigned units' });
+    }
+
+    const isEmployeeSearch = type === 'employee';
+    const isExactAFM = afm.length === 9 && /^\d{9}$/.test(afm);
+
+    // STRATEGY 1: For exact 9-digit AFM, use hash lookup (instant O(1) database query)
+    if (isExactAFM) {
+      console.log(`[SearchFast] Exact AFM search using hash: ${afm}`);
+      
+      if (isEmployeeSearch) {
+        // Employee search by hash - SECURITY: Filter by user's authorized units
+        const { hashAFM, decryptAFM } = await import('../utils/crypto');
+        const afmHash = hashAFM(afm);
+        
+        // Get unit codes for the user's units (required for security filtering)
+        const unitCodes: string[] = [];
+        for (const unitId of userUnits) {
+          const unitCode = await getUnitCodeById(unitId);
+          if (unitCode) {
+            unitCodes.push(unitCode);
+          }
+        }
+
+        if (unitCodes.length === 0) {
+          console.log('[SearchFast] SECURITY: Could not resolve user unit codes');
+          return res.status(403).json({ success: false, message: 'No authorized units' });
+        }
+
+        const { data, error } = await supabase
+          .from('Employees')
+          .select('id, afm, surname, name, fathername, monada')
+          .eq('afm_hash', afmHash)
+          .in('monada', unitCodes) // SECURITY: Only return employees from user's units
+          .limit(20);
+          
+        if (error) {
+          console.error('[SearchFast] Employee hash lookup error:', error);
+          throw error;
+        }
+
+        const results = (data || []).map(e => ({
+          id: e.id,
+          afm: decryptAFM(e.afm) || afm, // Use input AFM if decryption fails (we know it matches)
+          surname: e.surname,
+          name: e.name,
+          fathername: e.fathername
+        }));
+
+        const elapsed = Date.now() - startTime;
+        console.log(`[SearchFast] Employee hash lookup returned ${results.length} results in ${elapsed}ms (filtered by ${unitCodes.length} units)`);
+
+        return res.json({
+          success: true,
+          source: 'hash',
+          data: results,
+          count: results.length,
+          elapsed
+        });
+      } else {
+        // Beneficiary search by hash
+        const { hashAFM } = await import('../utils/crypto');
+        const afmHash = hashAFM(afm);
+        
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('id, afm, surname, name, fathername')
+          .eq('afm_hash', afmHash)
+          .limit(20);
+          
+        if (error) {
+          console.error('[SearchFast] Beneficiary hash lookup error:', error);
+          throw error;
+        }
+
+        const { decryptAFM } = await import('../utils/crypto');
+        const results = (data || []).map(b => ({
+          id: b.id,
+          afm: decryptAFM(b.afm) || afm, // Use input AFM if decryption fails
+          surname: b.surname,
+          name: b.name,
+          fathername: b.fathername
+        }));
+
+        const elapsed = Date.now() - startTime;
+        console.log(`[SearchFast] Beneficiary hash lookup returned ${results.length} results in ${elapsed}ms`);
+
+        return res.json({
+          success: true,
+          source: 'hash',
+          data: results,
+          count: results.length,
+          elapsed
+        });
+      }
+    }
+
+    // STRATEGY 2: For partial AFM, use cache (instant in-memory search)
+    const cached = getCachedAFMData(userUnits);
+    if (cached) {
+      const searchData = isEmployeeSearch ? cached.employees : cached.beneficiaries;
+      
+      const results = searchData
+        .filter(item => item.decryptedAFM.startsWith(afm))
+        .slice(0, 20)
+        .map(item => ({
+          id: item.beneficiaryId,
+          afm: item.decryptedAFM,
+          surname: item.surname,
+          name: item.name,
+          fathername: item.fathername
+        }));
+
+      const elapsed = Date.now() - startTime;
+      console.log(`[SearchFast] Cache search returned ${results.length} results in ${elapsed}ms for prefix: ${afm}`);
+
+      return res.json({
+        success: true,
+        source: 'cache',
+        data: results,
+        count: results.length,
+        elapsed
+      });
+    }
+
+    // STRATEGY 3: Cache miss - return empty and signal fallback needed
+    console.log(`[SearchFast] Cache MISS for prefix: ${afm}, units: ${userUnits.join(', ')}`);
+    res.json({
+      success: true,
+      source: 'fallback',
+      data: [],
+      count: 0,
+      message: 'Cache not available'
+    });
+
+  } catch (error) {
+    console.error('[SearchFast] Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Search failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Search from prefetched cache (fast path)
 router.get('/search-cached', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
