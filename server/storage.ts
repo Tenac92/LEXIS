@@ -20,6 +20,8 @@ export interface IStorage {
     newAmount: number,
     userId?: number
   ): Promise<void>;
+  checkBudgetAvailability(projectId: number, amount: number): Promise<{ isAvailable: boolean; message: string; availableBudget?: number }>;
+  syncProjectBudgetIds(): Promise<{ synced: number; errors: number }>;
   getBudgetHistory(
     na853?: string, 
     page?: number, 
@@ -280,7 +282,7 @@ export class DatabaseStorage implements IStorage {
       // First, get the project details to find the associated budget record
       const { data: project, error: projectError } = await supabase
         .from('Projects')
-        .select('mis, na853')
+        .select('id, mis, na853')
         .eq('id', projectId)
         .single();
         
@@ -308,6 +310,15 @@ export class DatabaseStorage implements IStorage {
           
         budgetData = fallbackData;
         budgetError = fallbackError;
+        
+        // SYNC FIX: If we found budget by MIS but project_id is missing, update it
+        if (!fallbackError && fallbackData && !fallbackData.project_id) {
+          console.log(`[Storage] SYNC: Updating project_id in project_budget for MIS ${project.mis}`);
+          await supabase
+            .from('project_budget')
+            .update({ project_id: projectId })
+            .eq('id', fallbackData.id);
+        }
       }
       
       if (budgetError || !budgetData) {
@@ -317,8 +328,33 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`[Storage] Found budget record - current user_view: ${budgetData.user_view}`);
       
-      // Calculate new spending amount for both year and current quarter
+      // Calculate budget values
       const currentSpending = parseFloat(String(budgetData.user_view || 0));
+      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
+      const ethsiaPistosi = parseFloat(String(budgetData.ethsia_pistosi || 0));
+      const availableBudget = katanomesEtous - currentSpending;
+      const yearlyAvailable = ethsiaPistosi - currentSpending;
+      
+      // HARD VALIDATION: Only check for spending (positive amounts), not refunds
+      if (amount > 0) {
+        // Check if this spending would exceed the allocated budget (katanomes_etous)
+        if (amount > availableBudget) {
+          const errorMsg = `Ανεπαρκές διαθέσιμο υπόλοιπο κατανομής. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${availableBudget.toFixed(2)}`;
+          console.error(`[Storage] BUDGET BLOCK: ${errorMsg}`);
+          throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
+        }
+        
+        // Check if this spending would exceed the annual allocation (ethsia_pistosi)
+        if (amount > yearlyAvailable) {
+          const errorMsg = `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`;
+          console.error(`[Storage] BUDGET BLOCK: ${errorMsg}`);
+          throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
+        }
+        
+        console.log(`[Storage] Budget validation passed: amount ${amount} <= available ${availableBudget}`);
+      }
+      
+      // Calculate new spending amount for both year and current quarter
       const newSpending = currentSpending + amount;
       
       const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
@@ -343,7 +379,6 @@ export class DatabaseStorage implements IStorage {
       
       // Create budget history entry showing the decrease in available budget (katanomes_etous)
       // When spending increases, available budget decreases
-      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
       const previousAvailableBudget = katanomesEtous - currentSpending;
       const newAvailableBudget = katanomesEtous - newSpending;
       
@@ -391,11 +426,18 @@ export class DatabaseStorage implements IStorage {
       if (oldProjectId && newProjectId && oldProjectId !== newProjectId) {
         console.log(`[Storage] Project changed from ${oldProjectId} to ${newProjectId}`);
         
+        // PRE-VALIDATION: Check if the new project has sufficient budget BEFORE making any changes
+        // This prevents partial state where we removed from old project but can't add to new project
+        const newBudgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
+        if (!newBudgetCheck.isAvailable) {
+          throw new Error(`BUDGET_EXCEEDED: Δεν είναι δυνατή η μεταφορά στο νέο έργο. ${newBudgetCheck.message}`);
+        }
+        
         try {
-          // Remove old amount from old project
+          // Remove old amount from old project (refund - always succeeds)
           await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
           
-          // Add new amount to new project (if this fails, restore the old project)
+          // Add new amount to new project (already validated above)
           try {
             await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
           } catch (newProjectError) {
@@ -405,6 +447,8 @@ export class DatabaseStorage implements IStorage {
               await this.updateProjectBudgetSpending(oldProjectId, oldAmount, documentId, userId);
             } catch (restoreError) {
               console.error(`[Storage] CRITICAL: Failed to restore old project budget:`, restoreError);
+              // Log critical inconsistency for manual resolution
+              await this.logBudgetInconsistency(documentId, oldProjectId, newProjectId, oldAmount, newAmount, 'restore_failed');
             }
             throw newProjectError;
           }
@@ -419,12 +463,27 @@ export class DatabaseStorage implements IStorage {
         console.log(`[Storage] Amount changed from ${oldAmount} to ${newAmount} for project ${oldProjectId}`);
         
         const amountDifference = newAmount - oldAmount;
+        
+        // PRE-VALIDATION: Only validate if amount is increasing (more spending)
+        if (amountDifference > 0) {
+          const budgetCheck = await this.checkBudgetAvailability(oldProjectId, amountDifference);
+          if (!budgetCheck.isAvailable) {
+            throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+          }
+        }
+        
         await this.updateProjectBudgetSpending(oldProjectId, amountDifference, documentId, userId);
         
       }
       // Case 3: Project added (document didn't have a project before)
       else if (!oldProjectId && newProjectId) {
         console.log(`[Storage] Project added: ${newProjectId}`);
+        
+        // PRE-VALIDATION: Check budget availability for new spending
+        const budgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
+        if (!budgetCheck.isAvailable) {
+          throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+        }
         
         await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
         
@@ -433,6 +492,7 @@ export class DatabaseStorage implements IStorage {
       else if (oldProjectId && !newProjectId) {
         console.log(`[Storage] Project removed: ${oldProjectId}`);
         
+        // Refunds always succeed (no validation needed)
         await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
       }
       
@@ -441,6 +501,202 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[Storage] Error in reconcileBudgetOnDocumentEdit:', error);
       throw error;
+    }
+  }
+
+  async checkBudgetAvailability(projectId: number, amount: number): Promise<{ isAvailable: boolean; message: string; availableBudget?: number }> {
+    try {
+      // Get budget data for the project
+      let { data: budgetData, error: budgetError } = await supabase
+        .from('project_budget')
+        .select('*')
+        .eq('project_id', projectId)
+        .single();
+
+      // Fallback to MIS lookup if project_id not found
+      if (budgetError) {
+        const { data: project } = await supabase
+          .from('Projects')
+          .select('mis')
+          .eq('id', projectId)
+          .single();
+
+        if (project?.mis) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('project_budget')
+            .select('*')
+            .eq('mis', project.mis)
+            .single();
+          
+          if (!fallbackError) {
+            budgetData = fallbackData;
+            budgetError = null;
+          }
+        }
+      }
+
+      if (budgetError || !budgetData) {
+        return {
+          isAvailable: false,
+          message: `Δεν βρέθηκε εγγραφή προϋπολογισμού για το έργο ${projectId}`
+        };
+      }
+
+      const currentSpending = parseFloat(String(budgetData.user_view || 0));
+      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
+      const ethsiaPistosi = parseFloat(String(budgetData.ethsia_pistosi || 0));
+      const availableBudget = katanomesEtous - currentSpending;
+      const yearlyAvailable = ethsiaPistosi - currentSpending;
+
+      if (amount > availableBudget) {
+        return {
+          isAvailable: false,
+          message: `Ανεπαρκές διαθέσιμο υπόλοιπο κατανομής. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${availableBudget.toFixed(2)}`,
+          availableBudget
+        };
+      }
+
+      if (amount > yearlyAvailable) {
+        return {
+          isAvailable: false,
+          message: `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`,
+          availableBudget
+        };
+      }
+
+      return {
+        isAvailable: true,
+        message: 'Επαρκές διαθέσιμο υπόλοιπο',
+        availableBudget
+      };
+    } catch (error) {
+      console.error('[Storage] Error checking budget availability:', error);
+      return {
+        isAvailable: false,
+        message: 'Σφάλμα κατά τον έλεγχο διαθεσιμότητας προϋπολογισμού'
+      };
+    }
+  }
+
+  async logBudgetInconsistency(
+    documentId: number,
+    oldProjectId: number,
+    newProjectId: number,
+    oldAmount: number,
+    newAmount: number,
+    errorType: string
+  ): Promise<void> {
+    try {
+      console.error(`[Storage] CRITICAL BUDGET INCONSISTENCY LOGGED:`, {
+        documentId,
+        oldProjectId,
+        newProjectId,
+        oldAmount,
+        newAmount,
+        errorType,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Create a special budget history entry to flag this issue
+      await supabase
+        .from('budget_history')
+        .insert({
+          project_id: oldProjectId,
+          previous_amount: String(oldAmount),
+          new_amount: String(newAmount),
+          change_type: 'inconsistency_error',
+          change_reason: `CRITICAL: Budget reconciliation failed for document ${documentId}. Error: ${errorType}. Manual resolution required.`,
+          document_id: documentId,
+          created_at: new Date().toISOString()
+        });
+    } catch (logError) {
+      console.error('[Storage] Failed to log budget inconsistency:', logError);
+    }
+  }
+
+  async syncProjectBudgetIds(): Promise<{ synced: number; errors: number }> {
+    let synced = 0;
+    let errors = 0;
+    
+    try {
+      console.log('[Storage] Starting project_budget project_id synchronization...');
+      
+      // Find all budget records where project_id is NULL but MIS exists
+      const { data: budgetsWithoutProjectId, error: fetchError } = await supabase
+        .from('project_budget')
+        .select('id, mis, na853')
+        .is('project_id', null);
+      
+      if (fetchError) {
+        console.error('[Storage] Error fetching budgets without project_id:', fetchError);
+        return { synced: 0, errors: 1 };
+      }
+      
+      if (!budgetsWithoutProjectId || budgetsWithoutProjectId.length === 0) {
+        console.log('[Storage] No budget records need project_id synchronization');
+        return { synced: 0, errors: 0 };
+      }
+      
+      console.log(`[Storage] Found ${budgetsWithoutProjectId.length} budget records needing sync`);
+      
+      for (const budget of budgetsWithoutProjectId) {
+        try {
+          // Try to find the project by MIS first, then by NA853
+          let projectId: number | null = null;
+          
+          if (budget.mis) {
+            const { data: projectByMis } = await supabase
+              .from('Projects')
+              .select('id')
+              .eq('mis', budget.mis)
+              .single();
+            
+            if (projectByMis) {
+              projectId = projectByMis.id;
+            }
+          }
+          
+          if (!projectId && budget.na853) {
+            const { data: projectByNa853 } = await supabase
+              .from('Projects')
+              .select('id')
+              .eq('na853', budget.na853)
+              .single();
+            
+            if (projectByNa853) {
+              projectId = projectByNa853.id;
+            }
+          }
+          
+          if (projectId) {
+            const { error: updateError } = await supabase
+              .from('project_budget')
+              .update({ project_id: projectId })
+              .eq('id', budget.id);
+            
+            if (updateError) {
+              console.error(`[Storage] Error updating budget ${budget.id}:`, updateError);
+              errors++;
+            } else {
+              console.log(`[Storage] Synced budget ${budget.id} to project ${projectId}`);
+              synced++;
+            }
+          } else {
+            console.warn(`[Storage] No project found for budget ${budget.id} (MIS: ${budget.mis}, NA853: ${budget.na853})`);
+            errors++;
+          }
+        } catch (budgetError) {
+          console.error(`[Storage] Error processing budget ${budget.id}:`, budgetError);
+          errors++;
+        }
+      }
+      
+      console.log(`[Storage] Project_budget sync complete: ${synced} synced, ${errors} errors`);
+      return { synced, errors };
+      
+    } catch (error) {
+      console.error('[Storage] Error in syncProjectBudgetIds:', error);
+      return { synced, errors: errors + 1 };
     }
   }
 

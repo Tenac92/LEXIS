@@ -417,8 +417,8 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
     // Fetch project details and map project_id to mis and NA853 for backwards compatibility
     const mappedData = await Promise.all(
       (data || []).map(async (notif) => {
-        let na853 = notif.na853 || '';
-        if (!na853 && notif.project_id) {
+        let na853 = '';
+        if (notif.project_id) {
           const { data: projectData } = await supabase
             .from('Projects')
             .select('na853')
