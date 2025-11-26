@@ -1868,12 +1868,15 @@ export function CreateDocumentDialog({
         const willExceedPistosi = (userView + currentAmount) > ethsiaPistosi;
         const willExceedKatanomi = (userView + currentAmount) > katanomesEtous;
         
+        // PRIORITY: Πίστωση ALWAYS takes precedence because it's a hard limit
+        // If Πίστωση is exceeded, user CANNOT proceed - requires Ανακατανομή
+        // If only Κατανομή is exceeded, user can save but DOCX is blocked - requires Χρηματοδότηση
         let budgetType: 'pistosi' | 'katanomi' | null = null;
-        if (willExceedPistosi && !willExceedKatanomi) {
-          // Only pistosi is exceeded - hard block, need ανακατανομή
+        if (willExceedPistosi) {
+          // Πίστωση exceeded = HARD BLOCK, need ανακατανομή (regardless of katanomi status)
           budgetType = 'pistosi';
         } else if (willExceedKatanomi) {
-          // Katanomi is exceeded - can save but no docx, need χρηματοδότηση
+          // Only Κατανομή exceeded (pistosi OK) = SOFT BLOCK, can save but no DOCX, need χρηματοδότηση
           budgetType = 'katanomi';
         }
         
