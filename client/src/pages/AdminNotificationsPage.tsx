@@ -9,12 +9,20 @@ import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-// Extend the BudgetNotification type to include the added properties
-import { BudgetNotification as BaseBudgetNotification } from '@/lib/types';
-
-// Extended type for admin notifications
-interface BudgetNotification extends BaseBudgetNotification {
+interface BudgetNotification {
+  id: number;
+  project_id: number;
+  mis?: number;
   na853?: string | null;
+  type: string;
+  amount: number;
+  current_budget: number;
+  ethsia_pistosi: number;
+  reason?: string;
+  status: string;
+  user_id?: number;
+  created_at: string;
+  updated_at?: string;
   user?: {
     id: number;
     name: string;
