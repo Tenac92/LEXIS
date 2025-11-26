@@ -3,6 +3,19 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  safelist: [
+    // Notification type colors - these are dynamically applied
+    'bg-red-50', 'bg-red-100', 'hover:bg-red-100', 'border-red-300', 'border-red-200',
+    'bg-red-600', 'bg-red-100', 'text-red-800', 'text-white',
+    'bg-amber-50', 'bg-amber-100', 'hover:bg-amber-100', 'border-amber-300',
+    'bg-amber-500', 'text-amber-800',
+    'bg-yellow-50', 'bg-yellow-100', 'hover:bg-yellow-100', 'border-yellow-200',
+    'bg-yellow-100', 'text-yellow-800',
+    'bg-blue-50', 'bg-blue-100', 'hover:bg-blue-100', 'border-blue-200',
+    'bg-blue-100', 'text-blue-800',
+    'bg-gray-50', 'bg-gray-100', 'hover:bg-gray-100', 'border-gray-200',
+    'bg-gray-100', 'text-gray-800',
+  ],
   theme: {
     extend: {
       borderRadius: {
