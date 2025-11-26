@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -514,16 +513,16 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-screen">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
               Enter the details for the new user below
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1 overflow-hidden">
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-4">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                 control={form.control}
                 name="email"
@@ -712,8 +711,8 @@ export default function UsersPage() {
               />
               </form>
             </Form>
-          </ScrollArea>
-          <DialogFooter>
+          </div>
+          <DialogFooter className="mt-4">
             <Button
               variant="outline"
               onClick={() => setNewUserDialogOpen(false)}
@@ -739,16 +738,16 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-screen">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
               Update the user details below
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="flex-1 overflow-hidden">
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-4">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pr-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                 control={form.control}
                 name="email"
@@ -945,8 +944,8 @@ export default function UsersPage() {
               />
               </form>
             </Form>
-          </ScrollArea>
-          <DialogFooter>
+          </div>
+          <DialogFooter className="mt-4">
             <Button
               variant="outline"
               onClick={() => setEditUserDialogOpen(false)}
