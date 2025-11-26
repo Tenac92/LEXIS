@@ -200,9 +200,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Projects by unit endpoint for document creation
+  // OPTIMIZED: Uses reference cache and targeted project queries
   app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { unitName } = req.params;
+      const startTime = Date.now();
       
       if (!unitName) {
         return res.status(400).json({ error: 'Unit name is required' });
@@ -213,6 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`[Projects Working] Fetching projects for unit: ${decodedUnitName}`);
       
+      // Get cached reference data (Monada, event_types, expenditure_types)
+      const { getReferenceData, getMonadaByUnit } = await import('./utils/reference-cache');
+      const refData = await getReferenceData();
+      
       // Check if unitName is numeric (unit ID) or string (unit name)
       let unitId: number | null = null;
       
@@ -220,16 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // It's a numeric unit ID
         unitId = parseInt(decodedUnitName, 10);
       } else {
-        // It's a unit name, find the corresponding ID
-        const unitResult = await supabase
-          .from('Monada')
-          .select('id')
-          .eq('unit', decodedUnitName)
-          .single();
-          
-        if (unitResult.data) {
-          unitId = unitResult.data.id;
-        }
+        // It's a unit name, find from cache
+        const unit = refData.monada.find(m => m.unit === decodedUnitName);
+        unitId = unit?.id || null;
       }
       
       if (!unitId) {
@@ -237,56 +236,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Get projects linked to this unit through project_index
-      const [projectIndexRes, projectsRes, monadaRes, eventTypesRes, expenditureTypesRes] = await Promise.all([
-        supabase.from('project_index').select('*').eq('monada_id', unitId),
-        supabase.from('Projects').select('*'),
-        supabase.from('Monada').select('*'),
-        supabase.from('event_types').select('*'),
-        supabase.from('expenditure_types').select('*')
-      ]);
+      // Step 1: Get project_index entries for this unit (targeted query)
+      const projectIndexRes = await supabase
+        .from('project_index')
+        .select('id, project_id, monada_id, expenditure_type_id, event_types_id')
+        .eq('monada_id', unitId);
 
       if (projectIndexRes.error) {
         console.error('[Projects Working] Database error:', projectIndexRes.error);
         return res.status(500).json({ error: 'Failed to fetch project index' });
       }
+      
+      const projectIndexItems = projectIndexRes.data || [];
+      
+      if (projectIndexItems.length === 0) {
+        log(`[Projects Working] No projects found for unit ${decodedUnitName}`);
+        return res.json([]);
+      }
+      
+      // Step 2: Get unique project IDs and fetch ONLY those projects
+      const projectIds = Array.from(new Set(projectIndexItems.map(item => item.project_id)));
+      
+      const projectsRes = await supabase
+        .from('Projects')
+        .select('id, mis, na853, project_title, event_description, created_at, updated_at')
+        .in('id', projectIds);
 
       if (projectsRes.error) {
         console.error('[Projects Working] Database error:', projectsRes.error);
         return res.status(500).json({ error: 'Failed to fetch projects' });
       }
       
-      const projectIndexItems = projectIndexRes.data || [];
-      const allProjects = projectsRes.data || [];
-      const monadaData = monadaRes.data || [];
-      const eventTypes = eventTypesRes.data || [];
-      const expenditureTypes = expenditureTypesRes.data || [];
+      const projects = projectsRes.data || [];
       
-      // Get unique project IDs for this unit
-      const projectIds = Array.from(new Set(projectIndexItems.map(item => item.project_id)));
+      // Create a map for quick lookup
+      const projectsMap = new Map(projects.map(p => [p.id, p]));
       
-      // Filter projects to those linked to this unit
-      const unitProjects = allProjects.filter(project => projectIds.includes(project.id));
-      
-      log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
+      log(`[Projects Working] Found ${projects.length} projects for unit ${decodedUnitName}`);
       
       // Group project_index items by project to aggregate expenditure types
-      // IMPORTANT: Only aggregate expenditure types for THIS UNIT to avoid showing invalid options
+      // Use cached reference data for lookups
       const projectMap = new Map();
       
       projectIndexItems.forEach(projectIndexItem => {
-        const project = allProjects.find(p => p.id === projectIndexItem.project_id);
+        const project = projectsMap.get(projectIndexItem.project_id);
         if (!project) return;
         
-        const expenditureType = expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
-        const eventType = eventTypes.find(et => et.id === projectIndexItem.event_types_id);
+        const expenditureType = refData.expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
+        const eventType = refData.eventTypes.find(et => et.id === projectIndexItem.event_types_id);
         
         if (!projectMap.has(project.id)) {
-          // First time seeing this project - create entry
           projectMap.set(project.id, {
-            id: project.id,  // Use project.id for dropdown binding
+            id: project.id,
             project_id: project.id,
-            project_index_ids: [projectIndexItem.id],  // Track all project_index IDs for this unit
+            project_index_ids: [projectIndexItem.id],
             mis: project.mis,
             na853: project.na853,
             project_name: project.project_title || project.event_description,
@@ -299,7 +302,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updated_at: project.updated_at
           });
         } else {
-          // Project already exists - add expenditure type only if it's for this unit
           const existingProject = projectMap.get(project.id);
           if (expenditureType?.expenditure_types && !existingProject.expenditure_types.includes(expenditureType.expenditure_types)) {
             existingProject.expenditure_types.push(expenditureType.expenditure_types);
@@ -311,8 +313,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const enhancedProjects = Array.from(projectMap.values());
+      const elapsed = Date.now() - startTime;
       
-      log(`[Projects Working] Returning ${enhancedProjects.length} unique projects with unit-specific expenditure types`);
+      log(`[Projects Working] Returning ${enhancedProjects.length} unique projects with unit-specific expenditure types in ${elapsed}ms`);
       
       res.json(enhancedProjects);
       
@@ -1700,115 +1703,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   log('[Routes] API routes registered');
   
-  // Additional project endpoints
-  app.get('/api/projects-working/:unitIdentifier', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      let { unitIdentifier } = req.params;
-      
-      // Decode URL-encoded Greek characters
-      try {
-        unitIdentifier = decodeURIComponent(unitIdentifier);
-      } catch (decodeError) {
-        console.log(`[ProjectsWorking] URL decode failed, using original: ${unitIdentifier}`);
-      }
-      
-      console.log(`[ProjectsWorking] Fetching projects for unit: ${unitIdentifier}`);
-      
-      // Get projects with enhanced data using optimized schema
-      const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, indexRes] = await Promise.all([
-        supabase.from('Projects').select('*'),
-        supabase.from('Monada').select('*'),
-        supabase.from('event_types').select('*'),
-        supabase.from('expenditure_types').select('*'),
-        supabase.from('project_index').select('*')
-      ]);
-      
-      if (projectsRes.error) {
-        console.error(`[ProjectsWorking] Query failed:`, projectsRes.error);
-        return res.status(500).json({
-          message: 'Database query failed',
-          error: projectsRes.error.message
-        });
-      }
-      
-      const projects = projectsRes.data || [];
-      const monadaData = monadaRes.data || [];
-      const eventTypes = eventTypesRes.data || [];
-      const expenditureTypes = expenditureTypesRes.data || [];
-      const indexData = indexRes.data || [];
-      
-      // Determine if unitIdentifier is numeric ID or unit name
-      const isNumericId = /^\d+$/.test(unitIdentifier);
-      let targetUnitId: number | null = null;
-      let targetUnitName: string | null = null;
-      
-      if (isNumericId) {
-        // If numeric, find the unit name from Monada table
-        targetUnitId = parseInt(unitIdentifier);
-        const unitData = monadaData.find(m => m.id === targetUnitId);
-        if (unitData) {
-          targetUnitName = unitData.unit;
-          console.log(`[ProjectsWorking] Numeric ID ${targetUnitId} maps to unit: ${targetUnitName}`);
-        } else {
-          console.log(`[ProjectsWorking] No unit found for ID: ${targetUnitId}`);
-          return res.json([]);
-        }
-      } else {
-        // If not numeric, use as unit name directly
-        targetUnitName = unitIdentifier;
-        const unitData = monadaData.find(m => m.unit === targetUnitName);
-        if (unitData) {
-          targetUnitId = unitData.id;
-          console.log(`[ProjectsWorking] Unit name ${targetUnitName} maps to ID: ${targetUnitId}`);
-        }
-      }
-      
-      // Filter projects by unit using project_index directly
-      const unitProjects = projects.filter(project => {
-        const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
-        return projectIndexEntries.some(idx => {
-          // Match by either unit ID or unit name
-          return idx.monada_id === targetUnitId || 
-                 (monadaData.find(m => m.id === idx.monada_id)?.unit === targetUnitName);
-        });
-      });
-      
-      console.log(`[ProjectsWorking] Found ${unitProjects.length} projects for unit ${unitIdentifier} (ID: ${targetUnitId}, Name: ${targetUnitName})`);
-      
-      // Enhance projects with expenditure_types array
-      const enhancedProjects = unitProjects.map(project => {
-        // Get all project_index entries for this project
-        const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
-        
-        // Extract unique expenditure type IDs
-        const expenditureTypeIds = Array.from(new Set(projectIndexEntries
-          .map(idx => idx.expenditure_type_id)
-          .filter(id => id !== null && id !== undefined)));
-        
-        // Map expenditure type IDs to names
-        const expenditureTypeNames = expenditureTypeIds
-          .map(id => {
-            const expType = expenditureTypes.find(et => et.id === id);
-            return expType ? expType.expenditure_types : null;
-          })
-          .filter(name => name !== null);
-        
-        return {
-          ...project,
-          expenditure_types: expenditureTypeNames,
-          expenditure_type: expenditureTypeNames // Keep for backward compatibility
-        };
-      });
-      
-      res.json(enhancedProjects);
-    } catch (error) {
-      console.error(`[ProjectsWorking] Error:`, error);
-      res.status(500).json({
-        message: 'Error fetching projects',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // NOTE: Duplicate /api/projects-working/:unitIdentifier route removed
+  // The optimized version is defined earlier in this file at line ~207
 
   // Geographic API routes
   app.get('/api/geographic/regions', async (req, res) => {

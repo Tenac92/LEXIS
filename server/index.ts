@@ -243,6 +243,15 @@ async function startServer() {
       registerAdminRoutes(apiRouter, wss);
       app.use('/api', apiRouter);
       console.log('[Startup] Admin routes registered successfully');
+      
+      // Preload reference cache for faster project loading
+      try {
+        const { preloadReferenceCache } = await import('./utils/reference-cache');
+        preloadReferenceCache();
+        console.log('[Startup] Reference cache preload initiated');
+      } catch (cacheError) {
+        console.warn('[Startup] Reference cache preload failed:', cacheError);
+      }
 
       // Setup Vite or serve static files
       if (app.get("env") === "development") {

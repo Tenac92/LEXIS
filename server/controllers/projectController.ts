@@ -170,24 +170,12 @@ export async function listProjects(req: Request, res: Response) {
 
     console.log(`[Projects] Pagination: page=${page}, pageSize=${pageSize}, range=${from}-${to}`);
 
-    // Get projects with enhanced data using optimized schema
-    const [
-      projectsRes,
-      monadaRes,
-      eventTypesRes,
-      expenditureTypesRes,
-      indexRes,
-    ] = await Promise.all([
-      supabase
-        .from("Projects")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(from, to),
-      supabase.from("Monada").select("*"),
-      supabase.from("event_types").select("*"),
-      supabase.from("expenditure_types").select("*"),
-      supabase.from("project_index").select("*"),
-    ]);
+    // Step 1: Get paginated projects first
+    const projectsRes = await supabase
+      .from("Projects")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (projectsRes.error) {
       console.error("Database error:", projectsRes.error);
@@ -197,14 +185,30 @@ export async function listProjects(req: Request, res: Response) {
       });
     }
 
-    if (!projectsRes.data) {
+    if (!projectsRes.data || projectsRes.data.length === 0) {
       return res.status(404).json({ message: "No projects found" });
     }
 
     const projects = projectsRes.data;
-    const monadaData = monadaRes.data || [];
-    const eventTypes = eventTypesRes.data || [];
-    const expenditureTypes = expenditureTypesRes.data || [];
+    const projectIds = projects.map(p => p.id);
+
+    // Step 2: Get cached reference data and targeted project_index in parallel
+    const { getReferenceData } = await import('../utils/reference-cache');
+    const [refData, indexRes] = await Promise.all([
+      getReferenceData(),
+      supabase
+        .from("project_index")
+        .select("id, project_id, monada_id, event_types_id, expenditure_type_id")
+        .in("project_id", projectIds)
+    ]);
+
+    if (indexRes.error) {
+      console.error("[Projects] Error fetching project_index:", indexRes.error);
+    }
+
+    const monadaData = refData.monada;
+    const eventTypes = refData.eventTypes;
+    const expenditureTypes = refData.expenditureTypes;
     const indexData = indexRes.data || [];
 
     // Enhance projects with optimized schema data
