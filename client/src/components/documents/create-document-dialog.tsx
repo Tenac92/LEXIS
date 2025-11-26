@@ -278,6 +278,17 @@ export function CreateDocumentDialog({
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
+  
+  // LOCAL BUDGET VALIDATION STATE - independent of hook to prevent infinite loops
+  // This stores the real-time validation result when amounts change
+  const [localBudgetValidation, setLocalBudgetValidation] = useState<{
+    status: 'success' | 'warning' | 'error';
+    canCreate: boolean;
+    allowDocx: boolean;
+    message: string;
+    budgetType?: 'pistosi' | 'katanomi' | null; // Which budget limit is being exceeded
+  } | null>(null);
+  const [validationTimeout, setValidationTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Memoize user unit IDs to avoid duplicate key warnings and improve performance
   const userUnitIds = useMemo(
@@ -1024,8 +1035,6 @@ export function CreateDocumentDialog({
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
-
-  // Removed redundant logging useEffect for recipients updates
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
@@ -1803,6 +1812,92 @@ export function CreateDocumentDialog({
   }, []);
   */
 
+  // DEBOUNCED BUDGET VALIDATION - validates when amounts change in Step 2
+  // This checks BOTH Πίστωση and Κατανομή έτους limits
+  useEffect(() => {
+    // Only validate when on Step 2 (recipients) and we have a project and amount
+    const projectId = selectedProjectId || formData.project_id;
+    
+    if (currentStep !== 2 || !projectId || currentAmount <= 0) {
+      // Reset validation when conditions aren't met
+      if (currentAmount === 0 && localBudgetValidation !== null) {
+        setLocalBudgetValidation(null);
+      }
+      return;
+    }
+
+    // Clear any existing timeout
+    if (validationTimeout) {
+      clearTimeout(validationTimeout);
+    }
+
+    // Debounce validation by 500ms
+    const timeout = setTimeout(async () => {
+      try {
+        console.log('[BudgetValidation] Validating amount:', currentAmount, 'for project:', projectId);
+        
+        const response = await fetch('/api/budget/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            mis: projectId,
+            amount: currentAmount,
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn('[BudgetValidation] API error:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[BudgetValidation] Response:', data);
+        
+        // Determine which budget type is being exceeded based on the response
+        // The backend should return budget_indicators with details
+        const budgetIndicators = data.metadata?.budget_indicators || {};
+        const available = Number(budgetIndicators.available_budget) || Number(budgetData?.available_budget) || 0;
+        const katanomesEtous = Number(budgetData?.katanomes_etous) || 0;
+        const ethsiaPistosi = Number(budgetData?.ethsia_pistosi) || 0;
+        const userView = Number(budgetData?.user_view) || 0;
+        
+        // Calculate what's being exceeded
+        // Πίστωση check: if userView + currentAmount > ethsia_pistosi
+        // Κατανομή check: if userView + currentAmount > katanomes_etous
+        const willExceedPistosi = (userView + currentAmount) > ethsiaPistosi;
+        const willExceedKatanomi = (userView + currentAmount) > katanomesEtous;
+        
+        let budgetType: 'pistosi' | 'katanomi' | null = null;
+        if (willExceedPistosi && !willExceedKatanomi) {
+          // Only pistosi is exceeded - hard block, need ανακατανομή
+          budgetType = 'pistosi';
+        } else if (willExceedKatanomi) {
+          // Katanomi is exceeded - can save but no docx, need χρηματοδότηση
+          budgetType = 'katanomi';
+        }
+        
+        setLocalBudgetValidation({
+          status: data.status || (data.canCreate ? 'success' : 'error'),
+          canCreate: data.canCreate ?? true,
+          allowDocx: data.allowDocx ?? true,
+          message: data.message || '',
+          budgetType,
+        });
+        
+      } catch (error) {
+        console.error('[BudgetValidation] Error:', error);
+      }
+    }, 500);
+    
+    setValidationTimeout(timeout);
+    
+    // Cleanup
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [currentAmount, currentStep, selectedProjectId, formData.project_id, budgetData]);
+
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
     staleTime: 5 * 60 * 1000, // 5 minutes cache for better performance
@@ -1993,10 +2088,10 @@ export function CreateDocumentDialog({
   }, [validationResult, toast]);
 
   // Fix validation logic: Allow submission if validation is null/undefined (no validation needed)
-  // Only block if validation explicitly says error or canCreate is false
+  // Only block if Πίστωση is exceeded (pistosi type) - hard block
+  // Κατανομή exceeded (katanomi type) allows saving but blocks DOCX
   const isSubmitDisabled =
-    validationResult?.status === "error" ||
-    validationResult?.canCreate === false;
+    localBudgetValidation?.budgetType === 'pistosi'; // Only pistosi is a hard block
 
   // Debug validation issues - logging removed for cleaner console
 
@@ -2881,14 +2976,25 @@ export function CreateDocumentDialog({
             return;
           }
           
-          // Budget validation check - block if budget is exceeded
-          if (validationResult?.status === "error" || validationResult?.canCreate === false) {
+          // Budget validation check - ONLY block if ΠΙΣΤΩΣΗ is exceeded (hard block)
+          // Κατανομή exceeded allows proceeding but blocks DOCX generation later
+          if (localBudgetValidation?.budgetType === 'pistosi') {
             toast({
-              title: "Υπέρβαση Προϋπολογισμού",
-              description: "Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό. Παρακαλώ αιτηθείτε ανακατανομή ή μειώστε το ποσό.",
+              title: "Υπέρβαση Πίστωσης",
+              description: "Δεν μπορείτε να συνεχίσετε. Το ποσό υπερβαίνει την ετήσια πίστωση. Παρακαλώ αιτηθείτε ανακατανομή.",
               variant: "destructive",
             });
             return;
+          }
+          
+          // Show warning for katanomi but allow proceeding
+          if (localBudgetValidation?.budgetType === 'katanomi') {
+            toast({
+              title: "Προειδοποίηση Κατανομής",
+              description: "Το ποσό υπερβαίνει την κατανομή έτους. Μπορείτε να αποθηκεύσετε αλλά δεν θα μπορέσετε να εξάγετε DOCX μέχρι να εγκριθεί η χρηματοδότηση.",
+              variant: "warning",
+            });
+            // Don't return - allow proceeding
           }
           break;
       }
@@ -3523,8 +3629,137 @@ export function CreateDocumentDialog({
                   currentAmount={currentAmount}
                 />
 
-                {/* Budget exceeded warning with reallocation request option */}
-                {(validationResult?.status === "error" || validationResult?.canCreate === false) && currentAmount > 0 && (
+                {/* ΠΙΣΤΩΣΗ EXCEEDED - Hard block, cannot proceed, needs Ανακατανομή */}
+                {localBudgetValidation?.budgetType === 'pistosi' && currentAmount > 0 && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-red-800 font-semibold text-base">
+                          Υπέρβαση Πίστωσης - Δεν Μπορείτε να Συνεχίσετε
+                        </h4>
+                        <p className="text-red-700 text-sm mt-2">
+                          Το ποσό <strong>{currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</strong> υπερβαίνει 
+                          την ετήσια πίστωση ({Number(budgetData?.ethsia_pistosi || 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}).
+                        </p>
+                        <p className="text-red-600 text-sm mt-2 font-medium">
+                          Πρέπει να ζητήσετε ανακατανομή προϋπολογισμού για να συνεχίσετε.
+                        </p>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/notifications/request-reallocation', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    project_id: selectedProjectId,
+                                    request_type: 'ανακατανομή',
+                                    requested_amount: currentAmount,
+                                    available_budget: Number(budgetData?.available_budget) || 0,
+                                    shortage: currentAmount - (Number(budgetData?.available_budget) || 0),
+                                  })
+                                });
+                                if (response.ok) {
+                                  toast({
+                                    title: "Αίτημα Ανακατανομής Απεστάλη",
+                                    description: "Το αίτημα στάλθηκε στον διαχειριστή για έγκριση.",
+                                  });
+                                } else {
+                                  throw new Error('Failed');
+                                }
+                              } catch (error) {
+                                toast({ title: "Σφάλμα", description: "Αποτυχία αποστολής.", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Αίτημα Ανακατανομής
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ΚΑΤΑΝΟΜΗ ΕΤΟΥΣ EXCEEDED - Soft block, can save but no DOCX, needs Χρηματοδότηση */}
+                {localBudgetValidation?.budgetType === 'katanomi' && currentAmount > 0 && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-6 w-6 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-amber-800 font-semibold text-base">
+                          Υπέρβαση Κατανομής Έτους - Απαιτείται Χρηματοδότηση
+                        </h4>
+                        <p className="text-amber-700 text-sm mt-2">
+                          Το ποσό <strong>{currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</strong> υπερβαίνει 
+                          την κατανομή έτους ({Number(budgetData?.katanomes_etous || 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}).
+                        </p>
+                        <p className="text-amber-600 text-sm mt-2">
+                          <strong>Μπορείτε να αποθηκεύσετε το έγγραφο</strong>, αλλά δεν θα μπορέσετε να εξάγετε το DOCX μέχρι να εγκριθεί η χρηματοδότηση.
+                        </p>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="bg-white border-amber-400 text-amber-700 hover:bg-amber-50"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/notifications/request-reallocation', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    project_id: selectedProjectId,
+                                    request_type: 'χρηματοδότηση',
+                                    requested_amount: currentAmount,
+                                    available_budget: Number(budgetData?.katanomes_etous) || 0,
+                                    shortage: currentAmount - (Number(budgetData?.katanomes_etous) || 0) + (Number(budgetData?.user_view) || 0),
+                                  })
+                                });
+                                if (response.ok) {
+                                  toast({
+                                    title: "Αίτημα Χρηματοδότησης Απεστάλη",
+                                    description: "Το αίτημα στάλθηκε στον διαχειριστή για έγκριση.",
+                                  });
+                                } else {
+                                  throw new Error('Failed');
+                                }
+                              } catch (error) {
+                                toast({ title: "Σφάλμα", description: "Αποτυχία αποστολής.", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Αίτημα Χρηματοδότησης
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generic budget exceeded warning (fallback when budgetType not determined) */}
+                {localBudgetValidation && !localBudgetValidation.canCreate && !localBudgetValidation.budgetType && currentAmount > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-0.5">
@@ -3534,63 +3769,11 @@ export function CreateDocumentDialog({
                       </div>
                       <div className="flex-1">
                         <h4 className="text-red-800 font-medium text-sm">
-                          Υπέρβαση Διαθέσιμου Προϋπολογισμού
+                          Υπέρβαση Προϋπολογισμού
                         </h4>
                         <p className="text-red-700 text-sm mt-1">
-                          Το συνολικό ποσό ({currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}) 
-                          υπερβαίνει τον διαθέσιμο προϋπολογισμό ({budgetData?.available_budget?.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) || '€0,00'}).
+                          {localBudgetValidation.message || 'Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό.'}
                         </p>
-                        <p className="text-red-600 text-sm mt-2">
-                          Για να συνεχίσετε, μπορείτε να:
-                        </p>
-                        <ul className="text-red-600 text-sm mt-1 list-disc list-inside">
-                          <li>Μειώσετε το ποσό στα διαθέσιμα όρια</li>
-                          <li>Ζητήσετε ανακατανομή προϋπολογισμού από τον διαχειριστή</li>
-                        </ul>
-                        <div className="mt-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
-                            onClick={async () => {
-                              try {
-                                const response = await fetch('/api/notifications/request-reallocation', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  credentials: 'include',
-                                  body: JSON.stringify({
-                                    project_id: selectedProjectId,
-                                    requested_amount: currentAmount,
-                                    available_budget: Number(budgetData?.available_budget) || 0,
-                                    shortage: currentAmount - (Number(budgetData?.available_budget) || 0),
-                                  })
-                                });
-                                
-                                if (response.ok) {
-                                  toast({
-                                    title: "Αίτημα Απεστάλη",
-                                    description: "Το αίτημα ανακατανομής προϋπολογισμού στάλθηκε επιτυχώς στον διαχειριστή.",
-                                  });
-                                } else {
-                                  throw new Error('Failed to send request');
-                                }
-                              } catch (error) {
-                                toast({
-                                  title: "Σφάλμα",
-                                  description: "Αποτυχία αποστολής αιτήματος. Παρακαλώ δοκιμάστε ξανά.",
-                                  variant: "destructive",
-                                });
-                              }
-                            }}
-                          >
-                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                            </svg>
-                            Αίτημα Ανακατανομής Προϋπολογισμού
-                          </Button>
-                        </div>
                       </div>
                     </div>
                   </div>
