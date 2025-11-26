@@ -16,7 +16,6 @@ import UsersPage from "@/pages/users";
 import EmployeesPage from "@/pages/employees";
 import BeneficiariesPage from "@/pages/beneficiaries-page";
 import BudgetHistoryPage from "@/pages/budget-history-page";
-import NotificationsPage from "@/pages/NotificationsPage";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
 import AdminBudgetUploadPage from "@/pages/AdminBudgetUploadPage";
 // Fix type issue by explicitly defining component return type
@@ -66,7 +65,7 @@ function Router(): JSX.Element {
         <ProtectedRoute path="/beneficiaries" component={BeneficiariesPage} />
         <ProtectedRoute path="/budget-history" component={BudgetHistoryPage} />
         <ProtectedRoute path="/budget/history" component={BudgetHistoryPage} />
-        <ProtectedRoute path="/notifications" component={NotificationsPage} />
+        <ProtectedRoute path="/notifications" component={AdminNotificationsPage} />
         <ProtectedRoute
           path="/admin/notifications"
           component={AdminNotificationsPage}
