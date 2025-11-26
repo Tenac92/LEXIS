@@ -23,20 +23,36 @@ interface BudgetNotification extends BaseBudgetNotification {
   } | null;
 }
 
-const notificationTypeLabels = {
+const notificationTypeLabels: Record<string, string> = {
+  anakatanom_request: 'ΑΝΑΚΑΤΑΝΟΜΗ',
+  xrimatodotisi_request: 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ',
   funding: 'ΧΡΗΜΑΤΟΔΟΤΗΣΗ',
   reallocation: 'ΑΝΑΠΡΟΣΑΡΜΟΓΗ',
   low_budget: 'ΧΑΜΗΛΟ ΥΠΟΛΟΙΠΟ',
   default: 'ΕΙΔΟΠΟΙΗΣΗ'
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   pending: 'εκκρεμές',
   approved: 'εγκεκριμένο',
   rejected: 'απορριφθέν'
 };
 
-const notificationStyles = {
+const notificationStyles: Record<string, { bg: string; border: string; badge: string; color: string; icon: string }> = {
+  anakatanom_request: {
+    bg: 'bg-red-50 hover:bg-red-100',
+    border: 'border-red-300',
+    badge: 'bg-red-600 text-white',
+    color: 'text-red-800',
+    icon: 'red',
+  },
+  xrimatodotisi_request: {
+    bg: 'bg-amber-50 hover:bg-amber-100',
+    border: 'border-amber-300',
+    badge: 'bg-amber-500 text-white',
+    color: 'text-amber-800',
+    icon: 'amber',
+  },
   funding: {
     bg: 'bg-red-50 hover:bg-red-100',
     border: 'border-red-200',
