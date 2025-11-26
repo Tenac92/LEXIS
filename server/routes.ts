@@ -201,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Projects by unit endpoint for document creation
   // OPTIMIZED: Uses reference cache and targeted project queries
-  app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
+  app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { unitName } = req.params;
       const startTime = Date.now();
