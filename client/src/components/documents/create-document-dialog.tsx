@@ -2880,6 +2880,16 @@ export function CreateDocumentDialog({
             });
             return;
           }
+          
+          // Budget validation check - block if budget is exceeded
+          if (validationResult?.status === "error" || validationResult?.canCreate === false) {
+            toast({
+              title: "Υπέρβαση Προϋπολογισμού",
+              description: "Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό. Παρακαλώ αιτηθείτε ανακατανομή ή μειώστε το ποσό.",
+              variant: "destructive",
+            });
+            return;
+          }
           break;
       }
 
@@ -3512,6 +3522,79 @@ export function CreateDocumentDialog({
                   budgetData={budgetData}
                   currentAmount={currentAmount}
                 />
+
+                {/* Budget exceeded warning with reallocation request option */}
+                {(validationResult?.status === "error" || validationResult?.canCreate === false) && currentAmount > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-red-800 font-medium text-sm">
+                          Υπέρβαση Διαθέσιμου Προϋπολογισμού
+                        </h4>
+                        <p className="text-red-700 text-sm mt-1">
+                          Το συνολικό ποσό ({currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}) 
+                          υπερβαίνει τον διαθέσιμο προϋπολογισμό ({budgetData?.available_budget?.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' }) || '€0,00'}).
+                        </p>
+                        <p className="text-red-600 text-sm mt-2">
+                          Για να συνεχίσετε, μπορείτε να:
+                        </p>
+                        <ul className="text-red-600 text-sm mt-1 list-disc list-inside">
+                          <li>Μειώσετε το ποσό στα διαθέσιμα όρια</li>
+                          <li>Ζητήσετε ανακατανομή προϋπολογισμού από τον διαχειριστή</li>
+                        </ul>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="bg-white border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/notifications/request-reallocation', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    project_id: selectedProjectId,
+                                    requested_amount: currentAmount,
+                                    available_budget: Number(budgetData?.available_budget) || 0,
+                                    shortage: currentAmount - (Number(budgetData?.available_budget) || 0),
+                                  })
+                                });
+                                
+                                if (response.ok) {
+                                  toast({
+                                    title: "Αίτημα Απεστάλη",
+                                    description: "Το αίτημα ανακατανομής προϋπολογισμού στάλθηκε επιτυχώς στον διαχειριστή.",
+                                  });
+                                } else {
+                                  throw new Error('Failed to send request');
+                                }
+                              } catch (error) {
+                                toast({
+                                  title: "Σφάλμα",
+                                  description: "Αποτυχία αποστολής αιτήματος. Παρακαλώ δοκιμάστε ξανά.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                          >
+                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Αίτημα Ανακατανομής Προϋπολογισμού
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-4">

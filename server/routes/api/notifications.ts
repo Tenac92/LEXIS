@@ -152,4 +152,52 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+/**
+ * Request budget reallocation from admin
+ * POST /api/notifications/request-reallocation
+ */
+router.post('/request-reallocation', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { project_id, requested_amount, available_budget, shortage } = req.body;
+    
+    if (!project_id || !requested_amount) {
+      return res.status(400).json({ 
+        message: 'Απαιτούνται τα πεδία project_id και requested_amount' 
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Μη εξουσιοδοτημένη πρόσβαση' });
+    }
+
+    // Create a notification for the admin about the reallocation request
+    const notification = await createBudgetNotification({
+      mis: parseInt(project_id.toString()),
+      type: 'reallocation_request',
+      amount: parseFloat(requested_amount.toString()),
+      current_budget: parseFloat(available_budget?.toString() || '0'),
+      ethsia_pistosi: parseFloat(shortage?.toString() || '0'),
+      reason: `Αίτημα ανακατανομής: Ζητούμενο ποσό €${parseFloat(requested_amount.toString()).toLocaleString('el-GR')}, Διαθέσιμο €${parseFloat(available_budget?.toString() || '0').toLocaleString('el-GR')}, Έλλειμμα €${parseFloat(shortage?.toString() || '0').toLocaleString('el-GR')}`,
+      user_id: req.user.id ? parseInt(req.user.id.toString()) : undefined
+    });
+
+    if (!notification) {
+      return res.status(500).json({ message: 'Αποτυχία δημιουργίας αιτήματος' });
+    }
+
+    log(`[Notifications] Created reallocation request for project ${project_id} by user ${req.user.id}`, 'info');
+    
+    return res.status(201).json({
+      message: 'Το αίτημα ανακατανομής υποβλήθηκε επιτυχώς',
+      notification
+    });
+
+  } catch (error) {
+    log(`[Notifications] Error creating reallocation request: ${error}`, 'error');
+    return res.status(500).json({ 
+      message: 'Σφάλμα κατά την υποβολή του αιτήματος' 
+    });
+  }
+});
+
 export default router;
