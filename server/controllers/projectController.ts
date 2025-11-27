@@ -2653,284 +2653,142 @@ router.patch(
           );
         }
 
-        // Insert new project_index entries from combined project_lines
-        for (let lineIndex = 0; lineIndex < projectLinesToProcess.length; lineIndex++) {
-          const line = projectLinesToProcess[lineIndex];
-          try {
-            // Find foreign key IDs from the provided data
-            let eventTypeId = null;
-            let expenditureTypeId = null;
-            let monadaId = null;
-            let kallikratisId = null;
+        // Get reference data for ID lookups
+        const [
+          eventTypesRes,
+          expenditureTypesRes,
+          monadaRes,
+        ] = await Promise.all([
+          supabase.from("event_types").select("*"),
+          supabase.from("expenditure_types").select("*"),
+          supabase.from("Monada").select("*"),
+        ]);
 
-            // Get reference data if not already available
-            const [
-              eventTypesRes,
-              expenditureTypesRes,
-              monadaRes,
-            ] = await Promise.all([
-              supabase.from("event_types").select("*"),
-              supabase.from("expenditure_types").select("*"),
-              supabase.from("Monada").select("*"),
-            ]);
+        const eventTypes = eventTypesRes.data || [];
+        const expenditureTypes = expenditureTypesRes.data || [];
+        const monadaData = monadaRes.data || [];
 
-            const eventTypes = eventTypesRes.data || [];
-            const expenditureTypes = expenditureTypesRes.data || [];
-            const monadaData = monadaRes.data || [];
+        // STEP 1: Group project_lines by unique key (monada_id, event_types_id, expenditure_type_id)
+        // and collect all geographic regions for each unique combination
+        const groupedLines = new Map<string, { 
+          monadaId: number, 
+          eventTypeId: number, 
+          expenditureTypeId: number, 
+          regions: any[] 
+        }>();
 
-            // Find event type ID
-            if (line.event_type) {
-              const eventType = eventTypes.find(
-                (et) =>
-                  et.id === line.event_type || et.name === line.event_type,
-              );
-              eventTypeId = eventType?.id || null;
+        for (const line of projectLinesToProcess) {
+          // Find event type ID
+          let eventTypeId = null;
+          if (line.event_type) {
+            const eventType = eventTypes.find(
+              (et) => et.id === line.event_type || et.name === line.event_type,
+            );
+            eventTypeId = eventType?.id || null;
+          }
+          if (!eventTypeId && eventTypes.length > 0) {
+            eventTypeId = eventTypes[0].id;
+          }
+
+          // Find implementing agency (Monada) ID
+          let monadaId = null;
+          if (line.implementing_agency_id) {
+            monadaId = parseInt(line.implementing_agency_id);
+          } else if (line.implementing_agency) {
+            const monada = monadaData.find((m) => {
+              const unitName = typeof m.unit_name === "object" && m.unit_name.name
+                ? m.unit_name.name : m.unit_name;
+              return m.id == line.implementing_agency ||
+                m.unit === line.implementing_agency ||
+                unitName === line.implementing_agency ||
+                (unitName && line.implementing_agency.includes(unitName)) ||
+                (unitName && unitName.includes(line.implementing_agency));
+            });
+            monadaId = monada ? parseInt(monada.id) : null;
+          }
+
+          if (!monadaId || !eventTypeId) {
+            console.warn(`[Projects] Skipping line - missing monadaId (${monadaId}) or eventTypeId (${eventTypeId})`);
+            continue;
+          }
+
+          // Process each expenditure type
+          const expTypes = line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0
+            ? line.expenditure_types
+            : ['ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ']; // default
+
+          for (const expType of expTypes) {
+            const expenditureType = expenditureTypes.find(
+              (et) => et.id == expType || et.expenditure_types === expType || et.id === parseInt(expType),
+            );
+            const expenditureTypeId = expenditureType?.id || null;
+
+            if (!expenditureTypeId) {
+              console.warn(`[Projects] Could not find expenditure type ID for: ${expType}`);
+              continue;
             }
 
-            // Find implementing agency (Monada) ID - ensure it's integer
-            if (line.implementing_agency_id) {
-              // Use the provided ID directly
-              monadaId = parseInt(line.implementing_agency_id);
-              console.log(
-                `[Projects] Using provided implementing_agency_id: ${monadaId}`,
-              );
-            } else if (line.implementing_agency) {
-              console.log(
-                `[Projects] DEBUG: Looking for agency: "${line.implementing_agency}"`,
-              );
-              console.log(
-                `[Projects] DEBUG: Available agencies:`,
-                monadaData.map((m) => ({
-                  id: m.id,
-                  unit: m.unit,
-                  unit_name: m.unit_name,
-                })),
-              );
+            // Create unique key for this combination
+            const key = `${monadaId}-${eventTypeId}-${expenditureTypeId}`;
 
-              const monada = monadaData.find((m) => {
-                // Handle the case where unit_name might be an object with name property
-                const unitName =
-                  typeof m.unit_name === "object" && m.unit_name.name
-                    ? m.unit_name.name
-                    : m.unit_name;
-
-                return (
-                  m.id == line.implementing_agency ||
-                  m.unit === line.implementing_agency ||
-                  unitName === line.implementing_agency ||
-                  // Try partial matching for long agency names
-                  (unitName && line.implementing_agency.includes(unitName)) ||
-                  (unitName && unitName.includes(line.implementing_agency)) ||
-                  (m.unit && line.implementing_agency.includes(m.unit)) ||
-                  (m.unit && m.unit.includes(line.implementing_agency))
-                );
+            if (!groupedLines.has(key)) {
+              groupedLines.set(key, {
+                monadaId,
+                eventTypeId,
+                expenditureTypeId,
+                regions: [],
               });
-              monadaId = monada ? parseInt(monada.id) : null;
-              console.log(
-                `[Projects] Found monada_id: ${monadaId} for agency: ${line.implementing_agency}`,
-              );
-              if (!monada) {
-                console.log(
-                  `[Projects] WARNING: No matching agency found for: "${line.implementing_agency}"`,
-                );
-              }
             }
 
-            // Geographic ID mapping skipped - using normalized geographic data instead
-            console.log(
-              `[Projects] Using normalized geographic system for location data`,
-            );
+            // Add this line's region to the group (if it has one)
+            if (line.region) {
+              groupedLines.get(key)!.regions.push(line.region);
+            }
+          }
+        }
 
-            console.log(
-              `[Projects] Processing line ${lineIndex + 1}:`,
-            );
-            console.log(`[Projects] - Event Type ID: ${eventTypeId}`);
-            console.log(`[Projects] - Monada ID: ${monadaId}`);
-            console.log(`[Projects] - Kallikratis ID: ${kallikratisId}`);
+        console.log(`[Projects] Grouped ${projectLinesToProcess.length} lines into ${groupedLines.size} unique index entries`);
 
-            // Create project_index entries if we have essential values (very relaxed requirement)
-            // Use default event type if none provided to ensure location data is saved
-            if (!eventTypeId) {
-              // Use first available event type as fallback
-              if (eventTypes && eventTypes.length > 0) {
-                eventTypeId = eventTypes[0].id;
-                console.log(
-                  `[Projects] No event type provided, using fallback event type ID: ${eventTypeId}`,
-                );
-              }
+        // STEP 2: For each unique combination, insert ONE project_index entry
+        // and insert ALL geographic relationships from all lines in that group
+        for (const [key, group] of Array.from(groupedLines.entries())) {
+          try {
+            const indexEntry = {
+              project_id: updatedProject.id,
+              monada_id: group.monadaId,
+              event_types_id: group.eventTypeId,
+              expenditure_type_id: group.expenditureTypeId,
+            };
+
+            console.log(`[Projects] Inserting project_index entry for key ${key}:`, indexEntry);
+
+            const result = await supabase
+              .from("project_index")
+              .insert(indexEntry)
+              .select("id")
+              .single();
+
+            if (result.error) {
+              console.error(`[Projects] Error inserting project_index entry:`, result.error);
+              continue;
             }
 
-            if (eventTypeId) {
-              console.log(
-                `[Projects] Creating project_index entries - event_type_id is valid: ${eventTypeId}`,
-              );
-              console.log(
-                `[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`,
-              );
-              if (!monadaId) {
-                console.log(
-                  `[Projects] WARNING: Proceeding without monada_id - may need manual correction`,
-                );
-              }
-              if (!kallikratisId) {
-                console.log(
-                  `[Projects] WARNING: Proceeding without kallikratis_id - may need manual geographic assignment`,
-                );
-              }
-              // Find expenditure type IDs (multiple values)
-              if (
-                line.expenditure_types &&
-                Array.isArray(line.expenditure_types) &&
-                line.expenditure_types.length > 0
-              ) {
-                console.log(
-                  `[Projects] DEBUG: Processing expenditure types:`,
-                  line.expenditure_types,
-                );
-                console.log(
-                  `[Projects] DEBUG: Available expenditure types:`,
-                  expenditureTypes.map((et) => ({
-                    id: et.id,
-                    name: et.expenditure_types,
-                  })),
-                );
-
-                for (const expType of line.expenditure_types) {
-                  const expenditureType = expenditureTypes.find(
-                    (et) =>
-                      et.id == expType ||
-                      et.expenditure_types === expType ||
-                      et.id === parseInt(expType),
-                  );
-                  expenditureTypeId = expenditureType?.id || null;
-
-                  console.log(
-                    `[Projects] DEBUG: Expenditure type "${expType}" -> ID: ${expenditureTypeId}`,
-                  );
-
-                  // Create project_index entry for each expenditure type
-                  if (expenditureTypeId) {
-                    // Using normalized geographic system instead of old kallikratis table
-                    console.log(
-                      `[Projects] Creating project_index entry for expenditure type: ${expType}`,
-                    );
-
-                    // Create project_index entry - must have all required fields per database schema
-                    if (monadaId && eventTypeId && expenditureTypeId) {
-                      const indexEntry = {
-                        project_id: updatedProject.id,
-                        monada_id: monadaId, // REQUIRED per database schema
-                        event_types_id: eventTypeId, // REQUIRED per database schema
-                        expenditure_type_id: expenditureTypeId, // REQUIRED per database schema
-                        // NOTE: kallikratis_id and geographic_code don't exist in actual database
-                      };
-
-                      console.log(
-                        `[Projects] Inserting project_index entry:`,
-                        indexEntry,
-                      );
-                      
-                      // FIX: Always create a new entry for each location line to ensure
-                      // geographic data is properly associated with each implementing agency.
-                      // Previously, the code reused entries with the same monada/event/expenditure,
-                      // which caused geographic areas to be incorrectly shared between agencies.
-                      const result = await supabase
-                        .from("project_index")
-                        .insert(indexEntry)
-                        .select("id")
-                        .single();
-                      const insertedEntry = result.data;
-                      const insertError = result.error;
-
-                      if (insertError) {
-                        console.error(
-                          `[Projects] Error inserting project_index entry:`,
-                          insertError,
-                        );
-                      } else if (insertedEntry && insertedEntry.id) {
-                        console.log(
-                          `[Projects] Successfully created project_index entry for expenditure type: ${expType}, ID: ${insertedEntry.id}`,
-                        );
-
-                        // Insert geographic relationships if we have region data
-                        if (line.region) {
-                          await insertGeographicRelationships(
-                            insertedEntry.id,
-                            line.region,
-                          );
-                        }
-                      }
-                    } else {
-                      console.warn(
-                        `[Projects] Cannot create project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, expenditure_type_id=${expenditureTypeId}`,
-                      );
-                    }
-                  } else {
-                    console.warn(
-                      `[Projects] Could not find expenditure type ID for: ${expType}`,
-                    );
-                  }
-                }
-              } else {
-                // Use default expenditure type if none specified - must have all required fields
-                const defaultExpenditureType =
-                  expenditureTypes.find(
-                    (et) => et.expenditure_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ",
-                  ) || expenditureTypes[0];
-                if (defaultExpenditureType && monadaId && eventTypeId) {
-                  const indexEntry = {
-                    project_id: updatedProject.id,
-                    monada_id: monadaId, // REQUIRED per database schema
-                    event_types_id: eventTypeId, // REQUIRED per database schema
-                    expenditure_type_id: defaultExpenditureType.id, // REQUIRED per database schema
-                    // NOTE: kallikratis_id and geographic_code don't exist in actual database
-                  };
-
-                  console.log(
-                    `[Projects] Inserting default project_index entry:`,
-                    indexEntry,
-                  );
-                  const { data: insertedEntry, error: insertError } =
-                    await supabase
-                      .from("project_index")
-                      .insert(indexEntry)
-                      .select("id")
-                      .single();
-
-                  if (insertError) {
-                    console.error(
-                      `[Projects] Error inserting default project_index entry:`,
-                      insertError,
-                    );
-                  } else if (insertedEntry && insertedEntry.id) {
-                    console.log(
-                      `[Projects] Successfully created default project_index entry, ID: ${insertedEntry.id}`,
-                    );
-
-                    // Insert geographic relationships if we have region data
-                    if (line.region) {
-                      await insertGeographicRelationships(
-                        insertedEntry.id,
-                        line.region,
-                      );
-                    }
-                  }
-                } else {
-                  console.warn(
-                    `[Projects] Cannot create default project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, defaultExpenditureType=${defaultExpenditureType?.id}`,
-                  );
-                }
-              }
-            } else {
-              console.warn(
-                `[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId}, monadaId: ${monadaId} (all fields required per database schema)`,
-              );
+            const projectIndexId = result.data?.id;
+            if (!projectIndexId) {
+              console.error(`[Projects] No ID returned for project_index entry`);
+              continue;
             }
+
+            console.log(`[Projects] Successfully created project_index entry, ID: ${projectIndexId}, with ${group.regions.length} regions to insert`);
+
+            // Insert ALL geographic relationships from ALL lines with this key
+            for (const region of group.regions) {
+              await insertGeographicRelationships(projectIndexId, region);
+            }
+
+            console.log(`[Projects] Inserted ${group.regions.length} geographic relationships for project_index ID: ${projectIndexId}`);
           } catch (lineError) {
-            console.error(
-              `[Projects] Error processing project line:`,
-              lineError,
-            );
+            console.error(`[Projects] Error processing grouped line ${key}:`, lineError);
           }
         }
       }
@@ -3424,7 +3282,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectIndex] Found ${indexData?.length || 0} index entries for project ${mis}`,
+        `[ProjectIndex] Found ${indexData?.length || 0} index entries for project ${project.mis}`,
       );
       res.json(indexData || []);
     } catch (error) {
@@ -3593,7 +3451,7 @@ router.put(
         }
 
         console.log(
-          `[ProjectDecisions] Successfully inserted ${decisionsToInsert.length} decisions for project ${mis}`,
+          `[ProjectDecisions] Successfully inserted ${decisionsToInsert.length} decisions for project ${project.mis}`,
         );
       }
 
@@ -3776,7 +3634,7 @@ router.put(
         }
 
         console.log(
-          `[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${mis}`,
+          `[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${project.mis}`,
         );
 
         // Now insert budget versions if provided
@@ -4111,7 +3969,7 @@ router.put(
         });
       } else {
         console.log(
-          `[ProjectFormulations] No formulations to insert for project ${mis}`,
+          `[ProjectFormulations] No formulations to insert for project ${project.mis}`,
         );
         res.json({
           message: "No formulations to update",
