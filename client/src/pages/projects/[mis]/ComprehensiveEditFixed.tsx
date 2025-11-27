@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -363,6 +364,7 @@ const comprehensiveProjectSchema = z.object({
     .array(
       z.object({
         implementing_agency: z.string().default(""),
+        for_yl_id: z.number().optional().nullable(), // For YL (implementing agency that differs from parent Monada)
         event_type: z.string().default(""),
         expenditure_types: z.array(z.string()).default([]),
         geographic_areas: z.array(z.string()).default([]),
@@ -606,6 +608,7 @@ export default function ComprehensiveEditFixed() {
       location_details: [
         {
           implementing_agency: "",
+          for_yl_id: null,
           event_type: "",
           expenditure_types: [],
           geographic_areas: [],
@@ -696,6 +699,7 @@ export default function ComprehensiveEditFixed() {
   const eventTypesData = (referenceData?.eventTypes?.length > 0 ? referenceData.eventTypes : completeProjectData?.eventTypes);
   const unitsData = (referenceData?.units?.length > 0 ? referenceData.units : completeProjectData?.units);
   const expenditureTypesData = (referenceData?.expenditureTypes?.length > 0 ? referenceData.expenditureTypes : completeProjectData?.expenditureTypes);
+  const forYlData = (referenceData?.forYl?.length > 0 ? referenceData.forYl : completeProjectData?.forYl) as Array<{ id: number; title: string; monada_id: string }> | undefined;
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
   const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean) || [])];
@@ -3168,7 +3172,11 @@ export default function ComprehensiveEditFixed() {
                                         <FormItem>
                                           <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
                                           <Select
-                                            onValueChange={field.onChange}
+                                            onValueChange={(value) => {
+                                              field.onChange(value);
+                                              // Reset for_yl_id when monada changes
+                                              form.setValue(`location_details.${locationIndex}.for_yl_id`, null);
+                                            }}
                                             value={field.value}
                                           >
                                             <FormControl>
@@ -3197,6 +3205,70 @@ export default function ComprehensiveEditFixed() {
                                         </FormItem>
                                       )}
                                     />
+
+                                    {/* For YL (implementing agency that differs from parent Monada) */}
+                                    {(() => {
+                                      // Get the selected implementing agency name
+                                      const selectedAgencyName = form.watch(`location_details.${locationIndex}.implementing_agency`);
+                                      
+                                      // Skip if no agency selected
+                                      if (!selectedAgencyName) return null;
+                                      
+                                      // Find the monada_id for the selected agency
+                                      const selectedMonada = typedUnitsData?.find(u => 
+                                        u.unit_name?.name === selectedAgencyName || 
+                                        u.name === selectedAgencyName || 
+                                        u.unit === selectedAgencyName
+                                      );
+                                      
+                                      // Skip if no monada found
+                                      if (!selectedMonada?.id) return null;
+                                      
+                                      // Filter for_yl by this monada_id (normalize both to strings for comparison)
+                                      const monadaIdStr = String(selectedMonada.id);
+                                      const availableForYl = forYlData?.filter(
+                                        fy => fy.monada_id && String(fy.monada_id) === monadaIdStr
+                                      ) || [];
+                                      
+                                      // Only show if there are available for_yl options
+                                      if (availableForYl.length === 0) return null;
+                                      
+                                      return (
+                                        <FormField
+                                          control={form.control}
+                                          name={`location_details.${locationIndex}.for_yl_id`}
+                                          render={({ field }) => (
+                                            <FormItem>
+                                              <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
+                                              <Select
+                                                onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                                                value={field.value ? String(field.value) : "none"}
+                                              >
+                                                <FormControl>
+                                                  <SelectTrigger data-testid={`select-for-yl-${locationIndex}`}>
+                                                    <SelectValue placeholder="Επιλέξτε φορέα (προαιρετικό)" />
+                                                  </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                  <SelectItem value="none">Κανένας (χρήση μονάδας)</SelectItem>
+                                                  {availableForYl.map((forYl) => (
+                                                    <SelectItem
+                                                      key={forYl.id}
+                                                      value={String(forYl.id)}
+                                                    >
+                                                      {forYl.title}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
+                                              <FormDescription className="text-xs">
+                                                Επιλέξτε αν ο φορέας υλοποίησης διαφέρει από τη μονάδα
+                                              </FormDescription>
+                                            </FormItem>
+                                          )}
+                                        />
+                                      );
+                                    })()}
 
                                     <FormField
                                       control={form.control}
@@ -3319,6 +3391,7 @@ export default function ComprehensiveEditFixed() {
                               form.getValues("location_details");
                             locations.push({
                               implementing_agency: "",
+                              for_yl_id: null,
                               event_type: "",
                               expenditure_types: [],
                               geographic_areas: [],

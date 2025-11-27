@@ -3271,6 +3271,8 @@ router.get(
       let expenditureType = "ΔΑΠΑΝΗ"; // Default fallback
 
       // Fetch related project data if project_index_id exists
+      let forYlData: { id: number; title: string; monada_id: string } | null = null;
+      
       if (document.project_index_id) {
         try {
           const { data: projectIndexData, error: projectIndexError } =
@@ -3280,6 +3282,7 @@ router.get(
                 `
             id,
             project_id,
+            for_yl_id,
             Projects:project_id (
               id,
               na853,
@@ -3295,6 +3298,20 @@ router.get(
               )
               .eq("id", document.project_index_id)
               .single();
+          
+          // Fetch for_yl data if for_yl_id exists
+          if (!projectIndexError && projectIndexData?.for_yl_id) {
+            const { data: forYl } = await supabase
+              .from("for_yl")
+              .select("id, title, monada_id")
+              .eq("id", projectIndexData.for_yl_id)
+              .single();
+            
+            if (forYl) {
+              forYlData = forYl as { id: number; title: string; monada_id: string };
+              console.log("[DocumentsController] Using for_yl for document:", forYlData.title);
+            }
+          }
 
           if (!projectIndexError && projectIndexData) {
             projectData = projectIndexData.Projects;
@@ -3556,6 +3573,8 @@ router.get(
         recipients: beneficiaryData,
         // Add attachments data
         attachments: attachmentsData,
+        // Add for_yl data (delegated implementing agency)
+        for_yl: forYlData,
       };
 
       console.log(

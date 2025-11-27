@@ -194,12 +194,15 @@ export async function listProjects(req: Request, res: Response) {
 
     // Step 2: Get cached reference data and targeted project_index in parallel
     const { getReferenceData } = await import('../utils/reference-cache');
-    const [refData, indexRes] = await Promise.all([
+    const [refData, indexRes, forYlRes] = await Promise.all([
       getReferenceData(),
       supabase
         .from("project_index")
-        .select("id, project_id, monada_id, event_types_id, expenditure_type_id")
-        .in("project_id", projectIds)
+        .select("id, project_id, monada_id, event_types_id, expenditure_type_id, for_yl_id")
+        .in("project_id", projectIds),
+      supabase
+        .from("for_yl")
+        .select("id, foreis")
     ]);
 
     if (indexRes.error) {
@@ -210,6 +213,7 @@ export async function listProjects(req: Request, res: Response) {
     const eventTypes = refData.eventTypes;
     const expenditureTypes = refData.expenditureTypes;
     const indexData = indexRes.data || [];
+    const forYlData = forYlRes.data || [];
 
     // Enhance projects with optimized schema data
     const enhancedProjects = projects
@@ -237,6 +241,12 @@ export async function listProjects(req: Request, res: Response) {
             projectIndexItems.length > 0
               ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
               : null;
+          
+          // Get for_yl data if project has a for_yl_id
+          const forYlItem = projectIndexItems.length > 0 && projectIndexItems[0].for_yl_id
+            ? forYlData.find((f) => f.id === projectIndexItems[0].for_yl_id)
+            : null;
+          const forYlForeis = forYlItem?.foreis as { title?: string; monada_id?: string } | null;
 
           // Get all expenditure types for this project
           const allExpenditureTypes = projectIndexItems
@@ -277,6 +287,14 @@ export async function listProjects(req: Request, res: Response) {
                 }
               : null,
             enhanced_kallikratis: null,
+            // For YL (implementing agency) data
+            enhanced_for_yl: forYlItem
+              ? {
+                  id: forYlItem.id,
+                  title: forYlForeis?.title || "",
+                  monada_id: forYlForeis?.monada_id || ""
+                }
+              : null,
             // Add arrays for backward compatibility
             expenditure_types: uniqueExpenditureTypes,
             event_types: uniqueEventTypes,
@@ -902,13 +920,14 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
     }
 
     // Fetch reference data with optimized queries and smaller limits for initial load
-    const [eventTypesRes, unitsRes, expenditureTypesRes] = await Promise.all([
+    const [eventTypesRes, unitsRes, expenditureTypesRes, forYlRes] = await Promise.all([
       supabase.from("event_types").select("id, name").limit(50), // Only essential fields
       supabase.from("Monada").select("id, unit, unit_name").limit(30), // Only essential fields
       supabase
         .from("expenditure_types")
         .select("id, expenditure_types")
         .limit(30), // Only essential fields
+      supabase.from("for_yl").select("id, foreis"), // For YL (implementing agencies)
     ]);
 
     // Check for errors in reference data queries
@@ -932,6 +951,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
     const eventTypes = eventTypesRes.data || [];
     const units = unitsRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
+    const forYlData = forYlRes.data || [];
 
     console.log(
       `[ProjectComplete] Before kallikratis loading - got ${eventTypes.length} eventTypes, ${units.length} units, ${expenditureTypes.length} expenditureTypes`,
@@ -1070,6 +1090,13 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
             (et) => et.id === projectIndex[0].expenditure_type_id,
           )
         : null;
+    
+    // Find for_yl if project has one
+    const projectForYlId = projectIndex.length > 0 ? projectIndex[0].for_yl_id : null;
+    const forYlItem = projectForYlId
+      ? forYlData.find((f) => f.id === projectForYlId)
+      : null;
+    const forYlForeis = forYlItem?.foreis as { title?: string; monada_id?: string } | null;
 
     // Find event type from direct field
     const eventType = eventTypes.find(
@@ -1095,6 +1122,13 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
         ? {
             id: mostCommonUnit.id,
             name: mostCommonUnit.unit || mostCommonUnit.unit_name,
+          }
+        : null,
+      enhanced_for_yl: forYlItem
+        ? {
+            id: forYlItem.id,
+            title: forYlForeis?.title || "",
+            monada_id: forYlForeis?.monada_id || ""
           }
         : null,
     };
@@ -1176,6 +1210,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
       units: units,
       kallikratis: kallikratis,
       expenditureTypes: expenditureTypes,
+      forYl: forYlData, // For YL (implementing agencies)
       // New normalized geographic data
       regions: regions,
       regionalUnits: regionalUnits,
@@ -1214,7 +1249,7 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
     console.log("[ProjectReference] Fetching reference data");
 
     // Fetch all reference data in parallel with optimized queries
-    const [eventTypesRes, unitsRes, expenditureTypesRes, projectIndexRes] =
+    const [eventTypesRes, unitsRes, expenditureTypesRes, projectIndexRes, forYlRes] =
       await Promise.all([
         supabase.from("event_types").select("id, name").limit(100),
         supabase.from("Monada").select("id, unit, unit_name").limit(50),
@@ -1223,6 +1258,7 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
           .select("id, expenditure_types")
           .limit(50),
         supabase.from("project_index").select("kallikratis_id").limit(5000),
+        supabase.from("for_yl").select("id, foreis"), // For YL (implementing agencies)
       ]);
 
     // Kallikratis table no longer exists - using normalized geographic data instead
@@ -1234,15 +1270,26 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
     // Set reasonable caching headers
     res.set("Cache-Control", "public, max-age=300"); // 5 minutes cache
 
+    // Format for_yl data for easy consumption
+    const formattedForYl = (forYlRes.data || []).map(item => {
+      const foreis = item.foreis as { title?: string; monada_id?: string } | null;
+      return {
+        id: item.id,
+        title: foreis?.title || "",
+        monada_id: foreis?.monada_id || ""
+      };
+    });
+
     const referenceData = {
       eventTypes: eventTypesRes.data || [],
       units: unitsRes.data || [],
       kallikratis: kallikratisFromIndex,
       expenditureTypes: expenditureTypesRes.data || [],
+      forYl: formattedForYl, // For YL (implementing agencies)
     };
 
     console.log(
-      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, expenditureTypes=${referenceData.expenditureTypes.length}`,
+      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, expenditureTypes=${referenceData.expenditureTypes.length}, forYl=${referenceData.forYl.length}`,
     );
 
     res.json(referenceData);

@@ -48,10 +48,17 @@ export interface UnitDetails {
   };
 }
 
+export interface ForYlDetails {
+  id: number;
+  title: string;
+  monada_id: string;
+}
+
 export interface DocumentData {
   id: number;
   unit: string; // Mapped from unit_id for compatibility
   unit_id?: bigint | number; // Actual database field
+  for_yl?: ForYlDetails | null; // Delegated implementing agency (φορέας υλοποίησης)
   project_id?: string | number;
   project_index_id?: number; // Reference to project_index table
   projects?: {

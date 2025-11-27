@@ -354,6 +354,17 @@ export const monada = pgTable("Monada", {
 });
 
 /**
+ * For YL Table (Φορείς για Υλοποίηση)
+ * Contains implementing agencies that are handled by a Monada
+ * Example: "ΤΑΣ ΚΕΦΑΛΛΗΝΙΑΣ" is a for_yl handled by monada_id 5 (ΔΑΕΦΚ-ΔΕ)
+ * Used when the actual implementing agency differs from the parent Monada
+ */
+export const forYl = pgTable("for_yl", {
+  id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+  foreis: jsonb("foreis"), // Contains { title: string, monada_id: string }
+});
+
+/**
  * Employees Table
  * Contains employee information for autocomplete and recipient management
  */
@@ -551,6 +562,7 @@ export const projectIndex = pgTable(
     expenditure_type_id: integer("expenditure_type_id")
       .notNull()
       .references(() => expenditureTypes.id), // NOT NULL - matches actual database schema
+    for_yl_id: integer("for_yl_id"), // Optional - implementing agency that differs from parent Monada
     // NOTE: kallikratis_id and geographic_code columns don't exist in actual database
     // Geographic data should be stored in a separate table or handled differently
   },
@@ -1256,6 +1268,7 @@ export type Employee = typeof employees.$inferSelect;
 export type Beneficiary = typeof beneficiaries.$inferSelect;
 export type BeneficiaryPayment = typeof beneficiaryPayments.$inferSelect;
 export type EmployeePayment = typeof employeePayments.$inferSelect;
+export type ForYl = typeof forYl.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below

@@ -209,14 +209,23 @@ export class DocumentGenerator {
     const { expenditureType, config } = this.getExpenditureConfig(documentData);
     const documentTitle = config.documentTitle;
 
+    // Use for_yl title if available, otherwise use the unit name
+    // The for_yl is the delegated implementing agency that appears in the subject line
+    let agencyName: string;
+    if (documentData.for_yl?.title) {
+      // When for_yl is specified, use its title
+      agencyName = documentData.for_yl.title;
+    } else {
+      // Fall back to unit name
+      agencyName = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
+        ? `${unitDetails?.unit_name?.propgen || ""} ${unitDetails?.unit_name?.namegen || ""}`
+        : `${unitDetails?.unit_name?.prop || ""} ${unitDetails?.unit_name?.name || ""}`;
+    }
+
     const subjectText = [
       { text: "ΘΕΜΑ: ", bold: true, italics: true, color: "000000" },
       {
-        text: ` ${documentTitle} ${
-          expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
-            ? `${unitDetails?.unit_name?.propgen || ""} ${unitDetails?.unit_name?.namegen || ""}`
-            : `${unitDetails?.unit_name?.prop || ""} ${unitDetails?.unit_name?.name || ""}`
-        }`,
+        text: ` ${documentTitle} ${agencyName}`,
         italics: true,
         bold: true,
         color: "000000",
