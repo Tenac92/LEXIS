@@ -344,23 +344,25 @@ export class DatabaseStorage implements IStorage {
       const availableBudget = katanomesEtous - currentSpending;
       const yearlyAvailable = ethsiaPistosi - currentSpending;
       
-      // HARD VALIDATION: Only check for spending (positive amounts), not refunds
+      // TWO-TIER VALIDATION: Only check for spending (positive amounts), not refunds
+      // PRIORITY ORDER: Check πίστωση first (HARD BLOCK), then κατανομή (SOFT WARNING)
       if (amount > 0) {
-        // Check if this spending would exceed the allocated budget (katanomes_etous)
-        if (amount > availableBudget) {
-          const errorMsg = `Ανεπαρκές διαθέσιμο υπόλοιπο κατανομής. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${availableBudget.toFixed(2)}`;
-          console.error(`[Storage] BUDGET BLOCK: ${errorMsg}`);
-          throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
-        }
-        
-        // Check if this spending would exceed the annual allocation (ethsia_pistosi)
+        // HARD BLOCK: Check if this spending would exceed the annual credit (ethsia_pistosi)
+        // This is the absolute limit - cannot proceed
         if (amount > yearlyAvailable) {
           const errorMsg = `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`;
-          console.error(`[Storage] BUDGET BLOCK: ${errorMsg}`);
+          console.error(`[Storage] BUDGET HARD BLOCK (πίστωση exceeded): ${errorMsg}`);
           throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
         }
         
-        console.log(`[Storage] Budget validation passed: amount ${amount} <= available ${availableBudget}`);
+        // SOFT WARNING: Check if this spending would exceed the allocation (katanomes_etous)
+        // Allow proceeding but log warning - document can still be saved
+        if (amount > availableBudget) {
+          console.warn(`[Storage] BUDGET SOFT WARNING (κατανομή exceeded): Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμη Κατανομή: €${availableBudget.toFixed(2)} - Επιτρέπεται η αποθήκευση με προειδοποίηση`);
+          // Don't throw - allow the spending to proceed
+        } else {
+          console.log(`[Storage] Budget validation passed: amount ${amount} <= available ${availableBudget}`);
+        }
       }
       
       // Calculate new spending amount for both year and current quarter
