@@ -223,6 +223,7 @@ const createDocumentSchema = z
       ),
     subproject_id: z.string().optional(),
     region: z.string().optional(),
+    for_yl_id: z.coerce.number().optional().nullable(),
     expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
     recipients: z.array(recipientSchema).optional().default([]),
     total_amount: z.number().optional(),
@@ -331,6 +332,7 @@ export function CreateDocumentDialog({
             project_id: formValues.project_id,
             subproject_id: formValues.subproject_id,
             region: formValues.region,
+            for_yl_id: formValues.for_yl_id || null,
             expenditure_type: formValues.expenditure_type,
             recipients: formValues.recipients,
             status: formValues.status || "draft",
@@ -378,6 +380,7 @@ export function CreateDocumentDialog({
       project_id: formData.project_id ? String(formData.project_id) : "", // Ensure string conversion
       subproject_id: formData.subproject_id || "",
       region: formData.region || "",
+      for_yl_id: formData.for_yl_id || null,
       expenditure_type: formData.expenditure_type || "",
       recipients: formData.recipients || [],
       status: formData.status || "draft",
@@ -674,6 +677,36 @@ export function CreateDocumentDialog({
     retry: 2,
   });
 
+  // Fetch for_yl (delegated implementing agencies) data
+  const { data: forYlData = [] } = useQuery({
+    queryKey: ["for-yl"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/units/for-yl", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.warn("[ForYl] Failed to fetch for_yl data:", response.status);
+          return [];
+        }
+
+        const data = await response.json();
+        return data || [];
+      } catch (error) {
+        console.error("[ForYl] Error fetching for_yl:", error);
+        return [];
+      }
+    },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // COMPLETE REWRITE: Multi-stage dialog initialization for complete flicker prevention
   // Uses advanced state management and form reconciliation techniques
   const dialogInitializationRef = useRef<{
@@ -741,6 +774,7 @@ export function CreateDocumentDialog({
         unit: defaultUnit,
         project_id: "",
         region: "",
+        for_yl_id: null,
         expenditure_type: "",
         recipients: [],
         status: "draft",
@@ -752,6 +786,7 @@ export function CreateDocumentDialog({
         unit: defaultUnit,
         project_id: "",
         region: "",
+        for_yl_id: null,
         expenditure_type: "",
         recipients: [],
         status: "draft",
@@ -995,6 +1030,32 @@ export function CreateDocumentDialog({
   const selectedAttachments = form.watch("selectedAttachments") || [];
   const esdianField1 = form.watch("esdian_field1") || "";
   const esdianField2 = form.watch("esdian_field2") || "";
+  const selectedForYlId = form.watch("for_yl_id");
+
+  // Effect to validate for_yl_id when unit or forYlData changes
+  // Clear for_yl_id if it no longer belongs to the available options for the selected unit
+  useEffect(() => {
+    // Skip if no for_yl_id is selected (handles null, undefined, 0)
+    const currentForYlId = selectedForYlId;
+    if (!currentForYlId || !selectedUnit || !forYlData?.length) return;
+    
+    // Filter for_yl options by the selected unit
+    const availableForYl = forYlData.filter(
+      (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnit)
+    );
+    
+    // Check if the current for_yl_id is in the available options (handle both number and string comparisons)
+    const isValidSelection = availableForYl.some((fy: any) => 
+      fy.id === currentForYlId || String(fy.id) === String(currentForYlId)
+    );
+    
+    if (!isValidSelection) {
+      console.log("[ForYlValidation] Clearing invalid for_yl_id:", currentForYlId, "for unit:", selectedUnit);
+      form.setValue("for_yl_id", null);
+      // Only update for_yl_id in context, preserving other values from form
+      updateFormData({ for_yl_id: null });
+    }
+  }, [selectedUnit, forYlData, selectedForYlId, form, updateFormData]);
 
   // Simplified state management - replace complex ref-based blocking
   const [isDialogInitializing, setIsDialogInitializing] = useState(false);
@@ -2366,11 +2427,30 @@ export function CreateDocumentDialog({
         data.expenditure_type === EKTOS_EDRAS_TYPE,
       );
 
+      // Validate and get for_yl title if selected
+      // Only include for_yl if it belongs to the available options for the selected unit
+      const availableForYlForPayload = forYlData?.filter(
+        (fy: any) => fy.monada_id && String(fy.monada_id) === String(data.unit)
+      ) || [];
+      // Normalize for_yl_id to number for consistent comparison
+      const normalizedForYlId = data.for_yl_id != null && data.for_yl_id !== "" 
+        ? Number(data.for_yl_id) 
+        : null;
+      // Find matching for_yl using normalized numeric comparison
+      const selectedForYl = normalizedForYlId != null
+        ? availableForYlForPayload.find((fy: any) => Number(fy.id) === normalizedForYlId)
+        : null;
+      // Only include for_yl if valid (belongs to available options for selected unit)
+      // If selectedForYl is null (not found in filtered options), submit null to clear stale values
+      const validForYlId = selectedForYl ? normalizedForYlId : null;
+
       const payload = {
         unit: data.unit,
         project_id: projectId, // Convert to numeric ID for v2 endpoint
         project_mis: projectForSubmission.mis,
         region: data.region,
+        for_yl_id: validForYlId,
+        for_yl_title: selectedForYl?.title || null,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map((r) => {
           // For housing allowance, ensure proper data structure for export
@@ -3120,11 +3200,14 @@ export function CreateDocumentDialog({
 
                             // Always save the form context after unit change
                             const formValues = form.getValues();
+                            // Clear for_yl when unit changes (for_yl options are unit-specific)
+                            form.setValue("for_yl_id", null);
                             updateFormData({
                               ...formValues,
                               unit: value,
-                              // Clear project when unit changes to avoid invalid combinations
+                              // Clear project and for_yl when unit changes to avoid invalid combinations
                               project_id: "",
+                              for_yl_id: null,
                             });
 
                             // Force a refresh of projects data
@@ -3199,6 +3282,56 @@ export function CreateDocumentDialog({
                     </FormItem>
                   )}
                 />
+
+                {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
+                {(() => {
+                  const selectedUnitValue = form.watch("unit");
+                  if (!selectedUnitValue) return null;
+                  
+                  // Filter for_yl by the selected unit's monada_id
+                  const availableForYl = forYlData?.filter(
+                    (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
+                  ) || [];
+                  
+                  // Only show dropdown if there are for_yl options for this unit
+                  if (availableForYl.length === 0) return null;
+                  
+                  return (
+                    <FormField
+                      control={form.control}
+                      name="for_yl_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                            value={field.value ? String(field.value) : "none"}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-for-yl">
+                                <SelectValue placeholder="Επιλέξτε φορέα (προαιρετικό)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="none">Κανένας (χρήση μονάδας)</SelectItem>
+                              {availableForYl.map((forYl: any) => (
+                                <SelectItem
+                                  key={forYl.id}
+                                  value={String(forYl.id)}
+                                >
+                                  {forYl.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Επιλέξτε αν ο φορέας υλοποίησης διαφέρει από τη μονάδα
+                          </p>
+                        </FormItem>
+                      )}
+                    />
+                  );
+                })()}
               </div>
             )}
 

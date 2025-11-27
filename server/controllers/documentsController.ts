@@ -389,6 +389,8 @@ router.post(
         esdian,
         director_signature,
         region,
+        for_yl_id,
+        for_yl_title,
         needs_xrimatodotisi = false, // Flag for documents exceeding Κατανομή έτους budget
       } = req.body;
 
@@ -801,7 +803,8 @@ router.post(
       }
 
       // Parse region data from string format (Region|RegionalUnit|Municipality) to JSONB
-      let regionJsonb = null;
+      // Also include for_yl (delegated implementing agency) info if provided
+      let regionJsonb: any = null;
       if (region && typeof region === 'string' && region.trim() !== '') {
         const parts = region.split('|');
         const regionName = parts[0] || '';
@@ -824,6 +827,16 @@ router.post(
         };
         
         console.log('[DocumentsController] V2 Parsed region data:', regionJsonb);
+      }
+      
+      // Add for_yl (delegated implementing agency) to region JSONB if provided
+      if (for_yl_id) {
+        if (!regionJsonb) {
+          regionJsonb = {};
+        }
+        regionJsonb.for_yl_id = for_yl_id;
+        regionJsonb.for_yl_title = for_yl_title || null;
+        console.log('[DocumentsController] V2 Added for_yl to region:', { for_yl_id, for_yl_title });
       }
 
       // PRE-VALIDATE BUDGET BEFORE CREATING DOCUMENT
@@ -3299,7 +3312,7 @@ router.get(
               .eq("id", document.project_index_id)
               .single();
           
-          // Fetch for_yl data if for_yl_id exists
+          // Fetch for_yl data if for_yl_id exists in project_index
           if (!projectIndexError && projectIndexData?.for_yl_id) {
             const { data: forYl } = await supabase
               .from("for_yl")
@@ -3309,7 +3322,35 @@ router.get(
             
             if (forYl) {
               forYlData = forYl as { id: number; title: string; monada_id: string };
-              console.log("[DocumentsController] Using for_yl for document:", forYlData.title);
+              console.log("[DocumentsController] Using for_yl from project_index:", forYlData.title);
+            }
+          }
+          
+          // Fallback: Check if for_yl is stored in the document's region JSONB
+          if (!forYlData && document.region && typeof document.region === 'object') {
+            const regionData = document.region as { for_yl_id?: number; for_yl_title?: string };
+            if (regionData.for_yl_id) {
+              // If we have the title in region, use it directly
+              if (regionData.for_yl_title) {
+                forYlData = { 
+                  id: regionData.for_yl_id, 
+                  title: regionData.for_yl_title, 
+                  monada_id: '' 
+                };
+                console.log("[DocumentsController] Using for_yl from region JSONB:", forYlData.title);
+              } else {
+                // Otherwise fetch from database
+                const { data: forYl } = await supabase
+                  .from("for_yl")
+                  .select("id, title, monada_id")
+                  .eq("id", regionData.for_yl_id)
+                  .single();
+                
+                if (forYl) {
+                  forYlData = forYl as { id: number; title: string; monada_id: string };
+                  console.log("[DocumentsController] Using for_yl from region JSONB (fetched):", forYlData.title);
+                }
+              }
             }
           }
 
