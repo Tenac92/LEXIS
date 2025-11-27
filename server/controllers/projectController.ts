@@ -990,12 +990,14 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
         const projectIndexIds = projectIndex.map((idx) => idx.id);
 
         // Fetch geographic relationships from junction tables
+        // IMPORTANT: Include project_index_id so frontend can map areas to specific agencies
         const [regionsJunctionRes, unitsJunctionRes, munisJunctionRes] =
           await Promise.all([
             supabase
               .from("project_index_regions")
               .select(
                 `
+              project_index_id,
               region_code,
               regions (
                 code,
@@ -1008,6 +1010,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
               .from("project_index_units")
               .select(
                 `
+              project_index_id,
               unit_code,
               regional_units (
                 code,
@@ -1021,6 +1024,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
               .from("project_index_munis")
               .select(
                 `
+              project_index_id,
               muni_code,
               municipalities (
                 code,
