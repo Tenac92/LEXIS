@@ -20,7 +20,16 @@ export interface IStorage {
     newAmount: number,
     userId?: number
   ): Promise<void>;
-  checkBudgetAvailability(projectId: number, amount: number): Promise<{ isAvailable: boolean; message: string; availableBudget?: number }>;
+  checkBudgetAvailability(projectId: number, amount: number): Promise<{ 
+    isAvailable: boolean; 
+    message: string; 
+    availableBudget?: number;
+    hardBlock?: boolean;
+    budgetType?: 'pistosi' | 'katanomi' | null;
+    katanomesEtous?: number;
+    ethsiaPistosi?: number;
+    yearlyAvailable?: number;
+  }>;
   syncProjectBudgetIds(): Promise<{ synced: number; errors: number }>;
   getBudgetHistory(
     na853?: string, 
