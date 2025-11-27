@@ -2636,37 +2636,46 @@ router.patch(
           JSON.stringify(projectLinesToProcess, null, 2),
         );
 
-        // First, delete existing project_index entries for this project
-        const { error: deleteError } = await supabase
-          .from("project_index")
-          .delete()
-          .eq("project_id", updatedProject.id);
-
-        if (deleteError) {
-          console.error(
-            `[Projects] Error deleting existing project_index entries:`,
-            deleteError,
-          );
-        } else {
-          console.log(
-            `[Projects] Successfully deleted existing project_index entries for project ${updatedProject.id}`,
-          );
-        }
-
         // Get reference data for ID lookups
         const [
           eventTypesRes,
           expenditureTypesRes,
           monadaRes,
+          existingIndexRes,
         ] = await Promise.all([
           supabase.from("event_types").select("*"),
           supabase.from("expenditure_types").select("*"),
           supabase.from("Monada").select("*"),
+          supabase.from("project_index").select("id, monada_id, event_types_id, expenditure_type_id").eq("project_id", updatedProject.id),
         ]);
 
         const eventTypes = eventTypesRes.data || [];
         const expenditureTypes = expenditureTypesRes.data || [];
         const monadaData = monadaRes.data || [];
+        const existingIndexEntries = existingIndexRes.data || [];
+
+        // Build a map of existing project_index entries for quick lookup
+        const existingIndexMap = new Map<string, number>();
+        for (const entry of existingIndexEntries) {
+          const key = `${entry.monada_id}-${entry.event_types_id}-${entry.expenditure_type_id}`;
+          existingIndexMap.set(key, entry.id);
+        }
+        console.log(`[Projects] Found ${existingIndexEntries.length} existing project_index entries`);
+
+        // Delete ALL existing geographic relationships for this project's index entries
+        // This allows us to re-insert them fresh without constraint issues
+        const existingIndexIds = existingIndexEntries.map(e => e.id);
+        if (existingIndexIds.length > 0) {
+          console.log(`[Projects] Deleting geographic relationships for ${existingIndexIds.length} project_index entries`);
+          
+          const [regionsDelRes, unitsDelRes, munisDelRes] = await Promise.all([
+            supabase.from("project_index_regions").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_units").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_munis").delete().in("project_index_id", existingIndexIds),
+          ]);
+          
+          console.log(`[Projects] Deleted geographic relationships: regions=${!regionsDelRes.error}, units=${!unitsDelRes.error}, munis=${!munisDelRes.error}`);
+        }
 
         // STEP 1: Group project_lines by unique key (monada_id, event_types_id, expenditure_type_id)
         // and collect all geographic regions for each unique combination
@@ -2749,44 +2758,54 @@ router.patch(
 
         console.log(`[Projects] Grouped ${projectLinesToProcess.length} lines into ${groupedLines.size} unique index entries`);
 
-        // STEP 2: For each unique combination, insert ONE project_index entry
+        // STEP 2: For each unique combination, get existing or create new project_index entry
         // and insert ALL geographic relationships from all lines in that group
         for (const [key, group] of Array.from(groupedLines.entries())) {
           try {
-            const indexEntry = {
-              project_id: updatedProject.id,
-              monada_id: group.monadaId,
-              event_types_id: group.eventTypeId,
-              expenditure_type_id: group.expenditureTypeId,
-            };
+            let projectIndexId: number;
 
-            console.log(`[Projects] Inserting project_index entry for key ${key}:`, indexEntry);
+            // Check if entry already exists
+            if (existingIndexMap.has(key)) {
+              projectIndexId = existingIndexMap.get(key)!;
+              console.log(`[Projects] Reusing existing project_index entry for key ${key}, ID: ${projectIndexId}`);
+            } else {
+              // Create new entry
+              const indexEntry = {
+                project_id: updatedProject.id,
+                monada_id: group.monadaId,
+                event_types_id: group.eventTypeId,
+                expenditure_type_id: group.expenditureTypeId,
+              };
 
-            const result = await supabase
-              .from("project_index")
-              .insert(indexEntry)
-              .select("id")
-              .single();
+              console.log(`[Projects] Creating new project_index entry for key ${key}:`, indexEntry);
 
-            if (result.error) {
-              console.error(`[Projects] Error inserting project_index entry:`, result.error);
-              continue;
+              const result = await supabase
+                .from("project_index")
+                .insert(indexEntry)
+                .select("id")
+                .single();
+
+              if (result.error) {
+                console.error(`[Projects] Error inserting project_index entry:`, result.error);
+                continue;
+              }
+
+              projectIndexId = result.data?.id;
+              if (!projectIndexId) {
+                console.error(`[Projects] No ID returned for project_index entry`);
+                continue;
+              }
+              
+              console.log(`[Projects] Created new project_index entry, ID: ${projectIndexId}`);
             }
-
-            const projectIndexId = result.data?.id;
-            if (!projectIndexId) {
-              console.error(`[Projects] No ID returned for project_index entry`);
-              continue;
-            }
-
-            console.log(`[Projects] Successfully created project_index entry, ID: ${projectIndexId}, with ${group.regions.length} regions to insert`);
 
             // Insert ALL geographic relationships from ALL lines with this key
+            console.log(`[Projects] Inserting ${group.regions.length} geographic relationships for project_index ID: ${projectIndexId}`);
             for (const region of group.regions) {
               await insertGeographicRelationships(projectIndexId, region);
             }
 
-            console.log(`[Projects] Inserted ${group.regions.length} geographic relationships for project_index ID: ${projectIndexId}`);
+            console.log(`[Projects] Completed inserting geographic relationships for project_index ID: ${projectIndexId}`);
           } catch (lineError) {
             console.error(`[Projects] Error processing grouped line ${key}:`, lineError);
           }
