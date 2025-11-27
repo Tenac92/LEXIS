@@ -2,12 +2,14 @@ import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
 import type { BudgetNotification } from '@shared/schema';
 import { wsConnectionManager } from './websocket-connection-manager';
+import { getClientIpFromSocket, isGreekIp } from './middleware/geoIpMiddleware';
 
 const WS_PATH = '/ws';
 
 interface ExtendedWebSocket extends WebSocket {
   isAlive: boolean;
   clientId?: string;
+  geoVerified?: boolean;
 }
 
 export interface BudgetUpdate {
@@ -39,7 +41,42 @@ export function createWebSocketServer(server: Server) {
       // Generate a more unique client ID with timestamp
       const clientId = `${Math.random().toString(36).substring(7)}${Date.now().toString(36)}`;
       ws.clientId = clientId;
-      console.log(`[WebSocket] New client connected: ${clientId} from ${req.socket.remoteAddress}`);
+      
+      // SECURITY: Get client IP with proper proxy handling
+      const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+      const isDirectPrivate = socketIp.startsWith('10.') || 
+                              socketIp.startsWith('127.') || 
+                              socketIp.startsWith('192.168.') ||
+                              socketIp.startsWith('172.') ||
+                              socketIp.startsWith('100.64.');
+      
+      // Only trust X-Forwarded-For if the direct connection is from a trusted proxy
+      let clientIp = socketIp;
+      if (isDirectPrivate) {
+        clientIp = getClientIpFromSocket(req.socket.remoteAddress, req.headers as any);
+      }
+      
+      console.log(`[WebSocket] New client attempting connection: ${clientId} from ${clientIp} (socket: ${socketIp})`);
+      
+      // GEO-VERIFICATION: Check if connection is from Greece
+      // Pass true for isFromSocket only if the final IP is the direct socket IP
+      const isDirectSocket = clientIp === socketIp;
+      const fromGreece = isGreekIp(clientIp, isDirectSocket && isDirectPrivate);
+      ws.geoVerified = fromGreece;
+      
+      if (!fromGreece) {
+        // Not from Greece - close connection immediately
+        console.log(`[WebSocket] Connection DENIED - not from Greece: ${clientId} from ${clientIp}`);
+        try {
+          ws.close(4003, 'Access denied: Greece only');
+        } catch (error) {
+          console.error(`[WebSocket] Error closing unauthorized connection:`, error);
+          ws.terminate();
+        }
+        return;
+      }
+      
+      console.log(`[WebSocket] Connection ALLOWED from Greece: ${clientId} from ${clientIp}`);
 
       // Mark as alive immediately
       ws.isAlive = true;
@@ -54,6 +91,7 @@ export function createWebSocketServer(server: Server) {
           type: 'connection',
           message: 'Connected to notification service',
           clientId,
+          geoVerified: true,
           timestamp: new Date().toISOString()
         });
         

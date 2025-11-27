@@ -16,6 +16,8 @@ import type { User as SchemaUser } from "../shared/schema";
 import bcrypt from "bcrypt";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
+import geoip from "geoip-lite";
+import { getClientIp, isGreekIp } from "./middleware/geoIpMiddleware";
 
 // ============================================================================
 // Authentication Types
@@ -615,6 +617,44 @@ export async function setupAuth(app: Express) {
       req.session.user = sessionUser;
       req.session.createdAt = new Date();
 
+      // GEO-VERIFICATION: Check if user is logging in from Greece
+      // SECURITY: Use socket IP to determine if we should trust X-Forwarded-For
+      const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+      const isDirectPrivate = socketIp.startsWith('10.') || 
+                              socketIp.startsWith('127.') || 
+                              socketIp.startsWith('192.168.') ||
+                              socketIp.startsWith('172.') ||
+                              socketIp.startsWith('100.64.');
+      
+      const clientIp = getClientIp(req);
+      const geo = geoip.lookup(clientIp);
+      
+      // Pass isFromSocket=true only for truly internal connections
+      const isFromGreece = isGreekIp(clientIp, isDirectPrivate && clientIp === socketIp);
+      
+      if (isFromGreece) {
+        req.session.geoVerified = true;
+        req.session.geoVerifiedAt = new Date().toISOString();
+        req.session.geoVerifiedIp = clientIp;
+        req.session.geoVerifiedCountry = geo?.country || 'GR';
+        console.log("[Auth] Session geo-verified from Greece:", {
+          ip: clientIp,
+          country: geo?.country || 'whitelisted',
+          userId: sessionUser.id,
+        });
+      } else {
+        // User is not from Greece - deny login
+        console.log("[Auth] Login DENIED - not from Greece:", {
+          ip: clientIp,
+          country: geo?.country || 'unknown',
+          email: email,
+        });
+        return res.status(403).json({
+          message: "Access denied. Login is only available from Greece.",
+          code: "COUNTRY_RESTRICTED",
+        });
+      }
+
       // Save session explicitly and wait for completion
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
@@ -627,6 +667,7 @@ export async function setupAuth(app: Express) {
               userID: sessionUser.id,
               secure: req.secure,
               protocol: req.protocol,
+              geoVerified: req.session.geoVerified,
             });
             resolve();
           }
@@ -641,7 +682,8 @@ export async function setupAuth(app: Express) {
         unit_id: sessionUser.unit_id,
         department: sessionUser.department,
         sessionID: req.sessionID,
-        ip: req.ip,
+        ip: clientIp,
+        geoVerified: req.session.geoVerified,
       });
 
       // Match the response format that the client expects

@@ -9,190 +9,225 @@ import { log } from '../vite';
 const ALLOWED_COUNTRIES = ['GR'];
 
 /**
- * Whitelist of IPs that can bypass geo restrictions
- * Include internal IPs, localhost, development environments, and Replit IPs
+ * Known trusted proxy IPs (Render, Cloudflare, etc.)
+ * Only these proxies' X-Forwarded-For values will be trusted
  */
-const IP_WHITELIST = [
-  '127.0.0.1',
-  'localhost',
-  '::1',
-  '10.0.0.0/8',       // Internal network
-  '172.16.0.0/12',    // Internal network
-  '192.168.0.0/16',   // Internal network
-  '35.192.0.0/12',    // Replit/Google Cloud IPs
-  '34.0.0.0/8',       // Replit/Google Cloud IPs
-  '84.205.0.0/16',    // Common Greek ISP range (for testing)
-];
-
-/**
- * Exempt domains from geo-restrictions
- * This allows specific domains to bypass geo-restrictions
- */
-const EXEMPT_DOMAINS = [
-  // Main sdegdaefk.gr domains
-  'sdegdaefk.gr',
-  'www.sdegdaefk.gr',
-  // Subdomains of sdegdaefk.gr
-  '.sdegdaefk.gr',
-  // Replit domains
-  'replit.app',
-  'replit.dev',
-  'repl.co',
-  'replit.com',
-  // Render domain
-  'onrender.com',
-  'lexis-ig6p.onrender.com'
+const TRUSTED_PROXY_RANGES = [
+  '10.0.0.0/8',       // Render internal
+  '172.16.0.0/12',    // Docker/internal
+  '100.64.0.0/10',    // Render private network
 ];
 
 /**
  * Exempt paths from geo-restrictions
- * Critical paths that should always be accessible
+ * Only truly critical paths that must always be accessible
  */
 const EXEMPT_PATHS = [
   '/api/health',
-  '/api/auth/login',
-  '/api/auth/logout',
-  '/api/auth/me',
 ];
 
 /**
- * Check if an IP is in the whitelist
+ * Check if an IP is a private/internal IP
  */
-function isIpWhitelisted(ip: string): boolean {
-  // Direct IP match
-  if (IP_WHITELIST.includes(ip)) return true;
-
-  // Check for CIDR matches (simplified)
-  if (ip.startsWith('10.') || 
-      ip.startsWith('127.') || 
-      (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31) ||
-      ip.startsWith('192.168.') ||
-      ip.startsWith('84.205.')) {  // Added common Greek IP range
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Check if a domain is exempt from geo-restrictions
- */
-function isDomainExempt(req: Request): boolean {
-  const referer = req.get('Referer') || '';
-  const origin = req.get('Origin') || '';
-  const host = req.get('Host') || '';
+function isPrivateIp(ip: string): boolean {
+  if (!ip) return false;
   
-  // In development mode, always exempt
-  if (process.env.NODE_ENV !== 'production') {
-    log(`[GeoIP] Dev environment exempt from GeoIP restrictions`, 'geoip');
-    return true;
-  }
-  
-  // Enhanced check for sdegdaefk.gr specifically
-  const isSdegdaefkDomain = 
-    origin.includes('sdegdaefk.gr') || 
-    referer.includes('sdegdaefk.gr') || 
-    host.includes('sdegdaefk.gr');
-  
-  if (isSdegdaefkDomain) {
-    log(`[GeoIP] sdegdaefk.gr domain exempt from GeoIP restrictions: ${origin || referer || host}`, 'geoip');
-    return true;
-  }
-  
-  // Check if any of the headers indicate exempt domains
-  const isExempt = EXEMPT_DOMAINS.some(domain => {
-    return (referer.includes(domain) || origin.includes(domain) || host.includes(domain));
-  });
-  
-  // Add extra check for Replit domains
-  const isReplitDomain = [referer, origin, host].some(header => {
-    return header.includes('replit.dev') || 
-           header.includes('replit.app') ||
-           header.includes('repl.co');
-  });
-  
-  if (isReplitDomain) {
-    log(`[GeoIP] Replit domain exempt from GeoIP restrictions: ${host}`, 'geoip');
-    return true;
-  }
-  
-  return isExempt || isReplitDomain;
+  return ip.startsWith('10.') || 
+         ip.startsWith('127.') || 
+         ip === '::1' ||
+         (ip.startsWith('172.') && parseInt(ip.split('.')[1]) >= 16 && parseInt(ip.split('.')[1]) <= 31) ||
+         ip.startsWith('192.168.') ||
+         ip.startsWith('100.64.');
 }
 
 /**
  * Check if a path should be exempt from geo-restrictions
  */
 function isPathExempt(path: string): boolean {
-  // Check for direct matches or if the path starts with any exempt path
   return EXEMPT_PATHS.some(exemptPath => 
     path === exemptPath || path.startsWith(exemptPath)
   );
 }
 
 /**
+ * Get the client's real IP address from request
+ * SECURITY: Only trust X-Forwarded-For if the direct connection is from a trusted proxy
+ * We use the RIGHTMOST non-private IP (the one added by the trusted proxy), not the leftmost
+ * This prevents attackers from prepending fake IPs to the header
+ */
+export function getClientIp(req: Request): string {
+  const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  
+  if (isPrivateIp(socketIp)) {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      const ips = typeof forwardedFor === 'string' 
+        ? forwardedFor.split(',').map(ip => ip.trim().replace(/^::ffff:/, ''))
+        : forwardedFor.map(ip => ip.replace(/^::ffff:/, ''));
+      
+      // Find the RIGHTMOST public IP (the one added by the trusted proxy)
+      // Work backwards through the chain to find the first public IP
+      for (let i = ips.length - 1; i >= 0; i--) {
+        const ip = ips[i];
+        if (!isPrivateIp(ip) && ip) {
+          return ip;
+        }
+      }
+    }
+  }
+  
+  return socketIp;
+}
+
+/**
+ * Get client IP from raw socket (for WebSocket connections)
+ * SECURITY: Only trust X-Forwarded-For if socket is from trusted proxy
+ * We use the RIGHTMOST non-private IP (the one added by the trusted proxy), not the leftmost
+ * This prevents attackers from prepending fake IPs to the header
+ */
+export function getClientIpFromSocket(
+  socketAddress: string | undefined,
+  headers: { [key: string]: string | string[] | undefined }
+): string {
+  const socketIp = (socketAddress || '').replace(/^::ffff:/, '');
+  
+  if (isPrivateIp(socketIp)) {
+    const forwardedFor = headers['x-forwarded-for'];
+    if (forwardedFor) {
+      const ips = typeof forwardedFor === 'string' 
+        ? forwardedFor.split(',').map(ip => ip.trim().replace(/^::ffff:/, ''))
+        : (Array.isArray(forwardedFor) ? forwardedFor : [forwardedFor]).map(ip => (ip || '').replace(/^::ffff:/, ''));
+      
+      // Find the RIGHTMOST public IP (the one added by the trusted proxy)
+      // Work backwards through the chain to find the first public IP
+      for (let i = ips.length - 1; i >= 0; i--) {
+        const ip = ips[i];
+        if (!isPrivateIp(ip) && ip) {
+          return ip;
+        }
+      }
+    }
+  }
+  
+  return socketIp;
+}
+
+/**
+ * Check if an IP address is from Greece
+ * SECURITY: Private IPs are only allowed if they come from the actual socket (internal services)
+ */
+export function isGreekIp(ip: string, isFromSocket: boolean = false): boolean {
+  if (!ip) {
+    log(`[GeoIP] No IP provided`, 'geoip');
+    return false;
+  }
+
+  if (isPrivateIp(ip)) {
+    if (isFromSocket) {
+      log(`[GeoIP] Private IP ${ip} allowed (direct socket connection)`, 'geoip');
+      return true;
+    }
+    log(`[GeoIP] Private IP ${ip} DENIED (not from direct socket)`, 'geoip-blocked');
+    return false;
+  }
+
+  const geo = geoip.lookup(ip);
+  
+  if (!geo) {
+    log(`[GeoIP] Lookup failed for IP: ${ip} - DENIED (fail-closed)`, 'geoip-blocked');
+    return false;
+  }
+
+  const isGreece = ALLOWED_COUNTRIES.includes(geo.country);
+  log(`[GeoIP] IP ${ip} country: ${geo.country}, allowed: ${isGreece}`, 'geoip');
+  return isGreece;
+}
+
+/**
+ * Check if the session has been geo-verified (user logged in from Greece)
+ */
+function isSessionGeoVerified(req: Request): boolean {
+  return req.session?.geoVerified === true;
+}
+
+/**
  * GeoIP Middleware for restricting access by country
  * 
- * This middleware blocks traffic from countries not in the ALLOWED_COUNTRIES list,
- * with exceptions for IP_WHITELIST and EXEMPT_DOMAINS.
- * Enhanced for sdegdaefk.gr domain support.
+ * Security model:
+ * 1. Unauthenticated users must come from Greece
+ * 2. Users who logged in from Greece have their session marked as "geo-verified"
+ * 3. Geo-verified sessions can access from anywhere (VPN, travel, etc.)
+ * 4. No header-based bypasses - only trust X-Forwarded-For from actual proxies
+ * 5. Fail-closed: if GeoIP lookup fails, deny access
  */
 export function geoIpRestriction(req: Request, res: Response, next: NextFunction) {
-  // Allow preflight requests to bypass geo-restriction
   if (req.method === 'OPTIONS') {
     return next();
   }
   
-  // Allow exempt paths to bypass geo-restriction
   if (isPathExempt(req.path)) {
     log(`[GeoIP] Exempt path ${req.path} bypassing geo-restrictions`, 'geoip');
     return next();
   }
 
-  // Skip for exempt domains (including sdegdaefk.gr)
-  if (isDomainExempt(req)) {
+  if (isSessionGeoVerified(req)) {
+    log(`[GeoIP] Session geo-verified, allowing access for path ${req.path}`, 'geoip');
     return next();
   }
 
-  // Get client's IP
-  let clientIp = 
-    req.headers['x-forwarded-for'] || 
-    req.socket.remoteAddress || 
-    req.ip || '';
+  const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  const isDirectPrivate = isPrivateIp(socketIp);
   
-  // If x-forwarded-for contains multiple IPs, take the first one
-  if (typeof clientIp === 'string' && clientIp.includes(',')) {
-    clientIp = clientIp.split(',')[0].trim();
+  if (isDirectPrivate) {
+    const clientIp = getClientIp(req);
+    
+    if (isPrivateIp(clientIp)) {
+      log(`[GeoIP] Internal request allowed: ${clientIp}`, 'geoip');
+      return next();
+    }
+    
+    const geo = geoip.lookup(clientIp);
+    
+    if (!geo) {
+      log(`[GeoIP] Access DENIED: GeoIP lookup failed for IP: ${clientIp} - fail-closed policy`, 'geoip-blocked');
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'Unable to verify your location. This service is only available in Greece.',
+        code: 'GEOIP_LOOKUP_FAILED'
+      });
+    }
+
+    if (ALLOWED_COUNTRIES.includes(geo.country)) {
+      log(`[GeoIP] Access allowed from Greece (${geo.country}) via proxy, IP: ${clientIp}`, 'geoip');
+      return next();
+    }
+
+    log(`[GeoIP] Access BLOCKED: IP ${clientIp} from ${geo.country} attempted to access ${req.path}`, 'geoip-blocked');
+    return res.status(403).json({
+      error: 'Access Denied',
+      message: 'This service is only available in Greece.',
+      code: 'COUNTRY_RESTRICTED'
+    });
   }
   
-  // Log IP check for debugging
-  log(`[GeoIP] Checking IP: ${clientIp} for path ${req.path}`, 'geoip');
-
-  // If IP is in whitelist, allow access
-  if (isIpWhitelisted(clientIp as string)) {
-    log(`[GeoIP] IP ${clientIp} is whitelisted, allowing access`, 'geoip');
-    return next();
-  }
-
-  // Lookup country for the IP
-  const geo = geoip.lookup(clientIp as string);
+  const geo = geoip.lookup(socketIp);
   
-  // If geo lookup failed, allow access (fail open for production environments)
-  // For stricter security, change this to deny by default
   if (!geo) {
-    log(`[GeoIP] GeoIP lookup failed for IP: ${clientIp}`, 'geoip');
-    return next();
+    log(`[GeoIP] Access DENIED: GeoIP lookup failed for direct IP: ${socketIp} - fail-closed policy`, 'geoip-blocked');
+    return res.status(403).json({
+      error: 'Access Denied',
+      message: 'Unable to verify your location. This service is only available in Greece.',
+      code: 'GEOIP_LOOKUP_FAILED'
+    });
   }
 
-  // Check if country is allowed (Greece)
   if (ALLOWED_COUNTRIES.includes(geo.country)) {
-    log(`[GeoIP] Access allowed from Greece (${geo.country}) IP: ${clientIp}`, 'geoip');
+    log(`[GeoIP] Access allowed from Greece (${geo.country}) direct IP: ${socketIp}`, 'geoip');
     return next();
   }
 
-  // Log blocked access
-  log(`[GeoIP] Access blocked: IP ${clientIp} from ${geo.country} attempted to access ${req.path}`, 'geoip-blocked');
+  log(`[GeoIP] Access BLOCKED: Direct IP ${socketIp} from ${geo.country} attempted to access ${req.path}`, 'geoip-blocked');
   
-  // Return 403 Forbidden
   return res.status(403).json({
     error: 'Access Denied',
     message: 'This service is only available in Greece.',
@@ -200,5 +235,4 @@ export function geoIpRestriction(req: Request, res: Response, next: NextFunction
   });
 }
 
-// Export the middleware
 export default geoIpRestriction;
