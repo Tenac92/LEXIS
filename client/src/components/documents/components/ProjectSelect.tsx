@@ -76,7 +76,14 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         .replace(/[^\w\s]/gi, "");
     }, []);
 
-    const extractNA853Info = useCallback((name: string) => {
+    const extractNA853Info = useCallback((name: string | undefined | null) => {
+      if (!name) {
+        return {
+          na853: "",
+          year: "",
+          budget: "",
+        };
+      }
       const na853Match = name.match(/ΝΑ853[:\s]*([^,\s]+)/i);
       const yearMatch = name.match(/20\d{2}/);
       const budgetMatch = name.match(/([\d.,]+)\s*€?/);
