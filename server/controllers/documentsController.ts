@@ -4244,7 +4244,12 @@ router.put(
 
 /**
  * DELETE /api/documents/generated/:id
- * Delete a generated document
+ * Delete a generated document (only if it hasn't received a protocol number yet)
+ * This will:
+ * 1. Check if document has a protocol number - if yes, block deletion
+ * 2. Return the budget amount to the project
+ * 3. Delete associated beneficiary payments (but not the beneficiary records)
+ * 4. Delete the document
  */
 router.delete(
   "/generated/:id",
@@ -4260,10 +4265,10 @@ router.delete(
         });
       }
 
-      // Verify document exists before deletion
+      // Fetch document with all necessary fields for deletion logic
       const { data: existingDocument, error: fetchError } = await supabase
         .from("generated_documents")
-        .select("id, generated_by")
+        .select("id, generated_by, protocol_number_input, total_amount, project_index_id, beneficiary_payments_id")
         .eq("id", documentId)
         .single();
 
@@ -4274,7 +4279,16 @@ router.delete(
         });
       }
 
-      // Optional: Add authorization check - only allow user who created the document or admin to delete
+      // BLOCK DELETION: Check if document has a protocol number
+      // Documents with protocol numbers cannot be deleted
+      if (existingDocument.protocol_number_input && existingDocument.protocol_number_input.trim() !== "") {
+        return res.status(400).json({
+          success: false,
+          message: "Δεν μπορείτε να διαγράψετε έγγραφο που έχει ήδη αριθμό πρωτοκόλλου. Μόνο έγγραφα χωρίς πρωτόκολλο μπορούν να διαγραφούν.",
+        });
+      }
+
+      // Authorization check - only allow user who created the document or manager to delete
       if (
         req.user?.role !== "manager" &&
         existingDocument.generated_by !== req.user?.id
@@ -4285,7 +4299,14 @@ router.delete(
         });
       }
 
-      // Delete the document
+      console.log(`[DocumentsController] Deleting document ${documentId} - will return budget and clean up payments after document deletion`);
+
+      // Store document info needed for cleanup BEFORE deletion
+      const projectIndexId = existingDocument.project_index_id;
+      const totalAmount = existingDocument.total_amount;
+
+      // STEP 1: Delete the document FIRST
+      // This ensures we don't leave the system in an inconsistent state if this fails
       const { error: deleteError } = await supabase
         .from("generated_documents")
         .delete()
@@ -4300,13 +4321,91 @@ router.delete(
         });
       }
 
+      console.log(`[DocumentsController] Document ${documentId} deleted successfully, now cleaning up related records`);
+
+      // STEP 2: Return the budget amount to the project (after document is deleted)
+      // Even if this fails, the document is gone, so we just log for manual resolution
+      if (projectIndexId && totalAmount) {
+        try {
+          // Get project_id from project_index
+          const { data: projectIndex, error: projectIndexError } = await supabase
+            .from("project_index")
+            .select("project_id")
+            .eq("id", projectIndexId)
+            .single();
+
+          if (!projectIndexError && projectIndex?.project_id) {
+            const amountToReturn = parseFloat(String(totalAmount));
+            
+            // Return the budget by passing negative amount
+            await storage.updateProjectBudgetSpending(
+              projectIndex.project_id,
+              -amountToReturn, // Negative amount to return/refund
+              documentId,
+              req.user?.id
+            );
+            
+            console.log(`[DocumentsController] Budget returned: €${amountToReturn} for project ${projectIndex.project_id}`);
+          } else {
+            console.warn(`[DocumentsController] Could not find project for budget return - project_index_id: ${projectIndexId}`);
+          }
+        } catch (budgetError) {
+          console.error("[DocumentsController] Error returning budget (document already deleted, manual resolution needed):", budgetError);
+          // Document is already deleted, log for manual budget adjustment
+        }
+      }
+
+      // STEP 3: Delete associated beneficiary payments (but not the beneficiary records themselves)
+      // These are now orphaned since the document is deleted
+      const { data: linkedPayments, error: paymentsError } = await supabase
+        .from("beneficiary_payments")
+        .select("id")
+        .eq("document_id", documentId);
+
+      if (!paymentsError && linkedPayments && linkedPayments.length > 0) {
+        const paymentIds = linkedPayments.map(p => p.id);
+        
+        // Delete all beneficiary payments linked to this document
+        const { error: deletePaymentsError } = await supabase
+          .from("beneficiary_payments")
+          .delete()
+          .in("id", paymentIds);
+
+        if (deletePaymentsError) {
+          console.error("[DocumentsController] Error deleting beneficiary payments (orphaned records):", deletePaymentsError);
+        } else {
+          console.log(`[DocumentsController] Deleted ${paymentIds.length} beneficiary payment(s) for document ${documentId}`);
+        }
+      }
+
+      // STEP 4: Delete employee payments if any exist (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
+      const { data: linkedEmployeePayments, error: employeePaymentsError } = await supabase
+        .from("employee_payments")
+        .select("id")
+        .eq("document_id", documentId);
+
+      if (!employeePaymentsError && linkedEmployeePayments && linkedEmployeePayments.length > 0) {
+        const employeePaymentIds = linkedEmployeePayments.map(p => p.id);
+        
+        const { error: deleteEmployeePaymentsError } = await supabase
+          .from("employee_payments")
+          .delete()
+          .in("id", employeePaymentIds);
+
+        if (deleteEmployeePaymentsError) {
+          console.error("[DocumentsController] Error deleting employee payments (orphaned records):", deleteEmployeePaymentsError);
+        } else {
+          console.log(`[DocumentsController] Deleted ${employeePaymentIds.length} employee payment(s) for document ${documentId}`);
+        }
+      }
+
       logger.info(
-        `Document ${documentId} deleted successfully by user ${req.user?.id}`,
+        `Document ${documentId} deleted successfully by user ${req.user?.id} - budget returned and payments cleaned up`,
       );
 
       res.json({
         success: true,
-        message: "Το έγγραφο διαγράφηκε επιτυχώς",
+        message: "Το έγγραφο διαγράφηκε επιτυχώς. Ο προϋπολογισμός επιστράφηκε και οι πληρωμές διαγράφηκαν.",
       });
     } catch (error) {
       console.error("Error in document deletion endpoint:", error);
