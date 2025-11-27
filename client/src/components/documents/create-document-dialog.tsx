@@ -2530,7 +2530,7 @@ export function CreateDocumentDialog({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        })) as { id?: number; message?: string };
+        })) as { id?: number; message?: string; budget_warning?: boolean; budget_warning_message?: string; budget_type?: string };
 
         console.log("[HandleSubmit] API request completed successfully!");
 
@@ -2563,10 +2563,20 @@ export function CreateDocumentDialog({
           }),
         ]);
 
-        toast({
-          title: "Επιτυχία",
-          description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
-        });
+        // Show appropriate toast based on budget status
+        if (response.budget_warning && response.budget_type === 'katanomi') {
+          // Document saved with budget warning (κατανομή exceeded)
+          toast({
+            title: "Έγγραφο Αποθηκεύτηκε με Προειδοποίηση",
+            description: "Υπέρβαση κατανομής έτους - Απαιτείται χρηματοδότηση. Το έγγραφο αποθηκεύτηκε επιτυχώς.",
+            variant: "warning",
+          });
+        } else {
+          toast({
+            title: "Επιτυχία",
+            description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
+          });
+        }
 
         // Reset entire form after successful document creation
         // Convert user's unit ID to unit name for form default

@@ -828,7 +828,12 @@ router.post(
 
       // PRE-VALIDATE BUDGET BEFORE CREATING DOCUMENT
       // This ensures we don't create documents that would exceed budget limits
+      // TWO-TIER VALIDATION:
+      // - ετήσια πίστωση exceeded = HARD BLOCK (cannot save)
+      // - κατανομή έτους exceeded = SOFT WARNING (save with warning)
       const spendingAmount = parseFloat(String(total_amount)) || 0;
+      let budgetWarning: { message: string; budgetType: string } | null = null;
+      
       if (spendingAmount > 0 && project_id) {
         console.log('[DocumentsController] V2 Pre-validating budget before document creation');
         console.log('[DocumentsController] V2 Project ID:', project_id, 'Amount:', spendingAmount);
@@ -837,18 +842,34 @@ router.post(
           const { storage } = await import("../storage");
           const budgetCheck = await storage.checkBudgetAvailability(project_id, spendingAmount);
           
-          if (!budgetCheck.isAvailable) {
-            console.log('[DocumentsController] V2 BUDGET PRE-VALIDATION FAILED:', budgetCheck.message);
+          // HARD BLOCK: Only block if ετήσια πίστωση is exceeded (hardBlock = true)
+          if (budgetCheck.hardBlock) {
+            console.log('[DocumentsController] V2 BUDGET HARD BLOCK (πίστωση exceeded):', budgetCheck.message);
             return res.status(400).json({
-              message: "Ανεπαρκής προϋπολογισμός",
+              message: "Υπέρβαση Ετήσιας Πίστωσης - Δεν μπορείτε να αποθηκεύσετε",
               error: budgetCheck.message,
               budget_error: true,
+              budget_type: budgetCheck.budgetType,
+              hard_block: true,
               available_budget: budgetCheck.availableBudget,
+              yearly_available: budgetCheck.yearlyAvailable,
+              katanomes_etous: budgetCheck.katanomesEtous,
+              ethsia_pistosi: budgetCheck.ethsiaPistosi,
               requested_amount: spendingAmount
             });
           }
           
-          console.log('[DocumentsController] V2 Budget pre-validation PASSED. Available:', budgetCheck.availableBudget);
+          // SOFT WARNING: κατανομή έτους exceeded - allow save but log warning
+          if (budgetCheck.budgetType === 'katanomi') {
+            console.log('[DocumentsController] V2 BUDGET SOFT WARNING (κατανομή exceeded):', budgetCheck.message);
+            budgetWarning = {
+              message: budgetCheck.message,
+              budgetType: 'katanomi'
+            };
+            // Don't return - continue with document creation
+          } else {
+            console.log('[DocumentsController] V2 Budget pre-validation PASSED. Available:', budgetCheck.availableBudget);
+          }
         } catch (budgetCheckError) {
           console.error('[DocumentsController] V2 Error during budget pre-validation:', budgetCheckError);
           // If we can't validate budget, we should still block the document creation for safety
@@ -1388,11 +1409,22 @@ router.post(
         },
       });
 
-      res.status(201).json({
+      // Include budget warning in response if κατανομή was exceeded
+      const responsePayload: any = {
         id: data.id,
-        message: "Document created successfully",
+        message: budgetWarning 
+          ? "Το έγγραφο αποθηκεύτηκε με προειδοποίηση προϋπολογισμού" 
+          : "Document created successfully",
         beneficiary_payments_count: beneficiaryPaymentsIds.length,
-      });
+      };
+      
+      if (budgetWarning) {
+        responsePayload.budget_warning = true;
+        responsePayload.budget_warning_message = budgetWarning.message;
+        responsePayload.budget_type = budgetWarning.budgetType;
+      }
+      
+      res.status(201).json(responsePayload);
     } catch (error) {
       console.error("[DocumentsController] V2 Error creating document:", error);
       res.status(500).json({

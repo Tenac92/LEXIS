@@ -428,9 +428,14 @@ export class DatabaseStorage implements IStorage {
         
         // PRE-VALIDATION: Check if the new project has sufficient budget BEFORE making any changes
         // This prevents partial state where we removed from old project but can't add to new project
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
         const newBudgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
-        if (!newBudgetCheck.isAvailable) {
+        if (newBudgetCheck.hardBlock) {
           throw new Error(`BUDGET_EXCEEDED: Δεν είναι δυνατή η μεταφορά στο νέο έργο. ${newBudgetCheck.message}`);
+        }
+        // Log soft warning but allow proceeding
+        if (newBudgetCheck.budgetType === 'katanomi') {
+          console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${newBudgetCheck.message}`);
         }
         
         try {
@@ -465,10 +470,15 @@ export class DatabaseStorage implements IStorage {
         const amountDifference = newAmount - oldAmount;
         
         // PRE-VALIDATION: Only validate if amount is increasing (more spending)
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
         if (amountDifference > 0) {
           const budgetCheck = await this.checkBudgetAvailability(oldProjectId, amountDifference);
-          if (!budgetCheck.isAvailable) {
+          if (budgetCheck.hardBlock) {
             throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+          }
+          // Log soft warning but allow proceeding
+          if (budgetCheck.budgetType === 'katanomi') {
+            console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${budgetCheck.message}`);
           }
         }
         
@@ -480,9 +490,14 @@ export class DatabaseStorage implements IStorage {
         console.log(`[Storage] Project added: ${newProjectId}`);
         
         // PRE-VALIDATION: Check budget availability for new spending
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
         const budgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
-        if (!budgetCheck.isAvailable) {
+        if (budgetCheck.hardBlock) {
           throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+        }
+        // Log soft warning but allow proceeding
+        if (budgetCheck.budgetType === 'katanomi') {
+          console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${budgetCheck.message}`);
         }
         
         await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
@@ -504,7 +519,16 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async checkBudgetAvailability(projectId: number, amount: number): Promise<{ isAvailable: boolean; message: string; availableBudget?: number }> {
+  async checkBudgetAvailability(projectId: number, amount: number): Promise<{ 
+    isAvailable: boolean; 
+    message: string; 
+    availableBudget?: number;
+    hardBlock?: boolean;
+    budgetType?: 'pistosi' | 'katanomi' | null;
+    katanomesEtous?: number;
+    ethsiaPistosi?: number;
+    yearlyAvailable?: number;
+  }> {
     try {
       // Get budget data for the project
       let { data: budgetData, error: budgetError } = await supabase
@@ -538,6 +562,7 @@ export class DatabaseStorage implements IStorage {
       if (budgetError || !budgetData) {
         return {
           isAvailable: false,
+          hardBlock: true,
           message: `Δεν βρέθηκε εγγραφή προϋπολογισμού για το έργο ${projectId}`
         };
       }
@@ -548,31 +573,49 @@ export class DatabaseStorage implements IStorage {
       const availableBudget = katanomesEtous - currentSpending;
       const yearlyAvailable = ethsiaPistosi - currentSpending;
 
-      if (amount > availableBudget) {
-        return {
-          isAvailable: false,
-          message: `Ανεπαρκές διαθέσιμο υπόλοιπο κατανομής. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${availableBudget.toFixed(2)}`,
-          availableBudget
-        };
-      }
-
+      // PRIORITY: Check ετήσια πίστωση first - this is a HARD BLOCK (cannot proceed)
       if (amount > yearlyAvailable) {
         return {
           isAvailable: false,
+          hardBlock: true,
+          budgetType: 'pistosi',
           message: `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`,
-          availableBudget
+          availableBudget,
+          katanomesEtous,
+          ethsiaPistosi,
+          yearlyAvailable
+        };
+      }
+
+      // Check κατανομή έτους - this is a SOFT BLOCK (can save, but with warning)
+      if (amount > availableBudget) {
+        return {
+          isAvailable: true,
+          hardBlock: false,
+          budgetType: 'katanomi',
+          message: `Υπέρβαση κατανομής έτους. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμη Κατανομή: €${availableBudget.toFixed(2)}. Το έγγραφο θα αποθηκευτεί με προειδοποίηση.`,
+          availableBudget,
+          katanomesEtous,
+          ethsiaPistosi,
+          yearlyAvailable
         };
       }
 
       return {
         isAvailable: true,
+        hardBlock: false,
+        budgetType: null,
         message: 'Επαρκές διαθέσιμο υπόλοιπο',
-        availableBudget
+        availableBudget,
+        katanomesEtous,
+        ethsiaPistosi,
+        yearlyAvailable
       };
     } catch (error) {
       console.error('[Storage] Error checking budget availability:', error);
       return {
         isAvailable: false,
+        hardBlock: true,
         message: 'Σφάλμα κατά τον έλεγχο διαθεσιμότητας προϋπολογισμού'
       };
     }
