@@ -43,6 +43,13 @@ Preferred communication style: Simple, everyday language.
 - **Authentication**: Session-based with Supabase user verification.
 - **Authorization**: Role-based (Admin, Manager, User) and unit-based restrictions.
 - **Security**: CORS configuration for specific domains and Geo-IP restrictions to Greece.
+- **GeoIP Security Hardening** (November 2025):
+    - Removed spoofable HTTP header checks (Origin, Referer, Host) that allowed bypass.
+    - Uses RIGHTMOST non-private IP from X-Forwarded-For to prevent header spoofing attacks.
+    - Session-based geo-verification: Users who login from Greece get `geoVerified` flag allowing access from any location.
+    - Fail-closed behavior: If GeoIP lookup fails, access is denied rather than allowed.
+    - WebSocket connections also enforce GeoIP restrictions.
+    - Only trusts X-Forwarded-For when socket connection is from private IP (trusted proxy like Render).
 
 ## Key Design Patterns
 - **Service Layer**: Dedicated services for core functionalities (budget, notifications, scheduling).
