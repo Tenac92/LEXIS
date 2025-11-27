@@ -4247,9 +4247,10 @@ router.put(
  * Delete a generated document (only if it hasn't received a protocol number yet)
  * This will:
  * 1. Check if document has a protocol number - if yes, block deletion
- * 2. Return the budget amount to the project
- * 3. Delete associated beneficiary payments (but not the beneficiary records)
- * 4. Delete the document
+ * 2. Delete associated beneficiary payments FIRST (to avoid FK constraint)
+ * 3. Delete associated employee payments (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
+ * 4. Delete the document (after all payment references are removed)
+ * 5. Return the budget amount to the project (only after document is successfully deleted)
  */
 router.delete(
   "/generated/:id",
@@ -4299,64 +4300,13 @@ router.delete(
         });
       }
 
-      console.log(`[DocumentsController] Deleting document ${documentId} - will return budget and clean up payments after document deletion`);
+      console.log(`[DocumentsController] Deleting document ${documentId} - deleting payments first, then returning budget, then deleting document`);
 
-      // Store document info needed for cleanup BEFORE deletion
+      // Store document info needed for cleanup
       const projectIndexId = existingDocument.project_index_id;
       const totalAmount = existingDocument.total_amount;
 
-      // STEP 1: Delete the document FIRST
-      // This ensures we don't leave the system in an inconsistent state if this fails
-      const { error: deleteError } = await supabase
-        .from("generated_documents")
-        .delete()
-        .eq("id", documentId);
-
-      if (deleteError) {
-        console.error("Error deleting document:", deleteError);
-        return res.status(500).json({
-          success: false,
-          message: "Σφάλμα κατά τη διαγραφή του εγγράφου",
-          error: deleteError.message,
-        });
-      }
-
-      console.log(`[DocumentsController] Document ${documentId} deleted successfully, now cleaning up related records`);
-
-      // STEP 2: Return the budget amount to the project (after document is deleted)
-      // Even if this fails, the document is gone, so we just log for manual resolution
-      if (projectIndexId && totalAmount) {
-        try {
-          // Get project_id from project_index
-          const { data: projectIndex, error: projectIndexError } = await supabase
-            .from("project_index")
-            .select("project_id")
-            .eq("id", projectIndexId)
-            .single();
-
-          if (!projectIndexError && projectIndex?.project_id) {
-            const amountToReturn = parseFloat(String(totalAmount));
-            
-            // Return the budget by passing negative amount
-            await storage.updateProjectBudgetSpending(
-              projectIndex.project_id,
-              -amountToReturn, // Negative amount to return/refund
-              documentId,
-              req.user?.id
-            );
-            
-            console.log(`[DocumentsController] Budget returned: €${amountToReturn} for project ${projectIndex.project_id}`);
-          } else {
-            console.warn(`[DocumentsController] Could not find project for budget return - project_index_id: ${projectIndexId}`);
-          }
-        } catch (budgetError) {
-          console.error("[DocumentsController] Error returning budget (document already deleted, manual resolution needed):", budgetError);
-          // Document is already deleted, log for manual budget adjustment
-        }
-      }
-
-      // STEP 3: Delete associated beneficiary payments (but not the beneficiary records themselves)
-      // These are now orphaned since the document is deleted
+      // STEP 1: Delete associated beneficiary payments FIRST (to avoid foreign key constraint)
       const { data: linkedPayments, error: paymentsError } = await supabase
         .from("beneficiary_payments")
         .select("id")
@@ -4365,20 +4315,23 @@ router.delete(
       if (!paymentsError && linkedPayments && linkedPayments.length > 0) {
         const paymentIds = linkedPayments.map(p => p.id);
         
-        // Delete all beneficiary payments linked to this document
         const { error: deletePaymentsError } = await supabase
           .from("beneficiary_payments")
           .delete()
           .in("id", paymentIds);
 
         if (deletePaymentsError) {
-          console.error("[DocumentsController] Error deleting beneficiary payments (orphaned records):", deletePaymentsError);
-        } else {
-          console.log(`[DocumentsController] Deleted ${paymentIds.length} beneficiary payment(s) for document ${documentId}`);
+          console.error("[DocumentsController] Error deleting beneficiary payments:", deletePaymentsError);
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά τη διαγραφή των πληρωμών δικαιούχων",
+            error: deletePaymentsError.message,
+          });
         }
+        console.log(`[DocumentsController] Deleted ${paymentIds.length} beneficiary payment(s) for document ${documentId}`);
       }
 
-      // STEP 4: Delete employee payments if any exist (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
+      // STEP 2: Delete employee payments if any exist (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
       const { data: linkedEmployeePayments, error: employeePaymentsError } = await supabase
         .from("employee_payments")
         .select("id")
@@ -4393,9 +4346,59 @@ router.delete(
           .in("id", employeePaymentIds);
 
         if (deleteEmployeePaymentsError) {
-          console.error("[DocumentsController] Error deleting employee payments (orphaned records):", deleteEmployeePaymentsError);
-        } else {
-          console.log(`[DocumentsController] Deleted ${employeePaymentIds.length} employee payment(s) for document ${documentId}`);
+          console.error("[DocumentsController] Error deleting employee payments:", deleteEmployeePaymentsError);
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά τη διαγραφή των πληρωμών υπαλλήλων",
+            error: deleteEmployeePaymentsError.message,
+          });
+        }
+        console.log(`[DocumentsController] Deleted ${employeePaymentIds.length} employee payment(s) for document ${documentId}`);
+      }
+
+      // STEP 3: Delete the document (after all payment references are removed)
+      const { error: deleteError } = await supabase
+        .from("generated_documents")
+        .delete()
+        .eq("id", documentId);
+
+      if (deleteError) {
+        console.error("Error deleting document:", deleteError);
+        return res.status(500).json({
+          success: false,
+          message: "Σφάλμα κατά τη διαγραφή του εγγράφου",
+          error: deleteError.message,
+        });
+      }
+
+      console.log(`[DocumentsController] Document ${documentId} deleted successfully`);
+
+      // STEP 4: Return the budget amount to the project (AFTER document is successfully deleted)
+      // This ensures budget is only refunded if deletion succeeded
+      if (projectIndexId && totalAmount) {
+        try {
+          const { data: projectIndex, error: projectIndexError } = await supabase
+            .from("project_index")
+            .select("project_id")
+            .eq("id", projectIndexId)
+            .single();
+
+          if (!projectIndexError && projectIndex?.project_id) {
+            const amountToReturn = parseFloat(String(totalAmount));
+            
+            await storage.updateProjectBudgetSpending(
+              projectIndex.project_id,
+              -amountToReturn,
+              documentId,
+              req.user?.id
+            );
+            
+            console.log(`[DocumentsController] Budget returned: €${amountToReturn} for project ${projectIndex.project_id}`);
+          } else {
+            console.warn(`[DocumentsController] Could not find project for budget return - project_index_id: ${projectIndexId}`);
+          }
+        } catch (budgetError) {
+          console.error("[DocumentsController] Error returning budget (document already deleted, manual resolution needed):", budgetError);
         }
       }
 
