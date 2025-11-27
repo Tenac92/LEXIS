@@ -2730,6 +2730,7 @@ router.patch(
           monadaId: number, 
           eventTypeId: number, 
           expenditureTypeId: number, 
+          forYlId: number | null,
           regions: any[] 
         }>();
 
@@ -2768,6 +2769,12 @@ router.patch(
             continue;
           }
 
+          // Get for_yl_id from the line (delegated implementing agency)
+          // Note: null means explicitly cleared, undefined means not provided
+          const forYlId = line.for_yl_id !== undefined 
+            ? (line.for_yl_id ? parseInt(line.for_yl_id) : null)
+            : undefined;
+
           // Process each expenditure type
           const expTypes = line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0
             ? line.expenditure_types
@@ -2792,8 +2799,17 @@ router.patch(
                 monadaId,
                 eventTypeId,
                 expenditureTypeId,
+                forYlId: forYlId !== undefined ? forYlId : null,
                 regions: [],
               });
+            } else if (forYlId !== undefined) {
+              // Update for_yl_id if this line has an explicit value (including null for clearing)
+              // and either the existing entry is undefined or this is a more explicit value
+              const existing = groupedLines.get(key)!;
+              if (forYlId !== null || existing.forYlId === null) {
+                // Set if new value is a number, or if both are null (keep null)
+                existing.forYlId = forYlId;
+              }
             }
 
             // Add this line's region to the group (if it has one)
@@ -2815,6 +2831,21 @@ router.patch(
             if (existingIndexMap.has(key)) {
               projectIndexId = existingIndexMap.get(key)!;
               console.log(`[Projects] Reusing existing project_index entry for key ${key}, ID: ${projectIndexId}`);
+              
+              // Update for_yl_id on existing entry if explicitly provided
+              // A non-null value means set the for_yl, null means clear it
+              if (group.forYlId !== undefined) {
+                const updateResult = await supabase
+                  .from("project_index")
+                  .update({ for_yl_id: group.forYlId })
+                  .eq("id", projectIndexId);
+                
+                if (updateResult.error) {
+                  console.warn(`[Projects] Failed to update for_yl_id on project_index ${projectIndexId}:`, updateResult.error);
+                } else {
+                  console.log(`[Projects] Updated for_yl_id to ${group.forYlId} on project_index ${projectIndexId}`);
+                }
+              }
             } else {
               // Create new entry
               const indexEntry = {
@@ -2822,6 +2853,7 @@ router.patch(
                 monada_id: group.monadaId,
                 event_types_id: group.eventTypeId,
                 expenditure_type_id: group.expenditureTypeId,
+                for_yl_id: group.forYlId,
               };
 
               console.log(`[Projects] Creating new project_index entry for key ${key}:`, indexEntry);

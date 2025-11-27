@@ -1761,12 +1761,16 @@ export default function ComprehensiveEditFixed() {
 
           let locationDetail = {
             implementing_agency: implementingAgencyName,
+            for_yl_id: indexItem.for_yl_id || null, // Include for_yl_id from project_index
             event_type: eventType?.name || "",
             expenditure_types: [],
             geographic_areas: [],
           };
 
           locationDetailsMap.set(key, locationDetail);
+        } else if (indexItem.for_yl_id && !locationDetailsMap.get(key).for_yl_id) {
+          // Update for_yl_id if this index item has one and the existing entry doesn't
+          locationDetailsMap.get(key).for_yl_id = indexItem.for_yl_id;
         }
 
         const locationDetail = locationDetailsMap.get(key);
