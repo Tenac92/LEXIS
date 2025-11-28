@@ -2358,7 +2358,7 @@ export function CreateDocumentDialog({
           },
           credentials: "include",
           body: JSON.stringify({
-            mis: projectForSubmission.mis,
+            mis: data.project_id, // Use project_id (not MIS code) - backend expects project_id for budget lookup
             amount: totalAmount.toString(),
             sessionId:
               sessionStorage.getItem("clientSessionId") ||
