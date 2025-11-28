@@ -700,6 +700,12 @@ export function EditDocumentModal({
     console.log('[EditDocument] NOTE: Form stores project_index.id:', document.project_index_id, 'but dropdown will display using project.id:', actualProjectId);
     form.reset(formData);
 
+    // Explicitly set unit_id after reset to ensure it propagates
+    if (document.unit_id) {
+      form.setValue('unit_id', Number(document.unit_id), { shouldValidate: false });
+      console.log('[EditDocument] Explicitly set unit_id:', document.unit_id);
+    }
+
     // Set selectedProjectId and selectedExpenditureTypeId for dropdowns and queries
     if (actualProjectId) {
       setSelectedProjectId(actualProjectId);
