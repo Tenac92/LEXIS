@@ -40,10 +40,13 @@ import {
   AlertCircle,
   Check,
   ChevronDown,
+  ChevronUp,
   FileText,
   FileX,
   Plus,
+  RotateCcw,
   Search,
+  Settings2,
   Trash2,
   User,
   Lightbulb,
@@ -1625,54 +1628,252 @@ export function CreateDocumentDialog({
       0,
     );
 
-    // ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ - Housing Allowance Layout
+    // ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ - Sophisticated Range Selector Layout
     if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      // Extract from/to quarters from selected installments
+      const quarterNumbers = selectedInstallments
+        .map((q) => parseInt(q.replace("ΤΡΙΜΗΝΟ ", "")))
+        .filter((n) => !isNaN(n))
+        .sort((a, b) => a - b);
+      
+      const fromQuarter = quarterNumbers.length > 0 ? quarterNumbers[0] : 1;
+      const toQuarter = quarterNumbers.length > 0 ? quarterNumbers[quarterNumbers.length - 1] : 1;
+      const quarterCount = quarterNumbers.length;
+
+      // Check if any amounts differ from STANDARD_QUARTER_AMOUNT (canonical baseline)
+      const hasCustomAmounts = selectedInstallments.some(
+        (q) => (installmentAmounts[q] || STANDARD_QUARTER_AMOUNT) !== STANDARD_QUARTER_AMOUNT
+      );
+      
+      // Calculate a "representative" amount for display (first quarter or standard)
+      const displayAmount = selectedInstallments.length > 0 
+        ? (installmentAmounts[selectedInstallments[0]] || STANDARD_QUARTER_AMOUNT)
+        : STANDARD_QUARTER_AMOUNT;
+      
+      // Check if all amounts are uniform (same value, even if custom)
+      const allAmounts = selectedInstallments.map((q) => installmentAmounts[q] || STANDARD_QUARTER_AMOUNT);
+      const areAllUniform = allAmounts.length > 0 && allAmounts.every((a) => a === allAmounts[0]);
+
+      // Handler for changing the quarter range - ALWAYS use STANDARD_QUARTER_AMOUNT for new quarters
+      const handleRangeChange = (newFrom: number, newTo: number) => {
+        if (newFrom > newTo || newFrom < 1) return;
+        
+        setIsFormSyncing(true);
+        try {
+          const newInstallments: string[] = [];
+          const newAmounts: Record<string, number> = {};
+          
+          // Build new range - preserve existing amounts only for quarters in new range
+          for (let i = newFrom; i <= newTo; i++) {
+            const quarterKey = `ΤΡΙΜΗΝΟ ${i}`;
+            newInstallments.push(quarterKey);
+            // Only keep existing amount if quarter was previously selected, otherwise use standard
+            if (selectedInstallments.includes(quarterKey) && installmentAmounts[quarterKey]) {
+              newAmounts[quarterKey] = installmentAmounts[quarterKey];
+            } else {
+              newAmounts[quarterKey] = STANDARD_QUARTER_AMOUNT;
+            }
+          }
+
+          const newTotal = Object.values(newAmounts).reduce((sum, a) => sum + a, 0);
+
+          form.setValue(`recipients.${index}.installments`, newInstallments);
+          form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
+          form.setValue(`recipients.${index}.amount`, newTotal);
+
+          setTimeout(() => {
+            const updatedRecipients = JSON.parse(JSON.stringify(recipients));
+            if (updatedRecipients[index]) {
+              updatedRecipients[index] = {
+                ...updatedRecipients[index],
+                installments: newInstallments,
+                installmentAmounts: newAmounts,
+                amount: newTotal,
+              };
+              updateFormData({ recipients: updatedRecipients });
+            }
+          }, 100);
+        } finally {
+          setTimeout(() => setIsFormSyncing(false), 150);
+        }
+      };
+
+      // Handler for changing the default amount (applies uniformly to ALL current quarters)
+      const handleDefaultAmountChange = (newAmount: number) => {
+        if (selectedInstallments.length === 0) return;
+        
+        setIsFormSyncing(true);
+        try {
+          const newAmounts: Record<string, number> = {};
+          // Apply new amount to ALL selected installments
+          selectedInstallments.forEach((q) => {
+            newAmounts[q] = newAmount;
+          });
+
+          const newTotal = newAmount * selectedInstallments.length;
+
+          form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
+          form.setValue(`recipients.${index}.amount`, newTotal);
+
+          setTimeout(() => {
+            const updatedRecipients = JSON.parse(JSON.stringify(recipients));
+            if (updatedRecipients[index]) {
+              updatedRecipients[index] = {
+                ...updatedRecipients[index],
+                installmentAmounts: newAmounts,
+                amount: newTotal,
+              };
+              updateFormData({ recipients: updatedRecipients });
+            }
+          }, 100);
+        } finally {
+          setTimeout(() => setIsFormSyncing(false), 150);
+        }
+      };
+
+      // Handler for resetting all quarters to the canonical STANDARD_QUARTER_AMOUNT
+      const handleResetToUniform = () => {
+        handleDefaultAmountChange(STANDARD_QUARTER_AMOUNT);
+      };
+
+      // State for showing/hiding quarter details - use local state with closure
+      const [showDetails, setShowDetails] = React.useState(false);
+
       return (
-        <div className="w-full">
-          <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium">Τρίμηνα & Ποσά</label>
-            {selectedInstallments.length > 0 && (
-              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md">
-                <span className="text-sm text-muted-foreground">Σύνολο:</span>
-                <span className="text-base font-bold text-primary">
-                  {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
-                </span>
+        <div className="w-full space-y-2">
+          {/* Compact main row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* From Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Από Τ</label>
+              <Input
+                type="number"
+                min={1}
+                max={99}
+                value={fromQuarter}
+                onChange={(e) => {
+                  const newFrom = parseInt(e.target.value) || 1;
+                  handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
+                }}
+                className="w-14 h-8 text-sm text-center px-2"
+              />
+            </div>
+
+            {/* To Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Έως Τ</label>
+              <Input
+                type="number"
+                min={fromQuarter}
+                max={99}
+                value={toQuarter}
+                onChange={(e) => {
+                  const newTo = parseInt(e.target.value) || fromQuarter;
+                  handleRangeChange(fromQuarter, Math.max(fromQuarter, newTo));
+                }}
+                className="w-14 h-8 text-sm text-center px-2"
+              />
+            </div>
+
+            {/* Separator */}
+            <div className="h-6 w-px bg-border" />
+
+            {/* Default Amount per Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Ποσό/τρίμηνο</label>
+              <div className="relative">
+                <NumberInput
+                  value={areAllUniform ? displayAmount : ""}
+                  onChange={(formatted, numeric) => handleDefaultAmountChange(numeric || 0)}
+                  className="w-24 h-8 text-sm pr-5"
+                  placeholder={areAllUniform ? "900,00" : "Διάφορα"}
+                  decimals={2}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
               </div>
-            )}
+            </div>
+
+            {/* Summary */}
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md ml-auto">
+              <span className="text-xs text-muted-foreground">{quarterCount} τρίμ.</span>
+              <span className="text-sm font-bold text-primary">
+                {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
+              </span>
+            </div>
+
+            {/* Customize button */}
+            <Button
+              type="button"
+              variant={showDetails ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setShowDetails(!showDetails)}
+              className="h-8 px-2 text-xs"
+            >
+              {showDetails ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Κλείσιμο
+                </>
+              ) : (
+                <>
+                  <Settings2 className="h-3 w-3 mr-1" />
+                  Προσαρμογή
+                </>
+              )}
+            </Button>
           </div>
-          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-            {availableInstallments.map((quarter) => {
-              const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
-              const isSelected = selectedInstallments.includes(quarter);
-              return (
-                <div key={quarter} className="flex flex-col gap-1">
+
+          {/* Expanded per-quarter details */}
+          {showDetails && (
+            <div className="border rounded-md p-3 bg-muted/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Ποσά ανά τρίμηνο</span>
+                {hasCustomAmounts && (
                   <Button
                     type="button"
-                    variant={isSelected ? "default" : "outline"}
+                    variant="ghost"
                     size="sm"
-                    onClick={() => handleInstallmentToggle(quarter)}
-                    className="h-9 text-sm font-medium w-full"
+                    onClick={handleResetToUniform}
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
                   >
-                    Τ{quarterNum}
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Επαναφορά σε {STANDARD_QUARTER_AMOUNT}€
                   </Button>
-                  {isSelected && (
-                    <div className="relative">
-                      <NumberInput
-                        value={installmentAmounts[quarter] || ""}
-                        onChange={(formatted, numeric) =>
-                          handleInstallmentAmountChange(quarter, numeric || 0)
-                        }
-                        className="h-8 text-xs pr-5"
-                        placeholder="900"
-                        decimals={2}
-                      />
-                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">€</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedInstallments.map((quarter) => {
+                  const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
+                  const amount = installmentAmounts[quarter] || STANDARD_QUARTER_AMOUNT;
+                  // Highlight if amount differs from STANDARD_QUARTER_AMOUNT
+                  const isCustom = amount !== STANDARD_QUARTER_AMOUNT;
+                  
+                  return (
+                    <div
+                      key={quarter}
+                      className={`flex items-center gap-1 rounded-md px-2 py-1 ${
+                        isCustom ? "bg-amber-100 dark:bg-amber-900/30 ring-1 ring-amber-300" : "bg-background"
+                      }`}
+                    >
+                      <span className="text-xs font-medium w-6">Τ{quarterNum}</span>
+                      <div className="relative">
+                        <NumberInput
+                          value={amount}
+                          onChange={(formatted, numeric) =>
+                            handleInstallmentAmountChange(quarter, numeric || 0)
+                          }
+                          className="w-20 h-7 text-xs pr-4"
+                          placeholder="900"
+                          decimals={2}
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">€</span>
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       );
     }
