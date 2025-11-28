@@ -696,6 +696,8 @@ export function CreateDocumentDialog({
         }
 
         const data = await response.json();
+        console.log("[ForYl] Fetched data:", data);
+        console.log("[ForYl] Data type:", typeof data, "Is array:", Array.isArray(data), "Length:", Array.isArray(data) ? data.length : "N/A");
         return data || [];
       } catch (error) {
         console.error("[ForYl] Error fetching for_yl:", error);
