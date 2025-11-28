@@ -68,6 +68,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: budgetNotificationsRouter } = await import('./controllers/budgetNotificationsController');
   app.use('/api/budget-notifications', budgetNotificationsRouter);
   
+  // Register units controller for for_yl (implementing agencies) and other unit-related endpoints
+  const { router: unitsRouter } = await import('./controllers/unitsController');
+  app.use('/api/units', unitsRouter);
+  
   // Register notifications router for budget reallocation requests
   const { default: notificationsRouter } = await import('./routes/api/notifications');
   app.use('/api/notifications', authenticateSession, notificationsRouter);

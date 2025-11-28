@@ -678,6 +678,7 @@ export function CreateDocumentDialog({
   });
 
   // Fetch for_yl (delegated implementing agencies) data
+  // Only fetch when user is authenticated to avoid HTML login page response
   const { data: forYlData = [] } = useQuery({
     queryKey: ["for-yl"],
     queryFn: async () => {
@@ -704,6 +705,7 @@ export function CreateDocumentDialog({
         return [];
       }
     },
+    enabled: !!user, // Only fetch when user is authenticated
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -2435,7 +2437,8 @@ export function CreateDocumentDialog({
         (fy: any) => fy.monada_id && String(fy.monada_id) === String(data.unit)
       ) || [];
       // Normalize for_yl_id to number for consistent comparison
-      const normalizedForYlId = data.for_yl_id != null && data.for_yl_id !== "" 
+      // Handle both number and string types (form may return either)
+      const normalizedForYlId = data.for_yl_id != null && String(data.for_yl_id) !== "" 
         ? Number(data.for_yl_id) 
         : null;
       // Find matching for_yl using normalized numeric comparison

@@ -14,9 +14,12 @@ router.get("/for-yl", authenticateSession, async (req: any, res) => {
     console.log("[ForYl] Fetching for_yl data, monada_id:", monada_id);
     
     // Query the for_yl table
-    const { data: forYlData, error } = await supabase
+    const { data: forYlData, error, count } = await supabase
       .from("for_yl")
-      .select("id, foreis");
+      .select("id, foreis", { count: 'exact' });
+
+    console.log("[ForYl] Raw database response: count=", count, "data length=", forYlData?.length, "error=", error);
+    console.log("[ForYl] Raw data sample:", JSON.stringify(forYlData?.slice(0, 3)));
 
     if (error) {
       console.error("[ForYl] Database error:", error);
@@ -45,7 +48,7 @@ router.get("/for-yl", authenticateSession, async (req: any, res) => {
       };
     });
 
-    console.log("[ForYl] Found for_yl entries:", formattedForYl.length);
+    console.log("[ForYl] Found for_yl entries:", formattedForYl.length, "formatted:", JSON.stringify(formattedForYl.slice(0, 3)));
     res.json(formattedForYl);
   } catch (error) {
     console.error("[ForYl] Error fetching for_yl:", error);
