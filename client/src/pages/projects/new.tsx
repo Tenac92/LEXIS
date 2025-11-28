@@ -1335,7 +1335,7 @@ export default function NewProjectPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Όνομα Γεγονότος</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Επιλέξτε γεγονός" />
@@ -1349,6 +1349,7 @@ export default function NewProjectPage() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -1403,7 +1404,7 @@ export default function NewProjectPage() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Υλοποιούσα Μονάδα</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Επιλέξτε μονάδα" />
@@ -1417,6 +1418,7 @@ export default function NewProjectPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                  <FormMessage />
                                 </FormItem>
                               )}
                             />
@@ -1427,7 +1429,7 @@ export default function NewProjectPage() {
                               render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Τύπος Γεγονότος</FormLabel>
-                                  <Select onValueChange={field.onChange} value={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <FormControl>
                                       <SelectTrigger>
                                         <SelectValue placeholder="Επιλέξτε τύπο" />
@@ -1441,6 +1443,7 @@ export default function NewProjectPage() {
                                       ))}
                                     </SelectContent>
                                   </Select>
+                                  <FormMessage />
                                 </FormItem>
                               )}
                             />
