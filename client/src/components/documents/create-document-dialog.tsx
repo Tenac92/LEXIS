@@ -3285,56 +3285,6 @@ export function CreateDocumentDialog({
                     </FormItem>
                   )}
                 />
-
-                {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
-                {(() => {
-                  const selectedUnitValue = form.watch("unit");
-                  if (!selectedUnitValue) return null;
-                  
-                  // Filter for_yl by the selected unit's monada_id
-                  const availableForYl = forYlData?.filter(
-                    (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
-                  ) || [];
-                  
-                  // Only show dropdown if there are for_yl options for this unit
-                  if (availableForYl.length === 0) return null;
-                  
-                  return (
-                    <FormField
-                      control={form.control}
-                      name="for_yl_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
-                          <Select
-                            onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
-                            value={field.value ? String(field.value) : "none"}
-                          >
-                            <FormControl>
-                              <SelectTrigger data-testid="select-for-yl">
-                                <SelectValue placeholder="Επιλέξτε φορέα (προαιρετικό)" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">Κανένας (χρήση μονάδας)</SelectItem>
-                              {availableForYl.map((forYl: any) => (
-                                <SelectItem
-                                  key={forYl.id}
-                                  value={String(forYl.id)}
-                                >
-                                  {forYl.title}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Επιλέξτε αν ο φορέας υλοποίησης διαφέρει από τη μονάδα
-                          </p>
-                        </FormItem>
-                      )}
-                    />
-                  );
-                })()}
               </div>
             )}
 
@@ -5068,6 +5018,56 @@ export function CreateDocumentDialog({
                       )}
                     />
                   </div>
+
+                  {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
+                  {(() => {
+                    const selectedUnitValue = form.watch("unit");
+                    if (!selectedUnitValue) return null;
+                    
+                    // Filter for_yl by the selected unit's monada_id
+                    const availableForYl = forYlData?.filter(
+                      (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
+                    ) || [];
+                    
+                    // Only show dropdown if there are for_yl options for this unit
+                    if (availableForYl.length === 0) return null;
+                    
+                    return (
+                      <FormField
+                        control={form.control}
+                        name="for_yl_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
+                            <Select
+                              onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                              value={field.value ? String(field.value) : "none"}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-for-yl">
+                                  <SelectValue placeholder="Επιλέξτε φορέα (προαιρετικό)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">Κανένας (χρήση μονάδας)</SelectItem>
+                                {availableForYl.map((forYl: any) => (
+                                  <SelectItem
+                                    key={forYl.id}
+                                    value={String(forYl.id)}
+                                  >
+                                    {forYl.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Επιλέξτε αν ο φορέας υλοποίησης διαφέρει από τη μονάδα
+                            </p>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })()}
                 </div>
               </>
             )}
