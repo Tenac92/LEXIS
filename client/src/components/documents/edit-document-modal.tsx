@@ -1316,13 +1316,23 @@ export function EditDocumentModal({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Εσωτερική Διανομή Πεδίο 1</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Πρώτο πεδίο εσωτερικής διανομής"
-                              {...field}
-                              data-testid="input-esdian-1"
-                            />
-                          </FormControl>
+                          <Select 
+                            onValueChange={field.onChange}
+                            value={field.value || ""}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="select-esdian-1">
+                                <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {expenditureTypes && Array.isArray(expenditureTypes) && expenditureTypes.map((type: any) => (
+                                <SelectItem key={type.id} value={type.expenditure_types || type.expenditure_types_minor || `Τύπος #${type.id}`}>
+                                  {type.expenditure_types || type.expenditure_types_minor || `Τύπος #${type.id}`}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
