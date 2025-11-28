@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -319,12 +319,16 @@ const comprehensiveProjectSchema = z.object({
 type ComprehensiveFormData = z.infer<typeof comprehensiveProjectSchema>;
 
 export default function NewProjectPage() {
+  const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(new Set());
   const [savedProjectId, setSavedProjectId] = useState<number | null>(null);
   const { validateSA, getValidationState } = useSAValidation();
+  
+  // Parse project ID from URL params (for edit mode)
+  const projectId = id ? parseInt(id, 10) : undefined;
 
   // Form initialization matching edit form
   const form = useForm<ComprehensiveFormData>({
@@ -382,6 +386,20 @@ export default function NewProjectPage() {
   // Initialize bi-directional sync after form is defined
   const { syncMainToFormulation, syncFormulationToMain, isUpdating } = useBidirectionalSync(form);
 
+  // Fetch complete project data if in edit mode (projectId exists)
+  const {
+    data: completeProjectData,
+    isLoading: isCompleteDataLoading,
+    error: completeDataError,
+  } = useQuery({
+    queryKey: [`/api/projects/${projectId}/complete`],
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
   // PERFORMANCE OPTIMIZATION: Separate query for reference data with aggressive caching (same as edit form)
   const {
     data: referenceData,
@@ -408,10 +426,15 @@ export default function NewProjectPage() {
     refetchOnMount: false,
   });
 
+  // Extract project data (exactly like edit form)
+  const projectData = completeProjectData?.project;
+  const decisionsData = completeProjectData?.decisions;
+  const formulationsData = completeProjectData?.formulations;
+  
   // Extract reference data (exactly like edit form)
-  const eventTypesData = (referenceData as any)?.eventTypes;
-  const unitsData = (referenceData as any)?.units; 
-  const expenditureTypesData = (referenceData as any)?.expenditureTypes;
+  const eventTypesData = (referenceData as any)?.eventTypes || completeProjectData?.eventTypes;
+  const unitsData = (referenceData as any)?.units || completeProjectData?.units;
+  const expenditureTypesData = (referenceData as any)?.expenditureTypes || completeProjectData?.expenditureTypes;
   
   // Convert new geographic data format to legacy kallikratis format for SmartGeographicMultiSelect
   const kallikratisData = geographicData ? convertGeographicDataToKallikratis(geographicData as any) : [];
@@ -421,6 +444,64 @@ export default function NewProjectPage() {
   const typedKallikratisData = kallikratisData as KallikratisEntry[] | undefined;
   const typedEventTypesData = eventTypesData as EventTypeData[] | undefined;
   const typedExpenditureTypesData = expenditureTypesData as ExpenditureTypeData[] | undefined;
+
+  // Populate form with existing project data when in edit mode
+  useEffect(() => {
+    if (projectId && completeProjectData && !isCompleteDataLoading) {
+      const projectData = completeProjectData?.project;
+      const decisionsData = completeProjectData?.decisions;
+      const formulationsData = completeProjectData?.formulations;
+
+      if (projectData) {
+        // Populate project details
+        form.setValue("project_details", {
+          mis: String(projectData.mis || ""),
+          sa: projectData.na853 ? "ΝΑ853" : projectData.na271 ? "ΝΑ271" : projectData.na069 ? "E069" : "ΝΑ853",
+          inc_year: String(projectData.inc_year || ""),
+          project_title: projectData.project_title || "",
+          project_description: projectData.event_description || "",
+          summary_description: projectData.summary_description || "",
+          expenses_executed: String(projectData.expenses_executed || ""),
+          project_status: projectData.status || "Ενεργό",
+        });
+
+        // Populate event details
+        form.setValue("event_details", {
+          event_name: projectData.event_type ? String(projectData.event_type) : "",
+          event_year: String(projectData.event_year || ""),
+        });
+
+        // Populate decisions
+        if (decisionsData && decisionsData.length > 0) {
+          form.setValue("decisions", decisionsData.map((d: any) => ({
+            protocol_number: d.protocol_number || "",
+            fek: d.fek || { year: "", issue: "", number: "" },
+            ada: d.ada || "",
+            implementing_agency: Array.isArray(d.implementing_agency) ? d.implementing_agency : [],
+            decision_budget: d.decision_budget ? String(d.decision_budget) : "",
+            expenses_covered: d.expenses_covered || "",
+            expenditure_type: Array.isArray(d.expenditure_type) ? d.expenditure_type : [],
+            decision_type: d.decision_type || "Έγκριση",
+            included: d.included !== undefined ? d.included : true,
+            comments: d.comments || "",
+          })));
+        }
+
+        // Populate formulations
+        if (formulationsData && formulationsData.length > 0) {
+          form.setValue("formulation_details", formulationsData.map((f: any) => ({
+            sa: f.sa || "ΝΑ853",
+            enumeration_code: f.enumeration_code || "",
+            decision_year: String(f.decision_year || ""),
+            decision_status: f.decision_status || "Ενεργή",
+            change_type: f.change_type || "Έγκριση",
+            comments: f.comments || "",
+            budget_versions: f.budget_versions || { pde: [], epa: [] },
+          })));
+        }
+      }
+    }
+  }, [projectId, completeProjectData, isCompleteDataLoading, form]);
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
