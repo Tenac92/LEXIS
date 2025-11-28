@@ -77,6 +77,19 @@ const getAvailableInstallments = (expenditureTypeName?: string): string[] => {
   return ALL_INSTALLMENTS;
 };
 
+// Helper to normalize installment value for housing allowance
+const normalizeInstallmentValue = (value: string | number | undefined, expenditureTypeName?: string): string => {
+  if (!value) return "";
+  const strValue = String(value).trim();
+  
+  // If it's housing allowance and value is just a number, convert to ΤΡΙΜΗΝΟ format
+  if (expenditureTypeName === HOUSING_ALLOWANCE_TYPE && /^\d+$/.test(strValue)) {
+    return `ΤΡΙΜΗΝΟ ${strValue}`;
+  }
+  
+  return strValue;
+};
+
 export function EditDocumentModal({ 
   document, 
   open, 
@@ -1862,13 +1875,18 @@ export function EditDocumentModal({
                               );
                               const expenditureTypeName = expenditureType?.expenditure_types || expenditureType?.expenditure_types_minor;
                               const availableInstallments = getAvailableInstallments(expenditureTypeName);
+                              // Normalize the saved value for housing allowance (e.g., "12" → "ΤΡΙΜΗΝΟ 12")
+                              const normalizedValue = normalizeInstallmentValue(field.value, expenditureTypeName);
                               
                               return (
                                 <FormItem>
                                   <FormLabel>Δόση</FormLabel>
                                   <Select 
-                                    value={String(field.value) || ""} 
-                                    onValueChange={(value) => field.onChange(value)}
+                                    value={normalizedValue} 
+                                    onValueChange={(value) => {
+                                      // When selecting, store as-is (either "ΤΡΙΜΗΝΟ 12" or "ΕΦΑΠΑΞ" etc.)
+                                      field.onChange(value);
+                                    }}
                                   >
                                     <FormControl>
                                       <SelectTrigger data-testid={`select-recipient-installment-${index}`}>
