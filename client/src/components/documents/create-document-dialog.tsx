@@ -4976,7 +4976,7 @@ export function CreateDocumentDialog({
                           {/* renderRecipientInstallments(index) - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
                             EKTOS_EDRAS_TYPE && (
-                            <div className="md:col-span-3 md:row-span-2 flex items-start">
+                            <div className="md:col-span-3 md:row-span-2 md:row-start-1 flex items-start">
                               <div className="flex-1">
                                 {renderRecipientInstallments(index)}
                               </div>
