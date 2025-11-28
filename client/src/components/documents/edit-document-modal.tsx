@@ -698,13 +698,16 @@ export function EditDocumentModal({
     console.log('[EditDocument] Form data:', formData);
     console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
     console.log('[EditDocument] NOTE: Form stores project_index.id:', document.project_index_id, 'but dropdown will display using project.id:', actualProjectId);
+    console.log('[EditDocument] Units available:', units?.length, 'first unit:', units?.[0]);
     form.reset(formData);
-
-    // Explicitly set unit_id after reset to ensure it propagates
-    if (document.unit_id) {
-      form.setValue('unit_id', Number(document.unit_id), { shouldValidate: false });
-      console.log('[EditDocument] Explicitly set unit_id:', document.unit_id);
-    }
+    
+    // Force re-render of unit_id field by triggering watch
+    setTimeout(() => {
+      if (document.unit_id) {
+        const currentValue = form.getValues('unit_id');
+        console.log('[EditDocument] After reset, unit_id value:', currentValue);
+      }
+    }, 0);
 
     // Set selectedProjectId and selectedExpenditureTypeId for dropdowns and queries
     if (actualProjectId) {
@@ -719,7 +722,7 @@ export function EditDocumentModal({
 
     // Mark as initialized to prevent re-resetting on user changes
     setFormInitialized(true);
-  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments]);
+  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units]);
 
   // Initialize geographic selection dropdowns from document's region JSONB
   useEffect(() => {
