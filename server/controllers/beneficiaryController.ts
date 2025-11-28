@@ -583,37 +583,80 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
         const employeeCache: any[] = [];
         const beneficiariesListCache: any[] = []; // For beneficiaries page list
 
-        // Fetch beneficiaries with decrypted AFMs for each unit
+        // Fetch beneficiaries using the same logic as getBeneficiariesByUnitOptimized:
+        // 1. Beneficiaries with payments for THIS unit
+        // 2. Beneficiaries without ANY payments (new/unassigned - visible to all units)
         for (const unitCode of unitCodes) {
           console.log(`[Prefetch] Fetching beneficiaries for unit: ${unitCode}`);
           
           // Get unit ID for this unit code
-          const { data: monadaData } = await supabase
+          const { data: monadaData, error: monadaError } = await supabase
             .from('Monada')
             .select('id')
             .eq('unit', unitCode)
             .single();
 
-          if (!monadaData) continue;
+          if (monadaError || !monadaData) {
+            console.error(`[Prefetch] Could not find unit ID for unit code: ${unitCode}`, monadaError);
+            continue;
+          }
+          
+          const unitId = monadaData.id;
 
-          // Get unique beneficiary IDs that have payments for this unit
-          const { data: paymentsBeneficiaryIds } = await supabase
+          // STEP 1: Get beneficiary IDs that have payments for this specific unit
+          const { data: paymentsBeneficiaryIds, error: paymentsError } = await supabase
             .from('beneficiary_payments')
             .select('beneficiary_id')
-            .eq('unit_id', monadaData.id);
-
-          const uniqueBeneficiaryIds = Array.from(new Set(
-            paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []
-          ));
+            .eq('unit_id', unitId);
+            
+          if (paymentsError) {
+            console.error('[Prefetch] Error fetching beneficiary IDs from payments:', paymentsError);
+          }
+          
+          const beneficiaryIdsWithPayments = new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+          console.log(`[Prefetch] Found ${beneficiaryIdsWithPayments.size} beneficiaries with payments for unit ${unitCode}`);
+          
+          // STEP 2: Get ALL beneficiary IDs that have ANY payment (to exclude from "new" beneficiaries)
+          const { data: allPaymentsBeneficiaryIds, error: allPaymentsError } = await supabase
+            .from('beneficiary_payments')
+            .select('beneficiary_id');
+            
+          if (allPaymentsError) {
+            console.error('[Prefetch] Error fetching all beneficiary IDs from payments:', allPaymentsError);
+          }
+          
+          const allBeneficiaryIdsWithPayments = new Set(allPaymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+          console.log(`[Prefetch] Total beneficiaries with any payments: ${allBeneficiaryIdsWithPayments.size}`);
+          
+          // STEP 3: Get beneficiaries that have NO payments yet (new beneficiaries visible to all units)
+          const { data: allBeneficiaryIds, error: allBeneficiariesError } = await supabase
+            .from('beneficiaries')
+            .select('id');
+            
+          if (allBeneficiariesError) {
+            console.error('[Prefetch] Error fetching all beneficiary IDs:', allBeneficiariesError);
+          }
+          
+          // Find beneficiaries with NO payments (new/unassigned)
+          const beneficiaryIdsWithoutPayments = (allBeneficiaryIds || [])
+            .filter(b => !allBeneficiaryIdsWithPayments.has(b.id))
+            .map(b => b.id);
+          console.log(`[Prefetch] Found ${beneficiaryIdsWithoutPayments.length} beneficiaries without any payments (new/unassigned)`);
+          
+          // STEP 4: Combine: beneficiaries with payments for this unit + new beneficiaries without any payments
+          const uniqueBeneficiaryIds = Array.from(new Set([
+            ...Array.from(beneficiaryIdsWithPayments),
+            ...beneficiaryIdsWithoutPayments
+          ]));
+          console.log(`[Prefetch] Total beneficiaries to fetch: ${uniqueBeneficiaryIds.length} (${beneficiaryIdsWithPayments.size} with payments + ${beneficiaryIdsWithoutPayments.length} new)`);
 
           if (uniqueBeneficiaryIds.length === 0) continue;
 
-          // Fetch beneficiaries in batches - fetch ALL fields for list cache
+          // Fetch beneficiaries in batches
           const batchSize = 500;
           for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
             const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
             
-            // Fetch full beneficiary data for list view
             const { data } = await supabase
               .from('beneficiaries')
               .select('id, afm, surname, name, fathername, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash, adeia, onlinefoldernumber')
@@ -623,7 +666,6 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
               for (const b of data) {
                 const decryptedAFM = decryptAFM(b.afm);
                 
-                // Add to AFM autocomplete cache (with decrypted AFM)
                 if (decryptedAFM) {
                   beneficiaryCache.push({
                     decryptedAFM,
@@ -635,7 +677,6 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
                   });
                 }
                 
-                // Add to beneficiaries list cache (with decrypted AFM for display)
                 beneficiariesListCache.push({
                   ...b,
                   afm: decryptedAFM || '***ERROR***',
@@ -644,6 +685,8 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
               }
             }
           }
+          
+          console.log(`[Prefetch] Fetched ${uniqueBeneficiaryIds.length} beneficiaries (${beneficiaryIdsWithPayments.size} with payments + ${beneficiaryIdsWithoutPayments.length} new) for unit: ${unitCode}`);
         }
 
         // Fetch employees for ΕΚΤΟΣ ΕΔΡΑΣ (they are unit-independent but still needed)
@@ -1117,6 +1160,9 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     const beneficiaryData = validationResult.data;
     const beneficiary = await storage.createBeneficiary(beneficiaryData);
     
+    // Invalidate cache after creating beneficiary
+    invalidateBeneficiariesCache(userUnits);
+    
     console.log('[Beneficiaries] Successfully created beneficiary:', beneficiary);
     res.status(201).json(beneficiary);
   } catch (error) {
@@ -1270,6 +1316,9 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
     const beneficiaryData = validationResult.data;
     const beneficiary = await storage.updateBeneficiary(id, beneficiaryData);
     
+    // Invalidate cache after updating beneficiary
+    invalidateBeneficiariesCache(userUnits);
+    
     console.log('[Beneficiaries] Successfully updated beneficiary:', beneficiary);
     res.json(beneficiary);
   } catch (error) {
@@ -1291,6 +1340,9 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
 
     console.log(`[Beneficiaries] Deleting beneficiary ${id}`);
     await storage.deleteBeneficiary(id);
+    
+    // Invalidate all caches after deleting beneficiary (affects all units)
+    invalidateBeneficiariesCache();
     
     console.log(`[Beneficiaries] Successfully deleted beneficiary ${id}`);
     res.status(204).send();
@@ -1340,6 +1392,11 @@ router.post('/bulk-import', authenticateSession, async (req: AuthenticatedReques
     }
 
     console.log(`[Beneficiaries] Bulk import completed: ${results.length} success, ${errors.length} errors`);
+    
+    // Invalidate all caches after bulk import
+    if (results.length > 0) {
+      invalidateBeneficiariesCache();
+    }
     
     res.json({
       success: results.length,

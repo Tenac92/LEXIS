@@ -1801,7 +1801,7 @@ export class DatabaseStorage implements IStorage {
       const unitId = monadaData.id;
       console.log(`[Storage] Mapped unit "${unit}" to unit_id: ${unitId}`);
       
-      // SECURITY: Get unique beneficiary IDs that have payments for this unit
+      // STEP 1: Get beneficiary IDs that have payments for this unit
       const { data: paymentsBeneficiaryIds, error: paymentsError } = await supabase
         .from('beneficiary_payments')
         .select('beneficiary_id')
@@ -1812,9 +1812,46 @@ export class DatabaseStorage implements IStorage {
         throw paymentsError;
       }
       
-      // Extract unique beneficiary IDs
-      const uniqueBeneficiaryIds = Array.from(new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []));
-      console.log(`[Storage] Found ${uniqueBeneficiaryIds.length} unique beneficiaries for unit ${unit}`);
+      // Extract unique beneficiary IDs from payments
+      const beneficiaryIdsWithPayments = new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+      console.log(`[Storage] Found ${beneficiaryIdsWithPayments.size} beneficiaries with payments for unit ${unit}`);
+      
+      // STEP 2: Get ALL beneficiary IDs that have ANY payment (to exclude from "new" beneficiaries)
+      const { data: allPaymentsBeneficiaryIds, error: allPaymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id');
+        
+      if (allPaymentsError) {
+        console.error('[Storage] Error fetching all beneficiary IDs from payments:', allPaymentsError);
+        throw allPaymentsError;
+      }
+      
+      const allBeneficiaryIdsWithPayments = new Set(allPaymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+      console.log(`[Storage] Total beneficiaries with any payments: ${allBeneficiaryIdsWithPayments.size}`);
+      
+      // STEP 3: Get beneficiaries that have NO payments yet (new beneficiaries visible to all units)
+      // These are beneficiaries that exist but haven't been assigned to any unit through payments
+      const { data: allBeneficiaryIds, error: allBeneficiariesError } = await supabase
+        .from('beneficiaries')
+        .select('id');
+        
+      if (allBeneficiariesError) {
+        console.error('[Storage] Error fetching all beneficiary IDs:', allBeneficiariesError);
+        throw allBeneficiariesError;
+      }
+      
+      // Find beneficiaries with NO payments (new/unassigned)
+      const beneficiaryIdsWithoutPayments = (allBeneficiaryIds || [])
+        .filter(b => !allBeneficiaryIdsWithPayments.has(b.id))
+        .map(b => b.id);
+      console.log(`[Storage] Found ${beneficiaryIdsWithoutPayments.length} beneficiaries without any payments (new/unassigned)`);
+      
+      // STEP 4: Combine: beneficiaries with payments for this unit + new beneficiaries without any payments
+      const uniqueBeneficiaryIds = Array.from(new Set([
+        ...Array.from(beneficiaryIdsWithPayments),
+        ...beneficiaryIdsWithoutPayments
+      ]));
+      console.log(`[Storage] Total beneficiaries to fetch: ${uniqueBeneficiaryIds.length} (${beneficiaryIdsWithPayments.size} with payments + ${beneficiaryIdsWithoutPayments.length} new)`);
       
       if (uniqueBeneficiaryIds.length === 0) {
         return [];
@@ -1849,7 +1886,7 @@ export class DatabaseStorage implements IStorage {
         allBeneficiaries.push(...batchData);
       }
       
-      console.log(`[Storage] FINAL: Successfully fetched ${allBeneficiaries.length} beneficiaries (optimized, unit-filtered) for unit: ${unit}`);
+      console.log(`[Storage] FINAL: Successfully fetched ${allBeneficiaries.length} beneficiaries (optimized, unit-filtered + new) for unit: ${unit}`);
       return allBeneficiaries;
     } catch (error) {
       console.error('[Storage] Error in getBeneficiariesByUnitOptimized:', error);
