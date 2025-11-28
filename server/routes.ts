@@ -364,7 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const { beneficiary_id, installment, amount, status, payment_date, expenditure_type } = req.body;
+      const { beneficiary_id, installment, amount, status, payment_date, unit_id, project_index_id } = req.body;
 
       // Validate required fields
       if (!beneficiary_id || !installment || !amount) {
@@ -386,7 +386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: amount.toString(),
           status: status || 'pending',
           payment_date: payment_date || null,
-          expenditure_type: expenditure_type || null,
+          unit_id: unit_id || req.user.unit_id[0] || null,
+          project_index_id: project_index_id || null,
           created_at: now,
           updated_at: now
         }])
@@ -413,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      const { installment, amount, status, payment_date, expenditure_type } = req.body;
+      const { installment, amount, status, payment_date, unit_id, project_index_id } = req.body;
 
       if (!id || isNaN(parseInt(id))) {
         return res.status(400).json({ message: 'Invalid payment ID' });
@@ -438,7 +439,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (amount !== undefined) updateData.amount = amount.toString();
       if (status !== undefined) updateData.status = status;
       if (payment_date !== undefined) updateData.payment_date = payment_date;
-      if (expenditure_type !== undefined) updateData.expenditure_type = expenditure_type;
+      if (unit_id !== undefined) updateData.unit_id = unit_id;
+      if (project_index_id !== undefined) updateData.project_index_id = project_index_id;
 
       const { data, error } = await supabase
         .from('beneficiary_payments')

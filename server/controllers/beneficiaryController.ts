@@ -1215,40 +1215,41 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
       });
     }
 
-    // SECURITY: Verify user can access the existing beneficiary's unit
-    const existingMonada = (existingBeneficiary as any).monada;
-    if (!authorizedUnitCodes.includes(existingMonada)) {
-      console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to update beneficiary in unauthorized unit ${existingMonada}`);
+    // SECURITY: Check if user has access to this beneficiary
+    // Beneficiaries are linked to units via beneficiary_payments table, NOT via a direct monada column
+    // A user can update a beneficiary if:
+    // 1. The beneficiary has payments for the user's unit, OR
+    // 2. The beneficiary has NO payments yet (new/unassigned beneficiary visible to all)
+    const { data: beneficiaryPayments } = await supabase
+      .from('beneficiary_payments')
+      .select('unit_id')
+      .eq('beneficiary_id', id);
+    
+    const beneficiaryUnitIds = beneficiaryPayments?.map(p => p.unit_id) || [];
+    const hasPaymentsForUserUnit = userUnits.some(unitId => beneficiaryUnitIds.includes(unitId));
+    const hasNoPayments = beneficiaryUnitIds.length === 0;
+    
+    if (!hasPaymentsForUserUnit && !hasNoPayments) {
+      console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to update beneficiary ${id} which belongs to other units: ${beneficiaryUnitIds.join(', ')}`);
       return res.status(403).json({
         message: 'Δεν έχετε πρόσβαση σε αυτόν τον δικαιούχο'
       });
     }
 
-    // SECURITY: Validate and authorize monada changes (if provided)
-    let assignedMonada = existingMonada; // Keep existing by default
-    if (req.body.monada) {
-      // Client wants to change the monada - verify it's in their authorized units
-      if (!authorizedUnitCodes.includes(req.body.monada)) {
-        console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to move beneficiary to unauthorized unit ${req.body.monada}`);
-        return res.status(403).json({
-          message: 'Δεν έχετε πρόσβαση στη συγκεκριμένη μονάδα'
-        });
-      }
-      assignedMonada = req.body.monada;
-    }
-
-    console.log(`[Beneficiaries] SECURITY: Updating beneficiary in authorized unit ${assignedMonada} for user ${req.user.id}`);
+    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} authorized to update beneficiary ${id} (payments for user unit: ${hasPaymentsForUserUnit}, no payments: ${hasNoPayments})`);
     
     // Transform data for proper validation with type safety
+    // Note: beneficiaries table does NOT have a 'monada' column - unit association is via beneficiary_payments
     const transformedData = {
       ...req.body,
       // Keep AFM as string for schema compatibility
       afm: req.body.afm ? String(req.body.afm).trim() : undefined,
       // Handle adeia field - convert to integer if provided
-      adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined,
-      // SECURITY: Use authorized unit code only - no client fallback
-      monada: assignedMonada
+      adeia: req.body.adeia && req.body.adeia !== '' ? parseInt(req.body.adeia) : undefined
     };
+    
+    // Remove monada from request if present since beneficiaries table doesn't have this column
+    delete transformedData.monada;
 
     // Remove geographic_areas from transformedData since it's not part of the database schema
     // (It's handled by the frontend form but not persisted separately)
