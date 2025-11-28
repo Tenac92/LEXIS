@@ -270,6 +270,11 @@ const DocumentCard = memo(function DocumentCard({
     doc.protocol_number_input || null,
   );
 
+  // Count unique recipients by AFM (group payments by recipient)
+  const uniqueRecipientCount = recipients?.length 
+    ? new Set(recipients.map(r => r.afm)).size 
+    : 0;
+
 
   // Show orthi epanalipsi info when either condition is met
   const showOrthiEpanalipsiInfo =
@@ -301,10 +306,10 @@ const DocumentCard = memo(function DocumentCard({
                       <FileText className="w-4 h-4" />
                       <span>Μονάδα: {(doc as any).unit}</span>
                     </div>
-                    {recipients?.length > 0 && (
+                    {uniqueRecipientCount > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <User className="w-4 h-4" />
-                        <span>Δικαιούχοι: {recipients.length}</span>
+                        <span>Δικαιούχοι ({uniqueRecipientCount})</span>
                       </div>
                     )}
                   </div>
@@ -558,7 +563,7 @@ const DocumentCard = memo(function DocumentCard({
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Δικαιούχοι</span>
                   <span className="text-gray-900">
-                    {recipients?.length || 0}
+                    ({uniqueRecipientCount})
                   </span>
                 </div>
               </div>
