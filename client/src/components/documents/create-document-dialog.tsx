@@ -2438,7 +2438,10 @@ export function CreateDocumentDialog({
         : null;
       // Find matching for_yl using normalized numeric comparison
       const selectedForYl = normalizedForYlId != null
-        ? availableForYlForPayload.find((fy: any) => Number(fy.id) === normalizedForYlId)
+        ? availableForYlForPayload.find((fy: any) => {
+            const fyId = typeof fy.id === 'string' ? Number(fy.id) : fy.id;
+            return fyId === normalizedForYlId;
+          })
         : null;
       // Only include for_yl if valid (belongs to available options for selected unit)
       // If selectedForYl is null (not found in filtered options), submit null to clear stale values
