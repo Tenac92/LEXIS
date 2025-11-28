@@ -179,8 +179,9 @@ export function EditDocumentModal({
   const unitIdForProjectsQuery = selectedUnitId || document?.unit_id;
 
   // Fetch projects based on document or form unit_id
+  // IMPORTANT: Use String() to match ProjectSelect's cache key format for cache sharing
   const { data: projects = [], isLoading: projectsLoading } = useQuery<any[]>({
-    queryKey: ['projects-working', unitIdForProjectsQuery],
+    queryKey: ['projects-working', unitIdForProjectsQuery ? String(unitIdForProjectsQuery) : ''],
     queryFn: async () => {
       if (!unitIdForProjectsQuery) return [];
       const response = await apiRequest(`/api/projects-working/${unitIdForProjectsQuery}`);
@@ -1273,7 +1274,7 @@ export function EditDocumentModal({
                             <SelectContent>
                               {projects && Array.isArray(projects) && projects.map((project: any) => (
                                 <SelectItem key={project.id} value={project.id.toString()}>
-                                  {project.event_description} ({project.na853})
+                                  {project.event_description || project.name || project.project_title || `Project ${project.mis}`} ({project.na853})
                                 </SelectItem>
                               ))}
                             </SelectContent>
