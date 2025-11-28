@@ -591,6 +591,12 @@ export function EditDocumentModal({
       return;
     }
     
+    // Also wait for filtered units array to be populated
+    if (!units || units.length === 0) {
+      console.log('[EditDocument] Waiting for units to be filtered');
+      return;
+    }
+    
     // If document has unit_id, also wait for projects to load
     if (document.unit_id && projectsLoading) {
       console.log('[EditDocument] Still loading projects for unit:', document.unit_id);
@@ -1174,6 +1180,7 @@ export function EditDocumentModal({
                         <FormItem>
                           <FormLabel>Μονάδα</FormLabel>
                           <Select 
+                            key={`unit-select-${document?.id}-${formInitialized}`}
                             onValueChange={(value) => {
                               const numericValue = parseInt(value);
                               field.onChange(numericValue);
@@ -1184,7 +1191,7 @@ export function EditDocumentModal({
                               // Invalidate projects query to fetch new projects
                               queryClient.invalidateQueries({ queryKey: ['projects-working', numericValue] });
                             }} 
-                            value={field.value?.toString() || ""}
+                            value={field.value != null ? String(field.value) : ""}
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-unit">
