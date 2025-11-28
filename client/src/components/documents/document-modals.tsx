@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface ViewModalProps {
   isOpen: boolean;
@@ -28,6 +29,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
   const [protocolNumber, setProtocolNumber] = useState('');
   const [protocolDate, setProtocolDate] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Fetch recipients with decrypted AFM values from the API
+  const { data: decryptedRecipients = [] } = useQuery<any[]>({
+    queryKey: [`/api/documents/${document?.id}/beneficiaries`],
+    enabled: !!document?.id && isOpen,
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     if (document) {
@@ -163,33 +171,42 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
             </div>
 
             {/* Recipients Section */}
-            {document.recipients && document.recipients.length > 0 && (
+            {decryptedRecipients && decryptedRecipients.length > 0 && (
               <div>
                 <h3 className="font-medium text-lg mb-2">Δικαιούχοι</h3>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {document.recipients.map((recipient: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
+                  {decryptedRecipients.map((item: any, index: number) => {
+                    // Extract beneficiary data from API response
+                    const beneficiary = item.beneficiaries ? (Array.isArray(item.beneficiaries) ? item.beneficiaries[0] : item.beneficiaries) : item;
+                    const firstname = beneficiary?.name || beneficiary?.firstname || '';
+                    const lastname = beneficiary?.surname || beneficiary?.lastname || '';
+                    const afm = beneficiary?.afm || item.afm || '';
+                    const amount = item.amount || 0;
+                    
+                    return (
+                      <div
+                        key={index}
+                        className="p-3 bg-muted rounded-lg"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">
+                              {lastname} {firstname}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              ΑΦΜ: {afm}
+                            </p>
+                          </div>
                           <p className="font-medium">
-                            {recipient.lastname} {recipient.firstname}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            ΑΦΜ: {recipient.afm}
+                            {new Intl.NumberFormat('el-GR', {
+                              style: 'currency',
+                              currency: 'EUR'
+                            }).format(amount)}
                           </p>
                         </div>
-                        <p className="font-medium">
-                          {new Intl.NumberFormat('el-GR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          }).format(recipient.amount || 0)}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
