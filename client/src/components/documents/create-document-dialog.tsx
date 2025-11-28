@@ -729,30 +729,29 @@ export function CreateDocumentDialog({
   });
 
   const handleDialogOpen = useCallback(async () => {
-    // CRITICAL: Block dialog reinitialization during autocomplete operations
-    if (isDialogInitializing) {
+    // Prevent duplicate initializations - use ref only to avoid temporal dead zone issues
+    if (dialogInitializationRef.current.isInitializing) {
       return;
     }
 
     // CRITICAL: Block reinitialization if dialog is already open and in use
     // Use formData from context (not form.getValues()) since form may not be initialized yet
     // Only block when we have meaningful form data AND dialog is currently in use
-    if (open && currentStep > 0) {
-      return;
-    }
-
-    // Prevent duplicate initializations
-    if (dialogInitializationRef.current.isInitializing) {
+    if (open && currentStep > 0 && !initialBeneficiary) {
       return;
     }
 
     // Only reset for truly new documents (when there's no saved state in context)
+    // EXCEPTION: Always reset when initialBeneficiary is provided (from beneficiary page)
     const hasExistingFormData =
       formData?.project_id ||
       formData?.expenditure_type ||
       (formData?.recipients && formData.recipients.length > 0);
 
-    if (!hasExistingFormData) {
+    // Force reset when initialBeneficiary is provided, even if there's existing form data
+    const shouldResetForm = !hasExistingFormData || !!initialBeneficiary;
+
+    if (shouldResetForm) {
       // Don't reset the unit if user has one assigned - preserve auto-selection
       let defaultUnit = "";
       if (userUnitIds.length > 0 && units && units.length > 0) {
@@ -919,14 +918,14 @@ export function CreateDocumentDialog({
 
       return () => clearTimeout(resetTimeout);
     }
-  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep]);
+  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, initialBeneficiary, units, userUnitIds, updateFormData, setCurrentStep, open]);
 
-  // Effect to handle dialog open state - FIXED: Remove handleDialogOpen from dependencies to prevent infinite loop
+  // Effect to handle dialog open state - triggers on open or when initialBeneficiary changes
   useEffect(() => {
     if (open && !dialogInitializationRef.current.isInitializing) {
       handleDialogOpen();
     }
-  }, [open]); // Removed handleDialogOpen from dependencies to break infinite loop
+  }, [open, initialBeneficiary]); // Also trigger when initialBeneficiary changes to prefill data
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
