@@ -4008,72 +4008,69 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
-                          {/* Όνομα */}
-                          <div className="md:col-span-2 md:row-span-1">
-                            <FormField
-                              control={form.control}
-                              name={`recipients.${index}.firstname`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="Όνομα"
-                                      autoComplete="off"
-                                      data-testid={`input-recipient-${index}-firstname`}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                        <div className="space-y-4">
+                          {/* Row 1: Identity Fields + Delete Button */}
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                              {/* Όνομα */}
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.firstname`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="Όνομα"
+                                        autoComplete="off"
+                                        data-testid={`input-recipient-${index}-firstname`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
-                          {/* Επώνυμο */}
-                          <div className="md:col-span-2 md:row-span-1">
-                            <FormField
-                              control={form.control}
-                              name={`recipients.${index}.lastname`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="Επώνυμο"
-                                      autoComplete="off"
-                                      data-testid={`input-recipient-${index}-lastname`}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                              {/* Επώνυμο */}
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.lastname`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="Επώνυμο"
+                                        autoComplete="off"
+                                        data-testid={`input-recipient-${index}-lastname`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
-                          {/* Πατρώνυμο */}
-                          <div className="md:col-span-2 md:row-span-1">
-                            <FormField
-                              control={form.control}
-                              name={`recipients.${index}.fathername`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormControl>
-                                    <Input
-                                      {...field}
-                                      placeholder="Πατρώνυμο"
-                                      autoComplete="off"
-                                      data-testid={`input-recipient-${index}-fathername`}
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
+                              {/* Πατρώνυμο */}
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.fathername`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="Πατρώνυμο"
+                                        autoComplete="off"
+                                        data-testid={`input-recipient-${index}-fathername`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
 
-                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                          <div className="md:col-span-2 md:row-span-1">
+                              {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
+                              <div>
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""
