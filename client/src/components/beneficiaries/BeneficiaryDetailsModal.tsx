@@ -79,7 +79,10 @@ interface BeneficiaryDetailsModalProps {
 const beneficiaryEditSchema = insertBeneficiarySchema.omit({ 
   id: true, 
   created_at: true, 
-  updated_at: true 
+  updated_at: true,
+  afm_hash: true, // afm_hash is computed server-side, not required in form
+  date: true, // date is auto-generated
+  regiondet: true, // regiondet is computed from geographic_areas
 }).extend({
   fathername: z.string().optional(), // Allow optional fathername
   adeia: z.number().optional(), // Allow optional adeia (license number)
