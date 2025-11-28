@@ -1229,7 +1229,7 @@ export function EditDocumentModal({
                             <SelectContent>
                               {projects && Array.isArray(projects) && projects.map((project: any) => (
                                 <SelectItem key={project.id} value={project.id.toString()}>
-                                  {project.event_description} ({project.mis})
+                                  {project.event_description} ({project.na853})
                                 </SelectItem>
                               ))}
                             </SelectContent>
