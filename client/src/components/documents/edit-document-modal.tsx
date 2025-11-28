@@ -1218,7 +1218,7 @@ export function EditDocumentModal({
                                 await findAndUpdateProjectIndex(projectId, unitId, selectedExpenditureTypeId);
                               }
                             }} 
-                            value={selectedProjectId ? selectedProjectId.toString() : undefined}
+                            value={selectedProjectId?.toString() || ""}
                             disabled={!selectedUnitId}
                           >
                             <FormControl>
@@ -1229,7 +1229,7 @@ export function EditDocumentModal({
                             <SelectContent>
                               {projects && Array.isArray(projects) && projects.map((project: any) => (
                                 <SelectItem key={project.id} value={project.id.toString()}>
-                                  {project.project_name || project.name || project.mis}
+                                  {project.event_description} ({project.mis})
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -1254,7 +1254,7 @@ export function EditDocumentModal({
                             }
                           }
                         }} 
-                        value={selectedExpenditureTypeId && !isNaN(selectedExpenditureTypeId) ? selectedExpenditureTypeId.toString() : undefined}
+                        value={selectedExpenditureTypeId?.toString() || ""}
                         disabled={!selectedProjectId}
                         onOpenChange={(open) => {
                           if (open) {
