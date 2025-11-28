@@ -786,7 +786,15 @@ export function CreateDocumentDialog({
         installment: "ΕΦΑΠΑΞ",
         installments: ["ΕΦΑΠΑΞ"],
         installmentAmounts: {},
+        // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+        days: 1,
+        daily_compensation: 0,
+        accommodation_expenses: 0,
+        kilometers_traveled: 0,
+        price_per_km: DEFAULT_PRICE_PER_KM,
+        tickets_tolls_rental: 0,
         tickets_tolls_rental_entries: [],
+        has_2_percent_deduction: false,
       }] : [];
 
       // Reset form to default values for new document, but preserve unit
@@ -926,6 +934,65 @@ export function CreateDocumentDialog({
       handleDialogOpen();
     }
   }, [open, initialBeneficiary]); // Also trigger when initialBeneficiary changes to prefill data
+
+  // SEPARATE EFFECT: Apply initialBeneficiary data directly to recipients without full form reset
+  // This ensures beneficiary prefill works even if dialog was previously used
+  const lastAppliedBeneficiaryRef = useRef<string | null>(null);
+  
+  // Reset the applied beneficiary ref when dialog closes or initialBeneficiary is cleared
+  useEffect(() => {
+    if (!open || !initialBeneficiary) {
+      // Reset when dialog closes or beneficiary is cleared, so it can be applied again next time
+      lastAppliedBeneficiaryRef.current = null;
+      return;
+    }
+    
+    // Create a unique key for this beneficiary to avoid duplicate applications
+    const beneficiaryKey = `${initialBeneficiary.afm}-${initialBeneficiary.firstname}-${initialBeneficiary.lastname}`;
+    
+    // Skip if we already applied this exact beneficiary
+    if (lastAppliedBeneficiaryRef.current === beneficiaryKey) {
+      return;
+    }
+    
+    console.log("[CreateDocument] Applying initialBeneficiary directly:", initialBeneficiary);
+    
+    // Create the recipient object from beneficiary data with all required fields
+    const newRecipient = {
+      firstname: initialBeneficiary.firstname,
+      lastname: initialBeneficiary.lastname,
+      fathername: initialBeneficiary.fathername || "",
+      afm: initialBeneficiary.afm,
+      amount: 0,
+      secondary_text: "",
+      installment: "ΕΦΑΠΑΞ",
+      installments: ["ΕΦΑΠΑΞ"],
+      installmentAmounts: {},
+      // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+      days: 1,
+      daily_compensation: 0,
+      accommodation_expenses: 0,
+      kilometers_traveled: 0,
+      price_per_km: DEFAULT_PRICE_PER_KM,
+      tickets_tolls_rental: 0,
+      tickets_tolls_rental_entries: [],
+      has_2_percent_deduction: false,
+    };
+    
+    // Apply to form - replace recipients with the prefilled beneficiary
+    form.setValue("recipients", [newRecipient], { shouldValidate: false });
+    
+    // Also update the form context
+    updateFormData({
+      ...formData,
+      recipients: [newRecipient],
+    });
+    
+    // Mark as applied to prevent duplicate applications
+    lastAppliedBeneficiaryRef.current = beneficiaryKey;
+    
+    console.log("[CreateDocument] Beneficiary applied successfully");
+  }, [open, initialBeneficiary, form, formData, updateFormData]);
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
