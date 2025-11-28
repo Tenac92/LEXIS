@@ -1621,17 +1621,18 @@ export function CreateDocumentDialog({
 
     return (
       <div className="w-full">
-        <div className="mb-2">
-          <label className="text-sm font-medium mb-2 block">
-            {expenditureType === HOUSING_ALLOWANCE_TYPE
-              ? "Τρίμηνα:"
-              : "Δόσεις:"}
-          </label>
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Installment Selection Label and Buttons */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+              {expenditureType === HOUSING_ALLOWANCE_TYPE
+                ? "Τρίμηνα:"
+                : "Δόσεις:"}
+            </label>
 
-          {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
-            // Housing allowance quarter selection - compact design
-            <div className="space-y-3">
-              <div className="grid grid-cols-8 gap-1.5">
+            {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
+              // Housing allowance quarter selection - horizontal inline
+              <div className="flex items-center gap-1.5">
                 {availableInstallments.map((quarter) => {
                   const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
                   return (
@@ -1645,38 +1646,16 @@ export function CreateDocumentDialog({
                       }
                       size="sm"
                       onClick={() => handleInstallmentToggle(quarter)}
-                      className="h-7 px-1 text-xs font-medium"
+                      className="h-8 px-3 text-xs font-medium"
                     >
                       {quarterNum}
                     </Button>
                   );
                 })}
               </div>
-
-              {selectedInstallments.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-blue-700 font-medium">
-                      Επιλογή:{" "}
-                      {selectedInstallments
-                        .sort((a, b) => {
-                          const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
-                          const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
-                          return aNum - bNum;
-                        })
-                        .map((q) => q.replace("ΤΡΙΜΗΝΟ ", ""))
-                        .join("-")}
-                    </span>
-                    <span className="text-blue-600">
-                      {selectedInstallments.length} τρίμηνα
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            // Segmented control for installment selection
-            <div className="grid grid-cols-2 gap-2">
+            ) : (
+              // Segmented control for installment selection - horizontal inline
+              <div className="flex flex-wrap items-center gap-2">
               {availableInstallments
                 .filter((inst) => !inst.includes("συμπληρωματική"))
                 .map((installment) => {
@@ -1760,11 +1739,12 @@ export function CreateDocumentDialog({
                     </div>
                   );
                 })}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {selectedInstallments.length > 0 && (
+          {/* Amount inputs - inline with installment selection */}
+          {selectedInstallments.length > 0 && (
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-1.5">
               {selectedInstallments.map((installment) => (
@@ -1812,7 +1792,8 @@ export function CreateDocumentDialog({
               </span>
             </div>
           </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
@@ -4008,69 +3989,72 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
-                        <div className="space-y-4">
-                          {/* Row 1: Identity Fields + Delete Button */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                              {/* Όνομα */}
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.firstname`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        placeholder="Όνομα"
-                                        autoComplete="off"
-                                        data-testid={`input-recipient-${index}-firstname`}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
+                          {/* Όνομα */}
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.firstname`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="Όνομα"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-firstname`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
-                              {/* Επώνυμο */}
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.lastname`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        placeholder="Επώνυμο"
-                                        autoComplete="off"
-                                        data-testid={`input-recipient-${index}-lastname`}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                          {/* Επώνυμο */}
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.lastname`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="Επώνυμο"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-lastname`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
-                              {/* Πατρώνυμο */}
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.fathername`}
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <Input
-                                        {...field}
-                                        placeholder="Πατρώνυμο"
-                                        autoComplete="off"
-                                        data-testid={`input-recipient-${index}-fathername`}
-                                      />
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
+                          {/* Πατρώνυμο */}
+                          <div className="md:col-span-2 md:row-span-1">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.fathername`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      placeholder="Πατρώνυμο"
+                                      autoComplete="off"
+                                      data-testid={`input-recipient-${index}-fathername`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
 
-                              {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
-                              <div>
+                          {/* ΑΦΜ με έξυπνη αυτόματη συμπλήρωση */}
+                          <div className="md:col-span-2 md:row-span-1">
                             <SimpleAFMAutocomplete
                               expenditureType={
                                 form.getValues("expenditure_type") || ""
@@ -4970,16 +4954,6 @@ export function CreateDocumentDialog({
                             </>
                           )}
 
-                          {/* renderRecipientInstallments(index) - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
-                          {form.getValues("expenditure_type") !==
-                            EKTOS_EDRAS_TYPE && (
-                            <div className="md:col-span-3 md:row-span-2 md:row-start-1 flex items-start">
-                              <div className="flex-1">
-                                {renderRecipientInstallments(index)}
-                              </div>
-                            </div>
-                          )}
-
                           {/* Delete Button - same row as the inputs */}
                           <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
                             <Button
@@ -4993,6 +4967,14 @@ export function CreateDocumentDialog({
                             </Button>
                           </div>
 
+                          {/* Installments Section - Full width row for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {form.getValues("expenditure_type") !==
+                            EKTOS_EDRAS_TYPE && (
+                            <div className="md:col-span-12 md:row-start-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                              {renderRecipientInstallments(index)}
+                            </div>
+                          )}
+
                           {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
                             EKTOS_EDRAS_TYPE && (
@@ -5000,8 +4982,8 @@ export function CreateDocumentDialog({
                               {...form.register(
                                 `recipients.${index}.secondary_text`,
                               )}
-                              placeholder="Ελεύθερο Κείμενο"
-                              className="md:col-span-8 md:row-start-2"
+                              placeholder="Ελεύθερο Κείμενο (προαιρετικό)"
+                              className="md:col-span-12 md:row-start-3"
                               autoComplete="off"
                             />
                           )}
