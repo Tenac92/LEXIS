@@ -40,7 +40,7 @@ import type { GeneratedDocument } from "@shared/schema";
 import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 import { MonthRangePicker } from "@/components/common/MonthRangePicker";
-import { EKTOS_EDRAS_TYPE, GREEK_MONTHS, AVAILABLE_YEARS } from "./constants";
+import { EKTOS_EDRAS_TYPE, GREEK_MONTHS, AVAILABLE_YEARS, DKA_INSTALLMENTS, DKA_TYPES, HOUSING_ALLOWANCE_TYPE, HOUSING_QUARTERS, ALL_INSTALLMENTS } from "./constants";
 
 // Use editDocumentSchema as base type - includes all fields with optional correction_reason
 // The zodResolver enforces correct validation based on mode (edit vs correction)
@@ -61,6 +61,21 @@ const STATUS_OPTIONS = [
   { value: "rejected", label: "Απορρίφθηκε", color: "bg-red-100 text-red-800" },
   { value: "completed", label: "Ολοκληρώθηκε", color: "bg-blue-100 text-blue-800" },
 ];
+
+// Helper function to get available installments based on expenditure type
+const getAvailableInstallments = (expenditureTypeName?: string): string[] => {
+  if (!expenditureTypeName) return [ALL_INSTALLMENTS[0]]; // Default to ΕΦΑΠΑΞ
+  
+  if (expenditureTypeName === HOUSING_ALLOWANCE_TYPE) {
+    return HOUSING_QUARTERS;
+  }
+  
+  if (DKA_TYPES.some(dka => expenditureTypeName.includes(dka))) {
+    return DKA_INSTALLMENTS;
+  }
+  
+  return ALL_INSTALLMENTS;
+};
 
 export function EditDocumentModal({ 
   document, 
@@ -1843,12 +1858,27 @@ export function EditDocumentModal({
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Δόση</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    {...field} 
-                                    data-testid={`input-recipient-installment-${index}`}
-                                  />
-                                </FormControl>
+                                <Select 
+                                  value={field.value || ""} 
+                                  onValueChange={field.onChange}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger data-testid={`select-recipient-installment-${index}`}>
+                                      <SelectValue placeholder="Επιλέξτε δόση" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {getAvailableInstallments(
+                                      allExpenditureTypes?.find(
+                                        (t: any) => t.id === selectedExpenditureTypeId
+                                      )?.expenditure_types
+                                    ).map((installment: string) => (
+                                      <SelectItem key={installment} value={installment}>
+                                        {installment}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                                 <FormMessage />
                               </FormItem>
                             )}
