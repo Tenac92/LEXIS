@@ -697,23 +697,28 @@ export function EditDocumentModal({
       correction_reason: "",
       recipients: initialRecipients,
       project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
-      unit_id: document.unit_id ? Number(document.unit_id) : undefined,
+      // Use document.unit_id if available, otherwise fall back to projectIndexData.monada_id
+      unit_id: document.unit_id ? Number(document.unit_id) : (projectIndexData?.monada_id ? Number(projectIndexData.monada_id) : undefined),
       region: (document as any).region || undefined,
       expenditure_type_id: documentExpenditureTypeId || undefined,  // Set expenditure type for dropdown display
     };
 
+    const resolvedUnitId = document.unit_id ? Number(document.unit_id) : (projectIndexData?.monada_id ? Number(projectIndexData.monada_id) : undefined);
     console.log('[EditDocument] Form data:', formData);
+    console.log('[EditDocument] Unit ID resolution:', {
+      documentUnitId: document.unit_id,
+      projectIndexMonadaId: projectIndexData?.monada_id,
+      resolvedUnitId: resolvedUnitId,
+      source: document.unit_id ? 'document.unit_id' : (projectIndexData?.monada_id ? 'projectIndexData.monada_id' : 'none')
+    });
     console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
-    console.log('[EditDocument] NOTE: Form stores project_index.id:', document.project_index_id, 'but dropdown will display using project.id:', actualProjectId);
     console.log('[EditDocument] Units available:', units?.length, 'first unit:', units?.[0]);
     form.reset(formData);
     
     // Force re-render of unit_id field by triggering watch
     setTimeout(() => {
-      if (document.unit_id) {
-        const currentValue = form.getValues('unit_id');
-        console.log('[EditDocument] After reset, unit_id value:', currentValue);
-      }
+      const currentValue = form.getValues('unit_id');
+      console.log('[EditDocument] After reset, unit_id value:', currentValue, 'expected:', resolvedUnitId);
     }, 0);
 
     // Set selectedProjectId and selectedExpenditureTypeId for dropdowns and queries
@@ -729,7 +734,7 @@ export function EditDocumentModal({
 
     // Mark as initialized to prevent re-resetting on user changes
     setFormInitialized(true);
-  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units]);
+  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units, projectIndexData]);
 
   // Initialize geographic selection dropdowns from document's region JSONB
   useEffect(() => {
