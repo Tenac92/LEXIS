@@ -557,6 +557,18 @@ export function EditDocumentModal({
     });
   }, [open, document?.id]);
 
+  // Populate selectedProjectId and selectedExpenditureTypeId from projectIndexData when modal opens
+  useEffect(() => {
+    if (projectIndexData && projectIndexData.project_id && projectIndexData.expenditure_type_id) {
+      console.log('[EditDocument] Populating project and expenditure type from projectIndexData:', { 
+        projectId: projectIndexData.project_id,
+        expenditureTypeId: projectIndexData.expenditure_type_id 
+      });
+      setSelectedProjectId(projectIndexData.project_id);
+      setSelectedExpenditureTypeId(projectIndexData.expenditure_type_id);
+    }
+  }, [projectIndexData]);
+
   // Reset form when document changes - WITH LOADING GATES (ONLY ONCE)
   useEffect(() => {
     if (!document || !open) return;

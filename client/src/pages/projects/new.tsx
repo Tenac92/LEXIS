@@ -391,7 +391,7 @@ export default function NewProjectPage() {
     data: completeProjectData,
     isLoading: isCompleteDataLoading,
     error: completeDataError,
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/projects/${projectId}/complete`],
     enabled: !!projectId,
     staleTime: 5 * 60 * 1000,
