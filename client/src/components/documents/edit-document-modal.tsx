@@ -1855,33 +1855,38 @@ export function EditDocumentModal({
                           <FormField
                             control={form.control}
                             name={`recipients.${index}.installment`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Δόση</FormLabel>
-                                <Select 
-                                  value={field.value || ""} 
-                                  onValueChange={field.onChange}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger data-testid={`select-recipient-installment-${index}`}>
-                                      <SelectValue placeholder="Επιλέξτε δόση" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    {getAvailableInstallments(
-                                      allExpenditureTypes?.find(
-                                        (t: any) => t.id === selectedExpenditureTypeId
-                                      )?.expenditure_types
-                                    ).map((installment: string) => (
-                                      <SelectItem key={installment} value={installment}>
-                                        {installment}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
+                            render={({ field }) => {
+                              // Get the expenditure type name to determine available installments
+                              const expenditureType = allExpenditureTypes?.find(
+                                (t: any) => t.id === selectedExpenditureTypeId
+                              );
+                              const expenditureTypeName = expenditureType?.expenditure_types || expenditureType?.expenditure_types_minor;
+                              const availableInstallments = getAvailableInstallments(expenditureTypeName);
+                              
+                              return (
+                                <FormItem>
+                                  <FormLabel>Δόση</FormLabel>
+                                  <Select 
+                                    value={String(field.value) || ""} 
+                                    onValueChange={(value) => field.onChange(value)}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger data-testid={`select-recipient-installment-${index}`}>
+                                        <SelectValue placeholder="Επιλέξτε δόση" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {availableInstallments.map((installment: string) => (
+                                        <SelectItem key={installment} value={installment}>
+                                          {installment}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              );
+                            }}
                           />
                         </div>
 
