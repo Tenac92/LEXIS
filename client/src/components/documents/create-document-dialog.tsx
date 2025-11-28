@@ -2366,9 +2366,9 @@ export function CreateDocumentDialog({
           }),
         });
 
-        // Handle authorization issues gracefully
+        // Handle authorization issues gracefully - allow to continue with warning
         if (budgetValidationResponse.status === 401) {
-          // Auth warning logging removed for cleaner console
+          console.warn("[Budget] Authorization issue during validation - continuing with reservation");
           toast({
             title: "Προειδοποίηση",
             description:
@@ -2376,9 +2376,9 @@ export function CreateDocumentDialog({
             variant: "destructive",
           });
         }
-        // Handle other errors gracefully
+        // Handle other HTTP errors gracefully - allow to continue with warning
         else if (!budgetValidationResponse.ok) {
-          // Budget validation error logging removed for cleaner console
+          console.warn("[Budget] HTTP error during validation - continuing with reservation");
           toast({
             title: "Προειδοποίηση",
             description:
@@ -2386,19 +2386,33 @@ export function CreateDocumentDialog({
             variant: "destructive",
           });
         }
-        // Process successful validation
+        // Process successful validation response
         else {
           const budgetValidation = await budgetValidationResponse.json();
 
+          // If budget validation explicitly says cannot create, this is a legitimate budget issue
+          // Do NOT catch this - let it propagate to block the save
           if (!budgetValidation.canCreate) {
-            throw new Error(
-              budgetValidation.message ||
-                "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού",
-            );
+            const budgetErrorMessage = budgetValidation.message ||
+              "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού";
+            toast({
+              title: "Σφάλμα Προϋπολογισμού",
+              description: budgetErrorMessage,
+              variant: "destructive",
+            });
+            throw new Error(`BUDGET_BLOCK: ${budgetErrorMessage}`);
           }
+          // If validation passed, optionally show success info
+          console.log("[Budget] Validation passed - proceeding with document creation");
         }
-      } catch (validationError) {
-        // Budget validation error logging removed for cleaner console
+      } catch (validationError: any) {
+        // If this is a legitimate budget block error, re-throw it to stop the save
+        if (validationError?.message?.startsWith("BUDGET_BLOCK:")) {
+          throw validationError;
+        }
+        // For unexpected technical errors (network issues, JSON parsing, etc.), 
+        // show warning and allow to continue with reservation
+        console.warn("[Budget] Unexpected error during validation:", validationError);
         toast({
           title: "Προειδοποίηση",
           description:
@@ -2729,16 +2743,18 @@ export function CreateDocumentDialog({
 
       // Nothing needed here as the document creation logic
       // and dialog closing are all handled in the try-catch block above
-    } catch (error) {
-      // Error logging removed for cleaner console output
-      toast({
-        title: "Σφάλμα",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Αποτυχία δημιουργίας εγγράφου",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      // Skip showing toast for BUDGET_BLOCK errors - they already showed a specific toast
+      if (!error?.message?.startsWith("BUDGET_BLOCK:")) {
+        toast({
+          title: "Σφάλμα",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Αποτυχία δημιουργίας εγγράφου",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
