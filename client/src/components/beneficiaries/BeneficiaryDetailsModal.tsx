@@ -844,7 +844,10 @@ export function BeneficiaryDetailsModal({
 
           <TabsContent value="details" className="flex-1 overflow-y-auto">
             <Form {...form}>
-              <form id="beneficiary-edit-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form id="beneficiary-edit-form" onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                console.log("[BeneficiaryDetailsModal] Form validation errors:", errors);
+                console.log("[BeneficiaryDetailsModal] Current form values:", form.getValues());
+              })} className="space-y-6">
               {/* Personal Information */}
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200 shadow-sm">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
