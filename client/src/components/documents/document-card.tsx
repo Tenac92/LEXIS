@@ -21,7 +21,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
@@ -275,6 +275,58 @@ const DocumentCard = memo(function DocumentCard({
     ? new Set(recipients.map(r => r.afm)).size 
     : 0;
 
+  // Group recipients by AFM with their payments
+  const groupedRecipients = useMemo(() => {
+    if (!recipients?.length) return [];
+    
+    const grouped = new Map<string, {
+      afm: string;
+      firstname: string;
+      lastname: string;
+      fathername: string;
+      totalAmount: number;
+      payments: Array<{
+        installment: string;
+        amount: number;
+        month?: string;
+        days?: number;
+        daily_compensation?: number;
+        accommodation_expenses?: number;
+        kilometers_traveled?: number;
+        tickets_tolls_rental?: number;
+        secondary_text?: string;
+      }>;
+    }>();
+
+    recipients.forEach(r => {
+      const key = r.afm || `${r.lastname}-${r.firstname}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          afm: r.afm,
+          firstname: r.firstname,
+          lastname: r.lastname,
+          fathername: r.fathername,
+          totalAmount: 0,
+          payments: []
+        });
+      }
+      const group = grouped.get(key)!;
+      group.totalAmount += r.amount || 0;
+      group.payments.push({
+        installment: r.installment || r.month || '',
+        amount: r.amount || 0,
+        month: r.month,
+        days: r.days,
+        daily_compensation: r.daily_compensation,
+        accommodation_expenses: r.accommodation_expenses,
+        kilometers_traveled: r.kilometers_traveled,
+        tickets_tolls_rental: r.tickets_tolls_rental,
+        secondary_text: r.secondary_text
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [recipients]);
 
   // Show orthi epanalipsi info when either condition is met
   const showOrthiEpanalipsiInfo =
