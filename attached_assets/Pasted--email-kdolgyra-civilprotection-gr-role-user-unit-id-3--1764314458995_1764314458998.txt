@@ -1,0 +1,195 @@
+Δόλγυρα Αικατερίνη',
+  email: 'kdolgyra@civilprotection.gr',
+  role: 'user',
+  unit_id: [ 3 ],
+  sessionID: '-b3zj-ehbyIWcEEQ_LI4h0zr59e3wDrL',
+  ip: '141.101.98.144'
+}
+[Prefetch] Starting background prefetch for units: 3
+[Beneficiaries] Looking up unit code for unit ID: 3
+9:11:22 AM [express] GET /api/public/expenditure-types 304 in 211ms
+9:11:22 AM [express] GET /api/public/units 304 in 182ms
+[Beneficiaries] Mapped unit ID 3 to unit code "ΔΑΕΦΚ-ΑΚ"
+9:11:22 AM [express] GET /api/beneficiaries/prefetch 304 in 191ms
+[Prefetch] Fetching beneficiaries for unit: ΔΑΕΦΚ-ΑΚ
+[Users] Found matching users: 5
+9:11:22 AM [express] GET /api/users/matching-units 304 in 228ms
+[DocumentsController] Fetching beneficiary payments for document 356 with IDs: [ 236, 237 ]
+[DocumentsController] Fetching beneficiary payments for document 326 with IDs: [ 212 ]
+[DocumentsController] Fetching beneficiary payments for document 317 with IDs: [ 202 ]
+[DocumentsController] Fetching beneficiary payments for document 311 with IDs: [ 197 ]
+[DocumentsController] Fetching beneficiary payments for document 306 with IDs: [ 190 ]
+[DocumentsController] Fetching beneficiary payments for document 304 with IDs: [ 188 ]
+[DocumentsController] Fetching beneficiary payments for document 303 with IDs: [ 187 ]
+[DocumentsController] Fetching beneficiary payments for document 301 with IDs: [ 183 ]
+[DocumentsController] Fetching beneficiary payments for document 286 with IDs: [ 168 ]
+[DocumentsController] Fetching beneficiary payments for document 280 with IDs: [ 165, 166 ]
+[DocumentsController] Fetching beneficiary payments for document 278 with IDs: [ 162, 163 ]
+[DocumentsController] Fetching beneficiary payments for document 274 with IDs: [ 157, 158 ]
+[DocumentsController] Fetching beneficiary payments for document 268 with IDs: [ 153 ]
+[DocumentsController] Fetching beneficiary payments for document 242 with IDs: [ 142 ]
+[DocumentsController] Fetching beneficiary payments for document 235 with IDs: [ 129, 130 ]
+[DocumentsController] Fetching beneficiary payments for document 231 with IDs: [ 124 ]
+[DocumentsController] Fetching beneficiary payments for document 229 with IDs: [ 122 ]
+[DocumentsController] Fetching beneficiary payments for document 218 with IDs: [ 105, 106 ]
+[DocumentsController] Fetching beneficiary payments for document 217 with IDs: [ 104 ]
+[DocumentsController] Fetching beneficiary payments for document 215 with IDs: [ 102 ]
+[DocumentsController] Fetching beneficiary payments for document 214 with IDs: [ 101 ]
+[DocumentsController] Fetching beneficiary payments for document 212 with IDs: [ 92, 93, 94, 95, 96, 97 ]
+[DocumentsController] Fetching beneficiary payments for document 210 with IDs: [ 90 ]
+[DocumentsController] Fetching beneficiary payments for document 208 with IDs: [ 87, 88 ]
+[DocumentsController] Fetching beneficiary payments for document 203 with IDs: [ 76, 77, 78, 79 ]
+[DocumentsController] Fetching beneficiary payments for document 190 with IDs: [ 61, 62, 63, 64 ]
+[DocumentsController] Beneficiary payments query result for doc 317: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 317
+9:11:22 AM [cors] [CORS] Processing sdegdaefk.gr request without valid origin:
+9:11:22 AM [cors] [CORS] Referer: https://sdegdaefk.gr/documents, Host: sdegdaefk.gr
+9:11:22 AM [cors] [CORS] Applied fallback CORS headers for sdegdaefk.gr request
+9:11:22 AM [geoip] [GeoIP] sdegdaefk.gr domain exempt from GeoIP restrictions: https://sdegdaefk.gr/documents
+9:11:22 AM [express] [Request] GET /api/documents from 172.71.241.70
+9:11:22 AM [info] [DocumentsPreHandler] Handling request from sdegdaefk.gr to /api/documents
+[DocumentsController] Beneficiary payments query result for doc 326: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 326
+[DocumentsController] Beneficiary payments query result for doc 306: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 306
+[DocumentsController] Beneficiary payments query result for doc 303: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 303
+[DocumentsController] Beneficiary payments query result for doc 356: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 356
+[DocumentsController] Beneficiary payments query result for doc 208: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 208
+[DocumentsController] Beneficiary payments query result for doc 231: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 231
+[DocumentsController] Beneficiary payments query result for doc 311: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 311
+[DocumentsController] Beneficiary payments query result for doc 278: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 278
+[DocumentsController] Beneficiary payments query result for doc 301: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 301
+[DocumentsController] Beneficiary payments query result for doc 235: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 235
+[DocumentsController] Beneficiary payments query result for doc 190: { error: null, paymentsCount: 4 }
+[DocumentsController] Transformed 4 beneficiary payments into recipients for doc 190
+[DocumentsController] Beneficiary payments query result for doc 242: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 242
+[DocumentsController] Beneficiary payments query result for doc 203: { error: null, paymentsCount: 4 }
+[DocumentsController] Transformed 4 beneficiary payments into recipients for doc 203
+[DocumentsController] Fetching beneficiary payments for document 356 with IDs: [ 236, 237 ]
+[DocumentsController] Fetching beneficiary payments for document 326 with IDs: [ 212 ]
+[DocumentsController] Fetching beneficiary payments for document 317 with IDs: [ 202 ]
+[DocumentsController] Fetching beneficiary payments for document 311 with IDs: [ 197 ]
+[DocumentsController] Fetching beneficiary payments for document 306 with IDs: [ 190 ]
+[DocumentsController] Fetching beneficiary payments for document 304 with IDs: [ 188 ]
+[DocumentsController] Fetching beneficiary payments for document 303 with IDs: [ 187 ]
+[DocumentsController] Fetching beneficiary payments for document 301 with IDs: [ 183 ]
+[DocumentsController] Fetching beneficiary payments for document 286 with IDs: [ 168 ]
+[DocumentsController] Fetching beneficiary payments for document 280 with IDs: [ 165, 166 ]
+[DocumentsController] Fetching beneficiary payments for document 278 with IDs: [ 162, 163 ]
+[DocumentsController] Fetching beneficiary payments for document 274 with IDs: [ 157, 158 ]
+[DocumentsController] Fetching beneficiary payments for document 268 with IDs: [ 153 ]
+[DocumentsController] Fetching beneficiary payments for document 242 with IDs: [ 142 ]
+[DocumentsController] Fetching beneficiary payments for document 235 with IDs: [ 129, 130 ]
+[DocumentsController] Fetching beneficiary payments for document 231 with IDs: [ 124 ]
+[DocumentsController] Fetching beneficiary payments for document 229 with IDs: [ 122 ]
+[DocumentsController] Fetching beneficiary payments for document 218 with IDs: [ 105, 106 ]
+[DocumentsController] Fetching beneficiary payments for document 217 with IDs: [ 104 ]
+[DocumentsController] Fetching beneficiary payments for document 215 with IDs: [ 102 ]
+[DocumentsController] Fetching beneficiary payments for document 214 with IDs: [ 101 ]
+[DocumentsController] Fetching beneficiary payments for document 212 with IDs: [ 92, 93, 94, 95, 96, 97 ]
+[DocumentsController] Fetching beneficiary payments for document 210 with IDs: [ 90 ]
+[DocumentsController] Fetching beneficiary payments for document 208 with IDs: [ 87, 88 ]
+[DocumentsController] Fetching beneficiary payments for document 203 with IDs: [ 76, 77, 78, 79 ]
+[DocumentsController] Fetching beneficiary payments for document 190 with IDs: [ 61, 62, 63, 64 ]
+[DocumentsController] Beneficiary payments query result for doc 286: { error: null, paymentsCount: 0 }
+[DocumentsController] Transformed 0 beneficiary payments into recipients for doc 286
+[DocumentsController] Beneficiary payments query result for doc 268: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 268
+[DocumentsController] Beneficiary payments query result for doc 304: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 304
+[DocumentsController] Beneficiary payments query result for doc 274: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 274
+[DocumentsController] Beneficiary payments query result for doc 229: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 229
+[DocumentsController] Beneficiary payments query result for doc 280: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 280
+[DocumentsController] Beneficiary payments query result for doc 214: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 214
+[DocumentsController] Beneficiary payments query result for doc 212: { error: null, paymentsCount: 6 }
+[DocumentsController] Transformed 6 beneficiary payments into recipients for doc 212
+[DocumentsController] Beneficiary payments query result for doc 210: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 210
+[DocumentsController] Beneficiary payments query result for doc 326: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 326
+[DocumentsController] Beneficiary payments query result for doc 218: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 218
+[DocumentsController] Beneficiary payments query result for doc 217: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 217
+[DocumentsController] Beneficiary payments query result for doc 215: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 215
+[Prefetch] Fetching employees for all units
+[WebSocket] Heartbeat - Clients: 10 (10 active, 0 terminated)
+[WebSocket] New client connected: yu17tmih7sad5 from 10.17.126.68
+[WSManager] Added connection yu17tmih7sad5, total: 11
+[WebSocket] Connection yu17tmih7sad5 registered with manager
+[DocumentsController] Beneficiary payments query result for doc 286: { error: null, paymentsCount: 0 }
+[DocumentsController] Transformed 0 beneficiary payments into recipients for doc 286
+[DocumentsController] Beneficiary payments query result for doc 274: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 274
+[DocumentsController] Beneficiary payments query result for doc 311: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 311
+[DocumentsController] Beneficiary payments query result for doc 303: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 303
+[DocumentsController] Beneficiary payments query result for doc 301: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 301
+[DocumentsController] Beneficiary payments query result for doc 306: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 306
+[DocumentsController] Beneficiary payments query result for doc 317: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 317
+[DocumentsController] Beneficiary payments query result for doc 280: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 280
+[DocumentsController] Beneficiary payments query result for doc 231: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 231
+[DocumentsController] Beneficiary payments query result for doc 278: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 278
+[DocumentsController] Beneficiary payments query result for doc 235: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 235
+[DocumentsController] Beneficiary payments query result for doc 229: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 229
+[DocumentsController] Beneficiary payments query result for doc 210: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 210
+[DocumentsController] Beneficiary payments query result for doc 208: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 208
+[DocumentsController] Beneficiary payments query result for doc 218: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 218
+[DocumentsController] Beneficiary payments query result for doc 242: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 242
+[DocumentsController] Beneficiary payments query result for doc 212: { error: null, paymentsCount: 6 }
+[DocumentsController] Transformed 6 beneficiary payments into recipients for doc 212
+[DocumentsController] Beneficiary payments query result for doc 190: { error: null, paymentsCount: 4 }
+[DocumentsController] Transformed 4 beneficiary payments into recipients for doc 190
+[DocumentsController] Beneficiary payments query result for doc 217: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 217
+[DocumentsController] Beneficiary payments query result for doc 356: { error: null, paymentsCount: 2 }
+[DocumentsController] Transformed 2 beneficiary payments into recipients for doc 356
+[DocumentsController] Beneficiary payments query result for doc 203: { error: null, paymentsCount: 4 }
+[DocumentsController] Transformed 4 beneficiary payments into recipients for doc 203
+[DocumentsController] Beneficiary payments query result for doc 268: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 268
+[DocumentsController] Beneficiary payments query result for doc 304: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 304
+[DocumentsController] Beneficiary payments query result for doc 215: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 215
+[DocumentsController] Beneficiary payments query result for doc 214: { error: null, paymentsCount: 1 }
+[DocumentsController] Transformed 1 beneficiary payments into recipients for doc 214
+[WebSocket] Received message from yu17tmih7sad5: { type: 'connect', timestamp: '2025-11-27T09:11:37.687Z' }
+[AFMCache] SET for units: 3 (79 beneficiaries, 21 employees)
+[Beneficiaries] CACHE SET for units: 3 (79 items)
+[Prefetch] COMPLETED in 15052ms - 79 AFM entries, 79 list entries, 21 employees cached for units: 3
+[WebSocket] New client connected: 734xodmih7scxi from 10.16.33.197
+[WSManager] Added connection 734xodmih7scxi, total: 12
+[WebSocket] Connection 734xodmih7scxi registered with manager
+[WebSocket] Received message from 734xodmih7scxi: { type: 'connect', timestamp: '2025-11-27T09:11:41.014Z' }
+9:11:37 AM [express] GET /api/documents 200 in 15553ms
+9:11:37 AM [express] GET /api/documents 200 in 15234ms
+9:11:38 AM [cors] [CORS] Processing sdegdaefk.gr request without valid origin:
+9:11:38 AM [cors] [CORS] Referer: https://sdegdaefk.gr/documents, Host: sdegdaefk.gr
