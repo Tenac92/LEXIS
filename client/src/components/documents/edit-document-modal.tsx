@@ -124,15 +124,22 @@ export function EditDocumentModal({
   const units = useMemo(() => {
     if (!rawUnits || rawUnits.length === 0) return [];
     
-    // Filter units based on user's assigned unit_id array
-    const userAllowedUnits = userUnitIds;
+    // If user has no unit restrictions, show all units (admin case)
+    if (userUnitIds.length === 0) {
+      return rawUnits;
+    }
     
+    // Filter units based on user's assigned unit_id array
+    // IMPORTANT: Match by item.id (numeric ID), NOT item.unit (text code)
     const filteredUnits = rawUnits.filter((item: any) => {
-      // Check if the unit ID matches any of the user's allowed units
-      // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
-      const unitId = String(item.unit);
-      return userAllowedUnits.includes(unitId);
+      const itemId = Number(item.id);
+      const matches = userUnitIds.some(
+        (uid: string) => Number(uid) === itemId,
+      );
+      return matches;
     });
+    
+    console.log('[EditDocument] Units filtered:', filteredUnits.length, 'from', rawUnits.length, 'total, user units:', userUnitIds);
     
     return filteredUnits;
   }, [rawUnits, userUnitIds]);
