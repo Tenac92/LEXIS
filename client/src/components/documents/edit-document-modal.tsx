@@ -598,12 +598,6 @@ export function EditDocumentModal({
       return;
     }
     
-    // Also wait for filtered units array to be populated
-    if (!units || units.length === 0) {
-      console.log('[EditDocument] Waiting for units to be filtered');
-      return;
-    }
-    
     // If document has unit_id, also wait for projects to load
     if (document.unit_id && projectsLoading) {
       console.log('[EditDocument] Still loading projects for unit:', document.unit_id);
