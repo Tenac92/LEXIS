@@ -1181,7 +1181,7 @@ export function EditDocumentModal({
                               // Invalidate projects query to fetch new projects
                               queryClient.invalidateQueries({ queryKey: ['projects-working', numericValue] });
                             }} 
-                            value={field.value ? field.value.toString() : undefined}
+                            value={field.value?.toString() || ""}
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-unit">
