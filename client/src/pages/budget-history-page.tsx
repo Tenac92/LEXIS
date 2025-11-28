@@ -367,43 +367,76 @@ export default function BudgetHistoryPage() {
     setPage(Math.max(1, Math.min(newPage, pagination.pages)));
   };
 
-  // Excel export function
+  // Excel export function with proper authentication handling
   const handleExcelExport = async () => {
     try {
       // Build export URL with current filters
-      let url = '/api/budget/history/export?';
+      const params = new URLSearchParams();
       
       if (appliedNa853Filter) {
-        url += `na853=${appliedNa853Filter}&`;
+        params.append('na853', appliedNa853Filter);
       }
       
       if (appliedExpenditureTypeFilter) {
-        url += `expenditure_type=${appliedExpenditureTypeFilter}&`;
+        params.append('expenditure_type', appliedExpenditureTypeFilter);
       }
       
       if (changeType !== 'all') {
-        url += `change_type=${changeType}&`;
+        params.append('change_type', changeType);
       }
       
       if (appliedDateFilter.from) {
-        url += `date_from=${appliedDateFilter.from}&`;
+        params.append('date_from', appliedDateFilter.from);
       }
       
       if (appliedDateFilter.to) {
-        url += `date_to=${appliedDateFilter.to}&`;
+        params.append('date_to', appliedDateFilter.to);
       }
       
       if (appliedCreatorFilter) {
-        url += `creator=${appliedCreatorFilter}&`;
+        params.append('creator', appliedCreatorFilter);
       }
       
-      // Create a temporary link element to trigger download
+      const url = `/api/budget/history/export?${params.toString()}`;
+      
+      // Use fetch with credentials to ensure session cookie is sent
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Export failed with status: ${response.status}`);
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create object URL and trigger download
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `Istoriko_Proypologismou_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.href = downloadUrl;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `Istoriko-Proypologismou-${new Date().toISOString().split('T')[0]}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the object URL
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Error exporting Excel file:', error);
     }

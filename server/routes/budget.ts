@@ -783,4 +783,750 @@ router.get('/quarterly-analysis', authenticateSession, async (req: Authenticated
   }
 });
 
+// Enhanced Budget History Export to XLSX for Managers
+// Provides comprehensive analysis with multiple worksheets including regional data
+router.get('/history/export', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Check if user is admin or manager
+    if (req.user?.role !== 'admin' && req.user?.role !== 'manager') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Access denied. This operation requires admin or manager privileges.'
+      });
+    }
+
+    console.log('[Budget] Starting comprehensive budget history export');
+
+    // Parse query parameters for filtering
+    const na853 = req.query.na853 as string | undefined;
+    const changeType = req.query.change_type as string | undefined;
+    const dateFrom = req.query.date_from as string | undefined;
+    const dateTo = req.query.date_to as string | undefined;
+    const creator = req.query.creator as string | undefined;
+    const expenditureType = req.query.expenditure_type as string | undefined;
+
+    // Get user unit IDs for access control - admins see all data
+    const userUnitIds = req.user.role === 'admin' ? undefined : (req.user.unit_id || undefined);
+
+    // Build the base query to fetch ALL budget history data (no pagination for export)
+    let query = supabase
+      .from('budget_history')
+      .select(`
+        id,
+        project_id,
+        previous_amount,
+        new_amount,
+        change_type,
+        change_reason,
+        document_id,
+        created_by,
+        created_at,
+        updated_at,
+        Projects!budget_history_project_id_fkey (
+          id,
+          mis,
+          na853,
+          project_title,
+          status,
+          budget_na853,
+          budget_na271,
+          budget_e069,
+          event_year,
+          implementing_agency
+        ),
+        generated_documents!budget_history_document_id_fkey (
+          protocol_number_input,
+          status,
+          amount,
+          project_index_id
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    // Apply unit-based access control for non-admin users
+    // SECURITY: Managers can only see budget history for projects in their units
+    let restrictedProjectIds: number[] | null = null;
+    
+    if (userUnitIds && userUnitIds.length > 0) {
+      const { data: projectIndexData, error: projectIndexError } = await supabase
+        .from('project_index')
+        .select('project_id, Projects!inner(mis)')
+        .in('monada_id', userUnitIds);
+      
+      if (projectIndexError) {
+        console.error('[Budget] Error fetching project index for access control:', projectIndexError);
+        throw projectIndexError;
+      }
+      
+      if (!projectIndexData || projectIndexData.length === 0) {
+        // SECURITY: Manager has no projects in their units - return empty export
+        console.log('[Budget] Manager has no projects in units, returning empty export');
+        
+        const XLSX = await import('xlsx');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet([{ 'Μήνυμα': 'Δεν υπάρχουν δεδομένα για τις μονάδες σας' }]);
+        XLSX.utils.book_append_sheet(wb, ws, 'Κενό');
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const today = new Date();
+        const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`);
+        res.setHeader('Content-Length', buffer.length.toString());
+        return res.end(buffer);
+      }
+      
+      const projectMisIds = projectIndexData
+        .map((p: any) => p.Projects?.mis)
+        .filter(mis => mis != null)
+        .map(mis => parseInt(String(mis)))
+        .filter(id => !isNaN(id));
+      const allowedMisIds = Array.from(new Set(projectMisIds));
+      
+      if (allowedMisIds.length === 0) {
+        // SECURITY: No valid MIS IDs found - return empty export
+        console.log('[Budget] No valid MIS IDs for manager, returning empty export');
+        
+        const XLSX = await import('xlsx');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet([{ 'Μήνυμα': 'Δεν υπάρχουν δεδομένα για τις μονάδες σας' }]);
+        XLSX.utils.book_append_sheet(wb, ws, 'Κενό');
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const today = new Date();
+        const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`);
+        res.setHeader('Content-Length', buffer.length.toString());
+        return res.end(buffer);
+      }
+      
+      const { data: allowedProjects } = await supabase
+        .from('Projects')
+        .select('id')
+        .in('mis', allowedMisIds);
+      
+      if (!allowedProjects || allowedProjects.length === 0) {
+        // SECURITY: No projects found - return empty export
+        console.log('[Budget] No projects found for manager MIS codes, returning empty export');
+        
+        const XLSX = await import('xlsx');
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet([{ 'Μήνυμα': 'Δεν υπάρχουν δεδομένα για τις μονάδες σας' }]);
+        XLSX.utils.book_append_sheet(wb, ws, 'Κενό');
+        
+        const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        const today = new Date();
+        const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`);
+        res.setHeader('Content-Length', buffer.length.toString());
+        return res.end(buffer);
+      }
+      
+      restrictedProjectIds = allowedProjects.map(p => p.id);
+      query = query.in('project_id', restrictedProjectIds);
+      console.log(`[Budget] Manager access restricted to ${restrictedProjectIds.length} projects`);
+    }
+
+    // Apply filters
+    if (na853 && na853 !== 'all') {
+      const { data: projectData } = await supabase
+        .from('Projects')
+        .select('id')
+        .eq('na853', na853)
+        .single();
+      if (projectData) {
+        query = query.eq('project_id', projectData.id);
+      }
+    }
+
+    if (changeType && changeType !== 'all') {
+      query = query.eq('change_type', changeType);
+    }
+
+    if (dateFrom) {
+      query = query.gte('created_at', dateFrom);
+    }
+
+    if (dateTo) {
+      query = query.lte('created_at', dateTo + 'T23:59:59.999Z');
+    }
+
+    if (creator && creator !== 'all') {
+      const { data: creatorData } = await supabase
+        .from('users')
+        .select('id')
+        .eq('name', creator)
+        .single();
+      if (creatorData) {
+        query = query.eq('created_by', creatorData.id);
+      }
+    }
+
+    // Fetch budget history data
+    const { data: historyData, error: historyError } = await query;
+
+    if (historyError) {
+      console.error('[Budget] Error fetching budget history for export:', historyError);
+      throw historyError;
+    }
+
+    // Fetch all project budget data for summaries
+    const { data: budgetData, error: budgetError } = await supabase
+      .from('project_budget')
+      .select('*');
+
+    if (budgetError) {
+      console.warn('[Budget] Warning: Could not fetch budget data:', budgetError);
+    }
+
+    // Fetch geographic data - regions, regional units, municipalities
+    const [regionsRes, regionalUnitsRes, municipalitiesRes] = await Promise.all([
+      supabase.from('regions').select('code, name'),
+      supabase.from('regional_units').select('code, name, region_code'),
+      supabase.from('municipalities').select('code, name, unit_code')
+    ]);
+
+    const regions = regionsRes.data || [];
+    const regionalUnits = regionalUnitsRes.data || [];
+    const municipalities = municipalitiesRes.data || [];
+
+    // Create lookup maps
+    const regionMap = new Map(regions.map(r => [r.code, r.name]));
+    const unitMap = new Map(regionalUnits.map(u => [u.code, { name: u.name, regionCode: u.region_code }]));
+    const muniMap = new Map(municipalities.map(m => [m.code, { name: m.name, unitCode: m.unit_code }]));
+
+    // Fetch project_index data to get geographic associations
+    const { data: projectIndexData } = await supabase
+      .from('project_index')
+      .select(`
+        id,
+        project_id,
+        monada_id,
+        expenditure_type_id,
+        project_index_regions(region_code),
+        project_index_units(unit_code),
+        project_index_munis(muni_code)
+      `);
+
+    // Create a map of project_id to geographic data
+    const projectGeoMap = new Map<number, { regions: string[], units: string[], municipalities: string[] }>();
+    
+    if (projectIndexData) {
+      projectIndexData.forEach((pi: any) => {
+        const projectId = pi.project_id;
+        if (!projectGeoMap.has(projectId)) {
+          projectGeoMap.set(projectId, { regions: [], units: [], municipalities: [] });
+        }
+        const geo = projectGeoMap.get(projectId)!;
+
+        // Extract region names
+        if (pi.project_index_regions) {
+          pi.project_index_regions.forEach((r: any) => {
+            const regionName = regionMap.get(r.region_code);
+            if (regionName && !geo.regions.includes(regionName)) {
+              geo.regions.push(regionName);
+            }
+          });
+        }
+
+        // Extract regional unit names
+        if (pi.project_index_units) {
+          pi.project_index_units.forEach((u: any) => {
+            const unit = unitMap.get(u.unit_code);
+            if (unit && !geo.units.includes(unit.name)) {
+              geo.units.push(unit.name);
+            }
+          });
+        }
+
+        // Extract municipality names
+        if (pi.project_index_munis) {
+          pi.project_index_munis.forEach((m: any) => {
+            const muni = muniMap.get(m.muni_code);
+            if (muni && !geo.municipalities.includes(muni.name)) {
+              geo.municipalities.push(muni.name);
+            }
+          });
+        }
+      });
+    }
+
+    // Fetch user data for creator names
+    const userIds = Array.from(new Set(historyData?.filter(e => e.created_by).map(e => e.created_by) || []));
+    let userMap: Record<number, string> = {};
+    
+    if (userIds.length > 0) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('id, name')
+        .or(userIds.map(id => `id.eq.${id}`).join(','));
+      
+      if (userData) {
+        userMap = userData.reduce((acc, user) => {
+          acc[user.id] = user.name;
+          return acc;
+        }, {} as Record<number, string>);
+      }
+    }
+
+    // Fetch Monada (unit) data for unit names
+    const { data: monadaData } = await supabase.from('Monada').select('id, unit');
+    const monadaMap = new Map((monadaData || []).map(m => [m.id, m.unit]));
+
+    // Create budget map for quick lookups
+    const budgetMap = new Map((budgetData || []).map(b => [b.mis, b]));
+
+    // Import XLSX library
+    const XLSX = await import('xlsx');
+
+    // ============================================
+    // WORKSHEET 1: Detailed Budget History
+    // ============================================
+    const detailedHistory = (historyData || []).map((entry: any) => {
+      const project = entry.Projects || {};
+      const projectId = project.id;
+      const geo = projectGeoMap.get(projectId) || { regions: [], units: [], municipalities: [] };
+      const budget = budgetMap.get(project.mis);
+      const document = entry.generated_documents;
+
+      const prevAmount = parseFloat(entry.previous_amount) || 0;
+      const newAmount = parseFloat(entry.new_amount) || 0;
+      const change = newAmount - prevAmount;
+
+      // Get change type in Greek
+      const changeTypeLabels: Record<string, string> = {
+        'spending': 'Δαπάνη',
+        'refund': 'Επιστροφή',
+        'document_created': 'Δημιουργία Εγγράφου',
+        'import': 'Εισαγωγή',
+        'quarter_change': 'Αλλαγή Τριμήνου',
+        'year_end_closure': 'Κλείσιμο Έτους',
+        'manual_adjustment': 'Χειροκίνητη Προσαρμογή',
+        'notification_created': 'Δημιουργία Ειδοποίησης'
+      };
+
+      return {
+        'Α/Α': entry.id,
+        'Ημερομηνία': entry.created_at ? new Date(entry.created_at).toLocaleDateString('el-GR') : '',
+        'Ώρα': entry.created_at ? new Date(entry.created_at).toLocaleTimeString('el-GR') : '',
+        'MIS': project.mis || '',
+        'ΝΑ853': project.na853 || '',
+        'Τίτλος Έργου': project.project_title || '',
+        'Κατάσταση Έργου': project.status || '',
+        'Περιφέρεια': geo.regions.join(', ') || '',
+        'Περιφερειακή Ενότητα': geo.units.join(', ') || '',
+        'Δήμος': geo.municipalities.join(', ') || '',
+        'Τύπος Αλλαγής': changeTypeLabels[entry.change_type] || entry.change_type || '',
+        'Προηγούμενο Ποσό': prevAmount,
+        'Νέο Ποσό': newAmount,
+        'Μεταβολή': change,
+        'Αρ. Πρωτοκόλλου': document?.protocol_number_input || '',
+        'Κατάσταση Εγγράφου': document?.status || '',
+        'Χρήστης': entry.created_by ? (userMap[entry.created_by] || `Χρήστης ${entry.created_by}`) : 'Σύστημα',
+        'Αιτία/Σχόλια': entry.change_reason || ''
+      };
+    });
+
+    // ============================================
+    // WORKSHEET 2: Project Summary
+    // ============================================
+    const projectSummaryMap = new Map<string, {
+      mis: string;
+      na853: string;
+      title: string;
+      status: string;
+      regions: string[];
+      units: string[];
+      municipalities: string[];
+      totalAllocated: number;
+      totalSpent: number;
+      available: number;
+      changeCount: number;
+      spendingCount: number;
+      refundCount: number;
+      lastChange: string;
+    }>();
+
+    (historyData || []).forEach((entry: any) => {
+      const project = entry.Projects || {};
+      const mis = project.mis?.toString() || '';
+      
+      if (!mis) return;
+
+      if (!projectSummaryMap.has(mis)) {
+        const geo = projectGeoMap.get(project.id) || { regions: [], units: [], municipalities: [] };
+        const budget = budgetMap.get(parseInt(mis));
+        
+        projectSummaryMap.set(mis, {
+          mis,
+          na853: project.na853 || '',
+          title: project.project_title || '',
+          status: project.status || '',
+          regions: geo.regions,
+          units: geo.units,
+          municipalities: geo.municipalities,
+          totalAllocated: parseFloat(budget?.katanomes_etous || '0'),
+          totalSpent: parseFloat(budget?.user_view || '0'),
+          available: parseFloat(budget?.katanomes_etous || '0') - parseFloat(budget?.user_view || '0'),
+          changeCount: 0,
+          spendingCount: 0,
+          refundCount: 0,
+          lastChange: ''
+        });
+      }
+
+      const summary = projectSummaryMap.get(mis)!;
+      summary.changeCount++;
+      
+      if (entry.change_type === 'spending' || entry.change_type === 'document_created') {
+        summary.spendingCount++;
+      } else if (entry.change_type === 'refund') {
+        summary.refundCount++;
+      }
+
+      if (!summary.lastChange || entry.created_at > summary.lastChange) {
+        summary.lastChange = entry.created_at;
+      }
+    });
+
+    const projectSummary = Array.from(projectSummaryMap.values()).map(p => ({
+      'MIS': p.mis,
+      'ΝΑ853': p.na853,
+      'Τίτλος Έργου': p.title,
+      'Κατάσταση': p.status,
+      'Περιφέρεια': p.regions.join(', '),
+      'Περιφερειακή Ενότητα': p.units.join(', '),
+      'Δήμος': p.municipalities.join(', '),
+      'Κατανομές Έτους': p.totalAllocated,
+      'Συνολικές Δαπάνες': p.totalSpent,
+      'Διαθέσιμο': p.available,
+      '% Απορρόφησης': p.totalAllocated > 0 ? Math.round((p.totalSpent / p.totalAllocated) * 100) : 0,
+      'Πλήθος Αλλαγών': p.changeCount,
+      'Πλήθος Δαπανών': p.spendingCount,
+      'Πλήθος Επιστροφών': p.refundCount,
+      'Τελευταία Αλλαγή': p.lastChange ? new Date(p.lastChange).toLocaleDateString('el-GR') : ''
+    }));
+
+    // ============================================
+    // WORKSHEET 3: Regional Summary
+    // ============================================
+    const regionSummaryMap = new Map<string, {
+      region: string;
+      projectCount: number;
+      totalAllocated: number;
+      totalSpent: number;
+      available: number;
+      changeCount: number;
+    }>();
+
+    projectSummaryMap.forEach((project) => {
+      const regionNames = project.regions.length > 0 ? project.regions : ['Χωρίς Περιφέρεια'];
+      
+      regionNames.forEach(regionName => {
+        if (!regionSummaryMap.has(regionName)) {
+          regionSummaryMap.set(regionName, {
+            region: regionName,
+            projectCount: 0,
+            totalAllocated: 0,
+            totalSpent: 0,
+            available: 0,
+            changeCount: 0
+          });
+        }
+        
+        const summary = regionSummaryMap.get(regionName)!;
+        summary.projectCount++;
+        summary.totalAllocated += project.totalAllocated;
+        summary.totalSpent += project.totalSpent;
+        summary.available += project.available;
+        summary.changeCount += project.changeCount;
+      });
+    });
+
+    const regionalSummary = Array.from(regionSummaryMap.values())
+      .sort((a, b) => b.totalAllocated - a.totalAllocated)
+      .map(r => ({
+        'Περιφέρεια': r.region,
+        'Πλήθος Έργων': r.projectCount,
+        'Συνολικές Κατανομές': r.totalAllocated,
+        'Συνολικές Δαπάνες': r.totalSpent,
+        'Διαθέσιμο': r.available,
+        '% Απορρόφησης': r.totalAllocated > 0 ? Math.round((r.totalSpent / r.totalAllocated) * 100) : 0,
+        'Πλήθος Αλλαγών': r.changeCount
+      }));
+
+    // ============================================
+    // WORKSHEET 4: Change Type Analysis
+    // ============================================
+    const changeTypeSummary = new Map<string, {
+      type: string;
+      typeGreek: string;
+      count: number;
+      totalAmount: number;
+      avgAmount: number;
+    }>();
+
+    const changeTypeLabels: Record<string, string> = {
+      'spending': 'Δαπάνη',
+      'refund': 'Επιστροφή',
+      'document_created': 'Δημιουργία Εγγράφου',
+      'import': 'Εισαγωγή',
+      'quarter_change': 'Αλλαγή Τριμήνου',
+      'year_end_closure': 'Κλείσιμο Έτους',
+      'manual_adjustment': 'Χειροκίνητη Προσαρμογή',
+      'notification_created': 'Δημιουργία Ειδοποίησης'
+    };
+
+    (historyData || []).forEach((entry: any) => {
+      const type = entry.change_type || 'unknown';
+      const change = (parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0);
+      
+      if (!changeTypeSummary.has(type)) {
+        changeTypeSummary.set(type, {
+          type,
+          typeGreek: changeTypeLabels[type] || type,
+          count: 0,
+          totalAmount: 0,
+          avgAmount: 0
+        });
+      }
+      
+      const summary = changeTypeSummary.get(type)!;
+      summary.count++;
+      summary.totalAmount += change;
+    });
+
+    const changeTypeAnalysis = Array.from(changeTypeSummary.values())
+      .sort((a, b) => b.count - a.count)
+      .map(c => ({
+        'Τύπος Αλλαγής': c.typeGreek,
+        'Πλήθος': c.count,
+        'Συνολική Μεταβολή': c.totalAmount,
+        'Μέση Μεταβολή': c.count > 0 ? Math.round(c.totalAmount / c.count * 100) / 100 : 0
+      }));
+
+    // ============================================
+    // WORKSHEET 5: Monthly Trend Analysis
+    // ============================================
+    const monthlyTrend = new Map<string, {
+      month: string;
+      year: number;
+      monthNum: number;
+      count: number;
+      totalSpending: number;
+      totalRefunds: number;
+      netChange: number;
+    }>();
+
+    (historyData || []).forEach((entry: any) => {
+      if (!entry.created_at) return;
+      
+      const date = new Date(entry.created_at);
+      const year = date.getFullYear();
+      const monthNum = date.getMonth();
+      const monthNames = ['Ιανουάριος', 'Φεβρουάριος', 'Μάρτιος', 'Απρίλιος', 'Μάιος', 'Ιούνιος', 
+                          'Ιούλιος', 'Αύγουστος', 'Σεπτέμβριος', 'Οκτώβριος', 'Νοέμβριος', 'Δεκέμβριος'];
+      const monthKey = `${year}-${String(monthNum + 1).padStart(2, '0')}`;
+      
+      if (!monthlyTrend.has(monthKey)) {
+        monthlyTrend.set(monthKey, {
+          month: monthNames[monthNum],
+          year,
+          monthNum,
+          count: 0,
+          totalSpending: 0,
+          totalRefunds: 0,
+          netChange: 0
+        });
+      }
+      
+      const summary = monthlyTrend.get(monthKey)!;
+      summary.count++;
+      
+      const change = (parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0);
+      summary.netChange += change;
+      
+      if (entry.change_type === 'spending' || entry.change_type === 'document_created') {
+        summary.totalSpending += Math.abs(change);
+      } else if (entry.change_type === 'refund') {
+        summary.totalRefunds += Math.abs(change);
+      }
+    });
+
+    const monthlyAnalysis = Array.from(monthlyTrend.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([key, m]) => ({
+        'Μήνας': m.month,
+        'Έτος': m.year,
+        'Πλήθος Αλλαγών': m.count,
+        'Δαπάνες': m.totalSpending,
+        'Επιστροφές': m.totalRefunds,
+        'Καθαρή Μεταβολή': m.netChange
+      }));
+
+    // ============================================
+    // WORKSHEET 6: User Activity Summary
+    // ============================================
+    const userActivityMap = new Map<string, {
+      userName: string;
+      changeCount: number;
+      totalAmount: number;
+      spendingCount: number;
+      refundCount: number;
+      lastActivity: string;
+    }>();
+
+    (historyData || []).forEach((entry: any) => {
+      const userId = entry.created_by;
+      const userName = userId ? (userMap[userId] || `Χρήστης ${userId}`) : 'Σύστημα';
+      
+      if (!userActivityMap.has(userName)) {
+        userActivityMap.set(userName, {
+          userName,
+          changeCount: 0,
+          totalAmount: 0,
+          spendingCount: 0,
+          refundCount: 0,
+          lastActivity: ''
+        });
+      }
+      
+      const summary = userActivityMap.get(userName)!;
+      summary.changeCount++;
+      
+      const change = Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0));
+      summary.totalAmount += change;
+      
+      if (entry.change_type === 'spending' || entry.change_type === 'document_created') {
+        summary.spendingCount++;
+      } else if (entry.change_type === 'refund') {
+        summary.refundCount++;
+      }
+      
+      if (!summary.lastActivity || entry.created_at > summary.lastActivity) {
+        summary.lastActivity = entry.created_at;
+      }
+    });
+
+    const userActivity = Array.from(userActivityMap.values())
+      .sort((a, b) => b.changeCount - a.changeCount)
+      .map(u => ({
+        'Χρήστης': u.userName,
+        'Πλήθος Ενεργειών': u.changeCount,
+        'Συνολικό Ποσό': u.totalAmount,
+        'Δαπάνες': u.spendingCount,
+        'Επιστροφές': u.refundCount,
+        'Τελευταία Ενέργεια': u.lastActivity ? new Date(u.lastActivity).toLocaleDateString('el-GR') : ''
+      }));
+
+    // ============================================
+    // CREATE WORKBOOK
+    // ============================================
+    const wb = XLSX.utils.book_new();
+
+    // Helper function to apply European number formatting
+    const applyEuropeanNumberFormatting = (ws: any, numericColumns: string[]) => {
+      for (const cell in ws) {
+        if (cell.startsWith('!')) continue;
+        
+        const cellRef = XLSX.utils.decode_cell(cell);
+        const col = XLSX.utils.encode_col(cellRef.c);
+        const headerCell = ws[`${col}1`];
+        
+        if (headerCell && numericColumns.includes(headerCell.v)) {
+          if (ws[cell] && typeof ws[cell].v === 'number') {
+            ws[cell].z = '#,##0.00';
+          }
+        }
+      }
+    };
+
+    // Create and add worksheets
+    // 1. Detailed History
+    if (detailedHistory.length > 0) {
+      const ws1 = XLSX.utils.json_to_sheet(detailedHistory);
+      ws1['!cols'] = Object.keys(detailedHistory[0]).map(key => ({ wch: key.length < 12 ? 15 : key.length + 5 }));
+      applyEuropeanNumberFormatting(ws1, ['Προηγούμενο Ποσό', 'Νέο Ποσό', 'Μεταβολή']);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Αναλυτικό Ιστορικό');
+    }
+
+    // 2. Project Summary
+    if (projectSummary.length > 0) {
+      const ws2 = XLSX.utils.json_to_sheet(projectSummary);
+      ws2['!cols'] = Object.keys(projectSummary[0]).map(key => ({ wch: key.length < 12 ? 15 : key.length + 5 }));
+      applyEuropeanNumberFormatting(ws2, ['Κατανομές Έτους', 'Συνολικές Δαπάνες', 'Διαθέσιμο']);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Σύνοψη Έργων');
+    }
+
+    // 3. Regional Summary
+    if (regionalSummary.length > 0) {
+      const ws3 = XLSX.utils.json_to_sheet(regionalSummary);
+      ws3['!cols'] = Object.keys(regionalSummary[0]).map(key => ({ wch: key.length < 12 ? 18 : key.length + 5 }));
+      applyEuropeanNumberFormatting(ws3, ['Συνολικές Κατανομές', 'Συνολικές Δαπάνες', 'Διαθέσιμο']);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Ανά Περιφέρεια');
+    }
+
+    // 4. Change Type Analysis
+    if (changeTypeAnalysis.length > 0) {
+      const ws4 = XLSX.utils.json_to_sheet(changeTypeAnalysis);
+      ws4['!cols'] = Object.keys(changeTypeAnalysis[0]).map(() => ({ wch: 20 }));
+      applyEuropeanNumberFormatting(ws4, ['Συνολική Μεταβολή', 'Μέση Μεταβολή']);
+      XLSX.utils.book_append_sheet(wb, ws4, 'Ανά Τύπο Αλλαγής');
+    }
+
+    // 5. Monthly Trend
+    if (monthlyAnalysis.length > 0) {
+      const ws5 = XLSX.utils.json_to_sheet(monthlyAnalysis);
+      ws5['!cols'] = Object.keys(monthlyAnalysis[0]).map(() => ({ wch: 18 }));
+      applyEuropeanNumberFormatting(ws5, ['Δαπάνες', 'Επιστροφές', 'Καθαρή Μεταβολή']);
+      XLSX.utils.book_append_sheet(wb, ws5, 'Μηνιαία Τάση');
+    }
+
+    // 6. User Activity
+    if (userActivity.length > 0) {
+      const ws6 = XLSX.utils.json_to_sheet(userActivity);
+      ws6['!cols'] = Object.keys(userActivity[0]).map(() => ({ wch: 18 }));
+      applyEuropeanNumberFormatting(ws6, ['Συνολικό Ποσό']);
+      XLSX.utils.book_append_sheet(wb, ws6, 'Δραστηριότητα Χρηστών');
+    }
+
+    // If no worksheets were added (no data), add an empty message sheet
+    if (wb.SheetNames.length === 0) {
+      const ws = XLSX.utils.json_to_sheet([{ 
+        'Μήνυμα': 'Δεν βρέθηκαν δεδομένα με τα επιλεγμένα κριτήρια αναζήτησης' 
+      }]);
+      ws['!cols'] = [{ wch: 60 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'Κενό');
+    }
+
+    // Generate buffer and send
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Format filename with current date
+    const today = new Date();
+    const formattedDate = `${today.getDate().toString().padStart(2, '0')}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getFullYear()}`;
+    const filename = `Istoriko-Proypologismou-${formattedDate}.xlsx`;
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', buffer.length.toString());
+
+    res.end(buffer);
+    console.log(`[Budget] Excel export successful: ${filename} with ${historyData?.length || 0} records`);
+
+  } catch (error) {
+    console.error('[Budget] Error generating budget history export:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate budget history export',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
