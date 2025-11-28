@@ -1206,7 +1206,7 @@ export function EditDocumentModal({
                             </FormControl>
                             <SelectContent>
                               {units && Array.isArray(units) && units.map((unit: any) => (
-                                <SelectItem key={unit.unit} value={unit.unit.toString()}>
+                                <SelectItem key={unit.id} value={String(unit.id)}>
                                   {unit.name || unit.unit}
                                 </SelectItem>
                               ))}
