@@ -1759,34 +1759,85 @@ export function CreateDocumentDialog({
           <div className="flex flex-wrap items-center gap-3">
             {/* From Quarter */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Από Τ</label>
-              <Input
-                type="number"
-                min={1}
-                max={99}
-                value={fromQuarter}
-                onChange={(e) => {
-                  const newFrom = parseInt(e.target.value) || 1;
-                  handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
-                }}
-                className="w-14 h-8 text-sm text-center px-2"
-              />
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Από Τρίμηνο</label>
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (fromQuarter > 1) {
+                      handleRangeChange(fromQuarter - 1, toQuarter);
+                    }
+                  }}
+                  disabled={fromQuarter <= 1}
+                  className="h-8 w-8 p-0 rounded-r-none border-r-0"
+                >
+                  −
+                </Button>
+                <Input
+                  type="text"
+                  value={fromQuarter}
+                  onChange={(e) => {
+                    const newFrom = parseInt(e.target.value) || 1;
+                    if (newFrom >= 1) {
+                      handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
+                    }
+                  }}
+                  className="w-12 h-8 text-sm text-center px-1 rounded-none border-x-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newFrom = fromQuarter + 1;
+                    handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
+                  }}
+                  className="h-8 w-8 p-0 rounded-l-none border-l-0"
+                >
+                  +
+                </Button>
+              </div>
             </div>
 
             {/* To Quarter */}
             <div className="flex items-center gap-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Έως Τ</label>
-              <Input
-                type="number"
-                min={fromQuarter}
-                max={99}
-                value={toQuarter}
-                onChange={(e) => {
-                  const newTo = parseInt(e.target.value) || fromQuarter;
-                  handleRangeChange(fromQuarter, Math.max(fromQuarter, newTo));
-                }}
-                className="w-14 h-8 text-sm text-center px-2"
-              />
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Έως Τρίμηνο</label>
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (toQuarter > fromQuarter) {
+                      handleRangeChange(fromQuarter, toQuarter - 1);
+                    }
+                  }}
+                  disabled={toQuarter <= fromQuarter}
+                  className="h-8 w-8 p-0 rounded-r-none border-r-0"
+                >
+                  −
+                </Button>
+                <Input
+                  type="text"
+                  value={toQuarter}
+                  onChange={(e) => {
+                    const newTo = parseInt(e.target.value) || fromQuarter;
+                    handleRangeChange(fromQuarter, Math.max(fromQuarter, newTo));
+                  }}
+                  className="w-12 h-8 text-sm text-center px-1 rounded-none border-x-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRangeChange(fromQuarter, toQuarter + 1)}
+                  className="h-8 w-8 p-0 rounded-l-none border-l-0"
+                >
+                  +
+                </Button>
+              </div>
             </div>
 
             {/* Separator */}
