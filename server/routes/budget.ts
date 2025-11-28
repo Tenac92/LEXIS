@@ -831,8 +831,7 @@ router.get('/history/export', authenticateSession, async (req: AuthenticatedRequ
           budget_na853,
           budget_na271,
           budget_e069,
-          event_year,
-          implementing_agency
+          event_year
         ),
         generated_documents!budget_history_document_id_fkey (
           protocol_number_input,
