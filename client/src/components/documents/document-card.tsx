@@ -800,20 +800,21 @@ const DocumentCard = memo(function DocumentCard({
                   </div>
                 )}
 
-                {/* Recipients Summary */}
+                {/* Recipients Summary - Grouped by recipient */}
                 <div className="pt-2 border-t border-orange-200">
                   <span className="text-orange-700 font-medium text-sm">
-                    Δικαιούχοι ({recipients?.length || 0}):
+                    Δικαιούχοι ({uniqueRecipientCount}):
                   </span>
-                  <div className="mt-1 max-h-32 overflow-y-auto space-y-2">
-                    {recipients?.slice(0, 3).map((recipient, index) => (
-                      <div key={index} className="text-sm text-orange-900">
-                        <div className="flex justify-between items-center">
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-3">
+                    {groupedRecipients.slice(0, 5).map((group, index) => (
+                      <div key={group.afm || index} className="text-sm" data-testid={`recipient-group-${index}`}>
+                        {/* Recipient Name Header */}
+                        <div className="flex justify-between items-center text-orange-900 font-medium">
                           <span className="truncate">
-                            {recipient.lastname} {recipient.firstname}
+                            {group.lastname} {group.firstname}
                           </span>
-                          <span className="text-orange-700 font-medium ml-2 flex-shrink-0">
-                            {recipient.amount?.toLocaleString("el-GR", {
+                          <span className="text-orange-800 ml-2 flex-shrink-0">
+                            {group.totalAmount.toLocaleString("el-GR", {
                               style: "currency",
                               currency: "EUR",
                               minimumFractionDigits: 2,
@@ -821,30 +822,34 @@ const DocumentCard = memo(function DocumentCard({
                             })}
                           </span>
                         </div>
-                        {/* ΕΚΤΟΣ ΕΔΡΑΣ details */}
-                        {recipient.month && (
-                          <div className="mt-1 text-xs text-orange-700 space-y-0.5 pl-2 border-l-2 border-orange-300">
-                            <div>Μήνας: {recipient.month}</div>
-                            {recipient.days && <div>Ημέρες: {recipient.days}</div>}
-                            {recipient.daily_compensation && (
-                              <div>Ημερήσια Αποζημίωση: {recipient.daily_compensation.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
-                            {recipient.accommodation_expenses && (
-                              <div>Δαπάνες Διαμονής: {recipient.accommodation_expenses.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
-                            {recipient.kilometers_traveled && (
-                              <div>Χιλιόμετρα: {recipient.kilometers_traveled} km</div>
-                            )}
-                            {recipient.tickets_tolls_rental && (
-                              <div>Εισιτήρια/Διόδια/Ενοικίαση: {recipient.tickets_tolls_rental.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
+                        {/* Indented Payments List */}
+                        {group.payments.length > 0 && (
+                          <div className="mt-1 pl-3 border-l-2 border-orange-300 space-y-1">
+                            {group.payments.map((payment, pIndex) => (
+                              <div key={pIndex} className="flex justify-between items-center text-xs text-orange-700">
+                                <span>
+                                  {payment.month 
+                                    ? `Μήνας: ${payment.month}${payment.days ? ` (${payment.days} ημ.)` : ''}`
+                                    : payment.installment || `Πληρωμή ${pIndex + 1}`
+                                  }
+                                </span>
+                                <span className="font-medium ml-2">
+                                  {payment.amount.toLocaleString("el-GR", {
+                                    style: "currency",
+                                    currency: "EUR",
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     ))}
-                    {recipients?.length > 3 && (
+                    {groupedRecipients.length > 5 && (
                       <div className="text-sm text-orange-700">
-                        +{recipients.length - 3} περισσότεροι...
+                        +{groupedRecipients.length - 5} περισσότεροι...
                       </div>
                     )}
                   </div>
