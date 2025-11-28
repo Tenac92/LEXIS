@@ -1293,6 +1293,9 @@ export function CreateDocumentDialog({
     const selectedInstallments = currentRecipient?.installments || [];
     const installmentAmounts = currentRecipient?.installmentAmounts || {};
 
+    // State for housing allowance quarter details - MUST be at top level, not inside conditional
+    const [showQuarterDetails, setShowQuarterDetails] = React.useState(false);
+
     // Control function to toggle an installment selection - simplified version
     const handleInstallmentToggle = (installment: string) => {
       // Check if this installment conflicts with existing beneficiary data
@@ -1736,9 +1739,6 @@ export function CreateDocumentDialog({
         handleDefaultAmountChange(STANDARD_QUARTER_AMOUNT);
       };
 
-      // State for showing/hiding quarter details - use local state with closure
-      const [showDetails, setShowDetails] = React.useState(false);
-
       return (
         <div className="w-full space-y-2">
           {/* Compact main row */}
@@ -1804,12 +1804,12 @@ export function CreateDocumentDialog({
             {/* Customize button */}
             <Button
               type="button"
-              variant={showDetails ? "secondary" : "ghost"}
+              variant={showQuarterDetails ? "secondary" : "ghost"}
               size="sm"
-              onClick={() => setShowDetails(!showDetails)}
+              onClick={() => setShowQuarterDetails(!showQuarterDetails)}
               className="h-8 px-2 text-xs"
             >
-              {showDetails ? (
+              {showQuarterDetails ? (
                 <>
                   <ChevronUp className="h-3 w-3 mr-1" />
                   Κλείσιμο
@@ -1824,7 +1824,7 @@ export function CreateDocumentDialog({
           </div>
 
           {/* Expanded per-quarter details */}
-          {showDetails && (
+          {showQuarterDetails && (
             <div className="border rounded-md p-3 bg-muted/30 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">Ποσά ανά τρίμηνο</span>
