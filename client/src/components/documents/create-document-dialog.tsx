@@ -111,10 +111,18 @@ interface Project {
 // Components are now extracted to separate files
 // Main dialog component interface
 
+interface InitialBeneficiaryData {
+  firstname: string;
+  lastname: string;
+  fathername: string;
+  afm: string;
+}
+
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
+  initialBeneficiary?: InitialBeneficiaryData;
 }
 
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
@@ -137,12 +145,6 @@ interface BudgetData {
 }
 
 // Use the interface from the imported BudgetIndicator component
-
-interface CreateDocumentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onClose: () => void;
-}
 
 // Animation variants
 const stepVariants = {
@@ -262,6 +264,7 @@ export function CreateDocumentDialog({
   open,
   onOpenChange,
   onClose,
+  initialBeneficiary,
 }: CreateDocumentDialogProps) {
   // Get form state from context
   const {
@@ -773,6 +776,20 @@ export function CreateDocumentDialog({
         }
       }
 
+      // Create initial recipients array with prefilled beneficiary if provided
+      const initialRecipients = initialBeneficiary ? [{
+        firstname: initialBeneficiary.firstname,
+        lastname: initialBeneficiary.lastname,
+        fathername: initialBeneficiary.fathername || "",
+        afm: initialBeneficiary.afm,
+        amount: 0,
+        secondary_text: "",
+        installment: "ΕΦΑΠΑΞ",
+        installments: ["ΕΦΑΠΑΞ"],
+        installmentAmounts: {},
+        tickets_tolls_rental_entries: [],
+      }] : [];
+
       // Reset form to default values for new document, but preserve unit
       form.reset({
         unit: defaultUnit,
@@ -780,7 +797,7 @@ export function CreateDocumentDialog({
         region: "",
         for_yl_id: null,
         expenditure_type: "",
-        recipients: [],
+        recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
       });
@@ -792,7 +809,7 @@ export function CreateDocumentDialog({
         region: "",
         for_yl_id: null,
         expenditure_type: "",
-        recipients: [],
+        recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
       });

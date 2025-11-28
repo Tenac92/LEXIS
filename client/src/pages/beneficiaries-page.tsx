@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
+import { CreateDocumentDialog } from "@/components/documents/create-document-dialog";
 import {
   Card,
   CardContent,
@@ -176,6 +177,14 @@ export default function BeneficiariesPage() {
     useState(false);
   const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
     useState<Beneficiary | null>(null);
+  // State for create document dialog with prefilled beneficiary
+  const [createDocumentOpen, setCreateDocumentOpen] = useState(false);
+  const [initialBeneficiaryForDocument, setInitialBeneficiaryForDocument] = useState<{
+    firstname: string;
+    lastname: string;
+    fathername: string;
+    afm: string;
+  } | undefined>(undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -1232,6 +1241,26 @@ export default function BeneficiariesPage() {
           createMutation.mutate(data);
           setDetailsModalOpen(false);
         }}
+        onCreatePaymentDocument={(beneficiaryData) => {
+          setInitialBeneficiaryForDocument(beneficiaryData);
+          setCreateDocumentOpen(true);
+        }}
+      />
+
+      {/* Create Document Dialog with prefilled beneficiary */}
+      <CreateDocumentDialog
+        open={createDocumentOpen}
+        onOpenChange={(open) => {
+          setCreateDocumentOpen(open);
+          if (!open) {
+            setInitialBeneficiaryForDocument(undefined);
+          }
+        }}
+        onClose={() => {
+          setCreateDocumentOpen(false);
+          setInitialBeneficiaryForDocument(undefined);
+        }}
+        initialBeneficiary={initialBeneficiaryForDocument}
       />
 
       {/* Existing Payments Modal */}

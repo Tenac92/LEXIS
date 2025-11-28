@@ -72,6 +72,7 @@ interface BeneficiaryDetailsModalProps {
   onOpenChange: (open: boolean) => void;
   initialEditMode?: boolean;
   onCreateBeneficiary?: (data: any) => void;
+  onCreatePaymentDocument?: (beneficiaryData: { firstname: string; lastname: string; fathername: string; afm: string }) => void;
 }
 
 // Form schema for editing beneficiaries (omit auto-generated fields)
@@ -303,7 +304,8 @@ export function BeneficiaryDetailsModal({
   open, 
   onOpenChange,
   initialEditMode = false,
-  onCreateBeneficiary
+  onCreateBeneficiary,
+  onCreatePaymentDocument
 }: BeneficiaryDetailsModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -444,6 +446,8 @@ export function BeneficiaryDetailsModal({
           freetext: dataSource.freetext || "",
           geographic_areas: geographicAreas,
         });
+        // Trigger validation after reset to ensure form isValid updates
+        setTimeout(() => form.trigger(), 100);
       } else {
         // Create new beneficiary - start with empty form
         form.reset({
@@ -651,7 +655,24 @@ export function BeneficiaryDetailsModal({
   };
 
   const handleAddNewPayment = () => {
-    if (!beneficiary?.id) return;
+    if (!beneficiary) return;
+    
+    // If callback provided, open create document dialog with prefilled beneficiary
+    if (onCreatePaymentDocument) {
+      // Use fullBeneficiaryData if available (has decrypted AFM), otherwise use beneficiary
+      const dataSource = fullBeneficiaryData || beneficiary;
+      onCreatePaymentDocument({
+        firstname: dataSource.name || "",
+        lastname: dataSource.surname || "",
+        fathername: dataSource.fathername || "",
+        afm: dataSource.afm || ""
+      });
+      // Close the beneficiary modal so user can focus on document creation
+      onOpenChange(false);
+      return;
+    }
+    
+    // Fallback: create payment record directly (legacy behavior)
     const newPayment = {
       beneficiary_id: beneficiary.id,
       installment: "ΕΦΑΠΑΞ",
