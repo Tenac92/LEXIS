@@ -1619,56 +1619,81 @@ export function CreateDocumentDialog({
       }
     };
 
+    // Calculate total for display
+    const totalAmount = Object.values(installmentAmounts).reduce(
+      (sum: number, amount: number) => sum + (amount || 0),
+      0,
+    );
+
+    // ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ - Housing Allowance Layout
+    if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      return (
+        <div className="w-full">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-medium">Τρίμηνα & Ποσά</label>
+            {selectedInstallments.length > 0 && (
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md">
+                <span className="text-sm text-muted-foreground">Σύνολο:</span>
+                <span className="text-base font-bold text-primary">
+                  {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+            {availableInstallments.map((quarter) => {
+              const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
+              const isSelected = selectedInstallments.includes(quarter);
+              return (
+                <div key={quarter} className="flex flex-col gap-1">
+                  <Button
+                    type="button"
+                    variant={isSelected ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleInstallmentToggle(quarter)}
+                    className="h-9 text-sm font-medium w-full"
+                  >
+                    Τ{quarterNum}
+                  </Button>
+                  {isSelected && (
+                    <div className="relative">
+                      <NumberInput
+                        value={installmentAmounts[quarter] || ""}
+                        onChange={(formatted, numeric) =>
+                          handleInstallmentAmountChange(quarter, numeric || 0)
+                        }
+                        className="h-8 text-xs pr-5"
+                        placeholder="900"
+                        decimals={2}
+                      />
+                      <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">€</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Regular Installments (ΔΚΑ, etc.) - Horizontal Layout
     return (
       <div className="w-full">
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Installment Selection Label and Buttons */}
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {expenditureType === HOUSING_ALLOWANCE_TYPE
-                ? "Τρίμηνα:"
-                : "Δόσεις:"}
-            </label>
-
-            {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
-              // Housing allowance quarter selection - horizontal inline
-              <div className="flex items-center gap-1.5">
-                {availableInstallments.map((quarter) => {
-                  const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
-                  return (
-                    <Button
-                      key={quarter}
-                      type="button"
-                      variant={
-                        selectedInstallments.includes(quarter)
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleInstallmentToggle(quarter)}
-                      className="h-8 px-3 text-xs font-medium"
-                    >
-                      {quarterNum}
-                    </Button>
-                  );
-                })}
-              </div>
-            ) : (
-              // Segmented control for installment selection - horizontal inline
-              <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+          {/* Left side: Installment buttons */}
+          <div className="flex-shrink-0">
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">Δόσεις</label>
+            <div className="flex flex-wrap items-center gap-2">
               {availableInstallments
                 .filter((inst) => !inst.includes("συμπληρωματική"))
                 .map((installment) => {
-                  const isRegularSelected =
-                    selectedInstallments.includes(installment);
+                  const isRegularSelected = selectedInstallments.includes(installment);
                   const supplementaryVersion = `${installment} συμπληρωματική`;
-                  const isSupplementarySelected =
-                    selectedInstallments.includes(supplementaryVersion);
+                  const isSupplementarySelected = selectedInstallments.includes(supplementaryVersion);
                   const isDKA = DKA_TYPES.includes(expenditureType);
-                  const canHaveSupplementary =
-                    isDKA && installment !== "ΕΦΑΠΑΞ";
+                  const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
 
-                  // For ΕΦΑΠΑΞ or non-DKA types, show single button
                   if (!canHaveSupplementary) {
                     return (
                       <Button
@@ -1677,7 +1702,7 @@ export function CreateDocumentDialog({
                         variant={isRegularSelected ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleInstallmentToggle(installment)}
-                        className="h-8 px-3"
+                        className="h-9 px-4"
                         data-testid={`installment-${installment}`}
                       >
                         {installment}
@@ -1685,113 +1710,85 @@ export function CreateDocumentDialog({
                     );
                   }
 
-                  // For DKA installments, show segmented control
                   return (
-                    <div
-                      key={installment}
-                      className="inline-flex rounded-md border border-input"
-                      role="group"
-                    >
+                    <div key={installment} className="inline-flex rounded-md border border-input overflow-hidden" role="group">
                       <Button
                         type="button"
                         variant={isRegularSelected ? "default" : "ghost"}
                         size="sm"
                         onClick={() => {
                           if (isSupplementarySelected) {
-                            // Switch from supplementary to regular
                             handleInstallmentToggle(supplementaryVersion);
                             handleInstallmentToggle(installment);
                           } else {
                             handleInstallmentToggle(installment);
                           }
                         }}
-                        className={`h-8 px-3 rounded-r-none border-r ${
-                          isRegularSelected
-                            ? ""
-                            : "border-transparent hover:bg-accent"
-                        }`}
+                        className={`h-9 px-3 rounded-none ${isRegularSelected ? "" : "hover:bg-accent"}`}
                         data-testid={`installment-regular-${installment}`}
                       >
                         {installment}
                       </Button>
+                      <div className="w-px bg-border" />
                       <Button
                         type="button"
                         variant={isSupplementarySelected ? "default" : "ghost"}
                         size="sm"
                         onClick={() => {
                           if (isRegularSelected) {
-                            // Switch from regular to supplementary
                             handleInstallmentToggle(installment);
                             handleInstallmentToggle(supplementaryVersion);
                           } else {
                             handleInstallmentToggle(supplementaryVersion);
                           }
                         }}
-                        className={`h-8 px-2 rounded-l-none text-xs ${
-                          isSupplementarySelected
-                            ? ""
-                            : "border-transparent hover:bg-accent"
-                        }`}
+                        className={`h-9 px-2 rounded-none text-xs ${isSupplementarySelected ? "" : "hover:bg-accent"}`}
                         data-testid={`installment-supplementary-${installment}`}
                       >
-                        {installment} ΣΥΜ.
+                        ΣΥΜ.
                       </Button>
                     </div>
                   );
                 })}
-              </div>
-            )}
+            </div>
           </div>
 
-          {/* Amount inputs - inline with installment selection */}
+          {/* Right side: Amount inputs */}
           {selectedInstallments.length > 0 && (
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-1.5">
-              {selectedInstallments.map((installment) => (
-                <div key={installment} className="flex items-center gap-1.5">
-                  <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
-                    {expenditureType === HOUSING_ALLOWANCE_TYPE
-                      ? installment.replace("ΤΡΙΜΗΝΟ ", "Τ")
-                      : installment.includes("συμπληρωματική")
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Ποσά</label>
+              <div className="flex flex-wrap items-center gap-3">
+                {selectedInstallments.map((installment) => (
+                  <div key={installment} className="flex items-center gap-1.5 bg-muted/50 rounded-md pl-2 pr-1 py-1">
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {installment.includes("συμπληρωματική")
                         ? installment.replace(" συμπληρωματική", " ΣΥΜ.")
                         : installment}
-                  </div>
-                  <div className="relative flex-1">
-                    <NumberInput
-                      value={installmentAmounts[installment] || ""}
-                      onChange={(formatted, numeric) =>
-                        handleInstallmentAmountChange(installment, numeric || 0)
-                      }
-                      className="pr-6 h-8 text-sm"
-                      placeholder={
-                        expenditureType === HOUSING_ALLOWANCE_TYPE
-                          ? "900,00"
-                          : "Ποσό"
-                      }
-                      decimals={2}
-                    />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
-                      €
                     </span>
+                    <div className="relative w-24">
+                      <NumberInput
+                        value={installmentAmounts[installment] || ""}
+                        onChange={(formatted, numeric) =>
+                          handleInstallmentAmountChange(installment, numeric || 0)
+                        }
+                        className="h-8 text-sm pr-5"
+                        placeholder="0,00"
+                        decimals={2}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
+                    </div>
                   </div>
+                ))}
+                
+                {/* Total display inline */}
+                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md ml-auto">
+                  <span className="text-sm text-muted-foreground">Σύνολο:</span>
+                  <span className="text-base font-bold text-primary">
+                    {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
+                  </span>
                 </div>
-              ))}
+              </div>
             </div>
-            <div className="text-xs font-medium flex justify-between pt-1.5 border-t">
-              <span>Συνολικό ποσό:</span>
-              <span className="text-primary">
-                {Object.values(installmentAmounts)
-                  .reduce(
-                    (sum: number, amount: number) => sum + (amount || 0),
-                    0,
-                  )
-                  .toLocaleString("el-GR", {
-                    style: "currency",
-                    currency: "EUR",
-                  })}
-              </span>
-            </div>
-          </div>
           )}
         </div>
       </div>
