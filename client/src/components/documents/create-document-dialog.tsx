@@ -296,6 +296,9 @@ export function CreateDocumentDialog({
     budgetType?: 'pistosi' | 'katanomi' | null; // Which budget limit is being exceeded
   } | null>(null);
   const [validationTimeout, setValidationTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Track which recipient indices have their housing allowance quarter details expanded
+  const [expandedQuarterDetails, setExpandedQuarterDetails] = useState<Set<number>>(new Set());
 
   // Memoize user unit IDs to avoid duplicate key warnings and improve performance
   const userUnitIds = useMemo(
@@ -1293,8 +1296,19 @@ export function CreateDocumentDialog({
     const selectedInstallments = currentRecipient?.installments || [];
     const installmentAmounts = currentRecipient?.installmentAmounts || {};
 
-    // State for housing allowance quarter details - MUST be at top level, not inside conditional
-    const [showQuarterDetails, setShowQuarterDetails] = React.useState(false);
+    // Use component-level state for showing/hiding quarter details
+    const showQuarterDetails = expandedQuarterDetails.has(index);
+    const toggleQuarterDetails = () => {
+      setExpandedQuarterDetails((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(index)) {
+          newSet.delete(index);
+        } else {
+          newSet.add(index);
+        }
+        return newSet;
+      });
+    };
 
     // Control function to toggle an installment selection - simplified version
     const handleInstallmentToggle = (installment: string) => {
@@ -1806,7 +1820,7 @@ export function CreateDocumentDialog({
               type="button"
               variant={showQuarterDetails ? "secondary" : "ghost"}
               size="sm"
-              onClick={() => setShowQuarterDetails(!showQuarterDetails)}
+              onClick={toggleQuarterDetails}
               className="h-8 px-2 text-xs"
             >
               {showQuarterDetails ? (
