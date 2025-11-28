@@ -544,15 +544,17 @@ export function BeneficiaryDetailsModal({
       if (!response.ok) throw new Error("Failed to update beneficiary");
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       // More granular cache invalidation for immediate UI reflection
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", beneficiary?.id] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", beneficiary?.id] });
       setIsEditing(false);
       toast({
         title: "Επιτυχία",
         description: "Τα στοιχεία του δικαιούχου ενημερώθηκαν επιτυχώς",
       });
+      // Close the modal after successful save to avoid UI freeze from slow background queries
+      onOpenChange(false);
     },
     onError: (error) => {
       console.error("Update error:", error);
@@ -810,8 +812,14 @@ export function BeneficiaryDetailsModal({
                     form="beneficiary-edit-form"
                     disabled={updateBeneficiaryMutation.isPending}
                   >
-                    <Save className="w-3 h-3 mr-1" />
-                    {isCreateMode ? "Δημιουργία" : "Αποθήκευση"}
+                    {updateBeneficiaryMutation.isPending ? (
+                      <div className="w-3 h-3 mr-1 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Save className="w-3 h-3 mr-1" />
+                    )}
+                    {updateBeneficiaryMutation.isPending 
+                      ? "Αποθήκευση..." 
+                      : (isCreateMode ? "Δημιουργία" : "Αποθήκευση")}
                   </Button>
                 </div>
               ) : (
