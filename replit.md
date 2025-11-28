@@ -33,6 +33,16 @@ Preferred communication style: Simple, everyday language.
     - Proper loading and persistence of EPA financial records.
     - Numeric field type alignment across frontend and backend to prevent validation errors.
     - Critical routing bug fixes to ensure correct API endpoint handling.
+    - **Budget History XLSX Export** (November 2025): Comprehensive Excel export for managers and admins via `/api/budget/history/export` with 6 analytical worksheets:
+        1. Αναλυτικό Ιστορικό (Detailed History) - Full change log with geographic hierarchy (Περιφέρεια, Π.Ε., Δήμος)
+        2. Σύνοψη Έργων (Project Summary) - Per-project aggregation with absorption rates
+        3. Ανά Περιφέρεια (Regional Summary) - Geographic breakdown of spending
+        4. Ανά Τύπο Αλλαγής (Change Type Analysis) - Breakdown by change category
+        5. Μηνιαία Τάση (Monthly Trend) - Temporal spending patterns
+        6. Δραστηριότητα Χρηστών (User Activity) - Activity per user
+        - Enforces unit-based access control (managers see only their units' data)
+        - Applies same filters as UI (NA853, expenditure type, date range, creator, change type)
+        - European number formatting and Greek labels throughout
 
 ## Data Storage Solutions
 - **Primary Database**: Supabase (PostgreSQL) with Row Level Security.
