@@ -27,6 +27,7 @@ interface Project {
   mis?: string;
   na853?: string; // NA853 enumeration code
   name: string;
+  event_description?: string; // Preserve original event_description for other components
   expenditure_types: string[];
 }
 
@@ -157,6 +158,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             mis: String(item.mis),
             na853: String(item.na853 || ""), // Use NA853 code directly from database
             name,
+            event_description: item.event_description || "", // Preserve original for other components
             expenditure_types: expenditureTypes || [],
           };
         });
