@@ -1317,17 +1317,31 @@ router.get(
         expenditureTypeNameMap.set(et.id, et.expenditure_types);
       });
 
-      // Create a map of project_index.id to expenditure_type_id
+      // CRITICAL FIX: Supabase has a 1000-row limit on complex nested queries.
+      // The projectIndexData query above has nested relations and is hitting this limit.
+      // We need a SEPARATE simple query just for expenditure type lookup.
+      // This query has NO nested relations, so it can fetch all rows reliably.
+      const { data: projectIndexExpenditureData, error: piExpError } = await supabase
+        .from("project_index")
+        .select("id, expenditure_type_id")
+        .not("expenditure_type_id", "is", null)
+        .range(0, 9999);
+      
+      if (piExpError) {
+        console.error(`[Budget Export] Error fetching project_index expenditure data:`, piExpError);
+      }
+
+      // Create a map of project_index.id to expenditure_type_id using the SIMPLE query
       const projectIndexExpenditureMap = new Map<number, number>();
-      if (projectIndexData) {
-        projectIndexData.forEach((pi: any) => {
+      if (projectIndexExpenditureData) {
+        projectIndexExpenditureData.forEach((pi: any) => {
           if (pi.id && pi.expenditure_type_id) {
             projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
           }
         });
       }
       
-      console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}, Project index entries: ${projectIndexExpenditureMap.size}`);
+      console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}, Project index entries for expenditure lookup: ${projectIndexExpenditureMap.size}`);
 
       // Helper function to get expenditure type name from a budget history entry
       const getExpenditureTypeName = (entry: any): string => {
