@@ -44,14 +44,14 @@ export const projectSchema = z.object({
     level: z.string()
   }).nullable().optional(),
   // Legacy compatibility fields - made optional for backward compatibility
-  event_type: z.array(z.string()).optional().default([]),
+  event_type: z.array(z.string()).nullable().optional().default([]),
   region: z.object({
     region: z.array(z.string()),
     municipality: z.array(z.string()),
     regional_unit: z.array(z.string()),
-  }).optional().default({ region: [], municipality: [], regional_unit: [] }),
-  implementing_agency: z.array(z.string()).optional().default([]),
-  expenditure_type: z.array(z.string()).optional().default([]),
+  }).nullable().optional().default({ region: [], municipality: [], regional_unit: [] }),
+  implementing_agency: z.union([z.array(z.string()), z.null()]).optional().default([]).transform(v => v === null ? [] : v),
+  expenditure_type: z.union([z.array(z.string()), z.null()]).optional().default([]).transform(v => v === null ? [] : v),
 });
 
 // Type inference
