@@ -1026,24 +1026,60 @@ export default function NewProjectPage() {
     );
   }
 
+  const [currentTab, setCurrentTab] = useState("project");
+  const tabLabels = ["project", "event-location", "formulation", "subprojects", "decisions", "changes"];
+  const currentTabIndex = tabLabels.indexOf(currentTab);
+  const progressPercent = ((currentTabIndex + 1) / tabLabels.length) * 100;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto p-6 max-w-7xl">
+        {/* Header with Progress */}
         <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-            Δημιουργία Νέου Έργου
-          </h1>
-          <p className="text-gray-600">
-            Συμπληρώστε τα απαιτούμενα στοιχεία για τη δημιουργία νέου έργου
-          </p>
-          <div className="flex gap-3 mt-4">
-            <Button variant="outline" onClick={() => navigate("/projects")}>
-              Επιστροφή στα Έργα
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                Δημιουργία Νέου Έργου
+              </h1>
+              <p className="text-gray-600">
+                Συμπληρώστε τα απαιτούμενα στοιχεία για τη δημιουργία νέου έργου (Βήμα {currentTabIndex + 1} από 6)
+              </p>
+            </div>
+            {mutation.isPending && (
+              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm font-medium">Αποθήκευση...</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-medium text-gray-600">Πρόοδος φόρμας</span>
+              <span className="text-xs font-semibold text-gray-700">{Math.round(progressPercent)}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+            </div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/projects")}
+              disabled={mutation.isPending}
+            >
+              Επιστροφή
             </Button>
             <Button 
               onClick={form.handleSubmit(onSubmit)}
               disabled={mutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-700 ml-auto"
+              size="lg"
             >
               {mutation.isPending ? (
                 <>
@@ -1061,33 +1097,41 @@ export default function NewProjectPage() {
         </div>
 
         <Form {...form}>
-          <Tabs defaultValue="project" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="project" className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4" />
-                Στοιχεία Έργου
-              </TabsTrigger>
-              <TabsTrigger value="event-location" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Γεγονός & Τοποθεσία
-              </TabsTrigger>
-              <TabsTrigger value="formulation" className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Διατύπωση
-              </TabsTrigger>
-              <TabsTrigger value="subprojects" className="flex items-center gap-2">
-                <Building2 className="h-4 w-4" />
-                Υποέργα
-              </TabsTrigger>
-              <TabsTrigger value="decisions" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Αποφάσεις
-              </TabsTrigger>
-              <TabsTrigger value="changes" className="flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Αλλαγές
-              </TabsTrigger>
-            </TabsList>
+          <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sticky top-6 z-10">
+              <TabsList className="grid w-full grid-cols-6 bg-gray-100">
+                <TabsTrigger value="project" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Στοιχεία Έργου</span>
+                  <span className="sm:hidden">Έργο</span>
+                </TabsTrigger>
+                <TabsTrigger value="event-location" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <Building2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Γεγονός & Τοποθεσία</span>
+                  <span className="sm:hidden">Θέση</span>
+                </TabsTrigger>
+                <TabsTrigger value="formulation" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Διατύπωση</span>
+                  <span className="sm:hidden">Διατ.</span>
+                </TabsTrigger>
+                <TabsTrigger value="subprojects" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <Building2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Υποέργα</span>
+                  <span className="sm:hidden">Υπο.</span>
+                </TabsTrigger>
+                <TabsTrigger value="decisions" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Αποφάσεις</span>
+                  <span className="sm:hidden">Απ.</span>
+                </TabsTrigger>
+                <TabsTrigger value="changes" className="flex items-center gap-2 text-xs sm:text-sm">
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden sm:inline">Αλλαγές</span>
+                  <span className="sm:hidden">Αλλ.</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Tab 1: Decisions */}
             <TabsContent value="decisions">
