@@ -1340,12 +1340,16 @@ export interface OptimizedProject {
   na853: string;
   mis: string;
   budget_na853?: number;
+  budget_na271?: number;
+  budget_e069?: number;
   status?: string;
   created_at?: string;
   updated_at?: string;
   event_description?: string;
   project_title?: string;
   name?: string;
+  event_year?: string[] | number[];
+  inc_year?: number;
   event_type: {
     id?: number;
     name?: string;
@@ -1365,6 +1369,12 @@ export interface OptimizedProject {
     regional_unit?: string;
     municipality?: string;
   };
+  implementing_agency?: {
+    id?: number;
+    title?: string;
+  };
+  expenditure_types?: string[];
+  event_types?: string[];
 }
 
 // Manager information structure

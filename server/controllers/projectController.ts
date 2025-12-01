@@ -296,6 +296,13 @@ export async function listProjects(req: Request, res: Response) {
                   monada_id: forYlForeis?.monada_id || ""
                 }
               : null,
+            // Implementing agency for frontend compatibility
+            implementing_agency: forYlItem
+              ? {
+                  id: forYlItem.id,
+                  title: forYlForeis?.title || ""
+                }
+              : null,
             // Add arrays for backward compatibility
             expenditure_types: uniqueExpenditureTypes,
             event_types: uniqueEventTypes,
