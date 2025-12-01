@@ -447,6 +447,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             q4: data.q4 || 0,
             katanomes_etous: initialKatanomesEtous,
             user_view: initialUserView,
+            proip: data.proip || 0,
+            node: data.node || null,
+            prev_years: data.prev_years || null,
+            years_paid: data.years_paid || null,
             created_at: new Date().toISOString()
           };
           
@@ -528,6 +532,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           const newQ3 = data.q3 !== undefined ? data.q3 : existingRecord.q3;
           const newQ4 = data.q4 !== undefined ? data.q4 : existingRecord.q4;
           const newKatanomesEtous = data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous;
+          const newProip = data.proip !== undefined ? data.proip : existingRecord.proip;
+          const newNode = data.node !== undefined ? data.node : existingRecord.node;
+          const newPrevYears = data.prev_years !== undefined ? data.prev_years : existingRecord.prev_years;
+          const newYearsPaid = data.years_paid !== undefined ? data.years_paid : existingRecord.years_paid;
           
           // Special handling for user_view: DO NOT change user_view from admin uploads
           // user_view is only increased by document creation, not by admin uploads
@@ -555,6 +563,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               q4: newQ4,
               katanomes_etous: newKatanomesEtous,
               user_view: newUserView,
+              proip: newProip,
+              node: newNode,
+              prev_years: newPrevYears,
+              years_paid: newYearsPaid,
               // NOTE: last_quarter_check is intentionally NOT updated - preserve existing application state
               sum: budgetSumBeforeUpdate, // Store the pre-update state
               updated_at: new Date().toISOString()
