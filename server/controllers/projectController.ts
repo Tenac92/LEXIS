@@ -483,11 +483,12 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         .map((et) => et.name);
       const uniqueEventTypes = Array.from(new Set(allEventTypes));
 
-      // Get unit info
-      const monadaItem =
-        projectIndexItems.length > 0
-          ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
-          : null;
+      // Get all monada for this project
+      const allMonadas = projectIndexItems
+        .map((idx) => monadaData.find((m) => m.id === idx.monada_id))
+        .filter((m) => m !== null && m !== undefined)
+        .map((m) => m.unit);
+      const uniqueMonadas = Array.from(new Set(allMonadas));
 
       // Get geographic data from junction tables
       const regionCodes = projectRegionsData
@@ -523,7 +524,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
       return {
         ...project,
-        enhanced_unit: monadaItem ? monadaItem.unit : null,
+        enhanced_unit: uniqueMonadas.length > 0 ? uniqueMonadas.join(", ") : null,
         expenditure_types: uniqueExpenditureTypes,
         event_types: uniqueEventTypes,
         enhanced_region: enhancedRegion,
