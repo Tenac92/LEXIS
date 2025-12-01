@@ -1002,6 +1002,12 @@ export default function NewProjectPage() {
     mutation.mutate(data);
   };
 
+  // IMPORTANT: Hooks must be called before any conditional returns
+  const [currentTab, setCurrentTab] = useState("project");
+  const tabLabels = ["project", "event-location", "formulation", "subprojects", "decisions", "changes"];
+  const currentTabIndex = tabLabels.indexOf(currentTab);
+  const progressPercent = ((currentTabIndex + 1) / tabLabels.length) * 100;
+
   // Debug data loading
   console.log("DEBUG - Event types data:", typedEventTypesData?.length || 0, "items");
   console.log("DEBUG - Kallikratis data:", typedKallikratisData?.length || 0, "items");
@@ -1025,11 +1031,6 @@ export default function NewProjectPage() {
       </div>
     );
   }
-
-  const [currentTab, setCurrentTab] = useState("project");
-  const tabLabels = ["project", "event-location", "formulation", "subprojects", "decisions", "changes"];
-  const currentTabIndex = tabLabels.indexOf(currentTab);
-  const progressPercent = ((currentTabIndex + 1) / tabLabels.length) * 100;
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -579,6 +579,7 @@ export default function ComprehensiveEditFixed() {
   const hasInitialized = useRef(false);
   const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
+  const [currentTab, setCurrentTab] = useState("project");
   const isInitializingRef = useRef(false);
   const { validateSA, getValidationState } = useSAValidation();
 
@@ -2361,7 +2362,6 @@ export default function ComprehensiveEditFixed() {
     typedExpenditureTypesData?.slice(0, 3),
   );
 
-  const [currentTab, setCurrentTab] = useState("project");
   const tabLabels = ["project", "event-location", "formulation", "decisions", "subprojects", "changes"];
   const currentTabIndex = tabLabels.indexOf(currentTab);
   const progressPercent = ((currentTabIndex + 1) / tabLabels.length) * 100;
