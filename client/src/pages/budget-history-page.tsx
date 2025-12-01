@@ -52,7 +52,7 @@ import type { GeneratedDocument } from "@shared/schema";
 import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
 
 // Hook to fetch users from the same unit for the creator filter
-const useUnitUsers = (userUnits: string[] | undefined) => {
+const useUnitUsers = (userUnits: (string | number)[] | undefined) => {
   const { data, isLoading } = useQuery({
     queryKey: ['unitUsers', userUnits],
     queryFn: async () => {
@@ -61,8 +61,11 @@ const useUnitUsers = (userUnits: string[] | undefined) => {
         const response = await fetch('/api/users/matching-units');
         if (!response.ok) return [];
         const data = await response.json();
+        // Convert userUnits to numbers for comparison since unit_id is numeric
+        const unitIds = userUnits.map(u => Number(u)).filter(Number.isFinite);
         return data.filter((user: any) => 
-          user.unit_id && user.unit_id.some((unitId: number) => userUnits.includes(unitId.toString()))
+          user.unit_id && Array.isArray(user.unit_id) && 
+          user.unit_id.some((unitId: number) => unitIds.includes(unitId))
         );
       } catch (error) {
         console.error('Error fetching unit users:', error);
@@ -246,7 +249,7 @@ export default function BudgetHistoryPage() {
   const isAdmin = user?.role === 'admin';
 
   // Fetch users from the same unit for the creator dropdown
-  const { unitUsers, isLoadingUsers } = useUnitUsers(user?.units);
+  const { unitUsers, isLoadingUsers } = useUnitUsers(user?.unit_id);
   
   // Fetch expenditure types for the filter
   const { data: expenditureTypes } = useExpenditureTypesForFilter();
