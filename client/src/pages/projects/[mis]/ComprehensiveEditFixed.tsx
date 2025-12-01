@@ -339,6 +339,7 @@ const comprehensiveProjectSchema = z.object({
           .default({ year: "", issue: "", number: "" }),
         ada: z.string().default(""),
         implementing_agency: z.array(z.number()).default([]),
+        implementing_agency_for_yl: z.record(z.string(), z.number().nullable()).default({}),
         decision_budget: z.string().default(""),
         expenses_covered: z.string().default(""),
         expenditure_type: z.array(z.number()).default([]),
@@ -593,6 +594,7 @@ export default function ComprehensiveEditFixed() {
           fek: { year: "", issue: "", number: "" },
           ada: "",
           implementing_agency: [],
+          implementing_agency_for_yl: {},
           decision_budget: "",
           expenses_covered: "",
           expenditure_type: [],
@@ -2845,9 +2847,14 @@ export default function ComprehensiveEditFixed() {
                                               <div className="ml-6 mt-1">
                                                 <Select
                                                   onValueChange={(value) => {
-                                                    console.log(`Selected for_yl ${value} for unit ${unit.id}`);
+                                                    const currentForYl = form.getValues(`decisions.${index}.implementing_agency_for_yl`) || {};
+                                                    const updatedForYl = {
+                                                      ...currentForYl,
+                                                      [String(unit.id)]: value === "none" ? null : Number(value)
+                                                    };
+                                                    form.setValue(`decisions.${index}.implementing_agency_for_yl`, updatedForYl);
                                                   }}
-                                                  defaultValue="none"
+                                                  value={String(form.watch(`decisions.${index}.implementing_agency_for_yl`)?.[String(unit.id)] || "none")}
                                                 >
                                                   <SelectTrigger className="h-8 text-xs">
                                                     <SelectValue placeholder="Φορέας Υλοποίησης" />

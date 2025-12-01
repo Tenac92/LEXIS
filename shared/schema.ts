@@ -778,6 +778,7 @@ export const projectDecisions = pgTable(
 
     // Decision details
     implementing_agency: integer("implementing_agency").array(),
+    implementing_agency_for_yl: jsonb("implementing_agency_for_yl").default({}), // Maps unit_id -> for_yl_id (e.g., {"5": 12, "7": null})
     decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
     expenditure_type: integer("expenditure_type").array(),
     decision_date: date("decision_date"),
