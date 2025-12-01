@@ -579,6 +579,7 @@ export default function NewProjectPage() {
             implementing_agency: Array.isArray(decision.implementing_agency) 
               ? decision.implementing_agency 
               : decision.implementing_agency ? [decision.implementing_agency] : [],
+            implementing_agency_for_yl: decision.implementing_agency_for_yl || {},
             decision_budget: decision.decision_budget || "",
             expenditure_type: Array.isArray(decision.expenditure_type) 
               ? decision.expenditure_type 

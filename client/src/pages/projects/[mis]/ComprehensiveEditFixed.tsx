@@ -1948,6 +1948,7 @@ export default function ComprehensiveEditFixed() {
               implementing_agency: Array.isArray(decision.implementing_agency)
                 ? decision.implementing_agency
                 : [],
+              implementing_agency_for_yl: (decision.implementing_agency_for_yl as Record<string, number | null>) || {},
               decision_budget: decision.decision_budget
                 ? formatEuropeanNumber(decision.decision_budget)
                 : "",
@@ -1964,6 +1965,7 @@ export default function ComprehensiveEditFixed() {
                 fek: { year: "", issue: "", number: "" },
                 ada: "",
                 implementing_agency: [],
+                implementing_agency_for_yl: {},
                 decision_budget: "",
                 expenditure_type: [],
                 decision_type: "Έγκριση" as const,

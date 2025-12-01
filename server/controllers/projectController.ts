@@ -1756,6 +1756,7 @@ router.post(
         fek: decisionData.fek || null,
         ada: decisionData.ada || null,
         implementing_agency: decisionData.implementing_agency || [],
+        implementing_agency_for_yl: decisionData.implementing_agency_for_yl || {},
         decision_budget: decisionData.decision_budget
           ? parseFloat(
               decisionData.decision_budget.toString().replace(/[.,]/g, ""),
@@ -1853,6 +1854,8 @@ router.patch(
       if (updateData.ada !== undefined) fieldsToUpdate.ada = updateData.ada;
       if (updateData.implementing_agency !== undefined)
         fieldsToUpdate.implementing_agency = updateData.implementing_agency;
+      if (updateData.implementing_agency_for_yl !== undefined)
+        fieldsToUpdate.implementing_agency_for_yl = updateData.implementing_agency_for_yl;
       if (updateData.expenditure_type !== undefined)
         fieldsToUpdate.expenditure_type = updateData.expenditure_type;
       if (updateData.decision_date !== undefined)
@@ -3880,6 +3883,7 @@ router.put(
               fek: decision.fek || null,
               ada: decision.ada || null,
               implementing_agency: decision.implementing_agency || [],
+              implementing_agency_for_yl: decision.implementing_agency_for_yl || {},
               decision_budget: parseEuropeanBudget(decision.decision_budget),
               expenditure_type: decision.expenditure_type || [],
               decision_date: new Date().toISOString().split("T")[0], // Today's date as default
