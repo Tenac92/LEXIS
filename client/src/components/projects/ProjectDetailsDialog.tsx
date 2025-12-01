@@ -615,7 +615,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                         <div className="mt-6 flex items-center justify-between">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                              <span className="font-medium text-purple-700 block mb-2">Υπόλοιπο Κατανομών:</span>
+                              <span className="font-medium text-purple-700 block mb-2">Δαπανες {new Date().getFullYear()}:</span>
                               <p className="text-xl font-semibold text-purple-900">{formatCurrency(budgetInfo.user_view)}</p>
                             </div>
                             <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
