@@ -19,6 +19,7 @@ import { insertEmployeeSchema, type Employee, type InsertEmployee } from "@share
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Trash2, Users, Upload, Trash } from "lucide-react";
+import { Header } from "@/components/header";
 
 export default function EmployeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -181,16 +182,19 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Διαχείριση Υπαλλήλων</h1>
-          <p className="text-muted-foreground">
-            Διαχειριστείτε τον κατάλογο υπαλλήλων για αυτόματη συμπλήρωση στα έγγραφα
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="container mx-auto px-4 py-6">
+        <div className="space-y-6">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Διαχείριση Υπαλλήλων</h1>
+              <p className="text-muted-foreground">
+                Διαχειριστείτε τον κατάλογο υπαλλήλων για αυτόματη συμπλήρωση στα έγγραφα
+              </p>
+            </div>
+            <div className="flex gap-2">
           <EmployeeDialog
             isOpen={isCreateDialogOpen}
             onOpenChange={setIsCreateDialogOpen}
@@ -220,12 +224,12 @@ export default function EmployeesPage() {
           >
             <Trash className="h-4 w-4 mr-2" />
             {cleanupDuplicatesMutation.isPending ? 'Γίνεται καθαρισμός...' : 'Αφαίρεση Διπλοτύπων'}
-          </Button>
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Search and Filters */}
-      <Card>
+        {/* Search and Filters */}
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="h-5 w-5" />
