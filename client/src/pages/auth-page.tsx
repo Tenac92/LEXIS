@@ -90,12 +90,40 @@ export default function AuthPage() {
           </CardContent>
         </div>
 
-        <div className="hidden md:block bg-muted rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Καλώς ήρθατε στο ΣΔΕ</h2>
-          <p className="text-muted-foreground">
-            Διαχειριστείτε αποτελεσματικά τα έγγραφά σας με το ολοκληρωμένο σύστημα διαχείρισης εγγράφων.
-            Παρακολουθήστε προϋπολογισμούς, δημιουργήστε αναφορές και διαχειριστείτε πληροφορίες παραληπτών σε ένα μέρος.
-          </p>
+        <div className="hidden md:block bg-muted rounded-lg p-6 space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Καλώς ήρθατε στο SUM-e</h2>
+            <p className="text-sm text-muted-foreground font-medium">Ολοκληρωμένη διαχείριση έργων και προϋπολογισμών</p>
+          </div>
+          <div className="space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Διαχείριση Εγγράφων</h3>
+                <p className="text-xs text-muted-foreground">Δημιουργήστε, επεξεργαστείτε και παρακολουθήστε όλα τα έγγραφά σας σε ένα κεντρικό σύστημα</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Έλεγχος Προϋπολογισμού</h3>
+                <p className="text-xs text-muted-foreground">Παρακολουθήστε και διαχειριστείτε τους προϋπολογισμούς έργων με ακρίβεια</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                <span className="text-xs font-bold text-primary">✓</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-sm mb-1">Αναφορές & Ανάλυση</h3>
+                <p className="text-xs text-muted-foreground">Δημιουργήστε λεπτομερείς αναφορές και αποκτήστε πολύτιμες πληροφορίες</p>
+              </div>
+            </div>
+          </div>
         </div>
       </Card>
     </div>
