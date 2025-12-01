@@ -51,8 +51,8 @@ export default function EmployeesPage() {
   // For managers, force their unit; for admins, use selected unit
   const filterUnitForQuery = useMemo(() => {
     if (isManager && user?.unit_id?.[0]) {
-      const managerUnitId = user.unit_id[0];
-      const managerUnit = units?.find((u: any) => u.id === managerUnitId);
+      const managerUnitId = user.unit_id[0].toString();
+      const managerUnit = units?.find((u: any) => u.id?.toString() === managerUnitId);
       console.log('[Employees] Manager unit lookup:', { managerUnitId, managerUnit });
       return managerUnit?.code || selectedUnit;
     }
