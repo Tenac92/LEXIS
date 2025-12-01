@@ -682,16 +682,23 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       }
     });
 
-    // Apply data styles and currency format
+    // Apply data styles and currency format with European number formatting
     const currencyColumns = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // Column indices for currency
+    const europeanCurrencyFormat = "#.##0,00\\ \"€\""; // European format: dots for thousands, comma for decimals
+    const defaultBorder: Partial<ExcelJS.Borders> = {
+      top: { style: "thin", color: { argb: "FFD9D9D9" } },
+      left: { style: "thin", color: { argb: "FFD9D9D9" } },
+      bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+      right: { style: "thin", color: { argb: "FFD9D9D9" } },
+    };
     wsIntegrated.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (currencyColumns.includes(colNumber)) {
-            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.numFmt = europeanCurrencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
-          cell.border = dataStyle.border;
+          cell.border = defaultBorder;
         });
         row.height = 22;
       }
@@ -726,7 +733,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     totalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (currencyColumns.includes(colNumber)) {
-        cell.numFmt = "#,##0.00\\ \"€\"";
+        cell.numFmt = europeanCurrencyFormat;
       }
     });
     totalRow.height = 28;
@@ -818,16 +825,16 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       });
     });
 
-    // Apply styles
+    // Apply styles with European currency format
     const projectCurrencyColumns = [14, 15, 16];
     wsProjects.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (projectCurrencyColumns.includes(colNumber)) {
-            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.numFmt = europeanCurrencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
-          cell.border = dataStyle.border;
+          cell.border = defaultBorder;
         });
         row.height = 22;
         if (rowNumber % 2 === 0) {
@@ -863,7 +870,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     projectTotalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (projectCurrencyColumns.includes(colNumber)) {
-        cell.numFmt = "#,##0.00\\ \"€\"";
+        cell.numFmt = europeanCurrencyFormat;
       }
     });
     projectTotalRow.height = 28;
@@ -945,16 +952,16 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       });
     }
 
-    // Apply styles
+    // Apply styles with European currency format
     const budgetCurrencyColumns = [4, 5, 6, 7, 8, 9, 10, 11];
     wsBudgets.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (budgetCurrencyColumns.includes(colNumber)) {
-            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.numFmt = europeanCurrencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
-          cell.border = dataStyle.border;
+          cell.border = defaultBorder;
         });
         row.height = 22;
         if (rowNumber % 2 === 0) {
@@ -984,7 +991,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     budgetTotalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (budgetCurrencyColumns.includes(colNumber)) {
-        cell.numFmt = "#,##0.00\\ \"€\"";
+        cell.numFmt = europeanCurrencyFormat;
       }
     });
     budgetTotalRow.height = 28;
