@@ -405,17 +405,29 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     const projectsRes = await projectQuery;
 
-    // Fetch all supporting data
+    // Fetch all supporting data including geographic data from junction tables
     const [
       monadaRes,
       eventTypesRes,
       expenditureTypesRes,
       indexRes,
+      regionsRes,
+      regionalUnitsRes,
+      municipalitiesRes,
+      projectRegionsRes,
+      projectUnitsRes,
+      projectMunisRes,
     ] = await Promise.all([
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
       supabase.from("project_index").select("*"),
+      supabase.from("regions").select("*"),
+      supabase.from("regional_units").select("*"),
+      supabase.from("municipalities").select("*"),
+      supabase.from("project_index_regions").select("project_index_id, region_code"),
+      supabase.from("project_index_units").select("project_index_id, unit_code"),
+      supabase.from("project_index_munis").select("project_index_id, muni_code"),
     ]);
 
     if (projectsRes.error) {
@@ -434,12 +446,19 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const eventTypes = eventTypesRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
     const indexData = indexRes.data || [];
+    const regionsData = regionsRes.data || [];
+    const regionalUnitsData = regionalUnitsRes.data || [];
+    const municipalitiesData = municipalitiesRes.data || [];
+    const projectRegionsData = projectRegionsRes.data || [];
+    const projectUnitsData = projectUnitsRes.data || [];
+    const projectMunisData = projectMunisRes.data || [];
 
-    // Enhance projects with optimized schema data
+    // Enhance projects with optimized schema data including geographic info
     const enhancedProjects = projects.map((project) => {
       const projectIndexItems = indexData.filter(
         (idx) => idx.project_id === project.id,
       );
+      const projectIndexIds = projectIndexItems.map((idx) => idx.id);
 
       // Get all expenditure types for this project
       const allExpenditureTypes = projectIndexItems
@@ -463,11 +482,44 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
           ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
           : null;
 
+      // Get geographic data from junction tables
+      const regionCodes = projectRegionsData
+        .filter((pr) => projectIndexIds.includes(pr.project_index_id))
+        .map((pr) => pr.region_code);
+      const regionNames = regionsData
+        .filter((r) => regionCodes.includes(r.code))
+        .map((r) => r.name);
+      const uniqueRegions = Array.from(new Set(regionNames));
+
+      const unitCodes = projectUnitsData
+        .filter((pu) => projectIndexIds.includes(pu.project_index_id))
+        .map((pu) => pu.unit_code);
+      const unitNames = regionalUnitsData
+        .filter((u) => unitCodes.includes(u.code))
+        .map((u) => u.name);
+      const uniqueUnits = Array.from(new Set(unitNames));
+
+      const muniCodes = projectMunisData
+        .filter((pm) => projectIndexIds.includes(pm.project_index_id))
+        .map((pm) => pm.muni_code);
+      const muniNames = municipalitiesData
+        .filter((m) => muniCodes.includes(m.code))
+        .map((m) => m.name);
+      const uniqueMunis = Array.from(new Set(muniNames));
+
+      // Format geographic string: Περιφέρεια | Π.Ε. | Δήμος
+      const geoParts: string[] = [];
+      if (uniqueRegions.length > 0) geoParts.push(uniqueRegions.join(", "));
+      if (uniqueUnits.length > 0) geoParts.push(uniqueUnits.join(", "));
+      if (uniqueMunis.length > 0) geoParts.push(uniqueMunis.join(", "));
+      const enhancedRegion = geoParts.length > 0 ? geoParts.join(" | ") : null;
+
       return {
         ...project,
         enhanced_unit: monadaItem ? monadaItem.unit : null,
         expenditure_types: uniqueExpenditureTypes,
         event_types: uniqueEventTypes,
+        enhanced_region: enhancedRegion,
       };
     });
 
@@ -522,7 +574,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const currencyStyle: Partial<ExcelJS.Style> = {
       ...dataStyle,
       alignment: { horizontal: "right", vertical: "middle" },
-      numFmt: "#.##0,00 €",
+      numFmt: '#,##0.00\\ "€"',
     };
 
     const totalRowStyle: Partial<ExcelJS.Style> = {
@@ -615,7 +667,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
           expenditure_type: formatArrayField(project.expenditure_types),
           event_type: formatArrayField(project.event_types),
           event_year: formatArrayField(project.event_year),
-          region: formatRegionData(project.region),
+          region: project.enhanced_region || "-",
           budget_na853: budgetNA853,
           budget_na271: budgetNA271,
           budget_e069: budgetE069,
@@ -661,7 +713,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
             expenditure_type: formatArrayField(project.expenditure_types),
             event_type: formatArrayField(project.event_types),
             event_year: formatArrayField(project.event_year),
-            region: formatRegionData(project.region),
+            region: project.enhanced_region || "-",
             budget_na853: budgetNA853,
             budget_na271: budgetNA271,
             budget_e069: budgetE069,
@@ -682,9 +734,9 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       }
     });
 
-    // Apply data styles and currency format with European number formatting
+    // Apply data styles and currency format
     const currencyColumns = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // Column indices for currency
-    const europeanCurrencyFormat = "#.##0,00\\ \"€\""; // European format: dots for thousands, comma for decimals
+    const currencyFormat = '#,##0.00\\ "€"'; // Standard Excel format - displays according to user's locale
     const defaultBorder: Partial<ExcelJS.Borders> = {
       top: { style: "thin", color: { argb: "FFD9D9D9" } },
       left: { style: "thin", color: { argb: "FFD9D9D9" } },
@@ -695,7 +747,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (currencyColumns.includes(colNumber)) {
-            cell.numFmt = europeanCurrencyFormat;
+            cell.numFmt = currencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
           cell.border = defaultBorder;
@@ -733,7 +785,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     totalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (currencyColumns.includes(colNumber)) {
-        cell.numFmt = europeanCurrencyFormat;
+        cell.numFmt = currencyFormat;
       }
     });
     totalRow.height = 28;
@@ -812,7 +864,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         event_type: formatArrayField(project.event_types),
         event_year: formatArrayField(project.event_year),
         inc_year: project.inc_year || "-",
-        region: formatRegionData(project.region),
+        region: project.enhanced_region || "-",
         budget_na853: budgetNA853,
         budget_na271: budgetNA271,
         budget_e069: budgetE069,
@@ -825,13 +877,13 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       });
     });
 
-    // Apply styles with European currency format
+    // Apply styles with currency format
     const projectCurrencyColumns = [14, 15, 16];
     wsProjects.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (projectCurrencyColumns.includes(colNumber)) {
-            cell.numFmt = europeanCurrencyFormat;
+            cell.numFmt = currencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
           cell.border = defaultBorder;
@@ -870,7 +922,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     projectTotalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (projectCurrencyColumns.includes(colNumber)) {
-        cell.numFmt = europeanCurrencyFormat;
+        cell.numFmt = currencyFormat;
       }
     });
     projectTotalRow.height = 28;
@@ -952,13 +1004,13 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       });
     }
 
-    // Apply styles with European currency format
+    // Apply styles with currency format
     const budgetCurrencyColumns = [4, 5, 6, 7, 8, 9, 10, 11];
     wsBudgets.eachRow((row, rowNumber) => {
       if (rowNumber > 1) {
         row.eachCell((cell, colNumber) => {
           if (budgetCurrencyColumns.includes(colNumber)) {
-            cell.numFmt = europeanCurrencyFormat;
+            cell.numFmt = currencyFormat;
             cell.alignment = { horizontal: "right", vertical: "middle" };
           }
           cell.border = defaultBorder;
@@ -991,7 +1043,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     budgetTotalRow.eachCell((cell, colNumber) => {
       Object.assign(cell, { style: totalRowStyle });
       if (budgetCurrencyColumns.includes(colNumber)) {
-        cell.numFmt = europeanCurrencyFormat;
+        cell.numFmt = currencyFormat;
       }
     });
     budgetTotalRow.height = 28;
