@@ -2371,19 +2371,19 @@ export default function ComprehensiveEditFixed() {
       <div className="container mx-auto p-6 max-w-7xl">
         {/* Header with Progress */}
         <div className="mb-6 bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">
+          <div className="flex justify-between items-start mb-4 gap-4">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold text-gray-900 mb-1 truncate">
                 Επεξεργασία Έργου
               </h1>
-              <p className="text-gray-600 truncate">
+              <p className="text-gray-600 text-sm truncate">
                 {typedProjectData?.project_title}
               </p>
             </div>
             {mutation.isPending && (
-              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-2 rounded-md ml-4 flex-shrink-0">
+              <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-2 rounded-md flex-shrink-0">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-medium">Αποθήκευση...</span>
+                <span className="text-sm font-medium whitespace-nowrap">Αποθήκευση...</span>
               </div>
             )}
           </div>
