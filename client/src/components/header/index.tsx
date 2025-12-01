@@ -11,6 +11,7 @@ import {
   Key,
   ChevronDown,
   Home,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -63,7 +64,7 @@ const navigationItems = [
     label: "Υπάλληλοι",
     roles: ["admin", "manager"],
   },
-  { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user", "manager"] },
+  { href: "/beneficiaries", icon: Award, label: "Δικαιούχοι", roles: ["user", "manager"] },
   { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
   {
     href: "/notifications",
