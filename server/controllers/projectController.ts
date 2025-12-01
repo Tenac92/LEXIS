@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/db";
 import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from "express";
 import { authenticateSession } from "../authentication";
@@ -326,11 +327,54 @@ export async function listProjects(req: Request, res: Response) {
   }
 }
 
-// Enhanced Excel export with both projects and budget data
+// Helper function to parse budget value to number
+function parseBudgetValue(value: any): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/\./g, "").replace(",", ".").trim();
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+// Helper function to format array fields
+function formatArrayField(value: any): string {
+  if (!value) return "-";
+  if (Array.isArray(value)) {
+    const filtered = value.filter(v => v && v.trim && v.trim() !== "");
+    return filtered.length > 0 ? filtered.join(", ") : "-";
+  }
+  if (typeof value === "string" && value.trim()) return value;
+  return "-";
+}
+
+// Helper function to format region data
+function formatRegionData(region: any): string {
+  if (!region) return "-";
+  if (typeof region === "string") return region || "-";
+  if (typeof region === "object") {
+    const parts: string[] = [];
+    if (region.region && Array.isArray(region.region) && region.region.length > 0) {
+      parts.push(region.region.filter((r: string) => r).join(", "));
+    }
+    if (region.regional_unit && Array.isArray(region.regional_unit) && region.regional_unit.length > 0) {
+      parts.push(region.regional_unit.filter((r: string) => r).join(", "));
+    }
+    if (region.municipality && Array.isArray(region.municipality) && region.municipality.length > 0) {
+      parts.push(region.municipality.filter((r: string) => r).join(", "));
+    }
+    return parts.length > 0 ? parts.join(" | ") : "-";
+  }
+  return "-";
+}
+
+// Enhanced Excel export with both projects and budget data using ExcelJS
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
     console.log(
-      "[Projects] Generating Excel export with projects and budget data",
+      "[Projects] Generating professional Excel export with projects and budget data",
     );
 
     // Get filter parameters from query string
@@ -338,8 +382,9 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const expenditureTypeFilter = req.query.expenditureType as string || "";
     const statusFilter = req.query.status as string || "";
     const unitFilter = req.query.unit as string || "";
+    const searchFilter = req.query.search as string || "";
 
-    console.log(`[Export] Filters - NA853: ${na853Filter}, Expenditure: ${expenditureTypeFilter}, Status: ${statusFilter}, Unit: ${unitFilter}`);
+    console.log(`[Export] Filters - NA853: ${na853Filter}, Expenditure: ${expenditureTypeFilter}, Status: ${statusFilter}, Unit: ${unitFilter}, Search: ${searchFilter}`);
 
     // Build filter query for projects
     let projectQuery = supabase
@@ -353,6 +398,9 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     }
     if (statusFilter && statusFilter !== "all") {
       projectQuery = projectQuery.eq("status", statusFilter);
+    }
+    if (searchFilter) {
+      projectQuery = projectQuery.or(`na853.ilike.%${searchFilter}%,event_description.ilike.%${searchFilter}%,project_title.ilike.%${searchFilter}%`);
     }
 
     const projectsRes = await projectQuery;
@@ -409,18 +457,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         .map((et) => et.name);
       const uniqueEventTypes = Array.from(new Set(allEventTypes));
 
-      const eventType =
-        projectIndexItems.length > 0
-          ? eventTypes.find(
-              (et) => et.id === projectIndexItems[0].event_types_id,
-            )
-          : null;
-      const expenditureType =
-        projectIndexItems.length > 0
-          ? expenditureTypes.find(
-              (et) => et.id === projectIndexItems[0].expenditure_type_id,
-            )
-          : null;
+      // Get unit info
       const monadaItem =
         projectIndexItems.length > 0
           ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
@@ -428,25 +465,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
       return {
         ...project,
-        enhanced_event_type: eventType
-          ? {
-              id: eventType.id,
-              name: eventType.name,
-            }
-          : null,
-        enhanced_expenditure_type: expenditureType
-          ? {
-              id: expenditureType.id,
-              name: expenditureType.expenditure_types,
-            }
-          : null,
-        enhanced_unit: monadaItem
-          ? {
-              id: monadaItem.id,
-              name: monadaItem.unit,
-            }
-          : null,
-        enhanced_kallikratis: null,
+        enhanced_unit: monadaItem ? monadaItem.unit : null,
         expenditure_types: uniqueExpenditureTypes,
         event_types: uniqueEventTypes,
       };
@@ -469,11 +488,108 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       return res.status(404).json({ message: "No projects found for export" });
     }
 
-    // Create a combined dataset for the integrated view
-    const combinedData: any[] = [];
+    // Create ExcelJS workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "ΓΓΠΠ - Σύστημα Διαχείρισης Έργων";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const currentYear = new Date().getFullYear();
+
+    // Define styles
+    const headerStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, color: { argb: "FFFFFFFF" }, size: 11 },
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      },
+    };
+
+    const dataStyle: Partial<ExcelJS.Style> = {
+      alignment: { vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: "FFD9D9D9" } },
+        left: { style: "thin", color: { argb: "FFD9D9D9" } },
+        bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+        right: { style: "thin", color: { argb: "FFD9D9D9" } },
+      },
+    };
+
+    const currencyStyle: Partial<ExcelJS.Style> = {
+      ...dataStyle,
+      alignment: { horizontal: "right", vertical: "middle" },
+      numFmt: "#.##0,00 €",
+    };
+
+    const totalRowStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, size: 11 },
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } },
+      alignment: { horizontal: "right", vertical: "middle" },
+      border: {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      },
+    };
+
+    // ========== SHEET 1: Projects with Allocations ==========
+    const wsIntegrated = workbook.addWorksheet("Έργα με Κατανομές", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    // Define columns for integrated view
+    const integratedColumns = [
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "Τίτλος Έργου", key: "title", width: 45 },
+      { header: "Κατάσταση", key: "status", width: 14 },
+      { header: "Μονάδα", key: "unit", width: 25 },
+      { header: "Τύπος Δαπάνης", key: "expenditure_type", width: 20 },
+      { header: "Τύπος Συμβάντος", key: "event_type", width: 20 },
+      { header: "Έτος Συμβάντος", key: "event_year", width: 15 },
+      { header: "Περιφέρεια", key: "region", width: 30 },
+      { header: "Π/Υ ΝΑ853 (€)", key: "budget_na853", width: 18 },
+      { header: "Π/Υ ΝΑ271 (€)", key: "budget_na271", width: 18 },
+      { header: "Π/Υ Ε069 (€)", key: "budget_e069", width: 18 },
+      { header: "ΠΡΟΙΠ (€)", key: "proip", width: 16 },
+      { header: "Ετήσια Πίστωση (€)", key: "ethsia_pistosi", width: 18 },
+      { header: "Α΄ Τρίμηνο (€)", key: "q1", width: 16 },
+      { header: "Β΄ Τρίμηνο (€)", key: "q2", width: 16 },
+      { header: "Γ΄ Τρίμηνο (€)", key: "q3", width: 16 },
+      { header: "Δ΄ Τρίμηνο (€)", key: "q4", width: 16 },
+      { header: "Κατανομές Έτους (€)", key: "katanomes_etous", width: 18 },
+      { header: `Δαπάνες ${currentYear} (€)`, key: "user_view", width: 18 },
+      { header: "Έτος Ένταξης", key: "inc_year", width: 14 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+    ];
+
+    wsIntegrated.columns = integratedColumns;
+
+    // Apply header styles
+    wsIntegrated.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsIntegrated.getRow(1).height = 35;
+
+    // Collect data and totals
+    let totalBudgetNA853 = 0;
+    let totalBudgetNA271 = 0;
+    let totalBudgetE069 = 0;
+    let totalProip = 0;
+    let totalEthsiaPistosi = 0;
+    let totalQ1 = 0;
+    let totalQ2 = 0;
+    let totalQ3 = 0;
+    let totalQ4 = 0;
+    let totalKatanomesEtous = 0;
+    let totalUserView = 0;
 
     enhancedProjects.forEach((project) => {
-      // Find all budget splits for this project (match by MIS or NA853)
       const projectSplits =
         budgetSplits?.filter(
           (split) =>
@@ -481,216 +597,400 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
             split.na853 === project.na853,
         ) || [];
 
-      // If no budget splits found, still include the project with empty budget data
-      if (projectSplits.length === 0) {
-        combinedData.push({
-          // Project Core Data
-          ΜΙS: project.mis || "",
-          Τίτλος:
-            project.title ||
-            project.project_title ||
-            project.event_description ||
-            "",
-          Κατάσταση: project.status || "",
-          ΝΑ853: project.na853 || "",
-          ΝΑ271: project.na271 || "",
-          Ε069: project.e069 || "",
-          "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-          "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-          "Προϋπολογισμός Ε069": project.budget_e069 || "",
-          Περιφέρεια:
-            typeof project.region === "object"
-              ? JSON.stringify(project.region)
-              : project.region || "",
-          "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-            ? project.implementing_agency.join(", ")
-            : project.implementing_agency || "",
-          "Τύπος Συμβάντος": Array.isArray(project.event_type)
-            ? project.event_type.join(", ")
-            : project.event_type || "",
-          "Έτος Συμβάντος": Array.isArray(project.event_year)
-            ? project.event_year.join(", ")
-            : project.event_year || "",
-          "Ημ/νία Δημιουργίας": project.created_at
-            ? new Date(project.created_at).toLocaleDateString("el-GR")
-            : "",
+      const budgetNA853 = parseBudgetValue(project.budget_na853);
+      const budgetNA271 = parseBudgetValue(project.budget_na271);
+      const budgetE069 = parseBudgetValue(project.budget_e069);
 
-          // Empty Budget Split Data
-          "ID Κατανομής": "",
-          ΠΡΟΙΠ: "",
-          "Ετήσια Πίστωση": "",
-          "Α΄ Τρίμηνο": "",
-          "Β΄ Τρίμηνο": "",
-          "Γ΄ Τρίμηνο": "",
-          "Δ΄ Τρίμηνο": "",
-          "Κατανομές Έτους": "",
-          [`Δαπάνες ${new Date().getFullYear()}`]: "",
+      if (budgetNA853) totalBudgetNA853 += budgetNA853;
+      if (budgetNA271) totalBudgetNA271 += budgetNA271;
+      if (budgetE069) totalBudgetE069 += budgetE069;
+
+      if (projectSplits.length === 0) {
+        wsIntegrated.addRow({
+          mis: project.mis || "-",
+          na853: project.na853 || "-",
+          title: project.project_title || project.event_description || "-",
+          status: project.status || "-",
+          unit: project.enhanced_unit || "-",
+          expenditure_type: formatArrayField(project.expenditure_types),
+          event_type: formatArrayField(project.event_types),
+          event_year: formatArrayField(project.event_year),
+          region: formatRegionData(project.region),
+          budget_na853: budgetNA853,
+          budget_na271: budgetNA271,
+          budget_e069: budgetE069,
+          proip: null,
+          ethsia_pistosi: null,
+          q1: null,
+          q2: null,
+          q3: null,
+          q4: null,
+          katanomes_etous: null,
+          user_view: null,
+          inc_year: project.inc_year || "-",
+          created_at: project.created_at
+            ? new Date(project.created_at).toLocaleDateString("el-GR")
+            : "-",
         });
       } else {
-        // For projects with splits, add one row per split with both project and split data
-        projectSplits.forEach((split: any, index: number) => {
-          combinedData.push({
-            // Project Core Data (only include full project data in the first row for this project)
-            ΜΙS: project.mis || "",
-            Τίτλος:
-              project.title ||
-              project.project_title ||
-              project.event_description ||
-              "",
-            Κατάσταση: project.status || "",
-            ΝΑ853: project.na853 || "",
-            ΝΑ271: project.na271 || "",
-            Ε069: project.e069 || "",
-            "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-            "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-            "Προϋπολογισμός Ε069": project.budget_e069 || "",
-            Περιφέρεια:
-              typeof project.region === "object"
-                ? JSON.stringify(project.region)
-                : project.region || "",
-            "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-              ? project.implementing_agency.join(", ")
-              : project.implementing_agency || "",
-            "Τύπος Συμβάντος": Array.isArray(project.event_type)
-              ? project.event_type.join(", ")
-              : project.event_type || "",
-            "Έτος Συμβάντος": Array.isArray(project.event_year)
-              ? project.event_year.join(", ")
-              : project.event_year || "",
-            "Ημ/νία Δημιουργίας": project.created_at
-              ? new Date(project.created_at).toLocaleDateString("el-GR")
-              : "",
+        projectSplits.forEach((split: any) => {
+          const proip = parseBudgetValue(split.proip);
+          const ethsiaPistosi = parseBudgetValue(split.ethsia_pistosi);
+          const q1 = parseBudgetValue(split.q1);
+          const q2 = parseBudgetValue(split.q2);
+          const q3 = parseBudgetValue(split.q3);
+          const q4 = parseBudgetValue(split.q4);
+          const katanomesEtous = parseBudgetValue(split.katanomes_etous);
+          const userView = parseBudgetValue(split.user_view);
 
-            // Budget Split Data
-            "ID Κατανομής": split.id || "",
-            ΠΡΟΙΠ: split.proip || "",
-            "Ετήσια Πίστωση": split.ethsia_pistosi || "",
-            "Α΄ Τρίμηνο": split.q1 || "",
-            "Β΄ Τρίμηνο": split.q2 || "",
-            "Γ΄ Τρίμηνο": split.q3 || "",
-            "Δ΄ Τρίμηνο": split.q4 || "",
-            "Κατανομές Έτους": split.katanomes_etous || "",
-            [`Δαπάνες ${new Date().getFullYear()}`]: split.user_view || "",
+          if (proip) totalProip += proip;
+          if (ethsiaPistosi) totalEthsiaPistosi += ethsiaPistosi;
+          if (q1) totalQ1 += q1;
+          if (q2) totalQ2 += q2;
+          if (q3) totalQ3 += q3;
+          if (q4) totalQ4 += q4;
+          if (katanomesEtous) totalKatanomesEtous += katanomesEtous;
+          if (userView) totalUserView += userView;
+
+          wsIntegrated.addRow({
+            mis: project.mis || "-",
+            na853: project.na853 || "-",
+            title: project.project_title || project.event_description || "-",
+            status: project.status || "-",
+            unit: project.enhanced_unit || "-",
+            expenditure_type: formatArrayField(project.expenditure_types),
+            event_type: formatArrayField(project.event_types),
+            event_year: formatArrayField(project.event_year),
+            region: formatRegionData(project.region),
+            budget_na853: budgetNA853,
+            budget_na271: budgetNA271,
+            budget_e069: budgetE069,
+            proip: proip,
+            ethsia_pistosi: ethsiaPistosi,
+            q1: q1,
+            q2: q2,
+            q3: q3,
+            q4: q4,
+            katanomes_etous: katanomesEtous,
+            user_view: userView,
+            inc_year: project.inc_year || "-",
+            created_at: project.created_at
+              ? new Date(project.created_at).toLocaleDateString("el-GR")
+              : "-",
           });
         });
       }
     });
 
-    // Create a separate Budget Splits Only worksheet
-    const budgetSplitsOnly = budgetSplits
-      ? budgetSplits.map((split) => ({
-          ID: split.id || "",
-          ΜΙS: split.mis || "",
-          ΝΑ853: split.na853 || "",
-          ΠΡΟΙΠ: split.proip || "",
-          "Ετήσια Πίστωση": split.ethsia_pistosi || "",
-          "Α΄ Τρίμηνο": split.q1 || "",
-          "Β΄ Τρίμηνο": split.q2 || "",
-          "Γ΄ Τρίμηνο": split.q3 || "",
-          "Δ΄ Τρίμηνο": split.q4 || "",
-          "Κατανομές Έτους": split.katanomes_etous || "",
-          [`Δαπάνες ${new Date().getFullYear()}`]: split.user_view || "",
-        }))
-      : [];
-
-    // Create the main workbook
-    const wb = XLSX.utils.book_new();
-
-    // Add the integrated projects and budget data worksheet
-    const wsIntegrated = XLSX.utils.json_to_sheet(combinedData);
-
-    // Set column widths for integrated worksheet
-    const colWidthsIntegrated = Object.keys(combinedData[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsIntegrated["!cols"] = colWidthsIntegrated;
-    XLSX.utils.book_append_sheet(wb, wsIntegrated, "Έργα με Κατανομές");
-
-    // Add a worksheet with only Projects data (simplified view)
-    const projectsOnly = projects.map((project) => ({
-      ΜΙS: project.mis || "",
-      ΝΑ853: project.na853 || "",
-      Τίτλος:
-        project.title ||
-        project.project_title ||
-        project.event_description ||
-        "",
-      Κατάσταση: project.status || "",
-      "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-      "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-      "Προϋπολογισμός Ε069": project.budget_e069 || "",
-      "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-        ? project.implementing_agency.join(", ")
-        : project.implementing_agency || "",
-      "Τύπος Συμβάντος": Array.isArray(project.event_type)
-        ? project.event_type.join(", ")
-        : project.event_type || "",
-      "Έτος Συμβάντος": Array.isArray(project.event_year)
-        ? project.event_year.join(", ")
-        : project.event_year || "",
-      "Ημ/νία Δημιουργίας": project.created_at
-        ? new Date(project.created_at).toLocaleDateString("el-GR")
-        : "",
-    }));
-
-    const wsProjects = XLSX.utils.json_to_sheet(projectsOnly);
-    const colWidthsProjects = Object.keys(projectsOnly[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsProjects["!cols"] = colWidthsProjects;
-    XLSX.utils.book_append_sheet(wb, wsProjects, "Μόνο Έργα");
-
-    // Add the Budget Splits Only worksheet
-    const wsBudgets = XLSX.utils.json_to_sheet(budgetSplitsOnly);
-    const colWidthsBudgets = Object.keys(budgetSplitsOnly[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsBudgets["!cols"] = colWidthsBudgets;
-    XLSX.utils.book_append_sheet(wb, wsBudgets, "Μόνο Κατανομές");
-
-    // Helper function to apply European number formatting to worksheet
-    const applyEuropeanNumberFormatting = (ws: XLSX.WorkSheet) => {
-      const currentYear = new Date().getFullYear();
-      const numericColumns = [
-        "Προϋπολογισμός ΝΑ853",
-        "Προϋπολογισμός ΝΑ271",
-        "Προϋπολογισμός Ε069",
-        "ΠΡΟΙΠ",
-        "Ετήσια Πίστωση",
-        "Α΄ Τρίμηνο",
-        "Β΄ Τρίμηνο",
-        "Γ΄ Τρίμηνο",
-        "Δ΄ Τρίμηνο",
-        "Κατανομές Έτους",
-        `Δαπάνες ${currentYear}`,
-      ];
-
-      for (const cell in ws) {
-        if (cell.startsWith("!")) continue; // Skip metadata
-
-        const cellRef = XLSX.utils.decode_cell(cell);
-        const col = XLSX.utils.encode_col(cellRef.c);
-        const row = cellRef.r;
-
-        // Get the header from the first row to identify numeric columns
-        const headerCell = ws[`${col}1`];
-        if (headerCell && numericColumns.includes(headerCell.v)) {
-          // Apply European number format: #,##0.00 with comma as decimal separator
-          if (!ws[cell]) ws[cell] = {};
-          if (typeof ws[cell].v === "number") {
-            ws[cell].z = "#,##0.00"; // Format code for European-style numbers
+    // Apply data styles and currency format
+    const currencyColumns = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // Column indices for currency
+    wsIntegrated.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (currencyColumns.includes(colNumber)) {
+            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.alignment = { horizontal: "right", vertical: "middle" };
           }
+          cell.border = dataStyle.border;
+        });
+        row.height = 22;
+      }
+    });
+
+    // Add totals row
+    const totalRow = wsIntegrated.addRow({
+      mis: "",
+      na853: "ΣΥΝΟΛΑ:",
+      title: "",
+      status: "",
+      unit: "",
+      expenditure_type: "",
+      event_type: "",
+      event_year: "",
+      region: "",
+      budget_na853: totalBudgetNA853,
+      budget_na271: totalBudgetNA271,
+      budget_e069: totalBudgetE069,
+      proip: totalProip,
+      ethsia_pistosi: totalEthsiaPistosi,
+      q1: totalQ1,
+      q2: totalQ2,
+      q3: totalQ3,
+      q4: totalQ4,
+      katanomes_etous: totalKatanomesEtous,
+      user_view: totalUserView,
+      inc_year: "",
+      created_at: "",
+    });
+
+    totalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (currencyColumns.includes(colNumber)) {
+        cell.numFmt = "#,##0.00\\ \"€\"";
+      }
+    });
+    totalRow.height = 28;
+
+    // Add alternating row colors
+    wsIntegrated.eachRow((row, rowNumber) => {
+      if (rowNumber > 1 && rowNumber < wsIntegrated.rowCount) {
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            if (!cell.fill || (cell.fill as ExcelJS.FillPattern).fgColor?.argb !== "FFE2EFDA") {
+              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+            }
+          });
         }
       }
-    };
+    });
 
-    // Apply European formatting to all worksheets
-    applyEuropeanNumberFormatting(wsIntegrated);
-    applyEuropeanNumberFormatting(wsProjects);
-    applyEuropeanNumberFormatting(wsBudgets);
+    // ========== SHEET 2: Projects Only ==========
+    const wsProjects = workbook.addWorksheet("Μόνο Έργα", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    const projectColumns = [
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "ΝΑ271", key: "na271", width: 15 },
+      { header: "Ε069", key: "e069", width: 15 },
+      { header: "Τίτλος Έργου", key: "title", width: 50 },
+      { header: "Περίληψη", key: "summary", width: 40 },
+      { header: "Κατάσταση", key: "status", width: 14 },
+      { header: "Μονάδα", key: "unit", width: 25 },
+      { header: "Τύπος Δαπάνης", key: "expenditure_type", width: 20 },
+      { header: "Τύπος Συμβάντος", key: "event_type", width: 20 },
+      { header: "Έτος Συμβάντος", key: "event_year", width: 15 },
+      { header: "Έτος Ένταξης", key: "inc_year", width: 14 },
+      { header: "Περιφέρεια", key: "region", width: 30 },
+      { header: "Π/Υ ΝΑ853 (€)", key: "budget_na853", width: 18 },
+      { header: "Π/Υ ΝΑ271 (€)", key: "budget_na271", width: 18 },
+      { header: "Π/Υ Ε069 (€)", key: "budget_e069", width: 18 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+      { header: "Ημ/νία Ενημέρωσης", key: "updated_at", width: 16 },
+    ];
+
+    wsProjects.columns = projectColumns;
+
+    // Apply header styles
+    wsProjects.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsProjects.getRow(1).height = 35;
+
+    // Add project data
+    let projectTotalNA853 = 0;
+    let projectTotalNA271 = 0;
+    let projectTotalE069 = 0;
+
+    enhancedProjects.forEach((project) => {
+      const budgetNA853 = parseBudgetValue(project.budget_na853);
+      const budgetNA271 = parseBudgetValue(project.budget_na271);
+      const budgetE069 = parseBudgetValue(project.budget_e069);
+
+      if (budgetNA853) projectTotalNA853 += budgetNA853;
+      if (budgetNA271) projectTotalNA271 += budgetNA271;
+      if (budgetE069) projectTotalE069 += budgetE069;
+
+      wsProjects.addRow({
+        mis: project.mis || "-",
+        na853: project.na853 || "-",
+        na271: project.na271 || "-",
+        e069: project.e069 || "-",
+        title: project.project_title || project.event_description || "-",
+        summary: project.summary || "-",
+        status: project.status || "-",
+        unit: project.enhanced_unit || "-",
+        expenditure_type: formatArrayField(project.expenditure_types),
+        event_type: formatArrayField(project.event_types),
+        event_year: formatArrayField(project.event_year),
+        inc_year: project.inc_year || "-",
+        region: formatRegionData(project.region),
+        budget_na853: budgetNA853,
+        budget_na271: budgetNA271,
+        budget_e069: budgetE069,
+        created_at: project.created_at
+          ? new Date(project.created_at).toLocaleDateString("el-GR")
+          : "-",
+        updated_at: project.updated_at
+          ? new Date(project.updated_at).toLocaleDateString("el-GR")
+          : "-",
+      });
+    });
+
+    // Apply styles
+    const projectCurrencyColumns = [14, 15, 16];
+    wsProjects.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (projectCurrencyColumns.includes(colNumber)) {
+            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          }
+          cell.border = dataStyle.border;
+        });
+        row.height = 22;
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+          });
+        }
+      }
+    });
+
+    // Add totals row for projects
+    const projectTotalRow = wsProjects.addRow({
+      mis: "",
+      na853: "ΣΥΝΟΛΑ:",
+      na271: "",
+      e069: "",
+      title: `${enhancedProjects.length} Έργα`,
+      summary: "",
+      status: "",
+      unit: "",
+      expenditure_type: "",
+      event_type: "",
+      event_year: "",
+      inc_year: "",
+      region: "",
+      budget_na853: projectTotalNA853,
+      budget_na271: projectTotalNA271,
+      budget_e069: projectTotalE069,
+      created_at: "",
+      updated_at: "",
+    });
+
+    projectTotalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (projectCurrencyColumns.includes(colNumber)) {
+        cell.numFmt = "#,##0.00\\ \"€\"";
+      }
+    });
+    projectTotalRow.height = 28;
+
+    // ========== SHEET 3: Budget Allocations Only ==========
+    const wsBudgets = workbook.addWorksheet("Μόνο Κατανομές", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    const budgetColumns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "ΠΡΟΙΠ (€)", key: "proip", width: 18 },
+      { header: "Ετήσια Πίστωση (€)", key: "ethsia_pistosi", width: 18 },
+      { header: "Α΄ Τρίμηνο (€)", key: "q1", width: 16 },
+      { header: "Β΄ Τρίμηνο (€)", key: "q2", width: 16 },
+      { header: "Γ΄ Τρίμηνο (€)", key: "q3", width: 16 },
+      { header: "Δ΄ Τρίμηνο (€)", key: "q4", width: 16 },
+      { header: "Κατανομές Έτους (€)", key: "katanomes_etous", width: 18 },
+      { header: `Δαπάνες ${currentYear} (€)`, key: "user_view", width: 18 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+    ];
+
+    wsBudgets.columns = budgetColumns;
+
+    // Apply header styles
+    wsBudgets.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsBudgets.getRow(1).height = 35;
+
+    // Add budget data with totals calculation
+    let budgetTotalProip = 0;
+    let budgetTotalEthsia = 0;
+    let budgetTotalQ1 = 0;
+    let budgetTotalQ2 = 0;
+    let budgetTotalQ3 = 0;
+    let budgetTotalQ4 = 0;
+    let budgetTotalKatanomes = 0;
+    let budgetTotalUserView = 0;
+
+    if (budgetSplits && budgetSplits.length > 0) {
+      budgetSplits.forEach((split) => {
+        const proip = parseBudgetValue(split.proip);
+        const ethsia = parseBudgetValue(split.ethsia_pistosi);
+        const q1 = parseBudgetValue(split.q1);
+        const q2 = parseBudgetValue(split.q2);
+        const q3 = parseBudgetValue(split.q3);
+        const q4 = parseBudgetValue(split.q4);
+        const katanomes = parseBudgetValue(split.katanomes_etous);
+        const userView = parseBudgetValue(split.user_view);
+
+        if (proip) budgetTotalProip += proip;
+        if (ethsia) budgetTotalEthsia += ethsia;
+        if (q1) budgetTotalQ1 += q1;
+        if (q2) budgetTotalQ2 += q2;
+        if (q3) budgetTotalQ3 += q3;
+        if (q4) budgetTotalQ4 += q4;
+        if (katanomes) budgetTotalKatanomes += katanomes;
+        if (userView) budgetTotalUserView += userView;
+
+        wsBudgets.addRow({
+          id: split.id || "-",
+          mis: split.mis || "-",
+          na853: split.na853 || "-",
+          proip: proip,
+          ethsia_pistosi: ethsia,
+          q1: q1,
+          q2: q2,
+          q3: q3,
+          q4: q4,
+          katanomes_etous: katanomes,
+          user_view: userView,
+          created_at: split.created_at
+            ? new Date(split.created_at).toLocaleDateString("el-GR")
+            : "-",
+        });
+      });
+    }
+
+    // Apply styles
+    const budgetCurrencyColumns = [4, 5, 6, 7, 8, 9, 10, 11];
+    wsBudgets.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (budgetCurrencyColumns.includes(colNumber)) {
+            cell.numFmt = "#,##0.00\\ \"€\"";
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          }
+          cell.border = dataStyle.border;
+        });
+        row.height = 22;
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+          });
+        }
+      }
+    });
+
+    // Add totals row for budgets
+    const budgetTotalRow = wsBudgets.addRow({
+      id: "",
+      mis: "ΣΥΝΟΛΑ:",
+      na853: `${budgetSplits?.length || 0} Εγγραφές`,
+      proip: budgetTotalProip,
+      ethsia_pistosi: budgetTotalEthsia,
+      q1: budgetTotalQ1,
+      q2: budgetTotalQ2,
+      q3: budgetTotalQ3,
+      q4: budgetTotalQ4,
+      katanomes_etous: budgetTotalKatanomes,
+      user_view: budgetTotalUserView,
+      created_at: "",
+    });
+
+    budgetTotalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (budgetCurrencyColumns.includes(colNumber)) {
+        cell.numFmt = "#,##0.00\\ \"€\"";
+      }
+    });
+    budgetTotalRow.height = 28;
 
     // Generate buffer and send the response
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Format current date as dd-mm-yyyy
     const today = new Date();
@@ -707,10 +1007,10 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       "Content-Disposition",
       `attachment; filename="${encodedFilename}"`,
     );
-    res.setHeader("Content-Length", buffer.length.toString());
+    res.setHeader("Content-Length", buffer.byteLength.toString());
 
-    res.end(buffer);
-    console.log(`[Projects] Excel export successful: ${encodedFilename}`);
+    res.end(Buffer.from(buffer));
+    console.log(`[Projects] Professional Excel export successful: ${encodedFilename} (${enhancedProjects.length} projects, ${budgetSplits?.length || 0} budget entries)`);
   } catch (error) {
     console.error("Error generating Excel export:", error);
     res.status(500).json({
