@@ -76,6 +76,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
         return {
           user_view: parseFloat(budgetData.user_view?.toString() || '0'),
           total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
+          proip: parseFloat(budgetData.proip?.toString() || '0'),
           katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
           ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
           current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
@@ -593,7 +594,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     <Target className="w-3.5 h-3.5 text-blue-500" />
                   </div>
                   <p className="text-xl font-bold text-foreground" data-testid={`text-total-budget-${project.id}`}>
-                    {formatCurrency(Number(project.budget_na853) || 0)}
+                    {formatCurrency(budgetData?.proip ? Number(budgetData.proip) : Number(project.budget_na853) || 0)}
                   </p>
                 </div>
 

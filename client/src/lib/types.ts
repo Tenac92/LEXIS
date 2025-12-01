@@ -1,6 +1,7 @@
 export interface BudgetData {
   current_budget: string | number;
   total_budget?: string | number;
+  proip?: string | number; // Προϋπολογισμός - from budget upload
   annual_budget?: string | number;
   katanomes_etous?: string | number;
   ethsia_pistosi: string | number;
