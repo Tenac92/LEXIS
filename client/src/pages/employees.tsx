@@ -18,30 +18,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { Plus, Search, Edit, Trash2, Users, Upload, Trash } from "lucide-react";
 import { Header } from "@/components/header";
 
 export default function EmployeesPage() {
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUnit, setSelectedUnit] = useState("all");
+  const [selectedUnit, setSelectedUnit] = useState(user?.unit_id?.[0] && isManager ? (units?.find((u: any) => u.id === user.unit_id[0])?.code || "all") : "all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const { toast } = useToast();
-
-  // Fetch employees with optional unit filter
-  const { data: employees = [], isLoading } = useQuery({
-    queryKey: ['/api/employees', selectedUnit !== 'all' ? selectedUnit : undefined],
-    queryFn: () => {
-      const params = selectedUnit !== 'all' ? `?unit=${selectedUnit}` : '';
-      return fetch(`/api/employees${params}`).then(res => res.json()).then(data => data.data || []);
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false,
-    refetchOnMount: "stale"
-  });
 
   // Fetch available units for filtering
   const { data: units = [] } = useQuery({
@@ -54,6 +44,24 @@ export default function EmployeesPage() {
     },
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: "stale"
+  });
+
+  // For managers, force their unit; for admins, use selected unit
+  const filterUnitForQuery = isManager && user?.unit_id?.[0] 
+    ? (units?.find((u: any) => u.id === user.unit_id[0])?.code || selectedUnit)
+    : selectedUnit;
+
+  // Fetch employees with optional unit filter
+  const { data: employees = [], isLoading } = useQuery({
+    queryKey: ['/api/employees', filterUnitForQuery !== 'all' ? filterUnitForQuery : undefined],
+    queryFn: () => {
+      const params = filterUnitForQuery !== 'all' ? `?unit=${filterUnitForQuery}` : '';
+      return fetch(`/api/employees${params}`).then(res => res.json()).then(data => data.data || []);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: "stale"
   });
