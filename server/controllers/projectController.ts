@@ -550,7 +550,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     // Create ExcelJS workbook
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "ΓΓΠΠ - Σύστημα Διαχείρισης Έργων";
+    workbook.creator = "ΓΓΠΠ - SUM-e";
     workbook.created = new Date();
     workbook.modified = new Date();
 

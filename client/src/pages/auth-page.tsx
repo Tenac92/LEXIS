@@ -45,7 +45,7 @@ export default function AuthPage() {
         <div>
           <CardHeader>
             <CardTitle className="text-2xl font-bold bg-gradient-to-br from-primary to-primary-foreground bg-clip-text text-transparent">
-              Σύστημα Διαχείρισης Εγγράφων
+              SUM-e
             </CardTitle>
           </CardHeader>
 
