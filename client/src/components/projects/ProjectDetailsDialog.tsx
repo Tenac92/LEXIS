@@ -13,7 +13,6 @@ import type {
   ProjectIndex,
   EventType,
   ExpenditureType,
-  Kallikratis,
   Monada,
   ProjectDecision,
   ProjectFormulation
@@ -28,7 +27,6 @@ interface ProjectDetailsDialogProps {
 // Enhanced types for API responses with joins
 interface ProjectIndexWithJoins extends ProjectIndex {
   monada?: Monada;
-  kallikratis?: Kallikratis;
   event_types?: EventType;
   expenditure_types?: ExpenditureType;
 }
@@ -48,6 +46,13 @@ interface CompleteProjectResponse {
   index?: ProjectIndexWithJoins | ProjectIndexWithJoins[];
   decisions?: ProjectDecision | ProjectDecision[];
   formulations?: ProjectFormulation | ProjectFormulation[];
+  units?: any[];
+  expenditureTypes?: any[];
+  projectGeographicData?: {
+    regions?: any[];
+    regionalUnits?: any[];
+    municipalities?: any[];
+  };
 }
 
 export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({

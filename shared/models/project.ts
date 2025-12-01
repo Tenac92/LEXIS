@@ -88,8 +88,8 @@ export const projectHelpers = {
     'KYA': Array.isArray(project.kya) ? project.kya.join(', ') : (typeof project.kya === 'string' ? project.kya : ''),
     'FEK': Array.isArray(project.fek) ? project.fek.join(', ') : (typeof project.fek === 'string' ? project.fek : ''),
     'ADA': Array.isArray(project.ada) ? project.ada.join(', ') : (typeof project.ada === 'string' ? project.ada : ''),
-    'Created At': project.created_at?.toLocaleDateString() || '',
-    'Updated At': project.updated_at?.toLocaleDateString() || ''
+    'Created At': typeof project.created_at === 'string' ? project.created_at : project.created_at?.toLocaleDateString() || '',
+    'Updated At': typeof project.updated_at === 'string' ? project.updated_at : project.updated_at?.toLocaleDateString() || ''
   }),
 
   validateProject: (data: unknown): Project => {
