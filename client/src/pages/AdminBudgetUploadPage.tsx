@@ -21,6 +21,9 @@ const formSchema = z.object({
       message: 'Please select an Excel or CSV file',
     })
     .refine((file) => {
+      if (!file || !(file instanceof FileList) || file.length === 0) {
+        return true; // Let the first refine handle validation
+      }
       const fileName = file[0]?.name?.toLowerCase();
       return fileName?.endsWith('.xlsx') || fileName?.endsWith('.xls') || fileName?.endsWith('.csv');
     }, {
