@@ -224,19 +224,24 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
       <Header />
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto px-4 py-8">
         <div className="space-y-6">
           {/* Page Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Διαχείριση Υπαλλήλων</h1>
-              <p className="text-muted-foreground">
+          <div className="flex items-start justify-between mb-8">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <h1 className="text-4xl font-bold tracking-tight">Διαχείριση Υπαλλήλων</h1>
+              </div>
+              <p className="text-base text-muted-foreground">
                 Διαχειριστείτε τον κατάλογο υπαλλήλων για αυτόματη συμπλήρωση στα έγγραφα
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
           {!isManager && (
             <>
               <EmployeeDialog
@@ -245,8 +250,8 @@ export default function EmployeesPage() {
                 onSubmit={(data) => createEmployeeMutation.mutate(data)}
                 isLoading={createEmployeeMutation.isPending}
                 trigger={
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" />
                     Νέος Υπάλληλος
                   </Button>
                 }
@@ -265,8 +270,9 @@ export default function EmployeesPage() {
                   }
                 }}
                 disabled={cleanupDuplicatesMutation.isPending}
+                className="gap-2"
               >
-                <Trash className="h-4 w-4 mr-2" />
+                <Trash className="h-4 w-4" />
                 {cleanupDuplicatesMutation.isPending ? 'Γίνεται καθαρισμός...' : 'Αφαίρεση Διπλοτύπων'}
               </Button>
             </>
@@ -275,110 +281,131 @@ export default function EmployeesPage() {
         </div>
 
         {/* Search and Filters */}
-        <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
+        <Card className="border-0 shadow-sm bg-white/50 backdrop-blur supports-[backdrop-filter]:bg-white/40">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Search className="h-4 w-4 text-primary" />
             Αναζήτηση & Φίλτρα
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Αναζήτηση με όνομα, επώνυμο, πατρώνυμο ή ΑΦΜ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Select value={filterUnitForQuery} onValueChange={isManager ? undefined : setSelectedUnit} disabled={isManager}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Επιλογή μονάδας" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Όλες οι μονάδες</SelectItem>
-              {Array.isArray(units) && units.length > 0 ? (
-                units.map((unit: any) => (
-                  <SelectItem key={unit.id} value={unit.code || unit.unit || unit.id}>
-                    {unit.name || unit.unit_name?.name || unit.code || unit.unit}
+        <CardContent className="space-y-4">
+          <div className="flex gap-4 flex-col md:flex-row">
+            <div className="flex-1">
+              <Input
+                placeholder="Αναζήτηση με όνομα, επώνυμο, πατρώνυμο ή ΑΦΜ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-white/50"
+              />
+            </div>
+            <Select value={filterUnitForQuery} onValueChange={isManager ? undefined : setSelectedUnit} disabled={isManager}>
+              <SelectTrigger className="w-full md:w-48 bg-white/50">
+                <SelectValue placeholder="Επιλογή μονάδας" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Όλες οι μονάδες</SelectItem>
+                {Array.isArray(units) && units.length > 0 ? (
+                  units.map((unit: any) => (
+                    <SelectItem key={unit.id} value={unit.code || unit.unit || unit.id}>
+                      {unit.name || unit.unit_name?.name || unit.code || unit.unit}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="all" disabled>
+                    Φόρτωση μονάδων...
                   </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="all" disabled>
-                  Φόρτωση μονάδων...
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
       {/* Employees Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Κατάλογος Υπαλλήλων ({filteredEmployees.length})
-          </CardTitle>
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-4 border-b">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="h-4 w-4 text-primary" />
+              Κατάλογος Υπαλλήλων
+            </CardTitle>
+            <Badge variant="secondary" className="text-base px-3 py-1">
+              {filteredEmployees.length} υπάλληλοι
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {isLoading ? (
-            <div className="text-center py-8">Φόρτωση υπαλλήλων...</div>
+            <div className="text-center py-12">
+              <div className="inline-block animate-pulse text-muted-foreground">Φόρτωση υπαλλήλων...</div>
+            </div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-muted-foreground">Δεν βρέθηκαν υπάλληλοι</p>
+            </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">ID</TableHead>
-                  <TableHead>Επώνυμο</TableHead>
-                  <TableHead>Όνομα</TableHead>
-                  <TableHead>Πατρώνυμο</TableHead>
-                  <TableHead>ΑΦΜ</TableHead>
-                  <TableHead>Κλάδος</TableHead>
-                  <TableHead>Ιδιότητα</TableHead>
-                  <TableHead>Χώρος Εργασίας</TableHead>
-                  <TableHead>Μονάδα</TableHead>
-                  <TableHead className="w-24">Ενέργειες</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEmployees.map((employee: Employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell className="text-xs text-muted-foreground">{employee.id}</TableCell>
-                    <TableCell className="font-medium">{employee.surname}</TableCell>
-                    <TableCell>{employee.name}</TableCell>
-                    <TableCell>{employee.fathername}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{maskAFM(employee.afm)}</Badge>
-                    </TableCell>
-                    <TableCell>{employee.klados}</TableCell>
-                    <TableCell>{employee.attribute}</TableCell>
-                    <TableCell>{employee.workaf}</TableCell>
-                    <TableCell>{employee.monada}</TableCell>
-                    <TableCell>
-                      {!isManager && (
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(employee)}
-                            data-testid={`button-edit-employee-${employee.id}`}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(employee)}
-                            data-testid={`button-delete-employee-${employee.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableHead className="w-12 text-xs font-semibold">ID</TableHead>
+                    <TableHead className="font-semibold">Επώνυμο</TableHead>
+                    <TableHead className="font-semibold">Όνομα</TableHead>
+                    <TableHead className="font-semibold">Πατρώνυμο</TableHead>
+                    <TableHead className="font-semibold">ΑΦΜ</TableHead>
+                    <TableHead className="font-semibold">Κλάδος</TableHead>
+                    <TableHead className="font-semibold">Ιδιότητα</TableHead>
+                    <TableHead className="font-semibold">Χώρος Εργασίας</TableHead>
+                    <TableHead className="font-semibold">Μονάδα</TableHead>
+                    <TableHead className="w-24 text-center font-semibold">Ενέργειες</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredEmployees.map((employee: Employee) => (
+                    <TableRow key={employee.id} className="hover:bg-muted/40 transition-colors">
+                      <TableCell className="text-xs text-muted-foreground font-medium">{employee.id}</TableCell>
+                      <TableCell className="font-semibold text-foreground">{employee.surname}</TableCell>
+                      <TableCell className="text-foreground">{employee.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{employee.fathername}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-mono text-xs">{maskAFM(employee.afm)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{employee.klados}</TableCell>
+                      <TableCell className="text-sm">{employee.attribute}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{employee.workaf}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20">{employee.monada}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {!isManager && (
+                          <div className="flex gap-2 justify-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(employee)}
+                              data-testid={`button-edit-employee-${employee.id}`}
+                              className="hover:bg-blue-50 dark:hover:bg-blue-900/20 h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(employee)}
+                              data-testid={`button-delete-employee-${employee.id}`}
+                              className="hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 p-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
