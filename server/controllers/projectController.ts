@@ -574,7 +574,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const currencyStyle: Partial<ExcelJS.Style> = {
       ...dataStyle,
       alignment: { horizontal: "right", vertical: "middle" },
-      numFmt: '#,##0.00\\ "€"',
+      numFmt: '#,##0.00 [$€-el-GR]', // Greek locale: dots for thousands, comma for decimals
     };
 
     const totalRowStyle: Partial<ExcelJS.Style> = {
@@ -736,7 +736,7 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 
     // Apply data styles and currency format
     const currencyColumns = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // Column indices for currency
-    const currencyFormat = '#,##0.00\\ "€"'; // Standard Excel format - displays according to user's locale
+    const currencyFormat = '#,##0.00 [$€-el-GR]'; // Greek locale: dots for thousands, comma for decimals
     const defaultBorder: Partial<ExcelJS.Borders> = {
       top: { style: "thin", color: { argb: "FFD9D9D9" } },
       left: { style: "thin", color: { argb: "FFD9D9D9" } },
