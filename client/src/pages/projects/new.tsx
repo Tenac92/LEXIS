@@ -215,7 +215,7 @@ const comprehensiveProjectSchema = z.object({
     }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"),
     expenses_covered: z.string().default(""),
     expenditure_type: z.array(z.number()).default([]),
-    decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση"]).default("Έγκριση"),
+    decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση", "Συμπληρωματική"]).default("Έγκριση"),
     included: z.boolean().default(true),
     comments: z.string().default(""),
   })).default([]),
@@ -435,6 +435,7 @@ export default function NewProjectPage() {
   const eventTypesData = (referenceData as any)?.eventTypes || completeProjectData?.eventTypes;
   const unitsData = (referenceData as any)?.units || completeProjectData?.units;
   const expenditureTypesData = (referenceData as any)?.expenditureTypes || completeProjectData?.expenditureTypes;
+  const forYlData = ((referenceData as any)?.forYl?.length > 0 ? (referenceData as any).forYl : completeProjectData?.forYl) as Array<{ id: number; title: string; monada_id: string }> | undefined;
   
   // Convert new geographic data format to legacy kallikratis format for SmartGeographicMultiSelect
   const kallikratisData = geographicData ? convertGeographicDataToKallikratis(geographicData as any) : [];
@@ -1266,6 +1267,7 @@ export default function NewProjectPage() {
                                     <SelectItem value="Έγκριση">Έγκριση</SelectItem>
                                     <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
                                     <SelectItem value="Παράταση">Παράταση</SelectItem>
+                                    <SelectItem value="Συμπληρωματική">Συμπληρωματική</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </FormItem>
@@ -1295,32 +1297,65 @@ export default function NewProjectPage() {
                         <div>
                           <FormLabel>Υλοποιούσες Μονάδες</FormLabel>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                            {typedUnitsData?.map((unit) => (
-                              <FormField
-                                key={unit.id}
-                                control={form.control}
-                                name={`decisions.${index}.implementing_agency`}
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(unit.id)}
-                                        onCheckedChange={(checked) => {
-                                          if (checked) {
-                                            field.onChange([...(field.value || []), unit.id]);
-                                          } else {
-                                            field.onChange((field.value || []).filter((item: number) => item !== unit.id));
-                                          }
+                            {typedUnitsData?.map((unit) => {
+                              const unitIdStr = String(unit.id);
+                              const availableForYl = forYlData?.filter(
+                                fy => fy.monada_id && String(fy.monada_id) === unitIdStr
+                              ) || [];
+                              const isUnitChecked = form.watch(`decisions.${index}.implementing_agency`)?.includes(unit.id);
+                              
+                              return (
+                                <div key={unit.id} className="space-y-1">
+                                  <FormField
+                                    control={form.control}
+                                    name={`decisions.${index}.implementing_agency`}
+                                    render={({ field }) => (
+                                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                        <FormControl>
+                                          <Checkbox
+                                            checked={field.value?.includes(unit.id)}
+                                            onCheckedChange={(checked) => {
+                                              if (checked) {
+                                                field.onChange([...(field.value || []), unit.id]);
+                                              } else {
+                                                field.onChange((field.value || []).filter((item: number) => item !== unit.id));
+                                              }
+                                            }}
+                                          />
+                                        </FormControl>
+                                        <FormLabel className="text-sm font-normal">
+                                          {unit.unit_name?.name || unit.name || unit.unit}
+                                        </FormLabel>
+                                      </FormItem>
+                                    )}
+                                  />
+                                  {/* Show for_yl dropdown if unit is checked and has available for_yl options */}
+                                  {isUnitChecked && availableForYl.length > 0 && (
+                                    <div className="ml-6 mt-1">
+                                      <Select
+                                        onValueChange={(value) => {
+                                          // Store for_yl selection in a separate state or form field if needed
+                                          console.log(`Selected for_yl ${value} for unit ${unit.id}`);
                                         }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="text-sm font-normal">
-                                      {unit.unit_name?.name || unit.name || unit.unit}
-                                    </FormLabel>
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
+                                        defaultValue="none"
+                                      >
+                                        <SelectTrigger className="h-8 text-xs">
+                                          <SelectValue placeholder="Φορέας Υλοποίησης" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="none">Κανένας</SelectItem>
+                                          {availableForYl.map((fy) => (
+                                            <SelectItem key={fy.id} value={String(fy.id)}>
+                                              {fy.title}
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
