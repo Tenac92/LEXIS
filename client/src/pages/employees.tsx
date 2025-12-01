@@ -26,7 +26,7 @@ export default function EmployeesPage() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedUnit, setSelectedUnit] = useState(user?.unit_id?.[0] && isManager ? (units?.find((u: any) => u.id === user.unit_id[0])?.code || "all") : "all");
+  const [selectedUnit, setSelectedUnit] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
@@ -231,36 +231,40 @@ export default function EmployeesPage() {
               </p>
             </div>
             <div className="flex gap-2">
-          <EmployeeDialog
-            isOpen={isCreateDialogOpen}
-            onOpenChange={setIsCreateDialogOpen}
-            onSubmit={(data) => createEmployeeMutation.mutate(data)}
-            isLoading={createEmployeeMutation.isPending}
-            trigger={
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Νέος Υπάλληλος
+          {!isManager && (
+            <>
+              <EmployeeDialog
+                isOpen={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                onSubmit={(data) => createEmployeeMutation.mutate(data)}
+                isLoading={createEmployeeMutation.isPending}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Νέος Υπάλληλος
+                  </Button>
+                }
+              />
+              <ImportEmployeesDialog
+                isOpen={isImportDialogOpen}
+                onOpenChange={setIsImportDialogOpen}
+                onImport={(employees) => importEmployeesMutation.mutate(employees)}
+                isLoading={importEmployeesMutation.isPending}
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (window.confirm('Θέλετε να αφαιρέσετε τα διπλότυπα υπαλλήλων;')) {
+                    cleanupDuplicatesMutation.mutate();
+                  }
+                }}
+                disabled={cleanupDuplicatesMutation.isPending}
+              >
+                <Trash className="h-4 w-4 mr-2" />
+                {cleanupDuplicatesMutation.isPending ? 'Γίνεται καθαρισμός...' : 'Αφαίρεση Διπλοτύπων'}
               </Button>
-            }
-          />
-          <ImportEmployeesDialog
-            isOpen={isImportDialogOpen}
-            onOpenChange={setIsImportDialogOpen}
-            onImport={(employees) => importEmployeesMutation.mutate(employees)}
-            isLoading={importEmployeesMutation.isPending}
-          />
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (window.confirm('Θέλετε να αφαιρέσετε τα διπλότυπα υπαλλήλων;')) {
-                cleanupDuplicatesMutation.mutate();
-              }
-            }}
-            disabled={cleanupDuplicatesMutation.isPending}
-          >
-            <Trash className="h-4 w-4 mr-2" />
-            {cleanupDuplicatesMutation.isPending ? 'Γίνεται καθαρισμός...' : 'Αφαίρεση Διπλοτύπων'}
-            </Button>
+            </>
+          )}
           </div>
         </div>
 
@@ -280,7 +284,7 @@ export default function EmployeesPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Select value={selectedUnit} onValueChange={setSelectedUnit}>
+          <Select value={filterUnitForQuery} onValueChange={isManager ? undefined : setSelectedUnit} disabled={isManager}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Επιλογή μονάδας" />
             </SelectTrigger>
@@ -344,24 +348,26 @@ export default function EmployeesPage() {
                     <TableCell>{employee.workaf}</TableCell>
                     <TableCell>{employee.monada}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(employee)}
-                          data-testid={`button-edit-employee-${employee.id}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(employee)}
-                          data-testid={`button-delete-employee-${employee.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {!isManager && (
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(employee)}
+                            data-testid={`button-edit-employee-${employee.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(employee)}
+                            data-testid={`button-delete-employee-${employee.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
