@@ -181,6 +181,16 @@ export default function EmployeesPage() {
     }
   };
 
+  const maskAFM = (afm: string | undefined) => {
+    if (!afm) return "";
+    const afmStr = afm.toString();
+    if (afmStr.length <= 4) return afmStr;
+    const first3 = afmStr.substring(0, 3);
+    const last3 = afmStr.substring(afmStr.length - 3);
+    const masked = afmStr.substring(3, afmStr.length - 3).replace(/./g, "*");
+    return `${first3}${masked}${last3}`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -295,7 +305,7 @@ export default function EmployeesPage() {
                     <TableCell>{employee.name}</TableCell>
                     <TableCell>{employee.fathername}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">{employee.afm}</Badge>
+                      <Badge variant="outline" className="blur-sm">{maskAFM(employee.afm)}</Badge>
                     </TableCell>
                     <TableCell>{employee.klados}</TableCell>
                     <TableCell>{employee.attribute}</TableCell>
