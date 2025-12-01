@@ -3,7 +3,7 @@
  * Complete CRUD interface for managing employees with search and filtering
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,13 +36,21 @@ export default function EmployeesPage() {
     queryFn: () => {
       const params = selectedUnit !== 'all' ? `?unit=${selectedUnit}` : '';
       return fetch(`/api/employees${params}`).then(res => res.json()).then(data => data.data || []);
-    }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
   // Fetch available units for filtering
   const { data: units = [] } = useQuery({
     queryKey: ['/api/units'],
-    queryFn: () => fetch('/api/units').then(res => res.json()).then(data => data.data || [])
+    queryFn: () => fetch('/api/units').then(res => res.json()).then(data => data.data || []),
+    staleTime: 60 * 60 * 1000, // 1 hour
+    gcTime: 2 * 60 * 60 * 1000, // 2 hours
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
   });
 
   // Create employee mutation
@@ -158,8 +166,8 @@ export default function EmployeesPage() {
     }
   });
 
-  // Filter employees based on search term
-  const filteredEmployees = employees.filter((employee: Employee) => {
+  // Filter employees based on search term (memoized to prevent unnecessary recalculations)
+  const filteredEmployees = useMemo(() => employees.filter((employee: Employee) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -168,7 +176,7 @@ export default function EmployeesPage() {
       employee.fathername?.toLowerCase().includes(searchLower) ||
       employee.afm?.includes(searchTerm)
     );
-  });
+  }), [employees, searchTerm]);
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
