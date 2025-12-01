@@ -799,7 +799,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <p className="text-orange-900">{formatCurrency(formulation.eligible_public_expense)}</p>
                                 </div>
                                 <div>
-                                  <span className="font-medium text-orange-700 block text-sm">Έκδοση ΕΠΑ:</span>
+                                  <span className="font-medium text-orange-700 block text-sm">Προγραμματιστική Περίοδος:</span>
                                   <p className="text-orange-900">{safeText(formulation.epa_version)}</p>
                                 </div>
                               </div>

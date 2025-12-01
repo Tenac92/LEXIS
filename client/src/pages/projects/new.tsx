@@ -270,7 +270,7 @@ const comprehensiveProjectSchema = z.object({
           const numericValue = parseEuropeanNumber(val);
           if (isNaN(numericValue)) return true;
           return numericValue >= 0 && numericValue <= 9999999999.99;
-        }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Προϋπολογισμός Οριοθέτησης
+        }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"), // Προϋπολογισμός Κατάρτισης
         protocol_number: z.string().default(""),
         ada: z.string().default(""),
         decision_date: z.string().default(""),
@@ -2102,7 +2102,7 @@ export default function NewProjectPage() {
                                                   name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.boundary_budget`}
                                                   render={({ field }) => (
                                                     <FormItem>
-                                                      <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
+                                                      <FormLabel>Προϋπολογισμός Κατάρτισης (€)</FormLabel>
                                                       <FormControl>
                                                         <Input 
                                                           {...field} 
@@ -2312,7 +2312,7 @@ export default function NewProjectPage() {
                                                     name={`formulation_details.${index}.budget_versions.epa.${epaIndex}.epa_version`}
                                                     render={({ field }) => (
                                                       <FormItem>
-                                                        <FormLabel>Έκδοση ΕΠΑ</FormLabel>
+                                                        <FormLabel>Προγραμματιστική Περίοδος</FormLabel>
                                                         <FormControl>
                                                           <Input {...field} placeholder="π.χ. 2021-2027" />
                                                         </FormControl>

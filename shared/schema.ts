@@ -904,7 +904,7 @@ export const projectBudgetVersions = pgTable(
     }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
 
     // ΠΔΕ specific fields
-    boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Οριοθέτησης
+    boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Κατάρτισης
 
     // ΕΠΑ specific fields
     epa_version: text("epa_version"),
@@ -1045,7 +1045,7 @@ export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
   budget_type: z.enum(["ΠΔΕ", "ΕΠΑ"], {
     required_error: "Ο τύπος προϋπολογισμού είναι υποχρεωτικός",
   }),
-  boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Οριοθέτησης
+  boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Κατάρτισης
   action_type: z
     .enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"])
     .default("Έγκριση"), // Είδος Πράξης

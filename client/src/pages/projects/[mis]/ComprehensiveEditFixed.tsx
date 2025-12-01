@@ -430,7 +430,7 @@ const comprehensiveProjectSchema = z.object({
             // ΠΔΕ fields: removed version_name, project_budget, total_public_expense, eligible_public_expense, status, connected_decisions
             // Added boundary_budget; renamed decision_type to action_type
             version_number: z.coerce.string().default("1.0"),
-            boundary_budget: z.string().default(""), // Προϋπολογισμός Οριοθέτησης (stored as string for better form handling)
+            boundary_budget: z.string().default(""), // Προϋπολογισμός Κατάρτισης (stored as string for better form handling)
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
@@ -4095,7 +4095,7 @@ export default function ComprehensiveEditFixed() {
                                                 name={`formulation_details.${index}.budget_versions.pde.${originalIndex}.boundary_budget`}
                                                 render={({ field }) => (
                                                   <FormItem>
-                                                    <FormLabel>Προϋπολογισμός Οριοθέτησης (€)</FormLabel>
+                                                    <FormLabel>Προϋπολογισμός Κατάρτισης (€)</FormLabel>
                                                     <FormControl>
                                                       <Input 
                                                         {...field}
@@ -4296,7 +4296,7 @@ export default function ComprehensiveEditFixed() {
                                                 name={`formulation_details.${index}.budget_versions.epa.${originalIndex}.epa_version`}
                                                 render={({ field }) => (
                                                   <FormItem>
-                                                    <FormLabel>Έκδοση ΕΠΑ</FormLabel>
+                                                    <FormLabel>Προγραμματιστική Περίοδος</FormLabel>
                                                     <FormControl>
                                                       <Input {...field} placeholder="π.χ. 2021-2027" />
                                                     </FormControl>
