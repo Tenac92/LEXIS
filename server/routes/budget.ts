@@ -1514,55 +1514,74 @@ router.get(
         }));
 
       // ============================================
-      // WORKSHEET 4: Change Type Analysis
+      // WORKSHEET 4: Expenditure Type Analysis
       // ============================================
-      const changeTypeSummary = new Map<
+      // Fetch all expenditure types
+      const { data: expenditureTypesData } = await supabase
+        .from("expenditure_types")
+        .select("id, expenditure_types");
+
+      // Create a map of expenditure type id to name
+      const expenditureTypeMap = new Map<number, string>();
+      (expenditureTypesData || []).forEach((et: any) => {
+        expenditureTypeMap.set(et.id, et.expenditure_types);
+      });
+
+      // Create a map of project_index.id to expenditure_type_id
+      const projectIndexExpenditureMap = new Map<number, number>();
+      if (projectIndexData) {
+        projectIndexData.forEach((pi: any) => {
+          if (pi.id && pi.expenditure_type_id) {
+            projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
+          }
+        });
+      }
+
+      const expenditureTypeSummary = new Map<
         string,
         {
-          type: string;
-          typeGreek: string;
+          typeName: string;
           count: number;
           totalAmount: number;
           avgAmount: number;
         }
       >();
 
-      const changeTypeLabels: Record<string, string> = {
-        spending: "Δαπάνη",
-        refund: "Επιστροφή",
-        document_created: "Δημιουργία Εγγράφου",
-        import: "Εισαγωγή",
-        quarter_change: "Αλλαγή Τριμήνου",
-        year_end_closure: "Κλείσιμο Έτους",
-        manual_adjustment: "Χειροκίνητη Προσαρμογή",
-        notification_created: "Δημιουργία Ειδοποίησης",
-      };
-
       (historyData || []).forEach((entry: any) => {
-        const type = entry.change_type || "unknown";
+        // Get expenditure type via generated_documents.project_index_id
+        const genDocs = entry.generated_documents;
+        let typeName = "Χωρίς Τύπο Δαπάνης";
+
+        if (genDocs && genDocs.length > 0 && genDocs[0]?.project_index_id) {
+          const projectIndexId = genDocs[0].project_index_id;
+          const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
+          if (expenditureTypeId) {
+            typeName = expenditureTypeMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
+          }
+        }
+
         const change =
           (parseFloat(entry.new_amount) || 0) -
           (parseFloat(entry.previous_amount) || 0);
 
-        if (!changeTypeSummary.has(type)) {
-          changeTypeSummary.set(type, {
-            type,
-            typeGreek: changeTypeLabels[type] || type,
+        if (!expenditureTypeSummary.has(typeName)) {
+          expenditureTypeSummary.set(typeName, {
+            typeName,
             count: 0,
             totalAmount: 0,
             avgAmount: 0,
           });
         }
 
-        const summary = changeTypeSummary.get(type)!;
+        const summary = expenditureTypeSummary.get(typeName)!;
         summary.count++;
         summary.totalAmount += change;
       });
 
-      const changeTypeAnalysis = Array.from(changeTypeSummary.values())
+      const expenditureTypeAnalysis = Array.from(expenditureTypeSummary.values())
         .sort((a, b) => b.count - a.count)
         .map((c) => ({
-          "Τύπος Αλλαγής": c.typeGreek,
+          "Τύπος Δαπάνης": c.typeName,
           Πλήθος: c.count,
           "Συνολική Μεταβολή": c.totalAmount,
           "Μέση Μεταβολή":
@@ -1784,17 +1803,17 @@ router.get(
         XLSX.utils.book_append_sheet(wb, ws3, "Ανά Περιφέρεια");
       }
 
-      // 4. Change Type Analysis
-      if (changeTypeAnalysis.length > 0) {
-        const ws4 = XLSX.utils.json_to_sheet(changeTypeAnalysis);
-        ws4["!cols"] = Object.keys(changeTypeAnalysis[0]).map(() => ({
-          wch: 20,
+      // 4. Expenditure Type Analysis
+      if (expenditureTypeAnalysis.length > 0) {
+        const ws4 = XLSX.utils.json_to_sheet(expenditureTypeAnalysis);
+        ws4["!cols"] = Object.keys(expenditureTypeAnalysis[0]).map(() => ({
+          wch: 25,
         }));
         applyEuropeanNumberFormatting(ws4, [
           "Συνολική Μεταβολή",
           "Μέση Μεταβολή",
         ]);
-        XLSX.utils.book_append_sheet(wb, ws4, "Ανά Τύπο Αλλαγής");
+        XLSX.utils.book_append_sheet(wb, ws4, "Ανά Τύπο Δαπάνης");
       }
 
       // 5. Monthly Trend
