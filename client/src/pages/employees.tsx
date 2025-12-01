@@ -329,22 +329,24 @@ export default function EmployeesPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      {editingEmployee && (
-        <EmployeeDialog
-          isOpen={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSubmit={(data) => 
-            updateEmployeeMutation.mutate({ 
-              id: editingEmployee.id, 
-              data 
-            })
-          }
-          isLoading={updateEmployeeMutation.isPending}
-          employee={editingEmployee}
-          title="Επεξεργασία Υπαλλήλου"
-        />
-      )}
+        {/* Edit Dialog */}
+        {editingEmployee && (
+          <EmployeeDialog
+            isOpen={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
+            onSubmit={(data) => 
+              updateEmployeeMutation.mutate({ 
+                id: editingEmployee.id, 
+                data 
+              })
+            }
+            isLoading={updateEmployeeMutation.isPending}
+            employee={editingEmployee}
+            title="Επεξεργασία Υπαλλήλου"
+          />
+        )}
+        </div>
+      </main>
     </div>
   );
 }
