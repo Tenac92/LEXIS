@@ -305,7 +305,7 @@ export default function EmployeesPage() {
                     <TableCell>{employee.name}</TableCell>
                     <TableCell>{employee.fathername}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="blur-sm">{maskAFM(employee.afm)}</Badge>
+                      <Badge variant="outline">{maskAFM(employee.afm)}</Badge>
                     </TableCell>
                     <TableCell>{employee.klados}</TableCell>
                     <TableCell>{employee.attribute}</TableCell>
