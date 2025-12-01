@@ -1301,6 +1301,48 @@ router.get(
       const XLSX = await import("xlsx");
 
       // ============================================
+      // EXPENDITURE TYPE LOOKUP (needed for multiple worksheets)
+      // ============================================
+      // Fetch all expenditure types
+      const { data: expenditureTypesData } = await supabase
+        .from("expenditure_types")
+        .select("id, expenditure_types");
+
+      // Create a map of expenditure type id to name
+      const expenditureTypeNameMap = new Map<number, string>();
+      (expenditureTypesData || []).forEach((et: any) => {
+        expenditureTypeNameMap.set(et.id, et.expenditure_types);
+      });
+
+      // Create a map of project_index.id to expenditure_type_id
+      const projectIndexExpenditureMap = new Map<number, number>();
+      if (projectIndexData) {
+        projectIndexData.forEach((pi: any) => {
+          if (pi.id && pi.expenditure_type_id) {
+            projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
+          }
+        });
+      }
+
+      // Helper function to get expenditure type name from a budget history entry
+      const getExpenditureTypeName = (entry: any): string => {
+        const genDocs = entry.generated_documents;
+        if (genDocs && Array.isArray(genDocs) && genDocs.length > 0) {
+          // Iterate through all generated documents to find one with a valid project_index_id
+          for (const doc of genDocs) {
+            if (doc?.project_index_id) {
+              const projectIndexId = doc.project_index_id;
+              const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
+              if (expenditureTypeId) {
+                return expenditureTypeNameMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
+              }
+            }
+          }
+        }
+        return "Χωρίς Τύπο Δαπάνης";
+      };
+
+      // ============================================
       // WORKSHEET 1: Detailed Budget History
       // ============================================
       const detailedHistory = (historyData || []).map((entry: any) => {
@@ -1312,7 +1354,8 @@ router.get(
           municipalities: [],
         };
         const budget = budgetMap.get(project.mis);
-        const document = entry.generated_documents;
+        const genDocs = entry.generated_documents;
+        const document = Array.isArray(genDocs) && genDocs.length > 0 ? genDocs[0] : genDocs;
 
         const prevAmount = parseFloat(entry.previous_amount) || 0;
         const newAmount = parseFloat(entry.new_amount) || 0;
@@ -1345,6 +1388,7 @@ router.get(
           Περιφέρεια: geo.regions.join(", ") || "",
           "Περιφερειακή Ενότητα": geo.units.join(", ") || "",
           Δήμος: geo.municipalities.join(", ") || "",
+          "Τύπος Δαπάνης": getExpenditureTypeName(entry),
           "Τύπος Αλλαγής":
             changeTypeLabels[entry.change_type] || entry.change_type || "",
           "Προηγούμενο Ποσό": prevAmount,
@@ -1516,27 +1560,6 @@ router.get(
       // ============================================
       // WORKSHEET 4: Expenditure Type Analysis
       // ============================================
-      // Fetch all expenditure types
-      const { data: expenditureTypesData } = await supabase
-        .from("expenditure_types")
-        .select("id, expenditure_types");
-
-      // Create a map of expenditure type id to name
-      const expenditureTypeMap = new Map<number, string>();
-      (expenditureTypesData || []).forEach((et: any) => {
-        expenditureTypeMap.set(et.id, et.expenditure_types);
-      });
-
-      // Create a map of project_index.id to expenditure_type_id
-      const projectIndexExpenditureMap = new Map<number, number>();
-      if (projectIndexData) {
-        projectIndexData.forEach((pi: any) => {
-          if (pi.id && pi.expenditure_type_id) {
-            projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
-          }
-        });
-      }
-
       const expenditureTypeSummary = new Map<
         string,
         {
@@ -1548,17 +1571,8 @@ router.get(
       >();
 
       (historyData || []).forEach((entry: any) => {
-        // Get expenditure type via generated_documents.project_index_id
-        const genDocs = entry.generated_documents;
-        let typeName = "Χωρίς Τύπο Δαπάνης";
-
-        if (genDocs && genDocs.length > 0 && genDocs[0]?.project_index_id) {
-          const projectIndexId = genDocs[0].project_index_id;
-          const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
-          if (expenditureTypeId) {
-            typeName = expenditureTypeMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
-          }
-        }
+        // Use the helper function defined earlier
+        const typeName = getExpenditureTypeName(entry);
 
         const change =
           (parseFloat(entry.new_amount) || 0) -
