@@ -214,7 +214,6 @@ const comprehensiveProjectSchema = z.object({
       const numericValue = parseEuropeanNumber(val);
       return numericValue <= 9999999999.99;
     }, "Το ποσό δεν μπορεί να υπερβαίνει τα 9.999.999.999,99 €"),
-    expenses_covered: z.string().default(""),
     expenditure_type: z.array(z.number()).default([]),
     decision_type: z.enum(["Έγκριση", "Τροποποίηση", "Παράταση", "Συμπληρωματική"]).default("Έγκριση"),
     included: z.boolean().default(true),
@@ -343,7 +342,6 @@ export default function NewProjectPage() {
         implementing_agency: [], 
         implementing_agency_for_yl: {},
         decision_budget: "", 
-        expenses_covered: "", 
         expenditure_type: [],
         decision_type: "Έγκριση", 
         included: true, 
@@ -482,7 +480,6 @@ export default function NewProjectPage() {
             ada: d.ada || "",
             implementing_agency: Array.isArray(d.implementing_agency) ? d.implementing_agency : [],
             decision_budget: d.decision_budget ? String(d.decision_budget) : "",
-            expenses_covered: d.expenses_covered || "",
             expenditure_type: Array.isArray(d.expenditure_type) ? d.expenditure_type : [],
             decision_type: d.decision_type || "Έγκριση",
             included: d.included !== undefined ? d.included : true,
@@ -1238,19 +1235,6 @@ export default function NewProjectPage() {
                               </FormItem>
                             )}
                           />
-
-                          <FormField
-                            control={form.control}
-                            name={`decisions.${index}.expenses_covered`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Δαπάνες που καλύπτει</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="π.χ. 500.000,00" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1426,7 +1410,6 @@ export default function NewProjectPage() {
                           implementing_agency: [],
                           implementing_agency_for_yl: {},
                           decision_budget: "",
-                          expenses_covered: "",
                           expenditure_type: [],
                           decision_type: "Έγκριση",
                           included: true,

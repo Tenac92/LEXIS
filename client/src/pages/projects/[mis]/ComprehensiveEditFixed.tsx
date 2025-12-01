@@ -341,7 +341,6 @@ const comprehensiveProjectSchema = z.object({
         implementing_agency: z.array(z.number()).default([]),
         implementing_agency_for_yl: z.record(z.string(), z.number().nullable()).default({}),
         decision_budget: z.string().default(""),
-        expenses_covered: z.string().default(""),
         expenditure_type: z.array(z.number()).default([]),
         decision_type: z
           .enum(["Έγκριση", "Τροποποίηση", "Παράταση", "Συμπληρωματική"])
@@ -596,7 +595,6 @@ export default function ComprehensiveEditFixed() {
           implementing_agency: [],
           implementing_agency_for_yl: {},
           decision_budget: "",
-          expenses_covered: "",
           expenditure_type: [],
           decision_type: "Έγκριση",
           included: true,
@@ -1288,8 +1286,6 @@ export default function ComprehensiveEditFixed() {
               implementing_agency: implementing_agency_ids,
               decision_budget:
                 parseEuropeanNumber(decision.decision_budget || "") || 0,
-              expenses_covered:
-                parseEuropeanNumber(decision.expenses_covered || "") || 0,
               expenditure_type: expenditure_type_ids,
               decision_type: decision.decision_type || "Έγκριση",
               included:
@@ -2727,29 +2723,6 @@ export default function ComprehensiveEditFixed() {
                                         </FormItem>
                                       )}
                                     />
-
-                                    <FormField
-                                      control={form.control}
-                                      name={`decisions.${index}.expenses_covered`}
-                                      render={({ field }) => (
-                                        <FormItem>
-                                          <FormLabel>Δαπάνες που καλύπτει</FormLabel>
-                                          <FormControl>
-                                            <Input
-                                              {...field}
-                                              placeholder="π.χ. 500.000,00"
-                                              onChange={(e) => {
-                                                const formatted =
-                                                  formatNumberWhileTyping(
-                                                    e.target.value,
-                                                  );
-                                                field.onChange(formatted);
-                                              }}
-                                            />
-                                          </FormControl>
-                                        </FormItem>
-                                      )}
-                                    />
                                   </div>
 
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2962,7 +2935,6 @@ export default function ComprehensiveEditFixed() {
                             ada: "",
                             implementing_agency: [],
                             decision_budget: "",
-                            expenses_covered: "",
                             expenditure_type: [],
                             decision_type: "Έγκριση",
                             included: true,
