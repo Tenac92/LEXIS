@@ -194,6 +194,39 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           key.toLowerCase().includes('διαθέσιμο')
         );
 
+        // Find proip (Προϋπολογισμός) key
+        const proipKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('proip') || 
+          key.toLowerCase().includes('προϋπολογισμός') ||
+          key.toLowerCase().includes('προυπολογισμός') ||
+          key.toLowerCase().includes('προυπ')
+        );
+
+        // Find node (Ποσό ΝοΔε που βαρύνει τον ενάριθμο) key
+        const nodeKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('node') || 
+          key.toLowerCase().includes('νοδε') ||
+          key.toLowerCase().includes('ποσό νοδε') ||
+          key.toLowerCase().includes('βαρύνει τον ενάριθμο')
+        );
+
+        // Find prev_years (Πληρ.Προηγ.Ετών) key
+        const prevYearsKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('prev_years') || 
+          key.toLowerCase().includes('πληρ.προηγ.ετών') ||
+          key.toLowerCase().includes('προηγ.ετών') ||
+          key.toLowerCase().includes('πληρωμές προηγ') ||
+          key.toLowerCase().includes('προηγούμενων ετών')
+        );
+
+        // Find years_paid (Πληρωμές Έτους) key
+        const yearsPaidKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('years_paid') || 
+          key.toLowerCase().includes('πληρωμές έτους') ||
+          key.toLowerCase().includes('πληρωμές_έτους') ||
+          key.toLowerCase().includes('πληρωμεσ ετουσ')
+        );
+
         // Check if required keys exist
         if (!misKey || !na853Key) {
           throw new Error(`Missing required columns MIS or NA853 in row`);
@@ -218,7 +251,11 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             q3: q3Key ? parseEuropeanNumber(row[q3Key]) : undefined,
             q4: q4Key ? parseEuropeanNumber(row[q4Key]) : undefined,
             katanomes_etous: katanomesEtousKey ? parseEuropeanNumber(row[katanomesEtousKey]) : undefined,
-            user_view: userViewKey ? parseEuropeanNumber(row[userViewKey]) : undefined
+            user_view: userViewKey ? parseEuropeanNumber(row[userViewKey]) : undefined,
+            proip: proipKey ? parseEuropeanNumber(row[proipKey]) : undefined,
+            node: nodeKey ? parseEuropeanNumber(row[nodeKey]) : undefined,
+            prev_years: prevYearsKey ? parseEuropeanNumber(row[prevYearsKey]) : undefined,
+            years_paid: yearsPaidKey ? parseEuropeanNumber(row[yearsPaidKey]) : undefined
           }
         };
 
