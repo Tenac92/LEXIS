@@ -1284,6 +1284,7 @@ export default function ComprehensiveEditFixed() {
               fek: decision.fek || { year: "", issue: "", number: "" },
               ada: decision.ada || "",
               implementing_agency: implementing_agency_ids,
+              implementing_agency_for_yl: decision.implementing_agency_for_yl || {},
               decision_budget:
                 parseEuropeanNumber(decision.decision_budget || "") || 0,
               expenditure_type: expenditure_type_ids,
