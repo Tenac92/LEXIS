@@ -40,17 +40,22 @@ export default function EmployeesPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: false
+    refetchOnMount: "stale"
   });
 
   // Fetch available units for filtering
   const { data: units = [] } = useQuery({
     queryKey: ['/api/units'],
-    queryFn: () => fetch('/api/units').then(res => res.json()).then(data => data.data || []),
+    queryFn: async () => {
+      const res = await fetch('/api/units');
+      const json = await res.json();
+      console.log('[Employees] Units API response:', json);
+      return json.data || json || [];
+    },
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnWindowFocus: false,
-    refetchOnMount: false
+    refetchOnMount: "stale"
   });
 
   // Create employee mutation
@@ -273,11 +278,17 @@ export default function EmployeesPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Όλες οι μονάδες</SelectItem>
-              {units.map((unit: any) => (
-                <SelectItem key={unit.unit} value={unit.unit}>
-                  {unit.unit_name?.name || unit.unit}
+              {Array.isArray(units) && units.length > 0 ? (
+                units.map((unit: any) => (
+                  <SelectItem key={unit.id} value={unit.code || unit.unit || unit.id}>
+                    {unit.name || unit.unit_name?.name || unit.code || unit.unit}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="all" disabled>
+                  Φόρτωση μονάδων...
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         </CardContent>
