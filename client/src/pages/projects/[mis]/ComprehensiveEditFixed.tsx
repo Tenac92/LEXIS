@@ -445,7 +445,7 @@ const comprehensiveProjectSchema = z.object({
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
-            action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
+            action_type: z.enum(["Έγκριση", "Τροποποίηση", "Ολοκλήρωση"]).default("Έγκριση"), // Renamed from decision_type
             comments: z.string().default(""),
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
@@ -4360,7 +4360,7 @@ export default function ComprehensiveEditFixed() {
                                                       <SelectContent>
                                                         <SelectItem value="Έγκριση">Έγκριση</SelectItem>
                                                         <SelectItem value="Τροποποίηση">Τροποποίηση</SelectItem>
-                                                        <SelectItem value="Κλείσιμο στο ύψος πληρωμών">Κλείσιμο στο ύψος πληρωμών</SelectItem>
+                                                        <SelectItem value="Ολοκλήρωση">Ολοκλήρωση</SelectItem>
                                                       </SelectContent>
                                                     </Select>
                                                   </FormItem>
