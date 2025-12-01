@@ -1202,6 +1202,7 @@ router.get(
 
       // Fetch project_index data to get geographic associations
       // Note: Supabase defaults to 1000 rows - we need all project_index entries for expenditure type lookup
+      // Using .range(0, 9999) is more reliable than .limit() for overriding the default with complex nested queries
       const { data: projectIndexData } = await supabase.from("project_index")
         .select(`
         id,
@@ -1212,7 +1213,7 @@ router.get(
         project_index_units(unit_code),
         project_index_munis(muni_code)
       `)
-        .limit(10000);
+        .range(0, 9999);
 
       // Create a map of project_id to geographic data
       const projectGeoMap = new Map<
