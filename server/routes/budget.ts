@@ -1323,12 +1323,34 @@ router.get(
           }
         });
       }
+      
+      console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}`);
+      console.log(`[Budget Export] Project index expenditure map size: ${projectIndexExpenditureMap.size}`);
+      
+      let debugCount = 0;
 
       // Helper function to get expenditure type name from a budget history entry
       const getExpenditureTypeName = (entry: any): string => {
         const genDocs = entry.generated_documents;
+        
+        // Debug first few entries
+        if (debugCount < 5) {
+          console.log(`[Budget Export] Entry ${entry.id}: genDocs =`, JSON.stringify(genDocs));
+          debugCount++;
+        }
+        
+        // Handle single object (foreign key relationship returns single object, not array)
+        if (genDocs && !Array.isArray(genDocs) && genDocs.project_index_id) {
+          const projectIndexId = genDocs.project_index_id;
+          const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
+          console.log(`[Budget Export] Entry ${entry.id}: projectIndexId=${projectIndexId}, expenditureTypeId=${expenditureTypeId}`);
+          if (expenditureTypeId) {
+            return expenditureTypeNameMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
+          }
+        }
+        
+        // Handle array case (if relationship returns array)
         if (genDocs && Array.isArray(genDocs) && genDocs.length > 0) {
-          // Iterate through all generated documents to find one with a valid project_index_id
           for (const doc of genDocs) {
             if (doc?.project_index_id) {
               const projectIndexId = doc.project_index_id;
@@ -1339,6 +1361,7 @@ router.get(
             }
           }
         }
+        
         return "Χωρίς Τύπο Δαπάνης";
       };
 
