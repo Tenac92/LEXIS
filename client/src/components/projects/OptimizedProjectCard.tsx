@@ -228,6 +228,21 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     return Math.min(100, Math.round((spent / allocated) * 100));
   };
 
+  const getCardBorderColor = () => {
+    const utilization = calculateBudgetUtilization();
+    return utilization > 80 ? 'border-l-red-500' : 'border-l-emerald-500';
+  };
+
+  const getCardBackgroundClass = () => {
+    const utilization = calculateBudgetUtilization();
+    return utilization > 80 ? 'bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-background' : 'bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-background';
+  };
+
+  const getFlipButtonColor = () => {
+    const utilization = calculateBudgetUtilization();
+    return utilization > 80 ? 'text-red-600 hover:bg-red-50 hover:text-red-700' : 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700';
+  };
+
   const getQuarterLabel = (quarter: string) => {
     switch(quarter?.toLowerCase()) {
       case 'q1': return 'Α\'';
@@ -401,7 +416,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
           
           {/* FRONT - Metadata */}
           <div className="flip-card-front">
-            <Card className="h-full border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+            <Card className={`h-full border-l-4 shadow-sm hover:shadow-md transition-shadow ${getCardBorderColor()}`}>
               <div className="p-5 h-full flex flex-col">
                 
                 {/* Header with Status and Actions */}
@@ -543,7 +558,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     e.stopPropagation();
                     setIsFlipped(true);
                   }}
-                  className="w-full mt-4 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                  className={`w-full mt-4 ${getFlipButtonColor()}`}
                   data-testid={`button-flip-to-financial-${project.id}`}
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
@@ -556,7 +571,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
 
           {/* BACK - Financial */}
           <div className="flip-card-back">
-            <Card className="h-full border-l-4 border-l-blue-500 shadow-sm bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-background">
+            <Card className={`h-full border-l-4 shadow-sm ${getCardBackgroundClass()} ${calculateBudgetUtilization() > 80 ? 'border-l-red-500' : 'border-l-blue-500'}`}>
               <div className="p-5 h-full flex flex-col">
                 
                 {/* Header */}
