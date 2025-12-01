@@ -1317,28 +1317,44 @@ router.get(
         expenditureTypeNameMap.set(et.id, et.expenditure_types);
       });
 
-      // CRITICAL FIX: Supabase has a 1000-row limit on complex nested queries.
-      // The projectIndexData query above has nested relations and is hitting this limit.
-      // We need a SEPARATE simple query just for expenditure type lookup.
-      // This query has NO nested relations, so it can fetch all rows reliably.
-      const { data: projectIndexExpenditureData, error: piExpError } = await supabase
-        .from("project_index")
-        .select("id, expenditure_type_id")
-        .not("expenditure_type_id", "is", null)
-        .range(0, 9999);
-      
-      if (piExpError) {
-        console.error(`[Budget Export] Error fetching project_index expenditure data:`, piExpError);
-      }
-
-      // Create a map of project_index.id to expenditure_type_id using the SIMPLE query
+      // CRITICAL FIX: Supabase has a hard 1000-row default limit on ALL queries.
+      // We need to paginate to fetch all project_index entries for expenditure type lookup.
       const projectIndexExpenditureMap = new Map<number, number>();
-      if (projectIndexExpenditureData) {
-        projectIndexExpenditureData.forEach((pi: any) => {
-          if (pi.id && pi.expenditure_type_id) {
-            projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
+      
+      // Fetch all project_index entries using pagination (1000 rows per batch)
+      let offset = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data: batchData, error: piExpError } = await supabase
+          .from("project_index")
+          .select("id, expenditure_type_id")
+          .not("expenditure_type_id", "is", null)
+          .range(offset, offset + batchSize - 1)
+          .order("id", { ascending: true });
+        
+        if (piExpError) {
+          console.error(`[Budget Export] Error fetching project_index batch at offset ${offset}:`, piExpError);
+          break;
+        }
+        
+        if (batchData && batchData.length > 0) {
+          batchData.forEach((pi: any) => {
+            if (pi.id && pi.expenditure_type_id) {
+              projectIndexExpenditureMap.set(pi.id, pi.expenditure_type_id);
+            }
+          });
+          
+          // If we got fewer than batchSize rows, we've reached the end
+          if (batchData.length < batchSize) {
+            hasMore = false;
+          } else {
+            offset += batchSize;
           }
-        });
+        } else {
+          hasMore = false;
+        }
       }
       
       console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}, Project index entries for expenditure lookup: ${projectIndexExpenditureMap.size}`);
