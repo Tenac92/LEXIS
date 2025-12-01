@@ -1201,6 +1201,7 @@ router.get(
       );
 
       // Fetch project_index data to get geographic associations
+      // Note: Supabase defaults to 1000 rows - we need all project_index entries for expenditure type lookup
       const { data: projectIndexData } = await supabase.from("project_index")
         .select(`
         id,
@@ -1210,7 +1211,8 @@ router.get(
         project_index_regions(region_code),
         project_index_units(unit_code),
         project_index_munis(muni_code)
-      `);
+      `)
+        .limit(10000);
 
       // Create a map of project_id to geographic data
       const projectGeoMap = new Map<
@@ -1324,26 +1326,16 @@ router.get(
         });
       }
       
-      console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}`);
-      console.log(`[Budget Export] Project index expenditure map size: ${projectIndexExpenditureMap.size}`);
-      
-      let debugCount = 0;
+      console.log(`[Budget Export] Expenditure types loaded: ${expenditureTypeNameMap.size}, Project index entries: ${projectIndexExpenditureMap.size}`);
 
       // Helper function to get expenditure type name from a budget history entry
       const getExpenditureTypeName = (entry: any): string => {
         const genDocs = entry.generated_documents;
         
-        // Debug first few entries
-        if (debugCount < 5) {
-          console.log(`[Budget Export] Entry ${entry.id}: genDocs =`, JSON.stringify(genDocs));
-          debugCount++;
-        }
-        
         // Handle single object (foreign key relationship returns single object, not array)
         if (genDocs && !Array.isArray(genDocs) && genDocs.project_index_id) {
           const projectIndexId = genDocs.project_index_id;
           const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
-          console.log(`[Budget Export] Entry ${entry.id}: projectIndexId=${projectIndexId}, expenditureTypeId=${expenditureTypeId}`);
           if (expenditureTypeId) {
             return expenditureTypeNameMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
           }
