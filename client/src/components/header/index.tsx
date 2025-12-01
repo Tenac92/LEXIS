@@ -63,13 +63,13 @@ const navigationItems = [
     label: "Υπάλληλοι",
     roles: ["admin", "manager"],
   },
-  { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user"] },
+  { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user", "manager"] },
   { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
   {
     href: "/notifications",
     icon: Bell,
     label: "Ειδοποιήσεις",
-    roles: ["admin", "manager"],
+    roles: ["admin"],
   },
 ];
 
