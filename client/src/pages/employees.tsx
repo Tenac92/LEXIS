@@ -166,8 +166,13 @@ export default function EmployeesPage() {
     }
   });
 
-  // Filter employees based on search term (memoized to prevent unnecessary recalculations)
+  // Filter employees based on search term and unit (memoized to prevent unnecessary recalculations)
   const filteredEmployees = useMemo(() => employees.filter((employee: Employee) => {
+    // Unit filter (additional client-side filtering for consistency)
+    if (selectedUnit !== 'all' && employee.monada !== selectedUnit) {
+      return false;
+    }
+    // Search filter
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -176,7 +181,7 @@ export default function EmployeesPage() {
       employee.fathername?.toLowerCase().includes(searchLower) ||
       employee.afm?.includes(searchTerm)
     );
-  }), [employees, searchTerm]);
+  }), [employees, searchTerm, selectedUnit]);
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
