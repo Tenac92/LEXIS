@@ -4,25 +4,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { type OptimizedProject } from "@shared/schema";
-import { 
-  Edit, 
-  Trash2, 
-  Info, 
-  Building, 
-  DollarSign, 
-  TrendingUp, 
-  MapPin, 
-  Briefcase, 
-  Calendar, 
-  Hash, 
-  Users, 
+import {
+  Edit,
+  Trash2,
+  Info,
+  Building,
+  DollarSign,
+  TrendingUp,
+  MapPin,
+  Briefcase,
+  Calendar,
+  Hash,
+  Users,
   ChevronRight,
   RotateCcw,
   Wallet,
   PiggyBank,
   ArrowUpRight,
   ArrowDownRight,
-  Target
+  Target,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -48,7 +48,11 @@ interface OptimizedProjectCardProps {
   isAdmin: boolean;
 }
 
-export function OptimizedProjectCard({ project, view = "grid", isAdmin }: OptimizedProjectCardProps) {
+export function OptimizedProjectCard({
+  project,
+  view = "grid",
+  isAdmin,
+}: OptimizedProjectCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const { toast } = useToast();
@@ -59,46 +63,74 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     queryKey: ["budget", project.mis],
     queryFn: async () => {
       if (!project.mis) return null;
-      
+
       try {
-        const response = await apiRequest(`/api/budget/lookup/${encodeURIComponent(project.mis)}`);
-        if (!response || (typeof response === 'object' && 'status' in response && response.status === 'error')) {
+        const response = await apiRequest(
+          `/api/budget/lookup/${encodeURIComponent(project.mis)}`,
+        );
+        if (
+          !response ||
+          (typeof response === "object" &&
+            "status" in response &&
+            response.status === "error")
+        ) {
           return null;
         }
-        
-        let budgetData: Record<string, any> = {}; 
-        if (typeof response === 'object' && 'data' in response && response.data) {
+
+        let budgetData: Record<string, any> = {};
+        if (
+          typeof response === "object" &&
+          "data" in response &&
+          response.data
+        ) {
           budgetData = response.data;
-        } else if (typeof response === 'object' && !('data' in response)) {
+        } else if (typeof response === "object" && !("data" in response)) {
           budgetData = response;
         }
-        
+
         return {
-          user_view: parseFloat(budgetData.user_view?.toString() || '0'),
-          total_budget: parseFloat(budgetData.total_budget?.toString() || '0'),
-          proip: parseFloat(budgetData.proip?.toString() || '0'),
-          katanomes_etous: parseFloat(budgetData.katanomes_etous?.toString() || '0'),
-          ethsia_pistosi: parseFloat(budgetData.ethsia_pistosi?.toString() || '0'),
-          current_budget: parseFloat(budgetData.current_budget?.toString() || '0'),
-          annual_budget: parseFloat(budgetData.annual_budget?.toString() || '0'),
-          quarter_view: parseFloat(budgetData.quarter_view?.toString() || '0'),
-          current_quarter: budgetData.current_quarter?.toString() || 'q1',
-          last_quarter_check: budgetData.last_quarter_check?.toString() || 'q1',
-          q1: parseFloat(budgetData.q1?.toString() || '0'),
-          q2: parseFloat(budgetData.q2?.toString() || '0'),
-          q3: parseFloat(budgetData.q3?.toString() || '0'),
-          q4: parseFloat(budgetData.q4?.toString() || '0'),
-          available_budget: budgetData.available_budget?.toString() || 
-            (parseFloat(budgetData.katanomes_etous?.toString() || '0') - 
-             parseFloat(budgetData.user_view?.toString() || '0')).toString(),
-          quarter_available: budgetData.quarter_available?.toString() || '0',
-          yearly_available: budgetData.yearly_available?.toString() || 
-            (parseFloat(budgetData.ethsia_pistosi?.toString() || '0') - 
-             parseFloat(budgetData.user_view?.toString() || '0')).toString()
+          user_view: parseFloat(budgetData.user_view?.toString() || "0"),
+          total_budget: parseFloat(budgetData.total_budget?.toString() || "0"),
+          proip: parseFloat(budgetData.proip?.toString() || "0"),
+          katanomes_etous: parseFloat(
+            budgetData.katanomes_etous?.toString() || "0",
+          ),
+          ethsia_pistosi: parseFloat(
+            budgetData.ethsia_pistosi?.toString() || "0",
+          ),
+          current_budget: parseFloat(
+            budgetData.current_budget?.toString() || "0",
+          ),
+          annual_budget: parseFloat(
+            budgetData.annual_budget?.toString() || "0",
+          ),
+          quarter_view: parseFloat(budgetData.quarter_view?.toString() || "0"),
+          current_quarter: budgetData.current_quarter?.toString() || "q1",
+          last_quarter_check: budgetData.last_quarter_check?.toString() || "q1",
+          q1: parseFloat(budgetData.q1?.toString() || "0"),
+          q2: parseFloat(budgetData.q2?.toString() || "0"),
+          q3: parseFloat(budgetData.q3?.toString() || "0"),
+          q4: parseFloat(budgetData.q4?.toString() || "0"),
+          available_budget:
+            budgetData.available_budget?.toString() ||
+            (
+              parseFloat(budgetData.katanomes_etous?.toString() || "0") -
+              parseFloat(budgetData.user_view?.toString() || "0")
+            ).toString(),
+          quarter_available: budgetData.quarter_available?.toString() || "0",
+          yearly_available:
+            budgetData.yearly_available?.toString() ||
+            (
+              parseFloat(budgetData.ethsia_pistosi?.toString() || "0") -
+              parseFloat(budgetData.user_view?.toString() || "0")
+            ).toString(),
         };
       } catch (error) {
-        if (error instanceof Error && !error.message.includes('Budget data not found')) {
-          console.error('[Budget] Error fetching budget data:', error);
+        if (
+          error instanceof Error &&
+          !error.message.includes("Budget data not found")
+        ) {
+          console.error("[Budget] Error fetching budget data:", error);
         }
         return null;
       }
@@ -106,14 +138,14 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     enabled: Boolean(project.mis),
     staleTime: 3 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest(`/api/projects/${project.id}`, {
+      const response = (await apiRequest(`/api/projects/${project.id}`, {
         method: "DELETE",
-      }) as Response;
+      })) as Response;
 
       if (!response.ok) {
         const error = await response.json();
@@ -139,17 +171,17 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
   });
 
   const formatCurrency = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return '€0,00';
+    if (amount === null || amount === undefined) return "€0,00";
     return new Intl.NumberFormat("el-GR", {
       style: "currency",
       currency: "EUR",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   const formatCompactCurrency = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return '€0';
+    if (amount === null || amount === undefined) return "€0";
     if (amount >= 1000000) {
       return `€${(amount / 1000000).toFixed(1)}M`;
     } else if (amount >= 1000) {
@@ -201,61 +233,70 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
     if (project.na853) {
       return `Έργο NA853: ${project.na853}`;
     }
-    return 'Έργο χωρίς τίτλο';
+    return "Έργο χωρίς τίτλο";
   };
 
   const getRegionText = (project: OptimizedProject) => {
-    if (!project.region) return '';
+    if (!project.region) return "";
     const parts = [];
     if (project.region.region) parts.push(project.region.region);
     if (project.region.regional_unit) parts.push(project.region.regional_unit);
-    return parts.join(' • ');
+    return parts.join(" • ");
   };
 
   const getEventYearText = (project: OptimizedProject) => {
     if (!project.event_year) return null;
     if (Array.isArray(project.event_year) && project.event_year.length > 0) {
-      return project.event_year.join(', ');
+      return project.event_year.join(", ");
     }
     return null;
   };
 
   const calculateBudgetUtilization = () => {
     if (!budgetData) return 0;
-    const allocated = parseFloat(budgetData.katanomes_etous?.toString() || '0');
-    const spent = parseFloat(budgetData.user_view?.toString() || '0');
+    const allocated = parseFloat(budgetData.katanomes_etous?.toString() || "0");
+    const spent = parseFloat(budgetData.user_view?.toString() || "0");
     if (allocated === 0) return 0;
     return Math.min(100, Math.round((spent / allocated) * 100));
   };
 
   const getCardBorderColor = () => {
     const utilization = calculateBudgetUtilization();
-    return utilization > 80 ? 'border-l-red-500' : 'border-l-emerald-500';
+    return utilization > 80 ? "border-l-red-500" : "border-l-emerald-500";
   };
 
   const getCardBackgroundClass = () => {
     const utilization = calculateBudgetUtilization();
-    return utilization > 80 ? 'bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-background' : 'bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-background';
+    return utilization > 80
+      ? "bg-gradient-to-br from-red-50/50 to-white dark:from-red-950/20 dark:to-background"
+      : "bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/20 dark:to-background";
   };
 
   const getFlipButtonColor = () => {
     const utilization = calculateBudgetUtilization();
-    return utilization > 80 ? 'text-red-600 hover:bg-red-50 hover:text-red-700' : 'text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700';
+    return utilization > 80
+      ? "text-red-600 hover:bg-red-50 hover:text-red-700"
+      : "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700";
   };
 
   const getQuarterLabel = (quarter: string) => {
-    switch(quarter?.toLowerCase()) {
-      case 'q1': return 'Α\'';
-      case 'q2': return 'Β\'';
-      case 'q3': return 'Γ\'';
-      case 'q4': return 'Δ\'';
-      default: return quarter;
+    switch (quarter?.toLowerCase()) {
+      case "q1":
+        return "Α'";
+      case "q2":
+        return "Β'";
+      case "q3":
+        return "Γ'";
+      case "q4":
+        return "Δ'";
+      default:
+        return quarter;
     }
   };
 
   if (view === "list") {
     return (
-      <Card 
+      <Card
         className="transition-all duration-200 hover:shadow-md border-l-4 border-l-emerald-500 cursor-pointer group"
         onClick={() => setShowDetails(true)}
         data-testid={`card-project-list-${project.id}`}
@@ -264,46 +305,56 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 mb-2">
-                <h3 className="text-base font-semibold text-foreground truncate" data-testid={`text-title-${project.id}`}>
+                <h3
+                  className="text-base font-semibold text-foreground truncate"
+                  data-testid={`text-title-${project.id}`}
+                >
                   {getProjectTitle(project)}
                 </h3>
-                <Badge variant="outline" className={`shrink-0 text-xs ${getStatusColor(project.status || '')}`}>
-                  {getStatusText(project.status || '')}
+                <Badge
+                  variant="outline"
+                  className={`shrink-0 text-xs ${getStatusColor(project.status || "")}`}
+                >
+                  {getStatusText(project.status || "")}
                 </Badge>
               </div>
-              
+
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-x-4 gap-y-1.5 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Hash className="w-3.5 h-3.5 shrink-0" />
-                  <span className="font-mono text-xs">{project.mis || "—"}</span>
+                  <span className="font-mono text-xs">
+                    {project.mis || "—"}
+                  </span>
                   <span className="text-muted-foreground/50">|</span>
                   <span className="font-mono text-xs">{project.na853}</span>
                 </div>
-                
+
                 {project.unit?.name && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Building className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{project.unit.name}</span>
                   </div>
                 )}
-                
+
                 {project.event_type?.name && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Briefcase className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{project.event_type.name}</span>
                   </div>
                 )}
-                
+
                 {getRegionText(project) && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <MapPin className="w-3.5 h-3.5 shrink-0" />
                     <span className="truncate">{getRegionText(project)}</span>
                   </div>
                 )}
-                
+
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Wallet className="w-3.5 h-3.5 shrink-0" />
-                  <span className="font-medium">{formatCompactCurrency(Number(project.budget_na853) || 0)}</span>
+                  <span className="font-medium">
+                    {formatCompactCurrency(Number(project.budget_na853) || 0)}
+                  </span>
                   {budgetData && (
                     <span className="text-emerald-600 text-xs">
                       ({calculateBudgetUtilization()}% χρήση)
@@ -311,29 +362,32 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                   )}
                 </div>
               </div>
-              
+
               {/* Second row with additional metadata */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 text-xs mt-2">
                 {project.implementing_agency?.title && (
                   <div className="flex items-center gap-1.5 text-muted-foreground/80">
                     <Users className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{project.implementing_agency.title}</span>
+                    <span className="truncate">
+                      {project.implementing_agency.title}
+                    </span>
                   </div>
                 )}
-                
+
                 {(getEventYearText(project) || project.inc_year) && (
                   <div className="flex items-center gap-1.5 text-muted-foreground/80">
                     <Calendar className="w-3 h-3 shrink-0" />
                     <span className="truncate">
-                      {getEventYearText(project) && `Συμβάν: ${getEventYearText(project)}`}
-                      {getEventYearText(project) && project.inc_year && ' • '}
+                      {getEventYearText(project) &&
+                        `Συμβάν: ${getEventYearText(project)}`}
+                      {getEventYearText(project) && project.inc_year && " • "}
                       {project.inc_year && `Ένταξη: ${project.inc_year}`}
                     </span>
                   </div>
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="ghost"
@@ -399,8 +453,8 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
             </div>
           </div>
         </div>
-        
-        <ProjectDetailsDialog 
+
+        <ProjectDetailsDialog
           project={project as any}
           open={showDetails}
           onOpenChange={setShowDetails}
@@ -411,18 +465,25 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
 
   return (
     <>
-      <div className="flip-card h-[420px]" onClick={() => setIsFlipped(!isFlipped)} data-testid={`card-project-grid-${project.id}`}>
+      <div
+        className="flip-card h-[420px]"
+        onClick={() => setIsFlipped(!isFlipped)}
+        data-testid={`card-project-grid-${project.id}`}
+      >
         <div className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}>
-          
           {/* FRONT - Metadata */}
           <div className="flip-card-front">
-            <Card className={`h-full border-l-4 shadow-sm hover:shadow-md transition-shadow ${getCardBorderColor()}`}>
+            <Card
+              className={`h-full border-l-4 shadow-sm hover:shadow-md transition-shadow ${getCardBorderColor()}`}
+            >
               <div className="p-5 h-full flex flex-col">
-                
                 {/* Header with Status and Actions */}
                 <div className="flex items-start justify-between gap-2 mb-4">
-                  <Badge variant="outline" className={`text-xs ${getStatusColor(project.status || '')}`}>
-                    {getStatusText(project.status || '')}
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${getStatusColor(project.status || "")}`}
+                  >
+                    {getStatusText(project.status || "")}
                   </Badge>
                   <div className="flex gap-0.5">
                     <Button
@@ -466,11 +527,16 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                          <AlertDialogContent
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Διαγραφή Έργου</AlertDialogTitle>
+                              <AlertDialogTitle>
+                                Διαγραφή Έργου
+                              </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το έργο;
+                                Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το
+                                έργο;
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -490,7 +556,10 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                 </div>
 
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-foreground leading-tight mb-4 line-clamp-2" data-testid={`text-title-grid-${project.id}`}>
+                <h3
+                  className="text-lg font-semibold text-foreground leading-tight mb-4 line-clamp-2"
+                  data-testid={`text-title-grid-${project.id}`}
+                >
                   {getProjectTitle(project)}
                 </h3>
 
@@ -498,12 +567,20 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                 <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4">
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">MIS</span>
-                      <p className="font-mono text-sm font-medium">{project.mis || "—"}</p>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        MIS
+                      </span>
+                      <p className="font-mono text-sm font-medium">
+                        {project.mis || "—"}
+                      </p>
                     </div>
                     <div>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">ΝΑ853</span>
-                      <p className="font-mono text-sm font-medium">{project.na853}</p>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        ΝΑ853
+                      </span>
+                      <p className="font-mono text-sm font-medium">
+                        {project.na853}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -513,37 +590,46 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                   {project.unit?.name && (
                     <div className="flex items-center gap-2.5 text-sm">
                       <Building className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-muted-foreground truncate">{project.unit.name}</span>
+                      <span className="text-muted-foreground truncate">
+                        {project.unit.name}
+                      </span>
                     </div>
                   )}
-                  
+
                   {project.implementing_agency?.title && (
                     <div className="flex items-center gap-2.5 text-sm">
                       <Users className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-muted-foreground truncate">{project.implementing_agency.title}</span>
+                      <span className="text-muted-foreground truncate">
+                        {project.implementing_agency.title}
+                      </span>
                     </div>
                   )}
-                  
+
                   {project.event_type?.name && (
                     <div className="flex items-center gap-2.5 text-sm">
                       <Briefcase className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-muted-foreground truncate">{project.event_type.name}</span>
+                      <span className="text-muted-foreground truncate">
+                        {project.event_type.name}
+                      </span>
                     </div>
                   )}
-                  
+
                   {getRegionText(project) && (
                     <div className="flex items-center gap-2.5 text-sm">
                       <MapPin className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span className="text-muted-foreground truncate">{getRegionText(project)}</span>
+                      <span className="text-muted-foreground truncate">
+                        {getRegionText(project)}
+                      </span>
                     </div>
                   )}
-                  
+
                   {(getEventYearText(project) || project.inc_year) && (
                     <div className="flex items-center gap-2.5 text-sm">
                       <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span className="text-muted-foreground">
-                        {getEventYearText(project) && `Συμβάν: ${getEventYearText(project)}`}
-                        {getEventYearText(project) && project.inc_year && ' • '}
+                        {getEventYearText(project) &&
+                          `Συμβάν: ${getEventYearText(project)}`}
+                        {getEventYearText(project) && project.inc_year && " • "}
                         {project.inc_year && `Ένταξη: ${project.inc_year}`}
                       </span>
                     </div>
@@ -571,16 +657,19 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
 
           {/* BACK - Financial */}
           <div className="flip-card-back">
-            <Card className={`h-full border-l-4 shadow-sm ${getCardBackgroundClass()} ${calculateBudgetUtilization() > 80 ? 'border-l-red-500' : 'border-l-blue-500'}`}>
+            <Card
+              className={`h-full border-l-4 shadow-sm ${getCardBackgroundClass()} ${calculateBudgetUtilization() > 80 ? "border-l-red-500" : "border-l-blue-500"}`}
+            >
               <div className="p-5 h-full flex flex-col">
-                
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded">
                       <Wallet className="w-4 h-4 text-blue-600" />
                     </div>
-                    <span className="font-semibold text-foreground">Οικονομικά</span>
+                    <span className="font-semibold text-foreground">
+                      Οικονομικά
+                    </span>
                   </div>
                   <Button
                     variant="ghost"
@@ -599,17 +688,27 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
 
                 {/* Project Reference */}
                 <div className="text-xs text-muted-foreground mb-4">
-                  MIS: <span className="font-mono">{project.mis}</span> • NA853: <span className="font-mono">{project.na853}</span>
+                  MIS: <span className="font-mono">{project.mis}</span> • NA853:{" "}
+                  <span className="font-mono">{project.na853}</span>
                 </div>
 
                 {/* Total Budget */}
                 <div className="bg-white dark:bg-slate-800 rounded-lg p-3 mb-4 border shadow-sm">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">Συνολικός Προϋπολογισμός</span>
+                    <span className="text-xs text-muted-foreground">
+                      Συνολικός Προϋπολογισμός
+                    </span>
                     <Target className="w-3.5 h-3.5 text-blue-500" />
                   </div>
-                  <p className="text-xl font-bold text-foreground" data-testid={`text-total-budget-${project.id}`}>
-                    {formatCurrency(budgetData?.proip ? Number(budgetData.proip) : Number(project.budget_na853) || 0)}
+                  <p
+                    className="text-xl font-bold text-foreground"
+                    data-testid={`text-total-budget-${project.id}`}
+                  >
+                    {formatCurrency(
+                      budgetData?.proip
+                        ? Number(budgetData.proip)
+                        : Number(project.budget_na853) || 0,
+                    )}
                   </p>
                 </div>
 
@@ -618,16 +717,32 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     {/* Budget Utilization */}
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">Χρήση Προϋπολογισμού</span>
-                        <span className="text-xs font-medium">{calculateBudgetUtilization()}%</span>
+                        <span className="text-xs text-muted-foreground">
+                          Χρήση Πιστώσεων
+                        </span>
+                        <span className="text-xs font-medium">
+                          {calculateBudgetUtilization()}%
+                        </span>
                       </div>
-                      <Progress 
-                        value={calculateBudgetUtilization()} 
+                      <Progress
+                        value={calculateBudgetUtilization()}
                         className="h-2"
                       />
                       <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-                        <span>Δαπάνες: {formatCompactCurrency(parseFloat(budgetData.user_view?.toString() || '0'))}</span>
-                        <span>Κατανομές: {formatCompactCurrency(parseFloat(budgetData.katanomes_etous?.toString() || '0'))}</span>
+                        <span>
+                          Δαπάνες:{" "}
+                          {formatCompactCurrency(
+                            parseFloat(budgetData.user_view?.toString() || "0"),
+                          )}
+                        </span>
+                        <span>
+                          Κατανομές:{" "}
+                          {formatCompactCurrency(
+                            parseFloat(
+                              budgetData.katanomes_etous?.toString() || "0",
+                            ),
+                          )}
+                        </span>
                       </div>
                     </div>
 
@@ -636,19 +751,29 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                       <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-2.5 border border-emerald-100 dark:border-emerald-900/30">
                         <div className="flex items-center gap-1.5 mb-1">
                           <ArrowUpRight className="w-3 h-3 text-emerald-600" />
-                          <span className="text-[10px] text-emerald-700 dark:text-emerald-400">Διαθέσιμο</span>
+                          <span className="text-[10px] text-emerald-700 dark:text-emerald-400">
+                            Διαθέσιμο
+                          </span>
                         </div>
                         <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                          {formatCompactCurrency(parseFloat(budgetData.available_budget?.toString() || '0'))}
+                          {formatCompactCurrency(
+                            parseFloat(
+                              budgetData.available_budget?.toString() || "0",
+                            ),
+                          )}
                         </p>
                       </div>
                       <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-2.5 border border-amber-100 dark:border-amber-900/30">
                         <div className="flex items-center gap-1.5 mb-1">
                           <ArrowDownRight className="w-3 h-3 text-amber-600" />
-                          <span className="text-[10px] text-amber-700 dark:text-amber-400">Δαπάνες {new Date().getFullYear()}</span>
+                          <span className="text-[10px] text-amber-700 dark:text-amber-400">
+                            Δαπάνες {new Date().getFullYear()}
+                          </span>
                         </div>
                         <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                          {formatCompactCurrency(parseFloat(budgetData.user_view?.toString() || '0'))}
+                          {formatCompactCurrency(
+                            parseFloat(budgetData.user_view?.toString() || "0"),
+                          )}
                         </p>
                       </div>
                     </div>
@@ -656,22 +781,36 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                     {/* Quarterly Breakdown */}
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">Τριμηνιαίες Κατανομές</span>
-                        <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
-                          Τρέχον: {getQuarterLabel(budgetData.current_quarter || '')}
+                        <span className="text-xs text-muted-foreground">
+                          Τριμηνιαίες Κατανομές
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200"
+                        >
+                          Τρέχον:{" "}
+                          {getQuarterLabel(budgetData.current_quarter || "")}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-4 gap-2">
-                        {['q1', 'q2', 'q3', 'q4'].map((q) => {
-                          const value = budgetData[q as keyof typeof budgetData] as number || 0;
-                          const isCurrent = budgetData.current_quarter?.toLowerCase() === q;
+                        {["q1", "q2", "q3", "q4"].map((q) => {
+                          const value =
+                            (budgetData[
+                              q as keyof typeof budgetData
+                            ] as number) || 0;
+                          const isCurrent =
+                            budgetData.current_quarter?.toLowerCase() === q;
                           return (
-                            <div 
-                              key={q} 
-                              className={`text-center p-1.5 rounded ${isCurrent ? 'bg-blue-100 dark:bg-blue-900/30 ring-1 ring-blue-300' : 'bg-white dark:bg-slate-700'}`}
+                            <div
+                              key={q}
+                              className={`text-center p-1.5 rounded ${isCurrent ? "bg-blue-100 dark:bg-blue-900/30 ring-1 ring-blue-300" : "bg-white dark:bg-slate-700"}`}
                             >
-                              <span className="text-[10px] text-muted-foreground block">{getQuarterLabel(q)}</span>
-                              <span className={`text-xs font-medium ${isCurrent ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+                              <span className="text-[10px] text-muted-foreground block">
+                                {getQuarterLabel(q)}
+                              </span>
+                              <span
+                                className={`text-xs font-medium ${isCurrent ? "text-blue-700 dark:text-blue-300" : ""}`}
+                              >
                                 {formatCompactCurrency(value)}
                               </span>
                             </div>
@@ -684,7 +823,9 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center text-muted-foreground">
                       <PiggyBank className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Δεν υπάρχουν δεδομένα προϋπολογισμού</p>
+                      <p className="text-sm">
+                        Δεν υπάρχουν δεδομένα προϋπολογισμού
+                      </p>
                     </div>
                   </div>
                 )}
@@ -710,7 +851,7 @@ export function OptimizedProjectCard({ project, view = "grid", isAdmin }: Optimi
         </div>
       </div>
 
-      <ProjectDetailsDialog 
+      <ProjectDetailsDialog
         project={project as any}
         open={showDetails}
         onOpenChange={setShowDetails}
