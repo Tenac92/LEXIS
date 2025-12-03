@@ -41,6 +41,15 @@ function isPrivateIp(ip: string): boolean {
 }
 
 /**
+ * Determine if the direct socket connection appears to be coming from a trusted proxy
+ * Right now we treat private/internal ranges as trusted. If more ranges are added above,
+ * this helper can be expanded to do proper CIDR matching.
+ */
+function isTrustedProxyIp(ip: string): boolean {
+  return isPrivateIp(ip);
+}
+
+/**
  * Check if a path should be exempt from geo-restrictions
  */
 function isPathExempt(path: string): boolean {
@@ -58,20 +67,22 @@ function isPathExempt(path: string): boolean {
 export function getClientIp(req: Request): string {
   const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
   
-  if (isPrivateIp(socketIp)) {
+  if (isTrustedProxyIp(socketIp)) {
+    // Prefer the left-most public IP from X-Forwarded-For (original client)
     const forwardedFor = req.headers['x-forwarded-for'];
     if (forwardedFor) {
       const ips = typeof forwardedFor === 'string' 
         ? forwardedFor.split(',').map(ip => ip.trim().replace(/^::ffff:/, ''))
         : forwardedFor.map(ip => ip.replace(/^::ffff:/, ''));
-      
-      // Find the RIGHTMOST public IP (the one added by the trusted proxy)
-      // Work backwards through the chain to find the first public IP
-      for (let i = ips.length - 1; i >= 0; i--) {
-        const ip = ips[i];
-        if (!isPrivateIp(ip) && ip) {
-          return ip;
-        }
+
+      const publicIps = ips.filter(ip => ip && !isPrivateIp(ip));
+      if (publicIps.length > 0) {
+        return publicIps[0];
+      }
+
+      if (ips.length > 0) {
+        // All IPs are private, return the first as a fallback
+        return ips[0];
       }
     }
   }
@@ -91,20 +102,20 @@ export function getClientIpFromSocket(
 ): string {
   const socketIp = (socketAddress || '').replace(/^::ffff:/, '');
   
-  if (isPrivateIp(socketIp)) {
+  if (isTrustedProxyIp(socketIp)) {
     const forwardedFor = headers['x-forwarded-for'];
     if (forwardedFor) {
       const ips = typeof forwardedFor === 'string' 
         ? forwardedFor.split(',').map(ip => ip.trim().replace(/^::ffff:/, ''))
         : (Array.isArray(forwardedFor) ? forwardedFor : [forwardedFor]).map(ip => (ip || '').replace(/^::ffff:/, ''));
-      
-      // Find the RIGHTMOST public IP (the one added by the trusted proxy)
-      // Work backwards through the chain to find the first public IP
-      for (let i = ips.length - 1; i >= 0; i--) {
-        const ip = ips[i];
-        if (!isPrivateIp(ip) && ip) {
-          return ip;
-        }
+
+      const publicIps = ips.filter(ip => ip && !isPrivateIp(ip));
+      if (publicIps.length > 0) {
+        return publicIps[0];
+      }
+
+      if (ips.length > 0) {
+        return ips[0];
       }
     }
   }
