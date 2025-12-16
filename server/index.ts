@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { fileURLToPath } from 'url';
 import { dirname, join } from "path";
@@ -17,6 +18,9 @@ import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/
 import { initializeScheduledTasks } from './services/schedulerService';
 import { registerAdminRoutes } from './routes/admin';
 import { Router } from 'express';
+import { applyConsoleLogLevelFilter, getCurrentLogLevel } from './utils/logger';
+
+applyConsoleLogLevelFilter('server');
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -39,7 +43,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-console.log('[Startup] Beginning server initialization');
+console.log(`[Startup] Beginning server initialization (LOG_LEVEL=${getCurrentLogLevel()})`);
 
 // Verify required environment variables with detailed logging
 const requiredEnvVars = [

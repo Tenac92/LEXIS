@@ -72,6 +72,8 @@ export const changePasswordSchema = z.object({
 // ============================================================================
 
 // Session middleware with enhanced security settings for cross-domain support
+const isProduction = process.env.NODE_ENV === "production";
+
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || "document-manager-secret",
   resave: false,
@@ -79,13 +81,13 @@ export const sessionMiddleware = session({
   store: storage.sessionStore, // Using the in-memory store from storage.ts
   name: "sid", // Custom session ID name
   cookie: {
-    secure: true, // Always use secure cookies (Render provides HTTPS)
+    secure: isProduction, // In dev over HTTP, allow insecure cookies for local testing
     httpOnly: true,
     maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
-    sameSite: "lax", // Use 'lax' for same-site requests (works better with single domain)
+    sameSite: isProduction ? "none" : "lax", // Use 'none' for cross-domain in prod, lax locally
     path: "/",
     // Only set domain if it's a valid non-empty string
-    ...(process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
+    ...(isProduction && process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
       ? { domain: process.env.COOKIE_DOMAIN.trim() } 
       : {}),
   },

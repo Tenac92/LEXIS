@@ -5,6 +5,10 @@ import session from 'express-session';
 import MemoryStore from 'memorystore';
 import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
 
+type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute'>;
+
+const ENGINEERS_CACHE_TTL = 5 * 60 * 1000;
+
 export interface IStorage {
   sessionStore: session.Store;
   getProjectsByUnit(unit: string): Promise<Project[]>;
@@ -54,9 +58,11 @@ export interface IStorage {
       changeTypes: Record<string, number>,
       periodRange: { start: string, end: string }
     }
-  }>;
+  }>; 
   
   // Employee management operations - SECURITY: Unit-based access only
+  getAllEmployees(): Promise<Employee[]>;
+  getEngineers(): Promise<EngineerSummary[]>;
   getEmployeesByUnit(unit: string): Promise<Employee[]>;
   searchEmployeesByAFM(afm: string): Promise<Employee[]>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
@@ -108,6 +114,7 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  private engineersCache: { data: EngineerSummary[]; expiresAt: number } | null = null;
   
   constructor() {
     // Create an in-memory session store with proper configuration
@@ -1376,6 +1383,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Employee management methods
+  private clearEngineersCache(): void {
+    this.engineersCache = null;
+  }
+
   async getAllEmployees(): Promise<Employee[]> {
     try {
       console.log('[Storage] Fetching all employees');
@@ -1399,6 +1410,39 @@ export class DatabaseStorage implements IStorage {
       return decryptedEmployees;
     } catch (error) {
       console.error('[Storage] Error in getAllEmployees:', error);
+      throw error;
+    }
+  }
+
+  async getEngineers(): Promise<EngineerSummary[]> {
+    try {
+      const now = Date.now();
+      if (this.engineersCache && this.engineersCache.expiresAt > now) {
+        console.log(`[Storage] Returning ${this.engineersCache.data.length} engineers from cache`);
+        return this.engineersCache.data;
+      }
+
+      console.log('[Storage] Fetching engineers with DB-side filter');
+
+      const { data, error } = await supabase
+        .from('Employees')
+        .select('id, name, surname, attribute')
+        .eq('attribute', 'Μηχανικός')
+        .order('surname', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('[Storage] Error fetching engineers:', error);
+        throw error;
+      }
+
+      const engineers = data || [];
+      this.engineersCache = { data: engineers, expiresAt: now + ENGINEERS_CACHE_TTL };
+      console.log(`[Storage] Cached ${engineers.length} engineers for ${ENGINEERS_CACHE_TTL / 1000}s`);
+
+      return engineers;
+    } catch (error) {
+      console.error('[Storage] Error in getEngineers:', error);
       throw error;
     }
   }
@@ -1529,6 +1573,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created employee:', data);
+      this.clearEngineersCache();
       
       return {
         ...data,
@@ -1564,6 +1609,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated employee:', data);
+      this.clearEngineersCache();
       
       return {
         ...data,
@@ -1631,6 +1677,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully imported/updated ${data?.length || 0} employees`);
+      this.clearEngineersCache();
       return { success: data?.length || 0, failed: 0, errors: [] };
     } catch (error) {
       console.error('[Storage] Error in bulkImportEmployees:', error);
@@ -1654,6 +1701,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully deleted employee ${id}`);
+      this.clearEngineersCache();
     } catch (error) {
       console.error('[Storage] Error in deleteEmployee:', error);
       throw error;
@@ -1723,6 +1771,9 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully cleaned up duplicates. Deleted: ${deletedCount}`);
+      if (deletedCount > 0) {
+        this.clearEngineersCache();
+      }
       return { deleted: deletedCount, kept: allEmployees.length - idsToDelete.length, errors: [] };
     } catch (error) {
       console.error('[Storage] Error in cleanupDuplicateEmployees:', error);

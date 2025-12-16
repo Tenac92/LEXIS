@@ -48,6 +48,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
@@ -471,15 +472,15 @@ export function BeneficiaryDetailsModal({
     }
   }, [beneficiary, fullBeneficiaryData, open, form, initialEditMode, isCreateMode]);
 
-  // Fetch all payments for this specific beneficiary
-  const { data: allPayments = [], isLoading: paymentsLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments"],
-    enabled: open
+  // Fetch payments only for this beneficiary to avoid pulling the whole table
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", beneficiary?.id],
+    queryFn: async () => {
+      if (!beneficiary?.id) return [];
+      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${beneficiary.id}`);
+    },
+    enabled: open && !!beneficiary?.id,
   });
-
-  // Filter payments for this specific beneficiary
-  const payments = Array.isArray(allPayments) && beneficiary ? 
-    allPayments.filter((payment: any) => payment.beneficiary_id === beneficiary.id) : [];
 
   // Fetch geographic data for region selection
   const { data: geographicData } = useQuery({

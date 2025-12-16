@@ -93,6 +93,61 @@ function useLoginMutation() {
       queryClient.setQueryData(["/api/auth/me"], processedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       
+      // PREFETCH: hydrate critical queries so the documents page renders instantly post-login
+      const defaultDocumentFilters = {
+        unit: processedUser.unit_id[0]?.toString() || "",
+        status: "all",
+        user: "current",
+        dateFrom: "",
+        dateTo: "",
+        amountFrom: "",
+        amountTo: "",
+        recipient: "",
+        afm: "",
+        expenditureType: "",
+        na853: "",
+        protocolNumber: "",
+      };
+
+      const docParams = new URLSearchParams();
+      if (defaultDocumentFilters.unit) {
+        docParams.append("unit", defaultDocumentFilters.unit);
+      }
+      if (processedUser.id) {
+        docParams.append("generated_by", processedUser.id.toString());
+      }
+      docParams.append("limit", "30");
+      docParams.append("offset", "0");
+
+      void queryClient.prefetchQuery({
+        queryKey: ["/api/documents", defaultDocumentFilters, 0, 30],
+        staleTime: 5 * 60 * 1000,
+        gcTime: 15 * 60 * 1000,
+        queryFn: async () => {
+          const response = await fetch(
+            `/api/documents${docParams.toString() ? `?${docParams.toString()}` : ""}`,
+            { credentials: 'include' },
+          );
+          if (!response.ok) {
+            throw new Error("Failed to prefetch documents");
+          }
+          return response.json();
+        },
+      });
+
+      void queryClient.prefetchQuery({
+        queryKey: ["/api/public/units"],
+        staleTime: 30 * 60 * 1000,
+        gcTime: 60 * 60 * 1000,
+        queryFn: async () => {
+          const response = await fetch('/api/public/units');
+          if (!response.ok) {
+            throw new Error("Failed to prefetch units");
+          }
+          return response.json();
+        },
+      });
+      
       // BACKGROUND PREFETCH: Start prefetching beneficiary/employee AFM data in the background
       // This runs silently while user navigates, making autocomplete instant later
       fetch('/api/beneficiaries/prefetch', { credentials: 'include' })

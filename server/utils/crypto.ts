@@ -8,9 +8,16 @@ const KEY_LENGTH = 32;
 const ITERATIONS = 100000;
 
 function getEncryptionKey(): Buffer {
-  const secret = process.env.AFM_KEY;
+  let secret = process.env.AFM_KEY;
+
+  // Developer-friendly fallback to avoid hard crashes when AFM_KEY is missing locally.
   if (!secret) {
-    throw new Error('AFM_KEY environment variable is not set');
+    if (process.env.NODE_ENV !== 'production') {
+      secret = process.env.SESSION_SECRET || 'dev-afm-key';
+      console.warn('[Crypto] AFM_KEY missing - using fallback key for development only.');
+    } else {
+      throw new Error('AFM_KEY environment variable is not set');
+    }
   }
   
   const salt = Buffer.from('afm-encryption-salt-v1');

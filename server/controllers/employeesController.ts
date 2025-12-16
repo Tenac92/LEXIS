@@ -53,17 +53,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/engineers', async (req: Request, res: Response) => {
   try {
     logger.info('Fetching engineers only (attribute = Μηχανικός)');
-    const allEmployees = await storage.getAllEmployees();
-    
-    const engineers = allEmployees
-      .filter((emp: Employee) => emp.attribute === "Μηχανικός")
-      .map((emp: Employee) => ({
-        id: emp.id,
-        name: emp.name,
-        surname: emp.surname,
-        attribute: emp.attribute
-      }))
-      .sort((a, b) => `${a.surname} ${a.name}`.localeCompare(`${b.surname} ${b.name}`, 'el'));
+    const engineers = await storage.getEngineers();
     
     logger.info(`Found ${engineers.length} engineers`);
     

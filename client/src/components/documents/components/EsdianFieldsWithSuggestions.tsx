@@ -61,14 +61,14 @@ interface EsdianFieldsWithSuggestionsProps {
 export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestionsProps) {
   const projectId = form.watch("project_id");
   const expenditureType = form.watch("expenditure_type");
-  
+
   // Watch the esdian_fields array
-  const esdianFields = form.watch("esdian_fields") || [""];
-  
-  // Initialize with at least one field if none exist
+  const esdianFields = form.watch("esdian_fields") || [];
+
+  // Ensure the value stays an array even when empty (fields are optional)
   useEffect(() => {
-    if (!esdianFields || esdianFields.length === 0) {
-      form.setValue("esdian_fields", [""]);
+    if (!Array.isArray(esdianFields)) {
+      form.setValue("esdian_fields", []);
     }
   }, [form, esdianFields]);
 
@@ -117,10 +117,8 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
 
   const removeEsdianField = (index: number) => {
     const currentFields = form.getValues("esdian_fields") || [];
-    if (currentFields.length > 1) {
-      const newFields = currentFields.filter((_: string, i: number) => i !== index);
-      form.setValue("esdian_fields", newFields);
-    }
+    const newFields = currentFields.filter((_: string, i: number) => i !== index);
+    form.setValue("esdian_fields", newFields);
   };
 
   const applyContextSuggestions = () => {
@@ -134,10 +132,10 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
   // Auto-population effect when suggestions load
   useEffect(() => {
     if (autoPopulate && autoPopulate.confidence === 'high') {
-      const currentFields = form.getValues("esdian_fields") || [""];
+      const currentFields = form.getValues("esdian_fields") || [];
       // Only auto-populate if fields are empty
       const hasEmptyFields = currentFields.every((field: string) => !field || field.trim() === "");
-      
+
       if (hasEmptyFields) {
         form.setValue("esdian_fields", autoPopulate.fields);
         console.log(`[EsdianFields] Auto-populated with ${autoPopulate.reason}: ${autoPopulate.fields.join(', ')}`);
@@ -273,6 +271,11 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
 
       {/* Dynamic ESDIAN Input Fields */}
       <div className="space-y-4">
+        {esdianFields.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Τα πεδία εσωτερικής διανομής είναι προαιρετικά. Προσθέστε νέο μόνο αν χρειάζεται.
+          </p>
+        )}
         {esdianFields.map((field: string, index: number) => (
           <div key={index} className="flex items-end gap-2">
             <div className="flex-1">
@@ -294,18 +297,16 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
                 )}
               />
             </div>
-            {esdianFields.length > 1 && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-10 px-3 text-red-600 hover:bg-red-50 hover:border-red-300"
-                onClick={() => removeEsdianField(index)}
-                data-testid={`button-remove-esdian-field-${index + 1}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-10 px-3 text-red-600 hover:bg-red-50 hover:border-red-300"
+              onClick={() => removeEsdianField(index)}
+              data-testid={`button-remove-esdian-field-${index + 1}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         ))}
         

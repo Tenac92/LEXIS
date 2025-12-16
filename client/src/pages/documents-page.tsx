@@ -118,6 +118,7 @@ export default function DocumentsPage() {
         na853: "",
         protocolNumber: "",
       });
+      setPage(0);
     }
   }, [location, setLocation]);
 
@@ -145,9 +146,7 @@ export default function DocumentsPage() {
   // Filter by unit.id which matches the values in user.unit_id
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
-    const filtered = allUnits.filter((unit) => user.unit_id?.includes(unit.id));
-    console.log("[DocumentsPage] Filtered userUnits:", filtered.length, "from", allUnits.length);
-    return filtered;
+    return allUnits.filter((unit) => user.unit_id?.includes(unit.id));
   }, [allUnits, user?.unit_id]);
 
   // Initialize both main filters and advanced filters states
@@ -207,6 +206,10 @@ export default function DocumentsPage() {
     setAdvancedFilters((prev) => ({ ...prev, ...newValues }));
   };
 
+  // Pagination state
+  const PAGE_SIZE = 30;
+  const [page, setPage] = useState(0);
+
   // Apply advanced filters only when button is clicked
   const applyAdvancedFilters = () => {
     // Update the main filters with advanced filter values
@@ -214,6 +217,7 @@ export default function DocumentsPage() {
       ...prev,
       ...advancedFilters,
     }));
+    setPage(0);
   };
 
   // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
@@ -230,112 +234,83 @@ export default function DocumentsPage() {
     enabled: !!user?.unit_id,
   });
 
-  // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
-  const {
-    data: documents = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<GeneratedDocument[]>({
-    queryKey: ["/api/documents", filters],
-    staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
-    gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
-    refetchOnMount: false, // Use cached data when available
-    refetchOnWindowFocus: false, // Prevent unnecessary refetching
-    queryFn: async () => {
+  const fetchDocuments = useCallback(
+    async ({ queryKey, signal }: { queryKey: [string, Filters, number, number]; signal?: AbortSignal }) => {
+      const [, currentFilters, currentPage, pageSize] = queryKey;
       try {
-        // Fetching documents with current filters
-        console.log(
-          "[DocumentsPage] Fetching documents with filters:",
-          JSON.stringify(filters),
-        );
-
-        // If AFM filter is provided (9 digits), use the dedicated search endpoint
-        if (filters.afm && filters.afm.length === 9) {
-          console.log(`[DocumentsPage] Using AFM search endpoint for: ${filters.afm}`);
-          const data = await apiRequest<GeneratedDocument[]>(`/api/documents/search?afm=${filters.afm}`);
-          const documentsArray = Array.isArray(data) ? data : [];
-          console.log(`[DocumentsPage] AFM search returned ${documentsArray.length} documents`);
-          return documentsArray;
+        if (currentFilters.afm && currentFilters.afm.length === 9) {
+          const data = await apiRequest<GeneratedDocument[]>(
+            `/api/documents/search?afm=${currentFilters.afm}`,
+            { signal },
+          );
+          return Array.isArray(data) ? data : [];
         }
 
-        // Build query parameters for the API request
         const queryParams = new URLSearchParams();
 
-        // Always enforce unit filter - users can only see their assigned units
-        if (filters.unit) {
-          // Verify the selected unit is in user's authorized units
-          if (user?.unit_id?.includes(parseInt(filters.unit))) {
-            queryParams.append("unit", filters.unit);
-          } else {
-            // If unauthorized unit, default to first authorized unit
-            if (user?.unit_id?.[0]) {
-              queryParams.append("unit", user.unit_id[0].toString());
-            }
-          }
-        } else {
-          // If no unit selected, default to first authorized unit
-          if (user?.unit_id?.[0]) {
+        if (currentFilters.unit) {
+          if (user?.unit_id?.includes(parseInt(currentFilters.unit))) {
+            queryParams.append("unit", currentFilters.unit);
+          } else if (user?.unit_id?.[0]) {
             queryParams.append("unit", user.unit_id[0].toString());
           }
+        } else if (user?.unit_id?.[0]) {
+          queryParams.append("unit", user.unit_id[0].toString());
         }
 
-        if (filters.status !== "all") {
-          queryParams.append("status", filters.status);
+        if (currentFilters.status !== "all") {
+          queryParams.append("status", currentFilters.status);
         }
 
-        if (filters.user === "current" && user?.id) {
+        if (currentFilters.user === "current" && user?.id) {
           queryParams.append("generated_by", user.id.toString());
-        } else if (filters.user !== "all") {
-          queryParams.append("generated_by", filters.user);
+        } else if (currentFilters.user !== "all") {
+          queryParams.append("generated_by", currentFilters.user);
         }
 
-        if (filters.dateFrom) {
-          queryParams.append("dateFrom", filters.dateFrom);
+        if (currentFilters.dateFrom) {
+          queryParams.append("dateFrom", currentFilters.dateFrom);
         }
 
-        if (filters.dateTo) {
-          queryParams.append("dateTo", filters.dateTo);
+        if (currentFilters.dateTo) {
+          queryParams.append("dateTo", currentFilters.dateTo);
         }
 
-        if (filters.amountFrom) {
-          queryParams.append("amountFrom", filters.amountFrom);
+        if (currentFilters.amountFrom) {
+          queryParams.append("amountFrom", currentFilters.amountFrom);
         }
 
-        if (filters.amountTo) {
-          queryParams.append("amountTo", filters.amountTo);
+        if (currentFilters.amountTo) {
+          queryParams.append("amountTo", currentFilters.amountTo);
         }
 
-        if (filters.recipient) {
-          queryParams.append("recipient", filters.recipient);
+        if (currentFilters.recipient) {
+          queryParams.append("recipient", currentFilters.recipient);
         }
 
-        if (filters.expenditureType) {
-          queryParams.append("expenditureType", filters.expenditureType);
+        if (currentFilters.expenditureType) {
+          queryParams.append("expenditureType", currentFilters.expenditureType);
         }
 
-        if (filters.na853) {
-          queryParams.append("na853", filters.na853);
+        if (currentFilters.na853) {
+          queryParams.append("na853", currentFilters.na853);
         }
 
-        if (filters.protocolNumber) {
-          queryParams.append("protocolNumber", filters.protocolNumber);
+        if (currentFilters.protocolNumber) {
+          queryParams.append("protocolNumber", currentFilters.protocolNumber);
         }
+
+        queryParams.append("limit", pageSize.toString());
+        queryParams.append("offset", (currentPage * pageSize).toString());
 
         const url = `/api/documents?${queryParams.toString()}`;
-        console.log("[DocumentsPage] Requesting documents from:", url);
-
-        const data = await apiRequest<GeneratedDocument[]>(url);
-
-        // Ensure we always return an array, even if API returns null or undefined
-        const documentsArray = Array.isArray(data) ? data : [];
-        console.log(
-          `[DocumentsPage] Received ${documentsArray.length} documents`,
-        );
-
-        return documentsArray;
+        const data = await apiRequest<GeneratedDocument[]>(url, { signal });
+        return Array.isArray(data) ? data : [];
       } catch (error) {
-        // Log error and notify user about document fetch failure
+        // Abort signals are expected when filters change rapidly
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return [];
+        }
         console.error("[DocumentsPage] Error fetching documents:", error);
         toast({
           title: "Error",
@@ -345,11 +320,31 @@ export default function DocumentsPage() {
               : "Failed to fetch documents",
           variant: "destructive",
         });
-        // Return empty array in case of error
         return [];
       }
     },
+    [toast, user?.id, user?.unit_id],
+  );
+
+  // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<GeneratedDocument[]>({
+    queryKey: ["/api/documents", filters, page, PAGE_SIZE],
+    staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
+    refetchOnMount: false, // Use cached data when available
+    refetchOnWindowFocus: false, // Prevent unnecessary refetching
+    keepPreviousData: true, // Avoid UI flicker on filter changes
+    enabled: Boolean(user?.id),
+    queryFn: fetchDocuments,
   });
+
+  const canGoPrev = page > 0;
+  const canGoNext = documents.length === PAGE_SIZE;
 
   // PERFORMANCE OPTIMIZATION: Memoized refresh handler and optimized filter functions
   const handleRefresh = useCallback(() => {
@@ -357,23 +352,31 @@ export default function DocumentsPage() {
     refetch();
   }, [refetch]);
 
-  // PERFORMANCE OPTIMIZATION: Memoized filter functions after refetch is available
-  const optimizedSetMainFilters = useCallback(
-    (newFilters: Partial<Filters>) => {
-      const updatedFilters = { ...filters, ...newFilters };
-      setFilters(updatedFilters);
-      refetch();
-    },
-    [filters, refetch],
-  );
+  const handleNextPage = useCallback(() => {
+    if (canGoNext) {
+      setPage((prev) => prev + 1);
+    }
+  }, [canGoNext]);
+
+  const handlePrevPage = useCallback(() => {
+    if (canGoPrev) {
+      setPage((prev) => Math.max(prev - 1, 0));
+    }
+  }, [canGoPrev]);
+
+  // PERFORMANCE OPTIMIZATION: Memoized filter functions without duplicate refetches
+  const optimizedSetMainFilters = useCallback((newFilters: Partial<Filters>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setPage(0);
+  }, []);
 
   const optimizedApplyAdvancedFilters = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
       ...advancedFilters,
     }));
-    refetch();
-  }, [advancedFilters, refetch]);
+    setPage(0);
+  }, [advancedFilters]);
 
   if (isLoading) {
     return (
@@ -800,6 +803,30 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
+          </div>
+          <div className="flex flex-col gap-3 px-6 pb-6">
+            <div className="text-sm text-muted-foreground">
+              Page {page + 1} • Showing {documents.length} documents
+              {documents.length < PAGE_SIZE && " (last page)"}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={!canGoPrev || isLoading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!canGoNext || isLoading}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

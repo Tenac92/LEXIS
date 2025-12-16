@@ -231,71 +231,6 @@ export default function BeneficiariesPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch beneficiary payments for enhanced display with caching
-  const { data: beneficiaryPayments = [] } = useQuery({
-    queryKey: ["/api/beneficiary-payments"],
-    staleTime: 3 * 60 * 1000, // 3 minutes cache
-    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
-    refetchOnWindowFocus: false,
-    enabled: beneficiaries.length > 0,
-  });
-
-  // Fetch kallikratis data for region name mapping with aggressive caching
-  const { data: kallikratisData = [] } = useQuery({
-    queryKey: ["/api/projects/cards"],
-    select: (data: any) => {
-      // Extract unique regions from enhanced project data
-      if (data && Array.isArray(data)) {
-        const regions = new Map();
-        data.forEach((project: any) => {
-          if (project.region && project.region.id && project.region.name) {
-            const regionId = project.region.id.toString();
-            if (!regions.has(regionId)) {
-              regions.set(regionId, project.region.name);
-            }
-          }
-        });
-        return Array.from(regions.entries()).map(([id, name]) => ({
-          id,
-          name,
-        }));
-      }
-      return [];
-    },
-    staleTime: 60 * 60 * 1000, // 1 hour cache - region data rarely changes
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours cache retention
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-
-  // PERFORMANCE OPTIMIZATION: Memoized payment data to avoid recalculation on every render
-  const beneficiaryPaymentData = useMemo(() => {
-    if (!Array.isArray(beneficiaryPayments)) return new Map();
-
-    const paymentMap = new Map();
-
-    // Group payments by beneficiary ID for O(1) lookup
-    beneficiaryPayments.forEach((payment: any) => {
-      const id = payment.beneficiary_id;
-      if (!paymentMap.has(id)) {
-        paymentMap.set(id, {
-          payments: [],
-          totalAmount: 0,
-          expenditureTypes: new Set(),
-        });
-      }
-
-      const data = paymentMap.get(id);
-      data.payments.push(payment);
-      data.totalAmount += parseEuropeanNumber(payment.amount) || 0;
-      if (payment.expenditure_type) {
-        data.expenditureTypes.add(payment.expenditure_type);
-      }
-    });
-
-    return paymentMap;
-  }, [beneficiaryPayments]);
-
   // Helper function to format regiondet JSONB data for display
   const formatRegiondet = useCallback((regiondet: Record<string, unknown> | null): string[] => {
     if (!regiondet || typeof regiondet !== 'object') return [];
@@ -315,28 +250,13 @@ export default function BeneficiariesPage() {
     return regionNames;
   }, []);
 
-  // Optimized helper functions using memoized data
-  const getPaymentsForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
-  };
-
-  const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
-  };
-
-  const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
-    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
-    return types ? Array.from(types) : [];
-  };
-
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: BeneficiaryFormData) =>
-      fetch("/api/beneficiaries", {
+      apiRequest("/api/beneficiaries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then((res) => res.json()),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       setDialogOpen(false);
@@ -358,11 +278,10 @@ export default function BeneficiariesPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: BeneficiaryFormData }) =>
-      fetch(`/api/beneficiaries/${id}`, {
+      apiRequest(`/api/beneficiaries/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then((res) => res.json()),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       setDialogOpen(false);
@@ -384,7 +303,7 @@ export default function BeneficiariesPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      fetch(`/api/beneficiaries/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/beneficiaries/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       toast({
@@ -460,14 +379,22 @@ export default function BeneficiariesPage() {
     }
 
     // Otherwise, do client-side filtering (for non-AFM searches)
-    if (!searchTerm.trim()) return beneficiaries;
+    const baseList = !searchTerm.trim()
+      ? beneficiaries
+      : beneficiaries.filter((beneficiary) => {
+          const searchLower = searchTerm.toLowerCase();
+          return (
+            beneficiary.surname?.toLowerCase().includes(searchLower) ||
+            beneficiary.name?.toLowerCase().includes(searchLower)
+          );
+        });
 
-    const searchLower = searchTerm.toLowerCase();
-    return beneficiaries.filter((beneficiary) => {
-      return (
-        beneficiary.surname?.toLowerCase().includes(searchLower) ||
-        beneficiary.name?.toLowerCase().includes(searchLower)
-      );
+    // Deduplicate by beneficiary ID to avoid duplicate keys in the list/grid
+    const seen = new Set<number>();
+    return baseList.filter((beneficiary) => {
+      if (seen.has(beneficiary.id)) return false;
+      seen.add(beneficiary.id);
+      return true;
     });
   }, [beneficiaries, searchTerm, afmSearchResults]);
 
@@ -484,6 +411,66 @@ export default function BeneficiariesPage() {
   }, [filteredBeneficiaries, currentPage, itemsPerPage]);
 
   const { totalPages, paginatedBeneficiaries } = paginationData;
+
+  // IDs of beneficiaries currently visible (limit server fetch scope)
+  const visibleBeneficiaryIds = useMemo(
+    () => paginatedBeneficiaries.map((b) => b.id),
+    [paginatedBeneficiaries],
+  );
+
+  // Fetch payments only for visible beneficiaries instead of the entire table
+  const { data: beneficiaryPayments = [], isFetching: paymentsLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", { ids: visibleBeneficiaryIds }],
+    queryFn: async () => {
+      if (visibleBeneficiaryIds.length === 0) return [];
+      const idParam = visibleBeneficiaryIds.join(",");
+      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
+    },
+    enabled: visibleBeneficiaryIds.length > 0,
+    staleTime: 2 * 60 * 1000, // keep short; list view refreshes when pages change
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // PERFORMANCE: Memoized payment data for O(1) lookups in list rendering
+  const beneficiaryPaymentData = useMemo(() => {
+    if (!Array.isArray(beneficiaryPayments)) return new Map();
+
+    const paymentMap = new Map();
+
+    beneficiaryPayments.forEach((payment: any) => {
+      const id = payment.beneficiary_id;
+      if (!paymentMap.has(id)) {
+        paymentMap.set(id, {
+          payments: [],
+          totalAmount: 0,
+          expenditureTypes: new Set(),
+        });
+      }
+
+      const data = paymentMap.get(id);
+      data.payments.push(payment);
+      data.totalAmount += parseEuropeanNumber(payment.amount) || 0;
+      if (payment.expenditure_type) {
+        data.expenditureTypes.add(payment.expenditure_type);
+      }
+    });
+
+    return paymentMap;
+  }, [beneficiaryPayments]);
+
+  // Optimized helper functions using memoized data
+  const getPaymentsForBeneficiary = (beneficiaryId: number) => {
+    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
+  };
+
+  const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
+    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
+  };
+
+  const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
+    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
+    return types ? Array.from(types) : [];
+  };
 
   // Handle loading state
   if (isLoading) {

@@ -336,14 +336,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Beneficiary payments endpoint for enhanced display
   app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!req.user?.unit_id) {
+      const userUnits = req.user?.unit_id || [];
+      if (userUnits.length === 0) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      // Get all beneficiaries for user's units first
-      const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0].toString());
-      
-      // Get payments for all these beneficiaries
+      // Optional narrowing by beneficiary IDs to avoid scanning the entire table
+      const beneficiaryIdsParam = (req.query.beneficiaryIds as string | undefined) || '';
+      const beneficiaryIds = beneficiaryIdsParam
+        .split(',')
+        .map(id => parseInt(id, 10))
+        .filter(id => Number.isFinite(id));
+
+      if (beneficiaryIds.length > 0) {
+        const { data, error } = await supabase
+          .from('beneficiary_payments')
+          .select('*')
+          .in('beneficiary_id', beneficiaryIds)
+          .in('unit_id', userUnits);
+
+        if (error) {
+          console.error('[Beneficiary Payments] Error fetching filtered payments:', error);
+          return res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
+        }
+
+        return res.json(data || []);
+      }
+
+      // Fallback: previous behavior (fetch payments for beneficiaries in first unit)
+      const beneficiaries = await storage.getBeneficiariesByUnit(userUnits[0].toString());
       const allPayments = [];
       for (const beneficiary of beneficiaries) {
         const payments = await storage.getBeneficiaryPayments(beneficiary.id);

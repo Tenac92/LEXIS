@@ -601,6 +601,40 @@ router.post(
         return baseRecipient;
       });
 
+      const isEktosEdrasType = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+
+      // Pre-validate ΕΚΤΟΣ ΕΔΡΑΣ recipients before creating the document to avoid orphan records
+      if (isEktosEdrasType) {
+        const hasMissingMonth = formattedRecipients.some(
+          (recipient) => !recipient.month || !String(recipient.month).trim(),
+        );
+
+        if (hasMissingMonth) {
+          return res.status(400).json({
+            message:
+              "Month selection is required for ΕΚΤΟΣ ΕΔΡΑΣ recipients",
+          });
+        }
+
+        const hasZeroExpenses = formattedRecipients.some((recipient) => {
+          const dailyComp = Number(recipient.daily_compensation) || 0;
+          const accommodation = Number(recipient.accommodation_expenses) || 0;
+          const kmTraveled = Number(recipient.kilometers_traveled) || 0;
+          const pricePerKm = Number(recipient.price_per_km) || 0.2;
+          const tickets = Number(recipient.tickets_tolls_rental) || 0;
+          const kmCost = kmTraveled * pricePerKm;
+
+          return dailyComp + accommodation + kmCost + tickets <= 0;
+        });
+
+        if (hasZeroExpenses) {
+          return res.status(400).json({
+            message:
+              "Total expenses must be greater than zero for ΕΚΤΟΣ ΕΔΡΑΣ recipients",
+          });
+        }
+      }
+
       const now = new Date().toISOString();
 
       // Use director signature from request body if provided, otherwise get from Monada table
@@ -952,6 +986,8 @@ router.post(
       // Create beneficiary payments OR employee payments for each recipient using project_index_id
       const beneficiaryPaymentsIds = [];
       const employeePaymentsIds = [];
+      let beneficiaryPaymentFailed = false;
+      let beneficiaryPaymentError: any = null;
       try {
         console.log(
           "[DocumentsController] V2 Creating payments for",
@@ -967,7 +1003,7 @@ router.post(
         );
 
         // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (out-of-office expenses)
-        const isEktosEdras = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+        const isEktosEdras = isEktosEdrasType;
 
         for (const recipient of formattedRecipients) {
           // ΕΚΤΟΣ ΕΔΡΑΣ: Create employee payment
@@ -1132,12 +1168,16 @@ router.post(
                 "[DocumentsController] V2 Error finding beneficiary:",
                 findError,
               );
+              beneficiaryPaymentFailed = true;
+              beneficiaryPaymentError = findError;
             }
           } catch (beneficiaryError) {
             console.error(
               "[DocumentsController] V2 Error during beneficiary lookup/creation:",
               beneficiaryError,
             );
+            beneficiaryPaymentFailed = true;
+            beneficiaryPaymentError = beneficiaryError;
           }
 
           // Step 2: Create separate beneficiary payment records for each installment
@@ -1200,6 +1240,8 @@ router.post(
                       "[DocumentsController] V2 Error creating installment payment:",
                       paymentError,
                     );
+                    beneficiaryPaymentFailed = true;
+                    beneficiaryPaymentError = paymentError;
                   } else {
                     beneficiaryPaymentsIds.push(paymentData.id);
                     console.log(
@@ -1251,6 +1293,8 @@ router.post(
                   "[DocumentsController] V2 Error creating single payment:",
                   paymentError,
                 );
+                beneficiaryPaymentFailed = true;
+                beneficiaryPaymentError = paymentError;
               } else {
                 beneficiaryPaymentsIds.push(paymentData.id);
                 console.log(
@@ -1264,6 +1308,7 @@ router.post(
               "[DocumentsController] V2 Cannot create payment: beneficiary_id is null for AFM:",
               recipient.afm,
             );
+            beneficiaryPaymentFailed = true;
           }
           } // End of else block for standard beneficiary payments
         }
@@ -1292,6 +1337,54 @@ router.post(
             );
           }
         } else {
+          if (
+            formattedRecipients.length > 0 &&
+            (beneficiaryPaymentsIds.length === 0 || beneficiaryPaymentFailed)
+          ) {
+            console.error(
+              "[DocumentsController] V2 Beneficiary payments were not created for non-EKTOS EDRAS document. Rolling back document:",
+              data.id,
+              "last error:",
+              beneficiaryPaymentError,
+            );
+
+            // Attempt to delete any partially created payments
+            if (beneficiaryPaymentsIds.length > 0) {
+              try {
+                await supabase
+                  .from("beneficiary_payments")
+                  .delete()
+                  .in("id", beneficiaryPaymentsIds);
+              } catch (deleteError) {
+                console.error(
+                  "[DocumentsController] V2 Rollback failed while deleting partial beneficiary payments:",
+                  deleteError,
+                );
+              }
+            }
+
+            try {
+              await supabase
+                .from("generated_documents")
+                .delete()
+                .eq("id", data.id);
+            } catch (rollbackError) {
+              console.error(
+                "[DocumentsController] V2 Rollback failed while deleting document:",
+                rollbackError,
+              );
+            }
+
+            return res.status(500).json({
+              message:
+                "Beneficiary payments could not be saved. The document was not created.",
+              error:
+                beneficiaryPaymentError?.message ||
+                "beneficiary_payments_not_created",
+              details: beneficiaryPaymentError || undefined,
+            });
+          }
+
           console.log(
             "[DocumentsController] V2 Updating document with beneficiary payment IDs:",
             beneficiaryPaymentsIds,
@@ -1448,10 +1541,20 @@ router.post(
   },
 );
 
-// List documents with filters
+// List documents with filters (batched fetch to avoid N+1 queries)
 router.get("/", async (req: Request, res: Response) => {
   try {
-    // Starting document fetch with filters
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offsetParam = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+    const limit =
+      typeof limitParam === "number" && Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 500)
+        : undefined;
+    const offset =
+      typeof offsetParam === "number" && Number.isFinite(offsetParam) && offsetParam >= 0
+        ? offsetParam
+        : 0;
+
     const filters = {
       unit_id: req.query.unit ? parseInt(req.query.unit as string) : undefined,
       status: req.query.status as string,
@@ -1473,14 +1576,12 @@ router.get("/", async (req: Request, res: Response) => {
       protocolNumber: req.query.protocolNumber as string,
     };
 
-    // Get documents from database directly, ordered by most recent first
-    // Explicitly select all columns including payment ID arrays
+    // Base query with optional pagination
     let query = supabase
       .from("generated_documents")
       .select("*, employee_payments_id, beneficiary_payments_id")
       .order("created_at", { ascending: false });
 
-    // Apply filters only if they exist
     if (filters.unit_id) {
       query = query.eq("unit_id", filters.unit_id);
     }
@@ -1489,6 +1590,10 @@ router.get("/", async (req: Request, res: Response) => {
     }
     if (filters.generated_by) {
       query = query.eq("generated_by", filters.generated_by);
+    }
+
+    if (limit) {
+      query = query.range(offset, offset + limit - 1);
     }
 
     const { data: documents, error } = await query;
@@ -1501,302 +1606,260 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Enrich documents with beneficiary payment data and project/unit information
-    const enrichedDocuments = await Promise.all(
-      (documents || []).map(async (doc) => {
-        let recipients: any[] = [];
+    if (!documents || documents.length === 0) {
+      return res.json([]);
+    }
 
-        // Fetch employee payments for ΕΚΤΟΣ ΕΔΡΑΣ documents
-        if (
-          doc.employee_payments_id &&
-          Array.isArray(doc.employee_payments_id) &&
-          doc.employee_payments_id.length > 0
-        ) {
-          try {
-            console.log(`[DocumentsController] Fetching employee payments for document ${doc.id} with IDs:`, doc.employee_payments_id);
-            
-            const { data: empPayments, error: empPaymentsError } = await supabase
-              .from("EmployeePayments")
-              .select(
-                `
+    // Collect all related IDs for batched fetching
+    const employeePaymentIds = new Set<number>();
+    const beneficiaryPaymentIds = new Set<number>();
+    const unitIds = new Set<number>();
+    const projectIndexIds = new Set<number>();
+    const attachmentIds = new Set<number>();
+
+    for (const doc of documents) {
+      if (doc.unit_id) unitIds.add(doc.unit_id);
+      if (doc.project_index_id) projectIndexIds.add(doc.project_index_id);
+      if (Array.isArray(doc.attachment_id)) {
+        doc.attachment_id.forEach((id: number) => attachmentIds.add(id));
+      } else if (doc.attachment_id) {
+        attachmentIds.add(doc.attachment_id as number);
+      }
+      if (Array.isArray(doc.employee_payments_id)) {
+        doc.employee_payments_id.forEach((id: number) => employeePaymentIds.add(id));
+      }
+      if (Array.isArray(doc.beneficiary_payments_id)) {
+        doc.beneficiary_payments_id.forEach((id: number) => beneficiaryPaymentIds.add(id));
+      }
+    }
+
+    const [
+      employeePaymentsResult,
+      beneficiaryPaymentsResult,
+      unitsResult,
+      projectIndexResult,
+      attachmentsResult,
+    ] = await Promise.all([
+      employeePaymentIds.size
+        ? supabase
+            .from("EmployeePayments")
+            .select(
+              `
+              id,
+              net_payable,
+              month,
+              days,
+              daily_compensation,
+              accommodation_expenses,
+              kilometers_traveled,
+              tickets_tolls_rental,
+              has_2_percent_deduction,
+              total_expense,
+              deduction_2_percent,
+              status,
+              Employees (
                 id,
-                net_payable,
-                month,
-                days,
-                daily_compensation,
-                accommodation_expenses,
-                kilometers_traveled,
-                tickets_tolls_rental,
-                has_2_percent_deduction,
-                total_expense,
-                deduction_2_percent,
-                status,
-                Employees (
-                  id,
-                  afm,
-                  surname,
-                  name,
-                  fathername,
-                  klados
-                )
-              `,
+                afm,
+                surname,
+                name,
+                fathername,
+                klados
               )
-              .in("id", doc.employee_payments_id);
-
-            console.log(`[DocumentsController] Employee payments query result for doc ${doc.id}:`, {
-              error: empPaymentsError,
-              paymentsCount: empPayments?.length || 0
-            });
-
-            if (!empPaymentsError && empPayments) {
-              // Transform employee payments into recipients format
-              recipients = empPayments.map((payment) => {
-                const employee = Array.isArray(payment.Employees)
-                  ? payment.Employees[0]
-                  : payment.Employees;
-                return {
-                  id: employee?.id,
-                  firstname: employee?.name || "",
-                  lastname: employee?.surname || "",
-                  fathername: employee?.fathername || "",
-                  afm: employee?.afm ? String(employee.afm) : "",
-                  amount: parseFloat(payment.net_payable) || 0,
-                  month: payment.month || "",
-                  days: payment.days || 0,
-                  daily_compensation: payment.daily_compensation || 0,
-                  accommodation_expenses: payment.accommodation_expenses || 0,
-                  kilometers_traveled: payment.kilometers_traveled || 0,
-                  tickets_tolls_rental: payment.tickets_tolls_rental || 0,
-                  tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
-                  has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
-                  total_expense: payment.total_expense ?? 0,
-                  deduction_2_percent: payment.deduction_2_percent ?? 0,
-                  status: payment.status || "pending",
-                  secondary_text: employee?.klados || null,
-                };
-              });
-              console.log(`[DocumentsController] Transformed ${recipients.length} employee payments into recipients for doc ${doc.id}`);
-            } else if (empPaymentsError) {
-              console.error(`[DocumentsController] Error fetching employee payments for doc ${doc.id}:`, empPaymentsError);
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching employee payments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-        // Fetch beneficiary payments for regular documents
-        else if (
-          doc.beneficiary_payments_id &&
-          Array.isArray(doc.beneficiary_payments_id) &&
-          doc.beneficiary_payments_id.length > 0
-        ) {
-          try {
-            console.log(`[DocumentsController] Fetching beneficiary payments for document ${doc.id} with IDs:`, doc.beneficiary_payments_id);
-            
-            const { data: payments, error: paymentsError } = await supabase
-              .from("beneficiary_payments")
-              .select(
-                `
+            `,
+            )
+            .in("id", Array.from(employeePaymentIds))
+        : { data: [] },
+      beneficiaryPaymentIds.size
+        ? supabase
+            .from("beneficiary_payments")
+            .select(
+              `
+              id,
+              amount,
+              installment,
+              status,
+              freetext,
+              beneficiaries (
                 id,
-                amount,
-                installment,
-                status,
-                freetext,
-                beneficiaries (
-                  id,
-                  afm,
-                  surname,
-                  name,
-                  fathername,
-                  regiondet
-                )
-              `,
+                afm,
+                surname,
+                name,
+                fathername,
+                regiondet
               )
-              .in("id", doc.beneficiary_payments_id);
-
-            console.log(`[DocumentsController] Beneficiary payments query result for doc ${doc.id}:`, {
-              error: paymentsError,
-              paymentsCount: payments?.length || 0
-            });
-
-            if (!paymentsError && payments) {
-              // Transform payments into recipients format
-              recipients = payments.map((payment) => {
-                const beneficiary = Array.isArray(payment.beneficiaries)
-                  ? payment.beneficiaries[0]
-                  : payment.beneficiaries;
-                return {
-                  id: beneficiary?.id,
-                  firstname: beneficiary?.name || "",
-                  lastname: beneficiary?.surname || "",
-                  fathername: beneficiary?.fathername || "",
-                  afm: beneficiary?.afm ? String(beneficiary.afm) : "",
-                  amount: parseFloat(payment.amount) || 0,
-                  installment: payment.installment || "",
-                  region: beneficiary?.regiondet || "",
-                  status: payment.status || "pending",
-                  freetext: payment.freetext || null,
-                };
-              });
-              console.log(`[DocumentsController] Transformed ${recipients.length} beneficiary payments into recipients for doc ${doc.id}`);
-            } else if (paymentsError) {
-              console.error(`[DocumentsController] Error fetching beneficiary payments for doc ${doc.id}:`, paymentsError);
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching beneficiary payments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-
-        // Fetch unit information
-        let unitInfo = null;
-        if (doc.unit_id) {
-          try {
-            const { data: unitData, error: unitError } = await supabase
-              .from("Monada")
-              .select("unit, unit_name")
-              .eq("id", doc.unit_id)
-              .single();
-
-            if (!unitError && unitData) {
-              unitInfo = unitData;
-            }
-          } catch (err) {
-            console.error("Error fetching unit for document", doc.id, ":", err);
-          }
-        }
-
-        // Fetch project information through project_index
-        let projectInfo = null;
-        let expenditureTypeInfo = null;
-        if (doc.project_index_id) {
-          try {
-            // Get project index entry with related project data
-            const { data: indexData, error: indexError } = await supabase
-              .from("project_index")
-              .select(
-                `
+            `,
+            )
+            .in("id", Array.from(beneficiaryPaymentIds))
+        : { data: [] },
+      unitIds.size
+        ? supabase.from("Monada").select("id, unit, unit_name").in("id", Array.from(unitIds))
+        : { data: [] },
+      projectIndexIds.size
+        ? supabase
+            .from("project_index")
+            .select(
+              `
+              id,
+              project_id,
+              expenditure_type_id,
+              Projects (
                 id,
-                project_id,
-                expenditure_type_id,
-                Projects (
-                  id,
-                  mis,
-                  na853,
-                  event_description,
-                  project_title
-                )
-              `,
+                mis,
+                na853,
+                event_description,
+                project_title
               )
-              .eq("id", doc.project_index_id)
-              .single();
+            `,
+            )
+            .in("id", Array.from(projectIndexIds))
+        : { data: [] },
+      attachmentIds.size
+        ? supabase
+            .from("attachments")
+            .select("id, expenditure_type_id")
+            .in("id", Array.from(attachmentIds))
+        : { data: [] },
+    ]);
 
-            if (!indexError && indexData && indexData.Projects) {
-              projectInfo = indexData.Projects;
+    const employeePayments = (employeePaymentsResult as any).data || [];
+    const beneficiaryPayments = (beneficiaryPaymentsResult as any).data || [];
+    const units = (unitsResult as any).data || [];
+    const projectIndexes = (projectIndexResult as any).data || [];
+    const attachments = (attachmentsResult as any).data || [];
 
-              // Get expenditure type information
-              if (indexData.expenditure_type_id) {
-                const { data: expTypeData, error: expTypeError } =
-                  await supabase
-                    .from("expenditure_types")
-                    .select("expenditure_types")
-                    .eq("id", indexData.expenditure_type_id)
-                    .single();
+    const expenditureTypeIds = new Set<number>();
+    projectIndexes.forEach((idx: any) => {
+      if (idx.expenditure_type_id) expenditureTypeIds.add(idx.expenditure_type_id);
+    });
+    attachments.forEach((att: any) => {
+      if (Array.isArray(att.expenditure_type_id)) {
+        att.expenditure_type_id.forEach((id: number) => expenditureTypeIds.add(id));
+      } else if (att.expenditure_type_id) {
+        expenditureTypeIds.add(att.expenditure_type_id);
+      }
+    });
 
-                if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
-                }
-              }
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching project info for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
+    const { data: expenditureTypesData = [] } = expenditureTypeIds.size
+      ? await supabase
+          .from("expenditure_types")
+          .select("id, expenditure_types")
+          .in("id", Array.from(expenditureTypeIds))
+      : { data: [] as any[] };
 
-        // Fallback: Try to get expenditure type from attachments if not found via project_index
-        if (
-          !expenditureTypeInfo &&
-          doc.attachment_id &&
-          Array.isArray(doc.attachment_id) &&
-          doc.attachment_id.length > 0
-        ) {
-          try {
-            const { data: attachmentData, error: attachmentError } =
-              await supabase
-                .from("attachments")
-                .select("expenditure_type_id")
-                .in("id", doc.attachment_id)
-                .limit(1);
-
-            if (
-              !attachmentError &&
-              attachmentData &&
-              attachmentData.length > 0 &&
-              attachmentData[0].expenditure_type_id
-            ) {
-              const expenditureTypeIds = Array.isArray(
-                attachmentData[0].expenditure_type_id,
-              )
-                ? attachmentData[0].expenditure_type_id
-                : [attachmentData[0].expenditure_type_id];
-
-              if (expenditureTypeIds.length > 0) {
-                const { data: expTypeData, error: expTypeError } =
-                  await supabase
-                    .from("expenditure_types")
-                    .select("expenditure_types")
-                    .eq("id", expenditureTypeIds[0])
-                    .single();
-
-                if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
-                }
-              }
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching expenditure type from attachments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-
-        // Return enriched document with all necessary data for cards
-        return {
-          ...doc,
-          recipients: recipients as any[],
-          // Add fields that the document cards expect
-          unit: unitInfo?.unit || "",
-          unit_name: unitInfo?.unit_name || "",
-          project_id: (projectInfo as any)?.mis || "",
-          mis: (projectInfo as any)?.mis || "",
-          project_na853: (projectInfo as any)?.na853 || "",
-          project_title: (projectInfo as any)?.project_title || "",
-          event_description: (projectInfo as any)?.event_description || "",
-          expenditure_type: expenditureTypeInfo?.name || "",
-        };
-      }),
+    const employeePaymentMap = new Map<number, any>(
+      employeePayments.map((p: any) => [p.id, p]),
     );
+    const beneficiaryPaymentMap = new Map<number, any>(
+      beneficiaryPayments.map((p: any) => [p.id, p]),
+    );
+    const unitMap = new Map<number, any>(units.map((u: any) => [u.id, u]));
+    const projectIndexMap = new Map<number, any>(
+      projectIndexes.map((p: any) => [p.id, p]),
+    );
+    const attachmentMap = new Map<number, any>(
+      attachments.map((a: any) => [a.id, a]),
+    );
+    const expenditureTypeMap = new Map<number, string>(
+      (expenditureTypesData as any[]).map((e: any) => [e.id, e.expenditure_types]),
+    );
+
+    const enrichedDocuments = documents.map((doc) => {
+      let recipients: any[] = [];
+
+      if (Array.isArray(doc.employee_payments_id) && doc.employee_payments_id.length > 0) {
+        recipients = doc.employee_payments_id
+          .map((id: number) => employeePaymentMap.get(id))
+          .filter(Boolean)
+          .map((payment: any) => {
+            const employee = Array.isArray(payment.Employees)
+              ? payment.Employees[0]
+              : payment.Employees;
+            return {
+              id: employee?.id,
+              firstname: employee?.name || "",
+              lastname: employee?.surname || "",
+              fathername: employee?.fathername || "",
+              afm: employee?.afm ? String(employee.afm) : "",
+              amount: parseFloat(payment.net_payable) || 0,
+              month: payment.month || "",
+              days: payment.days || 0,
+              daily_compensation: payment.daily_compensation || 0,
+              accommodation_expenses: payment.accommodation_expenses || 0,
+              kilometers_traveled: payment.kilometers_traveled || 0,
+              tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+              tickets_tolls_rental_entries: [],
+              has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
+              total_expense: payment.total_expense ?? 0,
+              deduction_2_percent: payment.deduction_2_percent ?? 0,
+              status: payment.status || "pending",
+              secondary_text: employee?.klados || null,
+            };
+          });
+      } else if (
+        Array.isArray(doc.beneficiary_payments_id) &&
+        doc.beneficiary_payments_id.length > 0
+      ) {
+        recipients = doc.beneficiary_payments_id
+          .map((id: number) => beneficiaryPaymentMap.get(id))
+          .filter(Boolean)
+          .map((payment: any) => {
+            const beneficiary = Array.isArray(payment.beneficiaries)
+              ? payment.beneficiaries[0]
+              : payment.beneficiaries;
+            return {
+              id: beneficiary?.id,
+              firstname: beneficiary?.name || "",
+              lastname: beneficiary?.surname || "",
+              fathername: beneficiary?.fathername || "",
+              afm: beneficiary?.afm ? String(beneficiary.afm) : "",
+              amount: parseFloat(payment.amount) || 0,
+              installment: payment.installment || "",
+              region: beneficiary?.regiondet || "",
+              status: payment.status || "pending",
+              freetext: payment.freetext || null,
+            };
+          });
+      }
+
+      const unitInfo = doc.unit_id ? unitMap.get(doc.unit_id) : null;
+      const projectIndex = doc.project_index_id
+        ? projectIndexMap.get(doc.project_index_id)
+        : null;
+      const projectInfo = projectIndex?.Projects || null;
+
+      let expenditureTypeName = projectIndex?.expenditure_type_id
+        ? expenditureTypeMap.get(projectIndex.expenditure_type_id) || ""
+        : "";
+
+      if (!expenditureTypeName && Array.isArray(doc.attachment_id) && doc.attachment_id.length) {
+        const attachment = attachmentMap.get(doc.attachment_id[0]);
+        if (attachment) {
+          const firstExpId = Array.isArray(attachment.expenditure_type_id)
+            ? attachment.expenditure_type_id[0]
+            : attachment.expenditure_type_id;
+          if (firstExpId) {
+            expenditureTypeName = expenditureTypeMap.get(firstExpId) || "";
+          }
+        }
+      }
+
+      return {
+        ...doc,
+        recipients,
+        unit: unitInfo?.unit || "",
+        unit_name: unitInfo?.unit_name || "",
+        project_id: projectInfo?.mis || "",
+        mis: projectInfo?.mis || "",
+        project_na853: projectInfo?.na853 || "",
+        project_title: projectInfo?.project_title || "",
+        event_description: projectInfo?.event_description || "",
+        expenditure_type: expenditureTypeName,
+      };
+    });
 
     // Apply filters to enriched documents (client-side filtering for expenditure type and NA853)
     let filteredDocuments = enrichedDocuments;
 
-    // Filter by expenditure type
     if (filters.expenditureType) {
       filteredDocuments = filteredDocuments.filter(
         (doc) =>
@@ -1807,7 +1870,6 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Filter by NA853 code
     if (filters.na853) {
       filteredDocuments = filteredDocuments.filter(
         (doc) =>
@@ -1816,7 +1878,6 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Filter by recipient name (if not already applied in database filters)
     if (filters.recipient) {
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
@@ -1828,7 +1889,6 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Filter by AFM (if not already applied in database filters)
     if (filters.afm) {
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
@@ -1839,22 +1899,15 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Filter by protocol number
     if (filters.protocolNumber) {
-      filteredDocuments = filteredDocuments.filter((doc) =>
-        doc.protocol_number_input &&
-        doc.protocol_number_input.toLowerCase().includes(filters.protocolNumber.toLowerCase())
+      filteredDocuments = filteredDocuments.filter(
+        (doc) =>
+          doc.protocol_number_input &&
+          doc.protocol_number_input
+            .toLowerCase()
+            .includes(filters.protocolNumber.toLowerCase()),
       );
     }
-
-    // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ documents
-    filteredDocuments.forEach(doc => {
-      if (doc.employee_payments_id && doc.employee_payments_id.length > 0) {
-        console.log(`[DocumentsController] Document ${doc.id} - employee_payments_id:`, doc.employee_payments_id);
-        console.log(`[DocumentsController] Document ${doc.id} - recipients count:`, doc.recipients?.length || 0);
-        console.log(`[DocumentsController] Document ${doc.id} - recipients data:`, JSON.stringify(doc.recipients).substring(0, 200));
-      }
-    });
 
     return res.json(filteredDocuments);
   } catch (error) {

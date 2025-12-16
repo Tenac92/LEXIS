@@ -234,7 +234,7 @@ const createDocumentSchema = z
     total_amount: z.number().optional(),
     status: z.string().default("draft"),
     selectedAttachments: z.array(z.string()).optional().default([]),
-    esdian_fields: z.array(z.string()).optional().default([""]),
+    esdian_fields: z.array(z.string().optional()).optional().default([]),
     // Keep old fields for backward compatibility during transition
     esdian_field1: z.string().optional().default(""),
     esdian_field2: z.string().optional().default(""),
@@ -346,7 +346,8 @@ export function CreateDocumentDialog({
             recipients: formValues.recipients,
             status: formValues.status || "draft",
             selectedAttachments: formValues.selectedAttachments,
-            esdian_fields: formValues.esdian_fields || [""],
+            esdian_fields:
+              formValues.esdian_fields?.filter((field) => field) || [],
             // Keep old fields for backward compatibility during transition
             esdian_field1: formValues.esdian_field1 || "",
             esdian_field2: formValues.esdian_field2 || "",
@@ -394,13 +395,13 @@ export function CreateDocumentDialog({
       recipients: formData.recipients || [],
       status: formData.status || "draft",
       selectedAttachments: formData.selectedAttachments || [],
-      esdian_fields:
-        formData.esdian_fields ||
-        (formData.esdian_field1 || formData.esdian_field2
+      esdian_fields: Array.isArray(formData.esdian_fields)
+        ? formData.esdian_fields
+        : formData.esdian_field1 || formData.esdian_field2
           ? [formData.esdian_field1 || "", formData.esdian_field2 || ""].filter(
               Boolean,
             )
-          : [""]),
+          : [],
       // Keep old fields for backward compatibility during transition
       esdian_field1: formData.esdian_field1 || "",
       esdian_field2: formData.esdian_field2 || "",
@@ -3025,7 +3026,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
-          esdian_fields: [""],
+          esdian_fields: [],
           esdian_field1: "",
           esdian_field2: "",
         });
@@ -3039,7 +3040,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
-          esdian_fields: [""],
+          esdian_fields: [],
           esdian_field1: "",
           esdian_field2: "",
         });

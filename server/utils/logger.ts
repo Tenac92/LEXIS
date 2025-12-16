@@ -15,9 +15,19 @@ export enum LogLevel {
 
 // Current environment log level - can be set via environment variable
 // Only logs at this level or higher will be output
-const currentLogLevel = 
-  process.env.LOG_LEVEL?.toLowerCase() as LogLevel || 
-  (process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG);
+const currentLogLevel: LogLevel = 
+  (process.env.LOG_LEVEL?.toLowerCase() as LogLevel) || 
+  (process.env.NODE_ENV === 'production' ? LogLevel.WARN : LogLevel.INFO);
+
+type ConsoleMethod = 'debug' | 'info' | 'warn' | 'error' | 'log';
+
+const baseConsole: Record<ConsoleMethod, (...args: any[]) => void> = {
+  debug: console.debug.bind(console),
+  info: console.info.bind(console),
+  warn: console.warn.bind(console),
+  error: console.error.bind(console),
+  log: console.log.bind(console),
+};
 
 // Log level numerical values for comparison
 const logLevelValues = {
@@ -57,17 +67,18 @@ function log(level: LogLevel, module: string, message: any, ...args: any[]): voi
 
   const timestamp = getFormattedTime();
   const logPrefix = `${timestamp} [${level.toUpperCase()}] [${module}]`;
+  const consoleMethod: ConsoleMethod = level === LogLevel.INFO ? 'info' : level;
   
   // Handle different types of messages
   if (typeof message === 'string') {
     if (args.length > 0) {
-      console[level](logPrefix, message, ...args);
+      baseConsole[consoleMethod](logPrefix, message, ...args);
     } else {
-      console[level](logPrefix, message);
+      baseConsole[consoleMethod](logPrefix, message);
     }
   } else {
     // For objects, arrays, etc.
-    console[level](logPrefix, message, ...args);
+    baseConsole[consoleMethod](logPrefix, message, ...args);
   }
 }
 
@@ -88,6 +99,41 @@ export function createLogger(moduleName: string) {
     error: (message: any, ...args: any[]) => 
       log(LogLevel.ERROR, moduleName, message, ...args)
   };
+}
+
+/**
+ * Expose the configured log level for status messages
+ */
+export function getCurrentLogLevel(): LogLevel {
+  return currentLogLevel;
+}
+
+/**
+ * Replace console logging with a filtered, timestamped version so that
+ * stray console.log/debug statements respect LOG_LEVEL as well.
+ */
+export function applyConsoleLogLevelFilter(prefix = 'console') {
+  const methodLevels: Record<ConsoleMethod, LogLevel> = {
+    debug: LogLevel.DEBUG,
+    log: LogLevel.INFO,
+    info: LogLevel.INFO,
+    warn: LogLevel.WARN,
+    error: LogLevel.ERROR,
+  };
+
+  (Object.keys(methodLevels) as ConsoleMethod[]).forEach((method) => {
+    const level = methodLevels[method];
+    const original = baseConsole[method];
+
+    console[method] = (...args: any[]) => {
+      if (!shouldLog(level)) {
+        return;
+      }
+
+      const timestamp = getFormattedTime();
+      original(`${timestamp} [${level.toUpperCase()}] [${prefix}]`, ...args);
+    };
+  });
 }
 
 // Create a default logger instance

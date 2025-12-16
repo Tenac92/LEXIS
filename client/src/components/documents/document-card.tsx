@@ -21,13 +21,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, memo, useMemo } from "react";
+import { useState, memo, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
 import { DocumentDetailsModal } from "./DocumentDetailsModal";
 import { ViewDocumentModal } from "./document-modals";
-import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DocumentCardProps {
@@ -115,47 +114,7 @@ const DocumentCard = memo(function DocumentCard({
   const [showProtocolModal, setShowProtocolModal] = useState(false);
   const [isReturned, setIsReturned] = useState((doc as any).is_returned || false);
   const [isTogglingReturn, setIsTogglingReturn] = useState(false);
-  const [projectNa853, setProjectNa853] = useState<string>(
-    (doc as any).project_na853 || "",
-  );
   const { toast } = useToast();
-
-  // Get the MIS code from the document
-  const mis = (doc as any).project_id || (doc as any).mis || "";
-
-  // Fetch project NA853 data from project resolver endpoint
-  const { data: na853Data } = useQuery<any>({
-    queryKey: ["/api/projects/na853", mis],
-    queryFn: async () => {
-      if (!mis) return null;
-      try {
-        console.log("Fetching NA853 for MIS:", mis);
-        return await apiRequest(`/api/projects/na853/${mis}`);
-      } catch (error) {
-        console.error("Failed to fetch NA853 data:", error);
-        return null;
-      }
-    },
-    enabled: !!mis,
-  });
-
-  // Update NA853 when data is fetched from our special endpoint
-  useEffect(() => {
-    if (na853Data) {
-      // Add debug log to see the structure of the response
-      console.log("NA853 data received:", na853Data);
-
-      try {
-        // Our dedicated endpoint returns a simplified structure always containing na853
-        if (na853Data && na853Data.na853) {
-          console.log("Found NA853 from dedicated endpoint:", na853Data.na853);
-          setProjectNa853(na853Data.na853);
-        }
-      } catch (error) {
-        console.error("Error extracting NA853 from data:", error);
-      }
-    }
-  }, [na853Data]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Allow flipping anywhere on the card
@@ -264,6 +223,7 @@ const DocumentCard = memo(function DocumentCard({
 
   const recipients = (doc as any).recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
+  const projectNa853 = docAny.project_na853 || "";
   const statusDetails = getStatusDetails(
     doc.status || "pending",
     docAny.is_correction,
