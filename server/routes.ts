@@ -770,6 +770,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const projectId = req.query.project_id as string;
       const expenditureType = req.query.expenditure_type as string;
+      const userUnitIdRaw = req.user?.unit_id?.[0];
+      const userUnitIdNum =
+        typeof userUnitIdRaw === 'number'
+          ? userUnitIdRaw
+          : userUnitIdRaw
+          ? parseInt(String(userUnitIdRaw), 10)
+          : null;
       
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated' });
@@ -778,7 +785,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[UserPreferences] ESDIAN request for user:', userId, 'project:', projectId, 'type:', expenditureType);
 
       // Get user's unit_id to get relevant suggestions
-      const userUnitId = req.user?.unit_id?.[0];
+      const userUnitId = userUnitIdNum;
       
       // Fetch comprehensive data for smart suggestions
       let baseQuery = supabase
@@ -799,22 +806,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         baseQuery = baseQuery.eq('unit_id', userUnitId);
       }
       
-      const { data: allDocuments, error } = await baseQuery.limit(100);
+      let { data: allDocuments, error } = await baseQuery.limit(100);
+
+      // Fallback: if no data came back with a unit filter, try without it to avoid empty suggestions
+      if (!error && (!allDocuments || allDocuments.length === 0)) {
+        const fallbackQuery = supabase
+          .from('generated_documents')
+          .select(`
+            esdian, 
+            created_at, 
+            generated_by, 
+            project_index_id,
+            unit_id,
+            id
+          `)
+          .not('esdian', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        const fallbackResult = await fallbackQuery;
+        if (!fallbackResult.error && fallbackResult.data) {
+          allDocuments = fallbackResult.data;
+        }
+      }
       
       if (error) {
         console.error('[UserPreferences] Error fetching ESDIAN suggestions:', error);
         return res.status(500).json({ message: 'Failed to fetch suggestions' });
       }
 
-      // Find project_index_id for current context
+      // Find project_index_id for current context (handle multiple rows per project)
       let currentProjectIndexId = null;
       if (projectId) {
-        const { data: projectIndex } = await supabase
+        const projectIdNum = parseInt(String(projectId), 10);
+        let projectIndexQuery = supabase
           .from('project_index')
-          .select('id')
-          .eq('project_id', projectId)
-          .single();
-        currentProjectIndexId = projectIndex?.id;
+          .select('id, monada_id, expenditure_type_id')
+          .eq('project_id', isNaN(projectIdNum) ? projectId : projectIdNum);
+
+        // Prefer entries matching the user's unit/monada when available
+        if (userUnitId) {
+          projectIndexQuery = projectIndexQuery.eq('monada_id', userUnitId);
+        }
+
+        // If an expenditure type is provided, resolve it to id and filter
+        if (expenditureType) {
+          const { data: expType } = await supabase
+            .from('expenditure_types')
+            .select('id')
+            .eq('expenditure_types', expenditureType)
+            .maybeSingle();
+          if (expType?.id) {
+            projectIndexQuery = projectIndexQuery.eq('expenditure_type_id', expType.id);
+          }
+        }
+
+        const { data: projectIndexRows, error: projectIndexError } = await projectIndexQuery
+          .order('id', { ascending: true })
+          .limit(1);
+
+        if (projectIndexError) {
+          console.warn('[UserPreferences] project_index lookup warning:', projectIndexError);
+        }
+
+        currentProjectIndexId = projectIndexRows?.[0]?.id || null;
       }
 
       // Analyze suggestions with metadata
