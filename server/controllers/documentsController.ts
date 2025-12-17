@@ -567,7 +567,7 @@ router.post(
       }
 
       // Format recipients data consistently
-      const formattedRecipients = recipients.map((r: any) => {
+      let formattedRecipients = recipients.map((r: any) => {
         const baseRecipient = {
           firstname: String(r.firstname || "").trim(),
           lastname: String(r.lastname || "").trim(),
@@ -592,8 +592,13 @@ router.post(
             daily_compensation: r.daily_compensation,
             accommodation_expenses: r.accommodation_expenses,
             kilometers_traveled: r.kilometers_traveled,
+            price_per_km:
+              r.price_per_km !== undefined && r.price_per_km !== null
+                ? Number(r.price_per_km)
+                : 0.2,
             tickets_tolls_rental: r.tickets_tolls_rental,
             tickets_tolls_rental_entries: r.tickets_tolls_rental_entries || [],
+            has_2_percent_deduction: Boolean(r.has_2_percent_deduction),
             net_payable: r.net_payable,
           };
         }
@@ -602,6 +607,54 @@ router.post(
       });
 
       const isEktosEdrasType = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+
+      // Resolve employee IDs for ΕΚΤΟΣ ΕΔΡΑΣ recipients and block creation when missing
+      if (isEktosEdrasType) {
+        const resolvedRecipients = [];
+
+        for (const recipient of formattedRecipients) {
+          let employeeId = recipient.employee_id;
+
+          // Fallback: try to resolve employee_id by AFM hash if not provided by the client
+          if (!employeeId && recipient.afm) {
+            try {
+              const afmHash = hashAFM(recipient.afm);
+              const { data: existingEmployee } = await supabase
+                .from("Employees")
+                .select("id")
+                .eq("afm_hash", afmHash)
+                .limit(1);
+
+              if (existingEmployee && existingEmployee.length > 0) {
+                employeeId = existingEmployee[0].id;
+              }
+            } catch (lookupError) {
+              console.error(
+                "[DocumentsController] V2 Error resolving employee by AFM hash:",
+                lookupError,
+              );
+            }
+          }
+
+          resolvedRecipients.push({
+            ...recipient,
+            employee_id: employeeId,
+          });
+        }
+
+        const recipientsMissingEmployee = resolvedRecipients.filter(
+          (recipient) => !recipient.employee_id,
+        );
+
+        if (recipientsMissingEmployee.length > 0) {
+          return res.status(400).json({
+            message:
+              "Employee selection is required for ΕΚΤΟΣ ΕΔΡΑΣ payments. Please select a valid employee from the search results.",
+          });
+        }
+
+        formattedRecipients = resolvedRecipients;
+      }
 
       // Pre-validate ΕΚΤΟΣ ΕΔΡΑΣ recipients before creating the document to avoid orphan records
       if (isEktosEdrasType) {
@@ -988,6 +1041,8 @@ router.post(
       const employeePaymentsIds = [];
       let beneficiaryPaymentFailed = false;
       let beneficiaryPaymentError: any = null;
+      let employeePaymentFailed = false;
+      let employeePaymentError: any = null;
       try {
         console.log(
           "[DocumentsController] V2 Creating payments for",
@@ -1053,7 +1108,6 @@ router.post(
               kilometers_traveled: kmTraveled,
               price_per_km: pricePerKm,
               tickets_tolls_rental: tickets,
-              tickets_tolls_rental_entries: recipient.tickets_tolls_rental_entries || [],
               has_2_percent_deduction: Boolean(recipient.has_2_percent_deduction),
               total_expense: totalExpense,
               deduction_2_percent: deduction2Percent,
@@ -1076,6 +1130,8 @@ router.post(
                 "[DocumentsController] V2 Error creating employee payment:",
                 empPaymentError,
               );
+              employeePaymentFailed = true;
+              employeePaymentError = empPaymentError;
             } else {
               employeePaymentsIds.push(empPaymentData.id);
               console.log(
@@ -1315,6 +1371,55 @@ router.post(
 
         // Update document with appropriate payment IDs based on expenditure type
         if (isEktosEdras) {
+          // If no employee payments were created, rollback the document to avoid orphan records
+          if (employeePaymentsIds.length === 0 || employeePaymentFailed) {
+            console.error(
+              "[DocumentsController] V2 Employee payments were not created for ΕΚΤΟΣ ΕΔΡΑΣ document. Rolling back document:",
+              data.id,
+              "last error:",
+              employeePaymentError,
+            );
+
+            // Attempt to delete any partially created employee payments
+            if (employeePaymentsIds.length > 0) {
+              try {
+                await supabase
+                  .from("EmployeePayments")
+                  .delete()
+                  .in("id", employeePaymentsIds);
+                console.log(
+                  "[DocumentsController] V2 Rollback: Deleted partial employee payments:",
+                  employeePaymentsIds,
+                );
+              } catch (deleteError) {
+                console.error(
+                  "[DocumentsController] V2 Rollback failed while deleting employee payments:",
+                  deleteError,
+                );
+              }
+            }
+
+            try {
+              await supabase
+                .from("generated_documents")
+                .delete()
+                .eq("id", data.id);
+            } catch (rollbackError) {
+              console.error(
+                "[DocumentsController] V2 Rollback failed while deleting document:",
+                rollbackError,
+              );
+            }
+
+            return res.status(500).json({
+              message:
+                "Employee payments could not be saved. The document was not created.",
+              error:
+                employeePaymentError?.message || "employee_payments_not_created",
+              details: employeePaymentError || undefined,
+            });
+          }
+
           console.log(
             "[DocumentsController] V2 Updating document with employee payment IDs:",
             employeePaymentsIds,
@@ -3977,7 +4082,6 @@ router.put(
                 accommodation_expenses: recipient.accommodation_expenses ?? 0,
                 kilometers_traveled: recipient.kilometers_traveled ?? 0,
                 tickets_tolls_rental: recipient.tickets_tolls_rental ?? 0,
-                tickets_tolls_rental_entries: recipient.tickets_tolls_rental_entries ?? [],
                 has_2_percent_deduction: recipient.has_2_percent_deduction ?? false,
                 total_expense: recipient.total_expense ?? 0,
                 deduction_2_percent: recipient.deduction_2_percent ?? 0,
@@ -4052,7 +4156,6 @@ router.put(
                 accommodation_expenses: recipient.accommodation_expenses || 0,
                 kilometers_traveled: recipient.kilometers_traveled || 0,
                 tickets_tolls_rental: recipient.tickets_tolls_rental || 0,
-                tickets_tolls_rental_entries: recipient.tickets_tolls_rental_entries || [],
                 has_2_percent_deduction: recipient.has_2_percent_deduction ?? false,
                 total_expense: recipient.total_expense ?? 0,
                 deduction_2_percent: recipient.deduction_2_percent ?? 0,

@@ -251,6 +251,14 @@ const createDocumentSchema = z
             path: ["recipients", index, "month"],
           });
         }
+        if (!recipient.employee_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "Employee selection is required for ΕΚΤΟΣ ΕΔΡΑΣ payments.",
+            path: ["recipients", index, "employee_id"],
+          });
+        }
         if (!recipient.net_payable || recipient.net_payable <= 0) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -2862,9 +2870,16 @@ export function CreateDocumentDialog({
               daily_compensation: r.daily_compensation || 0,
               accommodation_expenses: r.accommodation_expenses || 0,
               kilometers_traveled: r.kilometers_traveled || 0,
+              price_per_km:
+                r.price_per_km !== undefined && r.price_per_km !== null
+                  ? r.price_per_km
+                  : DEFAULT_PRICE_PER_KM,
               tickets_tolls_rental: r.tickets_tolls_rental || 0,
               tickets_tolls_rental_entries:
                 r.tickets_tolls_rental_entries || [], // Include array of entries
+              has_2_percent_deduction: !!r.has_2_percent_deduction,
+              total_expense: r.total_expense,
+              deduction_2_percent: r.deduction_2_percent,
               net_payable:
                 r.net_payable !== undefined && r.net_payable !== null
                   ? r.net_payable
