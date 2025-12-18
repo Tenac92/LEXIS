@@ -110,7 +110,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [document, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -474,7 +474,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         variant: "destructive",
       });
     }
-  };
+  }, [document, isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -727,8 +727,17 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
+    if (!documentId) {
+      toast({
+        title: "Error",
+        description: "Missing document identifier. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
       await apiRequest(`/api/documents/generated/${documentId}`, {
         method: 'DELETE'
       });
@@ -745,23 +754,6 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
           error instanceof Error
             ? error.message
             : "Αποτυχία διαγραφής εγγράφου",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-
-
-      const code = (error as any)?.code;
-      const friendlyMessage = code ? friendlyByCode[code] : undefined;
-
-      toast({
-        title: "Error",
-        description:
-          friendlyMessage ||
-          (error instanceof Error
-            ? error.message
-            : "Failed to save protocol number"),
         variant: "destructive",
       });
     } finally {
