@@ -224,8 +224,8 @@ export class DocumentGenerator {
     );
     const newProtocol = cleanText(documentData.protocol_number_input);
     const newProtocolDate = cleanText(documentData.protocol_date);
-    const font = { font: "Calibri", size: 18 };
-    const signatureFont = { ...font, size: font.size - 2 };
+    const font = { font: "Calibri", size: 16 }; // 8pt
+    const signatureFont = { ...font, size: 14 }; // 7pt
     const signatureRuns = this.getSignatureRuns(
       documentData.director_signature,
       signatureFont,
@@ -240,19 +240,19 @@ export class DocumentGenerator {
           ),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 0, before: 0 },
+        spacing: { after: 40, before: 0 },
       }),
       new Paragraph({
         children: [t(`Αρ. Πρωτ.: ${newProtocol}`, font)],
         alignment: AlignmentType.LEFT,
         spacing: { after: 0, before: 0 },
-        indent: { left: 120 },
+        indent: { left: 80 },
       }),
       new Paragraph({
         children: [t(`Ημ.: ${newProtocolDate}`, font)],
         alignment: AlignmentType.LEFT,
         spacing: { after: 0, before: 0 },
-        indent: { left: 120 },
+        indent: { left: 80 },
       }),
       new Paragraph({
         children: signatureRuns.length ? signatureRuns : [t("", font)],
@@ -262,9 +262,9 @@ export class DocumentGenerator {
     ];
 
     const boxWidthTwip = Math.min(
-      Math.round(contentWidthTwip() * 0.4),
-      4200,
-      Math.max(maxWidthTwip - 200, 2000),
+      Math.round(contentWidthTwip() * 0.32),
+      3400,
+      Math.max(maxWidthTwip - 300, 2000),
     );
     const bannerBorders = {
       top: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
@@ -290,7 +290,7 @@ export class DocumentGenerator {
                 color: "FFFFFF",
                 fill: "FFFFFF",
               },
-              margins: { top: 160, bottom: 80, left: 120, right: 80 },
+              margins: { top: 50, bottom: 50, left: 70, right: 70 },
               children: paragraphs,
             }),
           ],
