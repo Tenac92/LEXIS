@@ -240,7 +240,7 @@ export class DocumentGenerator {
           ),
         ],
         alignment: AlignmentType.CENTER,
-        spacing: { after: 80, before: 0 },
+        spacing: { after: 0, before: 0 },
       }),
       new Paragraph({
         children: [t(`Αρ. Πρωτ.: ${newProtocol}`, font)],
@@ -262,9 +262,9 @@ export class DocumentGenerator {
     ];
 
     const boxWidthTwip = Math.min(
-      Math.round(contentWidthTwip() * 0.45),
-      5200,
-      maxWidthTwip,
+      Math.round(contentWidthTwip() * 0.4),
+      4200,
+      Math.max(maxWidthTwip - 200, 2000),
     );
     const bannerBorders = {
       top: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
@@ -290,7 +290,7 @@ export class DocumentGenerator {
                 color: "FFFFFF",
                 fill: "FFFFFF",
               },
-              margins: { top: 160, bottom: 80, left: 80, right: 80 },
+              margins: { top: 160, bottom: 80, left: 120, right: 80 },
               children: paragraphs,
             }),
           ],
