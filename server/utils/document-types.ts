@@ -86,6 +86,7 @@ export interface DocumentData {
   protocol_date?: string;
   user_name?: string;
   user_id?: number;
+  correction_reason?: string;
   attachments?: string[];
   attachment_id?: number[]; // Array of attachment IDs from database
   esdian?: string[];

@@ -17,6 +17,26 @@ const logger = createLogger("DocumentsController");
 // Create the router
 export const router = Router();
 
+const extractCorrectionReason = (doc: any): string | undefined => {
+  const directReason =
+    typeof doc?.correction_reason === "string"
+      ? doc.correction_reason.trim()
+      : "";
+
+  if (directReason) {
+    return directReason;
+  }
+
+  if (typeof doc?.comments === "string") {
+    const match = doc.comments.match(/Λόγος Διόρθωσης:\s*([^\n\r]+)/i);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+};
+
 // Export the router as default
 // Debug endpoint to check expenditure type data
 router.get("/debug-expenditure/:docId", async (req: Request, res: Response) => {
@@ -3124,6 +3144,26 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
             });
         }
       }
+
+      // Refresh beneficiary payment IDs on the document so recipients can be hydrated in UI
+      const { data: refreshedPayments, error: fetchPaymentsError } = await supabase
+        .from("beneficiary_payments")
+        .select("id")
+        .eq("document_id", parseInt(id));
+
+      if (fetchPaymentsError) {
+        console.error("[Correction] Failed to fetch beneficiary payments after correction:", fetchPaymentsError);
+      } else {
+        const paymentIds = (refreshedPayments || []).map((p: any) => p.id).filter(Boolean);
+        const { error: updateBeneficiaryIdsError } = await supabase
+          .from("generated_documents")
+          .update({ beneficiary_payments_id: paymentIds })
+          .eq("id", parseInt(id));
+
+        if (updateBeneficiaryIdsError) {
+          console.error("[Correction] Failed to update beneficiary_payments_id after correction:", updateBeneficiaryIdsError);
+        }
+      }
     }
 
     // Broadcast correction update
@@ -3371,6 +3411,22 @@ router.get(
       if (!document) {
         console.error("[DocumentsController] Document not found:", id);
         return res.status(404).json({ error: "Document not found" });
+      }
+
+      const correctionReason = document.is_correction
+        ? extractCorrectionReason(document)
+        : undefined;
+
+      if (document.is_correction && !correctionReason) {
+        console.error(
+          "[DocumentsController] Export blocked - missing correction reason for document:",
+          id,
+        );
+        return res.status(400).json({
+          error: "CORRECTION_REASON_REQUIRED",
+          message:
+            "Η Αιτιολογία Ορθής Επανάληψης είναι υποχρεωτική για την εξαγωγή του εγγράφου.",
+        });
       }
 
       // BUDGET VALIDATION CHECK: Block DOCX export if document needs χρηματοδότηση approval
@@ -3756,6 +3812,7 @@ router.get(
 
       const documentData = {
         ...document,
+        correction_reason: correctionReason || document.correction_reason || "",
         user_name: document.generated_by?.name || "Unknown User",
         department: document.generated_by?.department || "",
         contact_number: document.generated_by?.telephone || "",

@@ -141,6 +141,166 @@ export class DocumentGenerator {
     return { contactPerson, telephone, email, address };
   }
 
+  /** Resolve correction reason from payload or comments */
+  private static resolveCorrectionReason(
+    documentData: DocumentData,
+  ): string | null {
+    const directReason = cleanText(documentData.correction_reason);
+    if (directReason) {
+      return directReason;
+    }
+
+    if (documentData.comments) {
+      const match = documentData.comments.match(
+        /Λόγος Διόρθωσης:\s*([^\n\r]+)/i,
+      );
+      const parsed = cleanText(match?.[1] || "");
+      if (parsed) {
+        return parsed;
+      }
+    }
+
+    return null;
+  }
+
+  /** Compact signature runs (with breaks) used inside the correction banner */
+  private static getSignatureRuns(
+    signatureInfo: any,
+    font: { font: string; size: number },
+  ): TextRun[] {
+    const parts = [
+      signatureInfo?.order,
+      signatureInfo?.title,
+      signatureInfo?.name,
+      signatureInfo?.degree,
+    ]
+      .map((p) => cleanText(p))
+      .filter(Boolean);
+
+    const runs: TextRun[] = [];
+    parts.forEach((part, idx) => {
+      if (idx === 2) {
+        runs.push(
+          new TextRun({
+            text: "",
+            break: 1, // blank line before the name for spacing
+            ...font,
+          }),
+        );
+      }
+      runs.push(
+        new TextRun({
+          text: part,
+          break: idx === 0 ? undefined : 1,
+          ...font,
+        }),
+      );
+    });
+
+    return runs;
+  }
+
+  /** Floating red banner for correction exports (top-right of first page) */
+  private static createCorrectionBanner(
+    documentData: DocumentData,
+    maxWidthTwip: number,
+  ): Table | null {
+    if (!documentData.is_correction) {
+      return null;
+    }
+
+    const correctionReason = this.resolveCorrectionReason(documentData);
+    if (!correctionReason) {
+      throw new Error(
+        "Η Αιτιολογία Ορθής Επανάληψης είναι υποχρεωτική για το DOCX export.",
+      );
+    }
+
+    const oldProtocol = cleanText(
+      documentData.original_protocol_number ||
+        documentData.protocol_number ||
+        documentData.protocol_number_input ||
+        "",
+    );
+    const newProtocol = cleanText(documentData.protocol_number_input);
+    const newProtocolDate = cleanText(documentData.protocol_date);
+    const font = { font: "Calibri", size: 18 };
+    const signatureFont = { ...font, size: font.size - 2 };
+    const signatureRuns = this.getSignatureRuns(
+      documentData.director_signature,
+      signatureFont,
+    );
+
+    const paragraphs = [
+      new Paragraph({
+        children: [
+          t(
+            `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocol} λογω ${correctionReason}`,
+            font,
+          ),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 80, before: 0 },
+      }),
+      new Paragraph({
+        children: [t(`Αρ. Πρωτ.: ${newProtocol}`, font)],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0, before: 0 },
+        indent: { left: 120 },
+      }),
+      new Paragraph({
+        children: [t(`Ημ.: ${newProtocolDate}`, font)],
+        alignment: AlignmentType.LEFT,
+        spacing: { after: 0, before: 0 },
+        indent: { left: 120 },
+      }),
+      new Paragraph({
+        children: signatureRuns.length ? signatureRuns : [t("", font)],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 0, before: 0 },
+      }),
+    ];
+
+    const boxWidthTwip = Math.min(
+      Math.round(contentWidthTwip() * 0.45),
+      5200,
+      maxWidthTwip,
+    );
+    const bannerBorders = {
+      top: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
+      bottom: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
+      left: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
+      right: { style: BorderStyle.SINGLE, color: "FF0000", size: 12 },
+      insideHorizontal: { style: BorderStyle.NONE },
+      insideVertical: { style: BorderStyle.NONE },
+    };
+
+    const bannerTable = new Table({
+      width: { type: WidthType.DXA, size: boxWidthTwip },
+      layout: TableLayoutType.FIXED,
+      borders: bannerBorders,
+      alignment: AlignmentType.RIGHT,
+      rows: [
+        new TableRow({
+          children: [
+            new TableCell({
+              borders: bannerBorders,
+              shading: {
+                type: ShadingType.CLEAR,
+                color: "FFFFFF",
+                fill: "FFFFFF",
+              },
+              margins: { top: 160, bottom: 80, left: 80, right: 80 },
+              children: paragraphs,
+            }),
+          ],
+        }),
+      ],
+    });
+
+    return bannerTable;
+  }
+
   /** Generate primary document */
   public static async generatePrimaryDocument(
     documentData: DocumentData,
@@ -1190,12 +1350,59 @@ export class DocumentGenerator {
     const innerRightWidth = headerGrid[1];
     const innerGrid = gridFromPercents([20, 80]); // label vs lines
 
+    const correctionBanner = this.createCorrectionBanner(
+      documentData,
+      innerRightWidth,
+    );
+
+    const reservedRow = new TableRow({
+      height: { value: 2200, rule: HeightRule.EXACT },
+      children: [
+        new TableCell({
+          borders: BORDER_NONE,
+          width: { type: WidthType.DXA, size: innerGrid[0] },
+          children: [new Paragraph({ children: [t("")], spacing: { after: 0, before: 0 } })],
+          verticalAlign: VerticalAlign.TOP,
+        }),
+        new TableCell({
+          borders: BORDER_NONE,
+          width: { type: WidthType.DXA, size: innerGrid[1] },
+          children: [
+            new Paragraph({ children: [t("")], spacing: { after: 0, before: 0 } }),
+          ],
+          verticalAlign: VerticalAlign.TOP,
+        }),
+      ],
+    });
+
+    const bannerRow = correctionBanner
+      ? new TableRow({
+          children: [
+            new TableCell({
+              borders: BORDER_NONE,
+              width: { type: WidthType.DXA, size: innerRightWidth },
+              columnSpan: 2,
+              children: [correctionBanner],
+              verticalAlign: VerticalAlign.TOP,
+            }),
+          ],
+        })
+      : null;
+
+    const rows: TableRow[] = [];
+    if (bannerRow) {
+      rows.push(bannerRow);
+    } else {
+      rows.push(reservedRow);
+    }
+
     const rightInnerTable = new Table({
       width: { type: WidthType.DXA, size: innerRightWidth },
       layout: TableLayoutType.FIXED,
       borders: BORDER_NONE,
       columnWidths: innerGrid,
       rows: [
+        ...rows,
         new TableRow({
           children: [
             new TableCell({
@@ -1204,8 +1411,7 @@ export class DocumentGenerator {
               children: [
                 new Paragraph({
                   children: [t("ΠΡΟΣ:", { bold: true, size: 20 })],
-                  // keep this gentle; huge 'before' causes layout jumps
-                  spacing: { before: 2200 },
+                  spacing: { before: 50 },
                   alignment: AlignmentType.LEFT,
                 }),
               ],
@@ -1217,7 +1423,7 @@ export class DocumentGenerator {
               children: [
                 new Paragraph({
                   children: [t(toLines[0], { size: 20 })],
-                  spacing: { before: 2200 },
+                  spacing: { before: 50 },
                   alignment: AlignmentType.LEFT,
                 }),
                 ...toLines.slice(1).map(

@@ -41,10 +41,19 @@ import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 import { MonthRangePicker } from "@/components/common/MonthRangePicker";
 import { EKTOS_EDRAS_TYPE, GREEK_MONTHS, AVAILABLE_YEARS, DKA_INSTALLMENTS, DKA_TYPES, HOUSING_ALLOWANCE_TYPE, HOUSING_QUARTERS, ALL_INSTALLMENTS } from "./constants";
+import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSuggestions";
+
+// Extend schemas to carry dynamic ESDIAN fields as well
+const editSchemaWithEsdian = editDocumentSchema.extend({
+  esdian_fields: z.array(z.string().optional()).optional(),
+});
+const correctionSchemaWithEsdian = correctionDocumentSchema.extend({
+  esdian_fields: z.array(z.string().optional()).optional(),
+});
 
 // Use editDocumentSchema as base type - includes all fields with optional correction_reason
 // The zodResolver enforces correct validation based on mode (edit vs correction)
-type DocumentForm = z.infer<typeof editDocumentSchema>;
+type DocumentForm = z.infer<typeof editSchemaWithEsdian>;
 
 interface EditDocumentModalProps {
   document: GeneratedDocument | null;
@@ -111,7 +120,7 @@ export function EditDocumentModal({
 
   // Initialize form with document data using the appropriate schema
   const form = useForm<DocumentForm>({
-    resolver: zodResolver(isCorrection ? correctionDocumentSchema : editDocumentSchema),
+    resolver: zodResolver(isCorrection ? correctionSchemaWithEsdian : editSchemaWithEsdian),
     defaultValues: {
       protocol_number_input: "",
       protocol_date: "",
@@ -120,6 +129,7 @@ export function EditDocumentModal({
       total_amount: 0,
       esdian_field1: "",
       esdian_field2: "",
+      esdian_fields: [],
       is_correction: false,
       original_protocol_number: "",
       original_protocol_date: "",
@@ -128,6 +138,8 @@ export function EditDocumentModal({
       region: undefined,
     },
   });
+  // Keep the initially loaded recipients so we can fall back if the form array is emptied
+  const initialRecipientsRef = useRef<any[]>([]);
 
   // Fetch beneficiary payments for this document
   const { data: beneficiaryPayments, refetch: refetchPayments, isLoading: beneficiariesLoading } = useQuery({
@@ -649,14 +661,14 @@ export function EditDocumentModal({
       ? new Date(document.original_protocol_date).toISOString().split('T')[0]
       : "";
 
-    // Extract ESDIAN fields
-    let esdianField1 = "";
-    let esdianField2 = "";
-    
-    if (document.esdian && Array.isArray(document.esdian)) {
-      esdianField1 = document.esdian[0] || "";
-      esdianField2 = document.esdian[1] || "";
-    }
+    // Extract ESDIAN fields (preserve all entries)
+    const esdianFieldsArray = Array.isArray(document.esdian)
+      ? document.esdian
+          .filter((value) => typeof value === "string" && value.trim() !== "")
+          .map((value) => value.trim())
+      : [];
+    const esdianField1 = esdianFieldsArray[0] || "";
+    const esdianField2 = esdianFieldsArray[1] || "";
 
     // Calculate initial recipients from beneficiary or employee payments
     const initialRecipients = (Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []).map((payment: any) => {
@@ -706,25 +718,47 @@ export function EditDocumentModal({
       };
     });
 
+    // Fallback to document.recipients if payments were not fetched (avoid losing recipients on correction)
+    const recipientsFromDocument =
+      initialRecipients.length === 0 && Array.isArray(docAny?.recipients)
+        ? (docAny.recipients as any[]).map((r) => {
+            const amountNumber = typeof r.amount === "string" ? parseFloat(r.amount) || 0 : Number(r.amount) || 0;
+            const key = r.installment || r.month || 'ΝΣΧΝΣΟΝΤΏΟΑ';
+            return {
+              ...r,
+              amount: amountNumber,
+              installment: key,
+              installments: r.installments || [key],
+              installmentAmounts: r.installmentAmounts || { [key]: amountNumber },
+            };
+          })
+        : [];
+
+    const hydratedRecipients = initialRecipients.length > 0 ? initialRecipients : recipientsFromDocument;
+
+    // Cache initial recipients for fallback usage during submission
+    initialRecipientsRef.current = hydratedRecipients;
+
     // Calculate initial total from recipients or document
-    const initialTotal = initialRecipients.length > 0
-      ? initialRecipients.reduce((sum: number, r: any) => sum + (parseFloat(r.amount) || 0), 0)
+    const initialTotal = hydratedRecipients.length > 0
+      ? hydratedRecipients.reduce((sum: number, r: any) => sum + (parseFloat(r.amount) || 0), 0)
       : parseFloat(document.total_amount?.toString() || "0") || 0;
 
     // For correction mode, prepare to archive current protocol info
     const formData: Partial<DocumentForm> = {
       protocol_number_input: isCorrection ? "" : (document.protocol_number_input || ""),
       protocol_date: isCorrection ? "" : protocolDate,
-      status: (document.status as any) || "draft",
+      status: isCorrection ? "pending" : (document.status as any) || "draft",
       comments: document.comments || "",
       total_amount: initialTotal,
       esdian_field1: esdianField1,
       esdian_field2: esdianField2,
+      esdian_fields: esdianFieldsArray,
       is_correction: isCorrection ? true : Boolean(document.is_correction),
       original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
       correction_reason: "",
-      recipients: initialRecipients,
+      recipients: hydratedRecipients,
       project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
       // Use document.unit_id if available, otherwise fall back to projectIndexData.monada_id
       unit_id: document.unit_id ? Number(document.unit_id) : (projectIndexData?.monada_id ? Number(projectIndexData.monada_id) : undefined),
@@ -817,6 +851,21 @@ export function EditDocumentModal({
     mutationFn: async (data: DocumentForm) => {
       if (!document?.id) throw new Error("No document ID");
 
+      // Always preserve recipients even if the form array was cleared by accident
+      const recipientsPayload = data.recipients?.length
+        ? data.recipients
+        : initialRecipientsRef.current || [];
+
+      // Prefer dynamic esdian_fields; fall back to legacy fields if needed
+      const esdianSource =
+        Array.isArray(data.esdian_fields) && data.esdian_fields.length > 0
+          ? data.esdian_fields
+          : [data.esdian_field1, data.esdian_field2];
+
+      const esdianCombined = esdianSource
+        .map((value) => (value ?? "").trim())
+        .filter((value) => value !== "");
+
       // Build region object from geographic selections or preserve existing
       const regionData = (() => {
         const areas = projectGeographicAreas as any;
@@ -849,11 +898,11 @@ export function EditDocumentModal({
           correction_reason: data.correction_reason || "",
           protocol_number_input: data.protocol_number_input || null,
           protocol_date: data.protocol_date || null,
-          status: data.status,
+          status: "pending",
           comments: data.comments || null,
           total_amount: data.total_amount,
-          esdian: [data.esdian_field1, data.esdian_field2].filter(Boolean),
-          recipients: data.recipients,
+          esdian: esdianCombined,
+          recipients: recipientsPayload,
           project_index_id: data.project_index_id,
           unit_id: data.unit_id,
           region: regionData,
@@ -872,7 +921,7 @@ export function EditDocumentModal({
           status: data.status,
           comments: data.comments || null,
           total_amount: data.total_amount,
-          esdian: [data.esdian_field1, data.esdian_field2].filter(Boolean),
+          esdian: esdianCombined,
           is_correction: data.is_correction,
           original_protocol_number: data.original_protocol_number || null,
           original_protocol_date: data.original_protocol_date || null,
@@ -890,8 +939,8 @@ export function EditDocumentModal({
         });
 
         // Update beneficiaries if they exist and have data
-        if (data.recipients && data.recipients.length > 0) {
-          const validRecipients = data.recipients.filter(r => 
+        if (recipientsPayload && recipientsPayload.length > 0) {
+          const validRecipients = recipientsPayload.filter(r => 
             r.firstname || r.lastname || r.afm || (r.amount && r.amount > 0)
           );
           
@@ -1337,44 +1386,8 @@ export function EditDocumentModal({
                 <CardHeader>
                   <CardTitle className="text-lg">Πεδία Εσωτερικής Διανομής</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="esdian_field1"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Εσωτερική Διανομή Πεδίο 1</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Πρώτο πεδίο εσωτερικής διανομής"
-                              {...field}
-                              data-testid="input-esdian-1"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="esdian_field2"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Εσωτερική Διανομή Πεδίο 2</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Δεύτερο πεδίο εσωτερικής διανομής"
-                              {...field}
-                              data-testid="input-esdian-2"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                <CardContent>
+                  <EsdianFieldsWithSuggestions form={form} user={user} />
                 </CardContent>
               </Card>
 
