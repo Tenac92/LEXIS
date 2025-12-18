@@ -110,7 +110,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
     } finally {
       setLoading(false);
     }
-  }, [document, isOpen]);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
