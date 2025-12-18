@@ -70,6 +70,20 @@ const cleanText = (input: unknown): string => {
     .trim();
 };
 
+const formatProtocolDate = (input: unknown): string => {
+  const raw = cleanText(input);
+  if (!raw) return "";
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  if (!isNaN(parsed.getTime())) {
+    const dd = String(parsed.getDate()).padStart(2, "0");
+    const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+    const yyyy = parsed.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  return raw;
+};
+
 // Convenience wrapper for TextRun that always sanitizes text.
 type TRInit = ConstructorParameters<typeof TextRun>[0];
 const t = (text: unknown, opts: Partial<TRInit> = {}) =>
@@ -223,7 +237,7 @@ export class DocumentGenerator {
         "",
     );
     const newProtocol = cleanText(documentData.protocol_number_input);
-    const newProtocolDate = cleanText(documentData.protocol_date);
+    const newProtocolDate = formatProtocolDate(documentData.protocol_date);
     const font = { font: "Calibri", size: 16 }; // 8pt
     const signatureFont = { ...font, size: 14 }; // 7pt
     const signatureRuns = this.getSignatureRuns(
@@ -1383,7 +1397,7 @@ export class DocumentGenerator {
               width: { type: WidthType.DXA, size: innerRightWidth },
               columnSpan: 2,
               children: [correctionBanner],
-              verticalAlign: VerticalAlign.TOP,
+              verticalAlign: VerticalAlign.BOTTOM,
             }),
           ],
         })
@@ -1434,7 +1448,7 @@ export class DocumentGenerator {
                     }),
                 ),
               ],
-              verticalAlign: VerticalAlign.TOP,
+              verticalAlign: VerticalAlign.BOTTOM,
             }),
           ],
         }),

@@ -2834,10 +2834,13 @@ router.patch(
     try {
       const { id } = req.params;
       const { protocol_number, protocol_date } = req.body;
+      const documentId = parseInt(id);
+      const trimmedProtocolNumber = protocol_number?.trim();
+      const parsedProtocolDate = protocol_date ? new Date(protocol_date) : null;
 
       // Updating protocol information for document
 
-      if (!protocol_number?.trim()) {
+      if (!trimmedProtocolNumber) {
         return res.status(400).json({
           success: false,
           message: "Protocol number is required",
@@ -2852,11 +2855,20 @@ router.patch(
         });
       }
 
+      if (!parsedProtocolDate || Number.isNaN(parsedProtocolDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Protocol date is invalid",
+        });
+      }
+
+      const protocolYear = parsedProtocolDate.getFullYear();
+
       // Get the document first to check access rights
       const { data: document, error: fetchError } = await supabase
         .from("generated_documents")
         .select("unit_id")
-        .eq("id", parseInt(id))
+        .eq("id", documentId)
         .single();
 
       if (fetchError) {
@@ -2885,14 +2897,49 @@ router.patch(
         });
       }
 
+      // Enforce uniqueness of protocol number within the same year
+      const { data: existingProtocols, error: conflictCheckError } =
+        await supabase
+          .from("generated_documents")
+          .select("id, protocol_date")
+          .eq("protocol_number_input", trimmedProtocolNumber)
+          .neq("id", documentId);
+
+      if (conflictCheckError) {
+        console.error(
+          "Error checking protocol uniqueness:",
+          conflictCheckError,
+        );
+        return res.status(500).json({
+          success: false,
+          message: "Could not validate protocol number uniqueness",
+          error: conflictCheckError.message,
+        });
+      }
+
+      const conflictingProtocol = (existingProtocols || []).find((doc) => {
+        if (!doc?.protocol_date) return false;
+        const existingYear = new Date(doc.protocol_date).getFullYear();
+        return existingYear === protocolYear;
+      });
+
+      if (conflictingProtocol) {
+        return res.status(409).json({
+          success: false,
+          message: `Protocol number "${trimmedProtocolNumber}" is already used for ${protocolYear}. Please use a different number for this year.`,
+          code: "PROTOCOL_NUMBER_EXISTS_YEAR",
+          conflict_document_id: conflictingProtocol.id,
+        });
+      }
+
       // Update the document
       const updateData: any = {
         status: "completed", // Set to completed when protocol is added
         updated_by: req.user?.id,
       };
 
-      if (protocol_number && protocol_number.trim() !== "") {
-        updateData.protocol_number_input = protocol_number.trim();
+      if (trimmedProtocolNumber) {
+        updateData.protocol_number_input = trimmedProtocolNumber;
       }
 
       if (protocol_date && protocol_date !== "") {
@@ -2902,11 +2949,24 @@ router.patch(
       const { data: updatedDocument, error: updateError } = await supabase
         .from("generated_documents")
         .update(updateData)
-        .eq("id", parseInt(id))
+        .eq("id", documentId)
         .select()
         .single();
 
       if (updateError) {
+        const isUniqueViolation =
+          updateError.code === "23505" ||
+          (updateError.message || "")
+            .toLowerCase()
+            .includes("duplicate key value");
+        if (isUniqueViolation) {
+          return res.status(409).json({
+            success: false,
+            message: `Protocol number "${trimmedProtocolNumber}" is already in use. Please use a different number for this year.`,
+            code: "PROTOCOL_NUMBER_EXISTS_YEAR",
+          });
+        }
+
         console.error("Protocol update error:", updateError);
         throw updateError;
       }
