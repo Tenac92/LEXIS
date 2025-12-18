@@ -462,34 +462,17 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         return recipient;
       });
 
-      console.log('[EditDocument] Processed recipients:', safeRecipients);
+      console.log("[EditDocument] Processed recipients:", safeRecipients);
       setRecipients(safeRecipients);
-            } catch (error) {
+    } catch (error) {
       toast({
-        title: "??????",
+        title: "Σφάλμα",
         description:
           error instanceof Error
             ? error.message
-            : "???????? ???????????? ??????????",
+            : "Αποτυχία επεξεργασίας δικαιούχων",
         variant: "destructive",
       });
-    }
-
-
-      const code = (error as any)?.code;
-      const friendlyMessage = code ? friendlyByCode[code] : undefined;
-
-      toast({
-        title: "Error",
-        description:
-          friendlyMessage ||
-          (error instanceof Error
-            ? error.message
-            : "Failed to save protocol number"),
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 
