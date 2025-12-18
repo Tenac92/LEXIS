@@ -290,14 +290,13 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
   // Function to load enhanced project data from MIS using optimized schema
   const loadProjectIdFromMis = async (mis: string) => {
-    if (!mis) return;
-    
+    if (!mis) return null;
+
+    setLoading(true); // Show loading indicator while fetching
     try {
       console.log(`[EditDocument] Fetching enhanced project data for MIS: ${mis}`);
-      setLoading(true); // Show loading indicator while fetching
-      
       const response = await fetch(`/api/projects/${mis}`);
-      
+
       if (response.ok) {
         const projectData = await response.json();
         if (projectData && projectData.na853) {
@@ -306,60 +305,53 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             event_type: projectData.enhanced_event_type?.name,
             expenditure_type: projectData.enhanced_expenditure_type?.name,
             unit: projectData.enhanced_unit?.name,
-            region: projectData.enhanced_region?.region
+            region: projectData.enhanced_region?.region,
           });
-          
+
           setProjectId(projectData.na853);
-          
+
           // Auto-fill expenditure type if available from enhanced data
           if (projectData.enhanced_expenditure_type?.name) {
             setExpenditureType(projectData.enhanced_expenditure_type.name);
           }
-          
+
           toast({
-            title: "Ξ•Ο€ΞΉΟ„Ο…Ο‡Ξ―Ξ±",
-            description: `Ξ’ΟΞ­ΞΈΞ·ΞΊΞµ Ο„ΞΏ Ξ­ΟΞ³ΞΏ: ${projectData.na853} - ${projectData.event_description || projectData.project_title}`,
+            title: "Success",
+            description: `Found project: ${projectData.na853} - ${projectData.event_description || projectData.project_title}`,
           });
           return projectData.na853;
-        } else {
-          console.log(`[EditDocument] No project data found for MIS: ${mis}`);
-          toast({
-            title: "Ξ ΟΞΏΟƒΞΏΟ‡Ξ®",
-            description: `Ξ”Ξµ Ξ²ΟΞ­ΞΈΞ·ΞΊΞµ Ξ­ΟΞ³ΞΏ Ξ³ΞΉΞ± Ο„ΞΏ MIS: ${mis}`,
-            variant: "destructive",
-          });
         }
-      } else {
-        console.error(`[EditDocument] Failed to fetch project for MIS: ${mis}`);
+
+        console.log(`[EditDocument] No project data found for MIS: ${mis}`);
         toast({
-          title: "Ξ£Ο†Ξ¬Ξ»ΞΌΞ±",
-          description: `Ξ‘Ο€ΞΏΟ„Ο…Ο‡Ξ―Ξ± Ξ±Ξ½Ξ±Ξ¶Ξ®Ο„Ξ·ΟƒΞ·Ο‚ Ξ­ΟΞ³ΞΏΟ… Ξ³ΞΉΞ± Ο„ΞΏ MIS: ${mis}`,
+          title: "Warning",
+          description: `No project found for MIS: ${mis}`,
           variant: "destructive",
         });
+        return null;
       }
-        } catch (error) {
-      // Protocol saving error occurred, now display toast notification to user
-      const friendlyByCode: Record<string, string> = {
-        PROTOCOL_NUMBER_EXISTS_YEAR:
-          "Protocol number is already used for this year. Please choose a different number.",
-      };
-      const code = (error as any)?.code;
-      const friendlyMessage = code ? friendlyByCode[code] : undefined;
 
+      console.error(`[EditDocument] Failed to fetch project for MIS: ${mis}`);
+      toast({
+        title: "Error",
+        description: `Failed to fetch project for MIS: ${mis}`,
+        variant: "destructive",
+      });
+      return null;
+    } catch (error) {
+      console.error("[EditDocument] Error fetching project for MIS:", error);
       toast({
         title: "Error",
         description:
-          friendlyMessage ||
-          (error instanceof Error
+          error instanceof Error
             ? error.message
-            : "Failed to save protocol number"),
+            : "Failed to fetch project data from MIS",
         variant: "destructive",
       });
+      return null;
     } finally {
       setLoading(false); // Hide loading indicator
     }
-    
-    return null;
   };
 
   // Use effect with a proper cleanup to prevent memory leaks and infinite loops
@@ -472,12 +464,18 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
 
       console.log('[EditDocument] Processed recipients:', safeRecipients);
       setRecipients(safeRecipients);
-        } catch (error) {
-      // Protocol saving error occurred, now display toast notification to user
-      const friendlyByCode: Record<string, string> = {
-        PROTOCOL_NUMBER_EXISTS_YEAR:
-          "Protocol number is already used for this year. Please choose a different number.",
-      };
+            } catch (error) {
+      toast({
+        title: "??????",
+        description:
+          error instanceof Error
+            ? error.message
+            : "???????? ???????????? ??????????",
+        variant: "destructive",
+      });
+    }
+
+
       const code = (error as any)?.code;
       const friendlyMessage = code ? friendlyByCode[code] : undefined;
 
@@ -757,12 +755,20 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
       });
       onDelete();
       onClose();
-        } catch (error) {
-      // Protocol saving error occurred, now display toast notification to user
-      const friendlyByCode: Record<string, string> = {
-        PROTOCOL_NUMBER_EXISTS_YEAR:
-          "Protocol number is already used for this year. Please choose a different number.",
-      };
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία διαγραφής εγγράφου",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+
+
       const code = (error as any)?.code;
       const friendlyMessage = code ? friendlyByCode[code] : undefined;
 
