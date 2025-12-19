@@ -304,7 +304,7 @@ export class DocumentGenerator {
                 color: "FFFFFF",
                 fill: "FFFFFF",
               },
-              margins: { top: 50, bottom: 50, left: 70, right: 70 },
+              margins: { top: 90, bottom: 60, left: 90, right: 70 },
               children: paragraphs,
             }),
           ],
