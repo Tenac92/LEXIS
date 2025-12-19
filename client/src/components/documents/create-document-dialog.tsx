@@ -4177,7 +4177,7 @@ export function CreateDocumentDialog({
                           την κατανομή έτους ({Number(budgetData?.katanomes_etous || 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}).
                         </p>
                         <p className="text-amber-600 text-sm mt-2">
-                          <strong>Μπορείτε να αποθηκεύσετε το έγγραφο</strong>, αλλά δεν θα μπορέσετε να εξάγετε το DOCX μέχρι να εγκριθεί η χρηματοδότηση.
+                          <strong>Μπορείτε να αποθηκεύσετε το έγγραφο</strong>, παρακαλούμε περιμένετε να εγκριθεί η χρηματοδότηση πριν την αποστολή.
                         </p>
                         <div className="mt-3">
                           <Button

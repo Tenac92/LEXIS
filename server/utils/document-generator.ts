@@ -245,13 +245,15 @@ export class DocumentGenerator {
       signatureFont,
     );
 
+    const normalizedReason = cleanText(correctionReason);
+    const bannerPrefix = `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocol} λόγω `;
+    const reasonHasPrefix = normalizedReason.toLowerCase().startsWith("ορθή επανάληψη");
+    const reasonText = reasonHasPrefix ? normalizedReason : `${bannerPrefix}${normalizedReason}`;
+
     const paragraphs = [
       new Paragraph({
         children: [
-          t(
-            `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocol} λογω ${correctionReason}`,
-            font,
-          ),
+          t(reasonText, font),
         ],
         alignment: AlignmentType.CENTER,
         spacing: { after: 40, before: 0 },

@@ -112,6 +112,31 @@ export function EditDocumentModal({
   const [isLoading, setIsLoading] = useState(false);
   const isCorrection = mode === 'correction';
 
+  const oldProtocolNumber = useMemo(() => {
+    if (!document) return "";
+    const raw =
+      document.protocol_number_input ||
+      (document as any).original_protocol_number ||
+      "";
+    return raw?.toString?.() || "";
+  }, [document]);
+
+  const originalProtocolDateDisplay = useMemo(() => {
+    if (!document) return "";
+    const rawDate = document.protocol_date || document.original_protocol_date;
+    if (!rawDate) return "";
+    const parsed = new Date(rawDate as any);
+    return isNaN(parsed.getTime())
+      ? ""
+      : parsed.toLocaleDateString("el-GR");
+  }, [document]);
+
+  const correctionReasonTemplate = useMemo(
+    () =>
+      `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocolNumber} λόγω `,
+    [oldProtocolNumber],
+  );
+
   // Memoize user unit IDs for filtering units dropdown
   const userUnitIds = useMemo(
     () => (user?.unit_id ?? []).map(String),
@@ -757,7 +782,7 @@ export function EditDocumentModal({
       is_correction: isCorrection ? true : Boolean(document.is_correction),
       original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
       original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
-      correction_reason: "",
+      correction_reason: document.correction_reason || "",
       recipients: hydratedRecipients,
       project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
       // Use document.unit_id if available, otherwise fall back to projectIndexData.monada_id
@@ -797,7 +822,7 @@ export function EditDocumentModal({
 
     // Mark as initialized to prevent re-resetting on user changes
     setFormInitialized(true);
-  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units, projectIndexData]);
+  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units, projectIndexData, correctionReasonTemplate]);
 
   // Initialize geographic selection dropdowns from document's region JSONB
   useEffect(() => {
@@ -1106,7 +1131,60 @@ export function EditDocumentModal({
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4">
               
-              {/* Correction Reason - Only visible in correction mode */}
+              {(isCorrection || form.watch("is_correction")) && (
+                <Card className="border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-lg text-blue-700">
+                      Στοιχεία Αρχικού Εγγράφου
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="original_protocol_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Αρχικός Αριθμός Πρωτοκόλλου</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                readOnly={isCorrection}
+                                className={isCorrection ? "bg-gray-100" : ""}
+                                data-testid="input-original-protocol-number"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="original_protocol_date"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Αρχική Ημερομηνία Πρωτοκόλλου</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="date"
+                                {...field}
+                                readOnly={isCorrection}
+                                className={isCorrection ? "bg-gray-100" : ""}
+                                data-testid="input-original-protocol-date"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              
+
               {isCorrection && (
                 <Card className="border-orange-200 bg-orange-50">
                   <CardHeader>
@@ -1115,20 +1193,53 @@ export function EditDocumentModal({
                       Λόγος Διόρθωσης
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <Badge variant="outline" className="bg-white text-orange-700 border-orange-200">
+                        Πρωτόκολλο προς διόρθωση: {oldProtocolNumber || "Δεν έχει οριστεί"}
+                      </Badge>
+                      {originalProtocolDateDisplay ? (
+                        <Badge variant="outline" className="bg-white text-orange-700 border-orange-200">
+                          Ημ/νία πρωτοκόλλου: {originalProtocolDateDisplay}
+                        </Badge>
+                      ) : null}
+                      <span className="text-xs text-muted-foreground">
+                        Χρησιμοποίησε το έτοιμο κείμενο και συνέχισε την αιτιολόγηση.
+                      </span>
+                    </div>
                     <FormField
                       control={form.control}
                       name="correction_reason"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Αιτιολογία Ορθής Επανάληψης *</FormLabel>
+                          <div className="flex items-center justify-between gap-3">
+                            <FormLabel className="mb-0">Αιτιολογία Ορθής Επανάληψης *</FormLabel>
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              size="sm"
+                              className="h-8 px-3"
+                              onClick={() =>
+                                form.setValue(
+                                  "correction_reason",
+                                  correctionReasonTemplate,
+                                  { shouldDirty: true },
+                                )
+                              }
+                            >
+                              Χρήση προτύπου
+                            </Button>
+                          </div>
                           <FormControl>
                             <Textarea 
                               {...field} 
                               className="min-h-[100px]"
-                              placeholder="Εισάγετε τον λόγο για τον οποίο δημιουργείται η ορθή επανάληψη..."
+                              placeholder={correctionReasonTemplate || "Εισάγετε τον λόγο για τον οποίο δημιουργείται η ορθή επανάληψη..."}
                             />
                           </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Το πεδίο ξεκινά με το πρότυπο κείμενο για το παλιό πρωτόκολλο· συνέχισε με τα αίτια της ορθής επανάληψης.
+                          </p>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -1378,43 +1489,6 @@ export function EditDocumentModal({
                       </p>
                     </FormItem>
                   </div>
-                </CardContent>
-              </Card>
-
-              {/* Εσωτερική Διανομή Fields Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Πεδία Εσωτερικής Διανομής</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <EsdianFieldsWithSuggestions form={form} user={user} />
-                </CardContent>
-              </Card>
-
-              {/* Comments Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Σχόλια</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <FormField
-                    control={form.control}
-                    name="comments"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Γενικές Παρατηρήσεις</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Προαιρετικά σχόλια ή σημειώσεις για το έγγραφο"
-                            className="min-h-[100px]"
-                            {...field}
-                            data-testid="textarea-comments"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </CardContent>
               </Card>
 
@@ -2225,58 +2299,42 @@ export function EditDocumentModal({
                 </CardContent>
               </Card>
 
-              {/* Original Document Info - Only visible in correction mode or if is_correction */}
-              {(isCorrection || form.watch("is_correction")) && (
-                <Card className="border-blue-200 bg-blue-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-blue-700">
-                      Στοιχεία Αρχικού Εγγράφου
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="original_protocol_number"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Αρχικός Αριθμός Πρωτοκόλλου</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                readOnly={isCorrection}
-                                className={isCorrection ? "bg-gray-100" : ""}
-                                data-testid="input-original-protocol-number"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+              {/* Εσωτερική Διανομή Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Εσωτερική Διανομή</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <EsdianFieldsWithSuggestions form={form} user={user} />
+                </CardContent>
+              </Card>
 
-                      <FormField
-                        control={form.control}
-                        name="original_protocol_date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Αρχική Ημερομηνία Πρωτοκόλλου</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="date"
-                                {...field}
-                                readOnly={isCorrection}
-                                className={isCorrection ? "bg-gray-100" : ""}
-                                data-testid="input-original-protocol-date"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Comments Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Σχόλια</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FormField
+                    control={form.control}
+                    name="comments"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Σχόλια</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Προσθέστε επιπλέον πληροφορίες ή διευκρινίσεις για το έγγραφο."
+                            className="min-h-[100px]"
+                            {...field}
+                            data-testid="textarea-comments"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
 
               <div className="p-6 pt-2 border-t flex justify-end gap-2 shrink-0 -mx-6 -mb-6 mt-6">
                 <Button

@@ -54,11 +54,11 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       setLoading(true);
 
       if (!protocolNumber.trim()) {
-        throw new Error('Ξ‘Ο€Ξ±ΞΉΟ„ΞµΞ―Ο„Ξ±ΞΉ Ξ±ΟΞΉΞΈΞΌΟΟ‚ Ο€ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…');
+        throw new Error("Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός");
       }
 
       if (!protocolDate) {
-        throw new Error('Ξ‘Ο€Ξ±ΞΉΟ„ΞµΞ―Ο„Ξ±ΞΉ Ξ·ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ± Ο€ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…');
+        throw new Error("Η ημερομηνία πρωτοκόλλου είναι υποχρεωτική");
       }
 
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
@@ -77,15 +77,15 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       });
 
       if (!response || response.success === false) {
-        throw new Error(response?.message || 'Ξ‘Ο€ΞΏΟ„Ο…Ο‡Ξ―Ξ± ΞµΞ½Ξ·ΞΌΞ­ΟΟ‰ΟƒΞ·Ο‚ Ο€ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…');
+        throw new Error(response?.message || "Αποτυχία αποθήκευσης πρωτοκόλλου");
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
       await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
 
       toast({
-        title: "Ξ•Ο€ΞΉΟ„Ο…Ο‡Ξ―Ξ±",
-        description: response.message || "Ξ¤ΞΏ Ο€ΟΟ‰Ο„ΟΞΊΞΏΞ»Ξ»ΞΏ ΞµΞ½Ξ·ΞΌΞµΟΟΞΈΞ·ΞΊΞµ ΞµΟ€ΞΉΟ„Ο…Ο‡ΟΟ‚",
+        title: "Επιτυχία",
+        description: response.message || "Αποθηκεύτηκε ο αριθμός πρωτοκόλλου",
       });
       onClose();
 
@@ -99,12 +99,12 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       const friendlyMessage = code ? friendlyByCode[code] : undefined;
 
       toast({
-        title: "Error",
+        title: "Σφάλμα",
         description:
           friendlyMessage ||
           (error instanceof Error
             ? error.message
-            : "Failed to save protocol number"),
+            : "Αποτυχία αποθήκευσης πρωτοκόλλου"),
         variant: "destructive",
       });
     } finally {
@@ -116,28 +116,28 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Ξ›ΞµΟ€Ο„ΞΏΞΌΞ­ΟΞµΞΉΞµΟ‚ Ξ•Ξ³Ξ³ΟΞ¬Ο†ΞΏΟ…</DialogTitle>
+          <DialogTitle>Καταχώριση Αριθμού Πρωτοκόλλου</DialogTitle>
           <DialogDescription>
-            Ξ ΟΞΏΞ²ΞΏΞ»Ξ® ΞΊΞ±ΞΉ ΞµΟ€ΞµΞΎΞµΟΞ³Ξ±ΟƒΞ―Ξ± Ο„Ο‰Ξ½ ΟƒΟ„ΞΏΞΉΟ‡ΞµΞ―Ο‰Ξ½ Ο„ΞΏΟ… ΞµΞ³Ξ³ΟΞ¬Ο†ΞΏΟ…
+            Συμπλήρωσε τα στοιχεία πρωτοκόλλου για το έγγραφο.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
             {/* Protocol Section */}
             <div className="p-4 bg-muted rounded-lg">
-              <h3 className="font-medium text-lg mb-4">Ξ£Ο„ΞΏΞΉΟ‡ΞµΞ―Ξ± Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</h3>
+              <h3 className="font-medium text-lg mb-4">Στοιχεία Πρωτοκόλλου</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Ξ‘ΟΞΉΞΈΞΌΟΟ‚ Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</Label>
+                  <Label>Αριθμός Πρωτοκόλλου</Label>
                   <Input
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
-                    placeholder="Ξ•ΞΉΟƒΞ¬Ξ³ΞµΟ„Ξµ Ξ±ΟΞΉΞΈΞΌΟ Ο€ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…"
+                    placeholder="Π.χ. 123456/2025"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ξ—ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ± Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</Label>
+                  <Label>Ημερομηνία Πρωτοκόλλου</Label>
                   <Input
                     type="date"
                     value={protocolDate}
@@ -151,26 +151,26 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                 onClick={handleProtocolSave}
                 disabled={loading}
               >
-                {loading ? "Ξ‘Ο€ΞΏΞΈΞ®ΞΊΞµΟ…ΟƒΞ·..." : "Ξ‘Ο€ΞΏΞΈΞ®ΞΊΞµΟ…ΟƒΞ· Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…"}
+                {loading ? "Αποθήκευση..." : "Αποθήκευση Πρωτοκόλλου"}
               </Button>
             </div>
 
             {/* Document Information */}
             <div>
-              <h3 className="font-medium text-lg">Ξ Ξ»Ξ·ΟΞΏΟ†ΞΏΟΞ―ΞµΟ‚ Ξ•Ξ³Ξ³ΟΞ¬Ο†ΞΏΟ…</h3>
+              <h3 className="font-medium text-lg">Πληροφορίες Εγγράφου</h3>
               <div className="grid grid-cols-2 gap-4 mt-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">ΞΞ±Ο„Ξ¬ΟƒΟ„Ξ±ΟƒΞ·</p>
-                  <p className="font-medium capitalize">{document.status === 'approved' ? 'Ξ•Ξ³ΞΊΞµΞΊΟΞΉΞΌΞ­Ξ½ΞΏ' : 'Ξ£Ξµ ΞµΞΊΞΊΟΞµΞΌΟΟ„Ξ·Ο„Ξ±'}</p>
+                  <p className="text-sm text-muted-foreground">Κατάσταση</p>
+                  <p className="font-medium capitalize">{document.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Ξ—ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ± Ξ”Ξ·ΞΌΞΉΞΏΟ…ΟΞ³Ξ―Ξ±Ο‚</p>
+                  <p className="text-sm text-muted-foreground">Ημ/νία δημιουργίας</p>
                   <p className="font-medium">
                     {new Date(document.created_at).toLocaleDateString('el-GR')}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Ξ£Ο…Ξ½ΞΏΞ»ΞΉΞΊΟ Ξ ΞΏΟƒΟ</p>
+                  <p className="text-sm text-muted-foreground">Συνολικό ποσό</p>
                   <p className="font-medium">
                     {new Intl.NumberFormat('el-GR', {
                       style: 'currency',
@@ -184,34 +184,32 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
             {/* Recipients Section */}
             {decryptedRecipients && decryptedRecipients.length > 0 && (
               <div>
-                <h3 className="font-medium text-lg mb-2">Ξ”ΞΉΞΊΞ±ΞΉΞΏΟΟ‡ΞΏΞΉ</h3>
+                <h3 className="font-medium text-lg mb-2">Δικαιούχοι</h3>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {decryptedRecipients.map((item: any, index: number) => {
-                    // Extract beneficiary data from API response
-                    const beneficiary = item.beneficiaries ? (Array.isArray(item.beneficiaries) ? item.beneficiaries[0] : item.beneficiaries) : item;
-                    const firstname = beneficiary?.name || beneficiary?.firstname || '';
-                    const lastname = beneficiary?.surname || beneficiary?.lastname || '';
-                    const afm = beneficiary?.afm || item.afm || '';
+                    const beneficiary = item.beneficiaries
+                      ? Array.isArray(item.beneficiaries)
+                        ? item.beneficiaries[0]
+                        : item.beneficiaries
+                      : item;
+                    const firstname = beneficiary?.name || beneficiary?.firstname || "";
+                    const lastname = beneficiary?.surname || beneficiary?.lastname || "";
+                    const afm = beneficiary?.afm || item.afm || "";
                     const amount = item.amount || 0;
-                    
+
                     return (
-                      <div
-                        key={index}
-                        className="p-3 bg-muted rounded-lg"
-                      >
+                      <div key={index} className="p-3 bg-muted rounded-lg">
                         <div className="flex justify-between items-start">
                           <div>
                             <p className="font-medium">
                               {lastname} {firstname}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              Ξ‘Ξ¦Ξ: {afm}
-                            </p>
+                            <p className="text-sm text-muted-foreground">ΑΦΜ: {afm}</p>
                           </div>
                           <p className="font-medium">
-                            {new Intl.NumberFormat('el-GR', {
-                              style: 'currency',
-                              currency: 'EUR'
+                            {new Intl.NumberFormat("el-GR", {
+                              style: "currency",
+                              currency: "EUR",
                             }).format(amount)}
                           </p>
                         </div>
@@ -225,7 +223,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            ΞΞ»ΞµΞ―ΟƒΞΉΞΌΞΏ
+            Κλείσιμο
           </Button>
         </DialogFooter>
       </DialogContent>
