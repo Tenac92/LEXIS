@@ -1,9 +1,18 @@
 import { Router, Response } from 'express';
-import { AuthenticatedRequest } from '../authentication';
+import { AuthenticatedRequest, authenticateSession } from '../authentication';
 import { supabase } from '../config/db';
 import { log } from '../vite';
 
 const router = Router();
+router.use(authenticateSession);
+
+function requireAdmin(req: AuthenticatedRequest, res: Response): boolean {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required' });
+    return false;
+  }
+  return true;
+}
 
 /**
  * GET /api/epa-versions/:epaVersionId/subprojects
@@ -75,6 +84,7 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
  */
 router.post('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const epaVersionId = parseInt(req.params.epaVersionId);
     const { title, description, status = 'Συνεχιζόμενο' } = req.body;
     
@@ -146,6 +156,7 @@ router.post('/epa-versions/:epaVersionId/subprojects', async (req: Authenticated
  */
 router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     const { title, description, status } = req.body;
     
@@ -197,6 +208,7 @@ router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) 
  */
 router.delete('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     
     if (!subprojectId || isNaN(subprojectId)) {
@@ -240,6 +252,7 @@ router.delete('/subprojects/:id', async (req: AuthenticatedRequest, res: Respons
  */
 router.post('/subprojects/:id/financials', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     const { year, total_public, eligible_public } = req.body;
     
@@ -320,6 +333,7 @@ router.post('/subprojects/:id/financials', async (req: AuthenticatedRequest, res
  */
 router.put('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const financialId = parseInt(req.params.id);
     const { year, total_public, eligible_public } = req.body;
     
@@ -381,6 +395,7 @@ router.put('/subprojects/financials/:id', async (req: AuthenticatedRequest, res:
  */
 router.delete('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const financialId = parseInt(req.params.id);
     
     if (!financialId || isNaN(financialId)) {
@@ -596,6 +611,7 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
 // Create test EPA budget version for testing purposes
 router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const projectId = parseInt(req.params.projectId);
     if (isNaN(projectId)) {
       return res.status(400).json({
@@ -697,6 +713,7 @@ router.get('/diagnostic', async (req: AuthenticatedRequest, res: Response) => {
  */
 router.post('/link-to-epa/:subprojectId/:epaVersionId', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.subprojectId);
     const epaVersionId = parseInt(req.params.epaVersionId);
 
@@ -859,6 +876,7 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
  */
 router.post('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const projectId = parseInt(req.params.projectId);
     const { title, description, status = 'active', code } = req.body;
     

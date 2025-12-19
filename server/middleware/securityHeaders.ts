@@ -15,45 +15,38 @@ export const securityHeaders = helmet({
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr",
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'", 
-        "'unsafe-eval'", 
         "https://unpkg.com",
         "https://ga.jspm.io",
         "https://esm.sh",
         "https://sdegdaefk.gr",
         "http://sdegdaefk.gr",
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       styleSrc: [
         "'self'", 
-        "'unsafe-inline'", 
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com",
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ], 
       imgSrc: [
         "'self'", 
         "data:", 
-        "https:",
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       connectSrc: [
         "'self'",
-        "https://ga.jspm.io",
-        "https://esm.sh",
         "https://cdnjs.cloudflare.com",
         "https://fonts.googleapis.com",
         "https://fonts.gstatic.com",
@@ -61,8 +54,7 @@ export const securityHeaders = helmet({
         "https://sdegdaefk.gr",
         "http://sdegdaefk.gr",
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       fontSrc: [
         "'self'", 
@@ -72,7 +64,7 @@ export const securityHeaders = helmet({
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
         "http://*.sdegdaefk.gr",
-        "*"
+        "https://fonts.gstatic.com"
       ],
       objectSrc: [
         "'self'", 
@@ -86,32 +78,28 @@ export const securityHeaders = helmet({
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       frameSrc: [
         "'self'", 
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       formAction: [
         "'self'", 
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       frameAncestors: [
         "'self'", 
         "https://sdegdaefk.gr", 
         "http://sdegdaefk.gr", 
         "https://*.sdegdaefk.gr",
-        "http://*.sdegdaefk.gr",
-        "*"
+        "http://*.sdegdaefk.gr"
       ],
       baseUri: ["'self'"],
       // Don't automatically upgrade HTTP to HTTPS for sdegdaefk.gr to support both protocols
@@ -123,7 +111,7 @@ export const securityHeaders = helmet({
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
   dnsPrefetchControl: false,
-  frameguard: false,  // Allow framing for sdegdaefk.gr
+  frameguard: true,  // Protect against clickjacking; allow explicit framing via CSP above
   hidePoweredBy: true,
   // Keep HSTS for production security
   hsts: {
@@ -217,12 +205,12 @@ export function additionalSecurity(req: Request, res: Response, next: NextFuncti
   // Set comprehensive CSP for sdegdaefk.gr domains
   // This is a backup CSP if helmet's doesn't apply (which should be rare)
   const cspValue = 
-    "default-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
-    "connect-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
-    "frame-ancestors 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
-    "img-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *; " +
-    "font-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr *;";
+    "default-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr; " +
+    "script-src 'self' 'unsafe-inline' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr; " +
+    "connect-src 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr; " +
+    "frame-ancestors 'self' https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr; " +
+    "img-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr; " +
+    "font-src 'self' data: https: https://*.sdegdaefk.gr http://*.sdegdaefk.gr https://sdegdaefk.gr http://sdegdaefk.gr;";
   
   // Only set CSP if it's not already set by helmet
   if (!res.getHeader('Content-Security-Policy')) {

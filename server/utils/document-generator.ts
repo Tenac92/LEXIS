@@ -1370,13 +1370,13 @@ export class DocumentGenerator {
     );
 
     const reservedRow = new TableRow({
-      height: { value: 2200, rule: HeightRule.EXACT },
+      height: { value: 2400, rule: HeightRule.EXACT },
       children: [
         new TableCell({
           borders: BORDER_NONE,
           width: { type: WidthType.DXA, size: innerGrid[0] },
-          children: [new Paragraph({ children: [t("")], spacing: { after: 0, before: 0 } })],
-          verticalAlign: VerticalAlign.TOP,
+          children: [new Paragraph({ children: [t("")], spacing: { after: 0, before: 200} })],
+          verticalAlign: VerticalAlign.BOTTOM,
         }),
         new TableCell({
           borders: BORDER_NONE,
@@ -1384,7 +1384,7 @@ export class DocumentGenerator {
           children: [
             new Paragraph({ children: [t("")], spacing: { after: 0, before: 0 } }),
           ],
-          verticalAlign: VerticalAlign.TOP,
+          verticalAlign: VerticalAlign.BOTTOM,
         }),
       ],
     });
@@ -1474,9 +1474,9 @@ export class DocumentGenerator {
               borders: BORDER_NONE,
               width: { type: WidthType.DXA, size: headerGrid[1] },
               // (optional) add a mild top margin to align with the logo
-              margins: { top: 120, bottom: 0, left: 0, right: 0 },
+              margins: { top: 340, bottom: 0, left: 0, right: 0 },
               children: [rightInnerTable],
-              verticalAlign: VerticalAlign.TOP,
+              verticalAlign: VerticalAlign.BOTTOM,
             }),
           ],
         }),

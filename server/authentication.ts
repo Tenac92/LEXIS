@@ -101,14 +101,10 @@ export const sessionMiddleware = session({
 // Rate limiting middleware for auth routes with proxy support
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Disabled rate limiting for testing critical security fixes
+  max: 10, // Allow up to 10 attempts per window
   message: { message: "Too many login attempts, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
-  // Configure rate limiter for proxy environment
-  skipFailedRequests: true,
-  // Only count failed attempts to be more lenient
-  skipSuccessfulRequests: true,
 });
 
 // ============================================================================
@@ -126,8 +122,7 @@ export const authenticateSession = async (
 ) => {
   try {
     console.log("[Auth] authenticateSession middleware called for:", req.path);
-    console.log("[Auth] Session ID:", req.sessionID);
-    console.log("[Auth] Session user exists:", !!req.session?.user);
+    console.log("[Auth] Session present:", !!req.session);
 
     // Check if the request path is in the public routes list
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {
@@ -154,10 +149,6 @@ export const authenticateSession = async (
 
     if (!req.session?.user?.id) {
       console.log("[Auth] No user in session for path:", req.path);
-      console.log("[Auth] Session ID:", req.sessionID);
-      console.log("[Auth] Session exists:", !!req.session);
-      console.log("[Auth] Session user:", req.session?.user);
-      console.log("[Auth] Cookie header:", req.headers.cookie);
 
       // Create an error object with status code to be handled by our error middleware
       const authError = new Error("Authentication required");
@@ -208,7 +199,6 @@ export const authenticateSession = async (
       email: req.user?.email,
       role: req.user?.role,
       unit_id: req.user?.unit_id,
-      sessionID: req.sessionID,
       ip: req.ip,
     });
 
@@ -254,7 +244,6 @@ export function authenticateToken(
       isPublicRoute,
       hasSession: !!req.session,
       hasUser: !!req.session?.user,
-      sessionID: req.sessionID,
       cookies: req.headers.cookie ? "present" : "missing",
     });
 
@@ -342,7 +331,6 @@ export function authenticateToken(
       role: req.user.role,
       unit_id: req.user.unit_id,
       department: req.user.department,
-      sessionID: req.sessionID,
     });
 
     next();
@@ -665,7 +653,6 @@ export async function setupAuth(app: Express) {
             reject(err);
           } else {
             console.log("[Auth] Session saved successfully:", {
-              sessionID: req.sessionID,
               userID: sessionUser.id,
               secure: req.secure,
               protocol: req.protocol,
@@ -683,7 +670,6 @@ export async function setupAuth(app: Express) {
         role: sessionUser.role,
         unit_id: sessionUser.unit_id,
         department: sessionUser.department,
-        sessionID: req.sessionID,
         ip: clientIp,
         geoVerified: req.session.geoVerified,
       });
@@ -714,7 +700,6 @@ export async function setupAuth(app: Express) {
   // Logout route optimized for faster response
   app.post("/api/auth/logout", (req, res) => {
     console.log("[Auth] Logging out user:", {
-      sessionID: req.sessionID,
       userId: req.session?.user?.id,
       ip: req.ip,
     });
@@ -830,7 +815,6 @@ export async function setupAuth(app: Express) {
         email: sessionUser.email,
         role: sessionUser.role,
         unit_id: sessionUser.unit_id,
-        sessionID: req.sessionID,
       });
 
       // Create a clean user response
@@ -856,37 +840,6 @@ export async function setupAuth(app: Express) {
         authenticated: false,
         message: "Session error",
       });
-    }
-  });
-
-  // Debug endpoint to check user data in database
-  app.get("/api/debug/user/:id", async (req, res) => {
-    try {
-      const userId = req.params.id;
-      console.log(`[Debug] Checking user ${userId} in database`);
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (userError) {
-        console.error(`[Debug] Database error:`, userError);
-        return res.status(500).json({ error: userError });
-      }
-
-      console.log(`[Debug] Raw database data for user ${userId}:`, userData);
-
-      return res.json({
-        raw_data: userData,
-        unit_id_value: userData?.unit_id,
-        unit_id_type: typeof userData?.unit_id,
-        unit_id_is_array: Array.isArray(userData?.unit_id),
-      });
-    } catch (error) {
-      console.error("[Debug] Error:", error);
-      return res.status(500).json({ error: error.message });
     }
   });
 
