@@ -539,11 +539,10 @@ router.get('/epa-versions/:epaVersionId/financial-validation', async (req: Authe
   }
 });
 
-/**
- * GET /api/projects/:projectId/epa-versions
- * Get all EPA versions for a specific project
- */
-router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest, res: Response) => {
+const getProjectEpaVersions = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   try {
     const projectId = parseInt(req.params.projectId);
     
@@ -606,7 +605,14 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
       error: 'Internal server error'
     });
   }
-});
+};
+
+/**
+ * GET /api/projects/:projectId/epa-versions
+ * Get all EPA versions for a specific project
+ */
+router.get('/:projectId/epa-versions', getProjectEpaVersions);
+router.get('/projects/:projectId/epa-versions', getProjectEpaVersions);
 
 // Create test EPA budget version for testing purposes
 router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRequest, res: Response) => {

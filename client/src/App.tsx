@@ -17,6 +17,7 @@ import BeneficiariesPage from "@/pages/beneficiaries-page";
 import BudgetHistoryPage from "@/pages/budget-history-page";
 import AdminNotificationsPage from "@/pages/AdminNotificationsPage";
 import AdminBudgetUploadPage from "@/pages/AdminBudgetUploadPage";
+import AdminPaymentsImportPage from "@/pages/AdminPaymentsImportPage";
 // Fix type issue by explicitly defining component return type
 import QuarterManagementPage from "@/pages/admin/QuarterManagementPage";
 import BudgetMonitoringPage from "@/pages/admin/BudgetMonitoringPage";
@@ -72,6 +73,10 @@ function Router(): JSX.Element {
         <ProtectedRoute
           path="/admin/budget-upload"
           component={AdminBudgetUploadPage}
+        />
+        <ProtectedRoute
+          path="/admin/payments-import"
+          component={AdminPaymentsImportPage}
         />
         <ProtectedRoute
           path="/admin/budget-monitoring"

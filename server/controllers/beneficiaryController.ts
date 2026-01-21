@@ -1,8 +1,7 @@
-import { Request, Response, Router } from 'express';
+import { Response, Router } from 'express';
 import { storage } from '../storage';
 import { authenticateSession, AuthenticatedRequest } from '../authentication';
-import { insertBeneficiarySchema, type Beneficiary, type InsertBeneficiary } from '@shared/schema';
-import { z } from 'zod';
+import { insertBeneficiarySchema } from '@shared/schema';
 import { supabase } from '../config/db';
 import { decryptAFM } from '../utils/crypto';
 import { 
@@ -63,107 +62,26 @@ export function invalidateBeneficiariesCache(unitIds?: number[]): void {
 }
 
 // Helper function to map region name to region code
-async function getRegionCodeFromName(regionName: string): Promise<string | null> {
-  try {
-    if (!regionName || regionName.trim() === '') {
-      return null;
-    }
-    
-    console.log(`[Beneficiaries] Looking up region code for: "${regionName}"`);
-    
-    const { data: regionData, error } = await supabase
-      .from('regions')
-      .select('code, name')
-      .eq('name', regionName.trim())
-      .single();
-    
-    if (error) {
-      console.log(`[Beneficiaries] No region found with name "${regionName}":`, error);
-      return null;
-    }
-    
-    if (regionData && regionData.code) {
-      console.log(`[Beneficiaries] Mapped region "${regionName}" to code "${regionData.code}"`);
-      return regionData.code.toString();
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('[Beneficiaries] Error in getRegionCodeFromName:', error);
-    return null;
-  }
-}
+// Helper function to get unit abbreviation from full unit name
 
-// Helper function to get unit code from numeric unit ID
+// Helper function to map unit ID to unit code
 async function getUnitCodeById(unitId: number): Promise<string | null> {
   try {
-    console.log(`[Beneficiaries] Looking up unit code for unit ID: ${unitId}`);
-    
-    const { data: monadaData, error: monadaError } = await supabase
+    const { data, error } = await supabase
       .from('Monada')
-      .select('id, unit')
+      .select('unit')
       .eq('id', unitId)
       .single();
     
-    if (monadaError) {
-      console.error(`[Beneficiaries] Error fetching unit for ID ${unitId}:`, monadaError);
+    if (error) {
+      console.error(`[Beneficiaries] Error mapping unit ID ${unitId} to code:`, error);
       return null;
     }
     
-    if (monadaData && monadaData.unit) {
-      console.log(`[Beneficiaries] Mapped unit ID ${unitId} to unit code "${monadaData.unit}"`);
-      return monadaData.unit;
-    }
-    
-    console.log(`[Beneficiaries] No unit code found for unit ID: ${unitId}`);
-    return null;
+    return data?.unit || null;
   } catch (error) {
-    console.error('[Beneficiaries] Error in getUnitCodeById:', error);
+    console.error(`[Beneficiaries] Exception mapping unit ID ${unitId}:`, error);
     return null;
-  }
-}
-
-// Helper function to get unit abbreviation from full unit name
-async function getUnitAbbreviation(userUnitName: string): Promise<string> {
-  try {
-    // First check if it's already an abbreviation by checking if it exists in Monada.unit
-    const { data: existingUnit, error: existingError } = await supabase
-      .from('Monada')
-      .select('unit')
-      .eq('unit', userUnitName)
-      .single();
-    
-    if (!existingError && existingUnit) {
-      // It's already an abbreviation, return as-is
-      console.log(`[Beneficiaries] Unit "${userUnitName}" is already an abbreviation`);
-      return userUnitName;
-    }
-    
-    // If not found as abbreviation, try to find it as a full name
-    const { data: monadaData, error: monadaError } = await supabase
-      .from('Monada')
-      .select('unit, unit_name')
-      .not('unit_name', 'is', null);
-    
-    if (monadaError) {
-      console.error('[Beneficiaries] Error fetching Monada data:', monadaError);
-      throw new Error('Failed to fetch unit mapping');
-    }
-    
-    // Find matching unit by comparing with unit_name.name
-    for (const monada of monadaData || []) {
-      if (monada.unit_name && typeof monada.unit_name === 'object' && monada.unit_name.name === userUnitName) {
-        console.log(`[Beneficiaries] Mapped full name "${userUnitName}" to abbreviation "${monada.unit}"`);
-        return monada.unit;
-      }
-    }
-    
-    // If no match found, return the original name (fallback)
-    console.log(`[Beneficiaries] No mapping found for "${userUnitName}", using as-is`);
-    return userUnitName;
-  } catch (error) {
-    console.error('[Beneficiaries] Error in getUnitAbbreviation:', error);
-    return userUnitName; // fallback
   }
 }
 
@@ -323,7 +241,7 @@ router.get('/search', authenticateSession, async (req: AuthenticatedRequest, res
     console.log(`[Beneficiaries] Searching beneficiaries by AFM: ${afm}${type ? ` and type: ${type}` : ''} for unit: ${userUnit}`);
     
     const includeFinancial = req.query.includeFinancial === 'true';
-    let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    const beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
     console.log(`[Beneficiaries] Raw search returned ${beneficiaries.length} beneficiaries`);
     console.log(`[Beneficiaries] Sample beneficiary monada values:`, beneficiaries.slice(0, 3).map(b => ({ id: b.id, monada: (b as any).monada || 'N/A' })));
@@ -499,7 +417,7 @@ router.get('/search/afm/:afm', authenticateSession, async (req: AuthenticatedReq
     console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} searching AFM ${afm} - authorized for units: ${authorizedUnitCodes.join(', ')}`);
     
     // Get all beneficiaries with this AFM
-    let beneficiaries = await storage.searchBeneficiariesByAFM(afm);
+    const beneficiaries = await storage.searchBeneficiariesByAFM(afm);
     
     // Note: Removed monada security filtering - beneficiaries can be accessed regardless of their monada field
     

@@ -28,7 +28,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
@@ -102,6 +102,13 @@ import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSugges
 import { ProjectSelect } from "./components/ProjectSelect";
 import { SubprojectSelect } from "./components/SubprojectSelect";
 import { StepIndicator } from "./components/StepIndicator";
+import { BeneficiaryGeoSelector } from "./components/BeneficiaryGeoSelector";
+import {
+  isRegiondetComplete,
+  mergeRegiondetPreservingPayments,
+  normalizeRegiondetEntry,
+  type RegiondetSelection,
+} from "./utils/beneficiary-geo";
 
 // Main project interface - simplified as components are now extracted
 interface Project {
@@ -173,6 +180,7 @@ const stepVariants = {
 
 // Schemas
 const recipientSchema = z.object({
+  id: z.number().optional(),
   firstname: z
     .string()
     .min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
@@ -206,6 +214,7 @@ const recipientSchema = z.object({
   total_expense: z.number().optional(),
   deduction_2_percent: z.number().optional(),
   net_payable: z.number().optional(),
+  regiondet: z.any().optional().nullable(),
 });
 
 const signatureSchema = z.object({
@@ -307,6 +316,12 @@ export function CreateDocumentDialog({
   
   // Track which recipient indices have their housing allowance quarter details expanded
   const [expandedQuarterDetails, setExpandedQuarterDetails] = useState<Set<number>>(new Set());
+  const [regiondetErrors, setRegiondetErrors] = useState<Record<number, string>>({});
+  const regiondetSaveTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const [regiondetSaveState, setRegiondetSaveState] = useState<
+    Record<string, { status: "idle" | "saving" | "error" | "saved"; message?: string }>
+  >({});
+  const lastRegiondetByBeneficiary = useRef<Record<string, RegiondetSelection | null>>({});
 
   // Memoize user unit IDs to avoid duplicate key warnings and improve performance
   const userUnitIds = useMemo(
@@ -415,8 +430,8 @@ export function CreateDocumentDialog({
       esdian_field2: formData.esdian_field2 || "",
       director_signature: formData.director_signature || undefined,
     }),
-    [formData],
-  ); // Fix: add dependencies to useMemo
+    [], // Empty deps - only initialize once, prevent re-initialization on every formData change
+  );
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -810,6 +825,7 @@ export function CreateDocumentDialog({
         tickets_tolls_rental: 0,
         tickets_tolls_rental_entries: [],
         has_2_percent_deduction: false,
+        regiondet: null,
       }] : [];
 
       // Reset form to default values for new document, but preserve unit
@@ -2521,6 +2537,10 @@ export function CreateDocumentDialog({
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
+      if (!validateBeneficiaryRegions()) {
+        return;
+      }
+
       // Detailed validation for each recipient
       for (let index = 0; index < data.recipients.length; index++) {
         const r = data.recipients[index];
@@ -2545,6 +2565,11 @@ export function CreateDocumentDialog({
         if (r.afm.trim().length !== 9) {
           throw new Error(
             `Δικαιούχος #${index + 1}: Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία.`,
+          );
+        }
+        if (!isRegiondetComplete(r.regiondet as RegiondetSelection)) {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Απαιτείται γεωγραφική επιλογή.`,
           );
         }
         if (typeof r.amount !== "number" || r.amount <= 0) {
@@ -3157,6 +3182,7 @@ export function CreateDocumentDialog({
         tickets_tolls_rental: 0,
         tickets_tolls_rental_entries: [0], // Initialize with one empty entry
         has_2_percent_deduction: false,
+        regiondet: null,
       },
     ]);
   };
@@ -3168,6 +3194,7 @@ export function CreateDocumentDialog({
       "recipients",
       currentRecipients.filter((_, i) => i !== index),
     );
+    setRegiondetErrors({});
   };
 
   useEffect(() => {
@@ -3354,34 +3381,60 @@ export function CreateDocumentDialog({
         Boolean(selectedProjectId) && projects.length > 0 && !!geographicData,
     });
 
-  // Smart cascading selection state
-  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
-  const [selectedUnitFilter, setSelectedUnitFilter] = useState<string>("");
-  const [selectedMunicipalityId, setSelectedMunicipalityId] =
-    useState<string>("");
+  // Smart fallback: use project-specific geographic data when available,
+  // otherwise fall back to full geographic data to support projects without explicit mappings
+  const availableRegions = useMemo(() => {
+    const projectRegions = (projectGeographicAreas as any)?.availableRegions || [];
+    if (projectRegions.length > 0) {
+      return projectRegions;
+    }
+    // Fallback to all regions when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).regions)) {
+      return (geographicData as any).regions.map((region: any) => ({
+        id: `region-${region.code}`,
+        code: region.code,
+        name: region.name,
+        type: "region",
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
 
-  // Computed available options based on current selections
-  const availableRegions =
-    (projectGeographicAreas as any)?.availableRegions || [];
-  const availableUnits = selectedRegionFilter
-    ? ((projectGeographicAreas as any)?.availableUnits || []).filter(
-        (unit: any) => unit.region_code === selectedRegionFilter,
-      )
-    : (projectGeographicAreas as any)?.availableUnits || [];
-  const availableMunicipalities = selectedUnitFilter
-    ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
-        (municipality: any) => municipality.unit_code === selectedUnitFilter,
-      )
-    : selectedRegionFilter
-      ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
-          (municipality: any) => {
-            const unit = (
-              (projectGeographicAreas as any)?.availableUnits || []
-            ).find((u: any) => u.code === municipality.unit_code);
-            return unit?.region_code === selectedRegionFilter;
-          },
-        )
-      : (projectGeographicAreas as any)?.availableMunicipalities || [];
+  const availableUnits = useMemo(() => {
+    const projectUnits = (projectGeographicAreas as any)?.availableUnits || [];
+    if (projectUnits.length > 0) {
+      return projectUnits;
+    }
+    // Fallback to all regional units when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).regionalUnits)) {
+      return (geographicData as any).regionalUnits.map((unit: any) => ({
+        id: `unit-${unit.code}`,
+        code: unit.code,
+        name: unit.name,
+        type: "regional_unit",
+        region_code: unit.region_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
+
+  const availableMunicipalities = useMemo(() => {
+    const projectMunis = (projectGeographicAreas as any)?.availableMunicipalities || [];
+    if (projectMunis.length > 0) {
+      return projectMunis;
+    }
+    // Fallback to all municipalities when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).municipalities)) {
+      return (geographicData as any).municipalities.map((muni: any) => ({
+        id: `municipality-${muni.code}`,
+        code: muni.code,
+        name: muni.name,
+        type: "municipality",
+        unit_code: muni.unit_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
 
   // All available options for the region dropdown (flattened for backward compatibility)
   const regions = [
@@ -3389,6 +3442,133 @@ export function CreateDocumentDialog({
     ...availableUnits,
     ...availableMunicipalities,
   ];
+
+  const regiondetMutation = useMutation({
+    mutationFn: async ({
+      beneficiaryId,
+      regiondet,
+    }: {
+      beneficiaryId: number;
+      regiondet: RegiondetSelection | null;
+    }) => {
+      return apiRequest(`/api/beneficiaries/${beneficiaryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ regiondet }),
+      });
+    },
+    onSuccess: (_data, variables) => {
+      const key = String(variables.beneficiaryId);
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: { status: "saved" },
+      }));
+    },
+    onError: (error: any, variables) => {
+      const key = String(variables.beneficiaryId);
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: {
+          status: "error",
+          message:
+            (error as any)?.message ||
+            "Failed to save geographical selection",
+        },
+      }));
+    },
+  });
+
+  const scheduleRegiondetSave = (
+    beneficiaryId: number | undefined,
+    nextValue: RegiondetSelection | null,
+  ) => {
+    if (!beneficiaryId) return;
+    const key = String(beneficiaryId);
+    lastRegiondetByBeneficiary.current[key] = nextValue;
+    if (regiondetSaveTimers.current[key]) {
+      clearTimeout(regiondetSaveTimers.current[key]);
+    }
+    regiondetSaveTimers.current[key] = setTimeout(() => {
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: { status: "saving" },
+      }));
+      regiondetMutation.mutate({ beneficiaryId, regiondet: nextValue });
+    }, 400);
+  };
+
+  const retryRegiondetSave = (beneficiaryId: number) => {
+    const key = String(beneficiaryId);
+    const lastValue = lastRegiondetByBeneficiary.current[key];
+    if (!lastValue) return;
+    setRegiondetSaveState((prev) => ({
+      ...prev,
+      [key]: { status: "saving" },
+    }));
+    regiondetMutation.mutate({ beneficiaryId, regiondet: lastValue });
+  };
+
+  const validateBeneficiaryRegions = () => {
+    const recipients = form.getValues("recipients") || [];
+    const missing: Record<number, string> = {};
+
+    recipients.forEach((recipient: any, idx: number) => {
+      if (!isRegiondetComplete(recipient?.regiondet as RegiondetSelection)) {
+        missing[idx] = "Geographical selection is required";
+      }
+    });
+
+    setRegiondetErrors(missing);
+
+    if (Object.keys(missing).length > 0) {
+      toast({
+        title: "Geography required",
+        description:
+          "Select a region, unit, or municipality for every beneficiary before continuing.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRecipientGeoChange = useCallback((
+    index: number,
+    nextValue: RegiondetSelection | null,
+  ) => {
+    setRegiondetErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+
+    const recipients = form.getValues("recipients") || [];
+    const target = recipients[index] || {};
+    const nextWithPayments = mergeRegiondetPreservingPayments(
+      nextValue as RegiondetSelection,
+      target?.regiondet as RegiondetSelection,
+    );
+
+    form.setValue(`recipients.${index}.regiondet` as any, nextWithPayments, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+
+    const beneficiaryId =
+      typeof target?.id === "number" ? (target as any).id : undefined;
+    scheduleRegiondetSave(beneficiaryId, nextWithPayments as any);
+  }, [form]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(regiondetSaveTimers.current).forEach((timer) => {
+        clearTimeout(timer);
+      });
+    };
+  }, []);
 
   const handleNext = async () => {
     try {
@@ -3436,6 +3616,10 @@ export function CreateDocumentDialog({
               description: "Παρακαλώ προσθέστε τουλάχιστον έναν δικαιούχο",
               variant: "destructive",
             });
+            return;
+          }
+
+          if (!validateBeneficiaryRegions()) {
             return;
           }
           
@@ -3779,310 +3963,6 @@ export function CreateDocumentDialog({
                     />
                   )}
 
-                  {/* Smart Hierarchical Geographic Selection */}
-                  {(availableRegions.length > 0 ||
-                    availableUnits.length > 0 ||
-                    availableMunicipalities.length > 0) && (
-                    <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
-                      <h3 className="text-xs font-medium text-gray-700">
-                        Γεωγραφική Περιοχή Διαβιβαστίκου
-                      </h3>
-
-                      {/* Filter by Region */}
-                      {availableRegions.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
-                            Φίλτρο Περιφέρειας
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedRegionFilter}
-                              onValueChange={(value) => {
-                                const regionCode = value === "all" ? "" : value;
-                                setSelectedRegionFilter(regionCode);
-                                setSelectedUnitFilter(""); // Reset unit filter when region changes
-
-                                // Set as final selected region for document (last hierarchy choice)
-                                if (regionCode) {
-                                  const selectedRegionName =
-                                    availableRegions.find(
-                                      (r: any) => r.code === regionCode,
-                                    )?.name || "";
-                                  // Build hierarchy: Region|| (region only, no unit or municipality)
-                                  const regionHierarchy = `${selectedRegionName}||`;
-                                  form.setValue("region", regionHierarchy);
-                                  setSelectedMunicipalityId(""); // Clear municipality selection
-                                  console.log(
-                                    "[Geographic] Selected region as final choice:",
-                                    regionHierarchy,
-                                  );
-                                } else {
-                                  form.setValue("region", "");
-                                  setSelectedMunicipalityId("");
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Όλες οι περιφέρειες" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  Όλες οι περιφέρειες
-                                </SelectItem>
-                                {availableRegions.map((region: any) => (
-                                  <SelectItem
-                                    key={`region-${region.code}`}
-                                    value={region.code}
-                                  >
-                                    {region.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Filter by Regional Unit */}
-                      {availableUnits.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
-                            Φίλτρο Περιφερειακής Ενότητας
-                            {selectedRegionFilter && (
-                              <span className="text-gray-500">
-                                (στην{" "}
-                                {
-                                  availableRegions.find(
-                                    (r: any) => r.code === selectedRegionFilter,
-                                  )?.name
-                                }
-                                )
-                              </span>
-                            )}
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedUnitFilter}
-                              onValueChange={(value) => {
-                                const unitCode = value === "all" ? "" : value;
-                                setSelectedUnitFilter(unitCode);
-
-                                // Set as final selected region for document (last hierarchy choice)
-                                if (unitCode) {
-                                  const selectedUnit = availableUnits.find(
-                                    (u: any) => u.code === unitCode,
-                                  );
-
-                                  if (selectedUnit) {
-                                    let regionHierarchy = selectedUnit.name;
-
-                                    // Auto-complete: Fill region filter
-                                    if (selectedUnit.region_code) {
-                                      setSelectedRegionFilter(
-                                        selectedUnit.region_code,
-                                      );
-
-                                      // Find the region name to build hierarchy
-                                      const parentRegion =
-                                        availableRegions.find(
-                                          (r: any) =>
-                                            r.code === selectedUnit.region_code,
-                                        );
-
-                                      if (parentRegion) {
-                                        // Build hierarchy: Region|RegionalUnit|
-                                        regionHierarchy = `${parentRegion.name}|${selectedUnit.name}|`;
-                                      } else {
-                                        // Fallback: if no region found, use unit only
-                                        regionHierarchy = `|${selectedUnit.name}|`;
-                                      }
-                                    }
-
-                                    form.setValue("region", regionHierarchy);
-                                    setSelectedMunicipalityId(""); // Clear municipality selection
-                                    console.log(
-                                      "[Geographic] Selected regional unit as final choice:",
-                                      regionHierarchy,
-                                    );
-                                  }
-                                } else if (!selectedRegionFilter) {
-                                  form.setValue("region", "");
-                                  setSelectedMunicipalityId("");
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  Όλες οι περιφερειακές ενότητες
-                                </SelectItem>
-                                {availableUnits.map((unit: any) => (
-                                  <SelectItem
-                                    key={`unit-${unit.code}`}
-                                    value={unit.code}
-                                  >
-                                    {unit.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Final Municipality Selection */}
-                      {availableMunicipalities.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium whitespace-nowrap min-w-[140px]">
-                            Τελική Επιλογή Δήμου/Κοινότητας
-                            {(selectedRegionFilter || selectedUnitFilter) && (
-                              <span className="text-xs text-gray-500 ml-2">
-                                ({availableMunicipalities.length} διαθέσιμες
-                                επιλογές)
-                              </span>
-                            )}
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedMunicipalityId}
-                              onValueChange={(value) => {
-                                // Set as final selected region for document (last hierarchy choice - municipality)
-                                const selectedMunicipality =
-                                  availableMunicipalities.find(
-                                    (m: any) => m.id === value,
-                                  );
-                                if (selectedMunicipality) {
-                                  // Auto-complete: Find the parent unit and region
-                                  const parentUnit = (
-                                    (projectGeographicAreas as any)
-                                      ?.availableUnits || []
-                                  ).find(
-                                    (u: any) =>
-                                      u.code === selectedMunicipality.unit_code,
-                                  );
-
-                                  let regionHierarchy =
-                                    selectedMunicipality.name;
-
-                                  if (parentUnit) {
-                                    // Auto-fill regional unit filter
-                                    setSelectedUnitFilter(parentUnit.code);
-
-                                    // Auto-fill region filter
-                                    if (parentUnit.region_code) {
-                                      setSelectedRegionFilter(
-                                        parentUnit.region_code,
-                                      );
-
-                                      // Find the region name to build full hierarchy
-                                      const parentRegion =
-                                        availableRegions.find(
-                                          (r: any) =>
-                                            r.code === parentUnit.region_code,
-                                        );
-
-                                      if (parentRegion) {
-                                        // Build hierarchy: Region|RegionalUnit|Municipality
-                                        regionHierarchy = `${parentRegion.name}|${parentUnit.name}|${selectedMunicipality.name}`;
-                                      } else {
-                                        // Fallback: if no region found, use unit and municipality
-                                        regionHierarchy = `|${parentUnit.name}|${selectedMunicipality.name}`;
-                                      }
-                                    }
-                                  }
-
-                                  form.setValue("region", regionHierarchy);
-                                  setSelectedMunicipalityId(value); // Store ID for dropdown
-                                  console.log(
-                                    "[Geographic] Selected municipality as final choice:",
-                                    regionHierarchy,
-                                  );
-                                }
-                              }}
-                              disabled={regionsLoading}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-60">
-                                {availableMunicipalities
-                                  .filter(
-                                    (municipality: any) =>
-                                      municipality.code && municipality.name,
-                                  )
-                                  .map((municipality: any) => (
-                                    <SelectItem
-                                      key={`municipality-${municipality.code}`}
-                                      value={municipality.id}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {municipality.name}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          Δήμος/Κοινότητα
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                {availableMunicipalities.length === 0 && (
-                                  <SelectItem
-                                    value="no-municipalities"
-                                    disabled
-                                  >
-                                    Δεν υπάρχουν διαθέσιμοι δήμοι
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Show current selection path */}
-                      {(selectedRegionFilter ||
-                        selectedUnitFilter ||
-                        selectedMunicipalityId) && (
-                        <div className="text-xs text-gray-500 bg-blue-50 p-1.5 rounded mt-1">
-                          <span className="text-gray-600">
-                            Επιλεγμένη περιοχή:
-                          </span>
-                          {selectedRegionFilter && (
-                            <span className="ml-1 font-medium">
-                              {
-                                availableRegions.find(
-                                  (r: any) => r.code === selectedRegionFilter,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                          {selectedUnitFilter && (
-                            <span className="ml-1 font-medium">
-                              {selectedRegionFilter && " › "}
-                              {
-                                availableUnits.find(
-                                  (u: any) => u.code === selectedUnitFilter,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                          {selectedMunicipalityId && (
-                            <span className="ml-1 font-medium">
-                              {(selectedRegionFilter || selectedUnitFilter) &&
-                                " › "}
-                              {
-                                availableMunicipalities.find(
-                                  (m: any) => m.id === selectedMunicipalityId,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -4347,7 +4227,7 @@ export function CreateDocumentDialog({
                                 // Update the AFM field in the form when user types
                                 form.setValue(`recipients.${index}.afm`, value);
                               }}
-                              onSelectPerson={(personData) => {
+                              onSelectPerson={async (personData) => {
                                 if (personData) {
                                   console.log(
                                     "[AFMAutocomplete] Selection made for index:",
@@ -4519,8 +4399,15 @@ export function CreateDocumentDialog({
                                   const currentRecipients =
                                     form.getValues("recipients");
 
+                                  const initialRegiondet = normalizeRegiondetEntry(
+                                    (personData as any).regiondet ||
+                                      currentRecipients[index]?.regiondet ||
+                                      null,
+                                  );
+
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
+                                    id: (personData as any).id,
                                     firstname: personData.name || "",
                                     lastname: personData.surname || "",
                                     fathername: personData.fathername || "",
@@ -4532,10 +4419,89 @@ export function CreateDocumentDialog({
                                     amount: totalAmount,
                                     installments: installmentsList,
                                     installmentAmounts: installmentAmounts,
+                                    regiondet: initialRegiondet,
                                     ...(isEktosEdras && {
                                       employee_id: (personData as any).id,
                                     }),
                                   };
+
+                                  // Hydrate full beneficiary data (including persisted regiondet/payment_ids)
+                                  let hydratedRegiondet = initialRegiondet;
+                                  try {
+                                    if (personData.id) {
+                                      const fullBeneficiary = await apiRequest(
+                                        `/api/beneficiaries/${personData.id}`,
+                                      );
+                                      if (fullBeneficiary) {
+                                        const enrichedRegiondet =
+                                          normalizeRegiondetEntry(
+                                            (fullBeneficiary as any).regiondet,
+                                          );
+                                        hydratedRegiondet =
+                                          enrichedRegiondet ||
+                                          hydratedRegiondet ||
+                                          null;
+                                        currentRecipients[index].id =
+                                          (fullBeneficiary as any).id ||
+                                          currentRecipients[index].id;
+                                      }
+                                    }
+
+                                    // Fallback: search by AFM if no regiondet was found (newly created or cached results)
+                                    if (
+                                      !hydratedRegiondet &&
+                                      personData.afm &&
+                                      String(personData.afm).length >= 4
+                                    ) {
+                                      const searchResults: any[] =
+                                        (await apiRequest(
+                                          `/api/beneficiaries/search?afm=${encodeURIComponent(String(personData.afm))}`,
+                                        )) || [];
+                                      if (Array.isArray(searchResults)) {
+                                        const matched = searchResults.find(
+                                          (entry) =>
+                                            String(entry.afm).endsWith(
+                                              String(personData.afm),
+                                            ) ||
+                                            String(entry.afm) ===
+                                              String(personData.afm),
+                                        );
+                                          if (matched) {
+                                          hydratedRegiondet =
+                                            normalizeRegiondetEntry(
+                                              matched.regiondet,
+                                            ) ||
+                                            hydratedRegiondet ||
+                                            null;
+                                          currentRecipients[index].id =
+                                            matched.id ||
+                                            currentRecipients[index].id;
+                                        }
+                                      }
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "[AFMAutocomplete] Error hydrating beneficiary data:",
+                                      error,
+                                    );
+                                  }
+
+                                  currentRecipients[index].regiondet =
+                                    hydratedRegiondet;
+
+                                  if (
+                                    currentRecipients[index].id &&
+                                    isRegiondetComplete(
+                                      currentRecipients[index]
+                                        .regiondet as RegiondetSelection,
+                                    )
+                                  ) {
+                                    scheduleRegiondetSave(
+                                      Number(currentRecipients[index].id),
+                                      currentRecipients[index]
+                                        .regiondet as RegiondetSelection,
+                                    );
+                                  }
 
                                   // Use setValue and trigger validation to ensure form recognizes the changes
                                   form.setValue(
@@ -4680,9 +4646,12 @@ export function CreateDocumentDialog({
                                                 : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const withholdingBase = isEktosEdras ? numericValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -4757,9 +4726,15 @@ export function CreateDocumentDialog({
                                                 : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -4834,9 +4809,15 @@ export function CreateDocumentDialog({
                                                 : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -4972,9 +4953,15 @@ export function CreateDocumentDialog({
                                                     (recipient.price_per_km ||
                                                       DEFAULT_PRICE_PER_KM) +
                                                   sum;
+                                                // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                                const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                                const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                                  ? recipient.daily_compensation
+                                                  : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                                const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                                 const deduction =
                                                   recipient.has_2_percent_deduction
-                                                    ? totalExpense * 0.02
+                                                    ? withholdingBase * 0.02
                                                     : 0;
                                                 const netPayable =
                                                   totalExpense - deduction;
@@ -5058,9 +5045,15 @@ export function CreateDocumentDialog({
                                                       (recipient.price_per_km ||
                                                         DEFAULT_PRICE_PER_KM) +
                                                     sum;
+                                                  // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                                  const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                                  const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                                    ? recipient.daily_compensation
+                                                    : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                                  const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                                   const deduction =
                                                     recipient.has_2_percent_deduction
-                                                      ? totalExpense * 0.02
+                                                      ? withholdingBase * 0.02
                                                       : 0;
                                                   const netPayable =
                                                     totalExpense - deduction;
@@ -5109,7 +5102,7 @@ export function CreateDocumentDialog({
                                   control={form.control}
                                   name={`recipients.${index}.has_2_percent_deduction`}
                                   render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                                       <FormControl>
                                         <Checkbox
                                           checked={field.value}
@@ -5146,8 +5139,14 @@ export function CreateDocumentDialog({
                                                 : parseFloat(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseFloat(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction = checked
-                                              ? totalExpense * 0.02
+                                              ? withholdingBase * 0.02
                                               : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -5167,9 +5166,16 @@ export function CreateDocumentDialog({
                                           data-testid={`checkbox-recipient-${index}-2-percent-deduction`}
                                         />
                                       </FormControl>
-                                      <FormLabel className="font-normal">
-                                        Παρακράτηση 2%
-                                      </FormLabel>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel className="font-normal">
+                                          Παρακράτηση 2% (Φόρος Προκαταβολής)
+                                        </FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                          {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE
+                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση"
+                                            : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
+                                        </p>
+                                      </div>
                                     </FormItem>
                                   )}
                                 />
@@ -5254,6 +5260,51 @@ export function CreateDocumentDialog({
                             </div>
                           )}
 
+                          <div className="md:col-span-12 md:row-start-3">
+                            <BeneficiaryGeoSelector
+                              regions={availableRegions}
+                              regionalUnits={availableUnits}
+                              municipalities={availableMunicipalities}
+                              value={
+                                (recipient as any).regiondet as
+                                  | RegiondetSelection
+                                  | null
+                              }
+                              onChange={(next) =>
+                                handleRecipientGeoChange(index, next)
+                              }
+                              required
+                              loading={
+                                regionsLoading ||
+                                geographicDataLoading ||
+                                !selectedProjectId ||
+                                (recipient.id
+                                  ? regiondetSaveState[String(recipient.id)]
+                                      ?.status === "saving"
+                                  : false)
+                              }
+                              error={
+                                regiondetErrors[index] ||
+                                (recipient.id &&
+                                regiondetSaveState[String(recipient.id)]
+                                  ?.status === "error"
+                                  ? regiondetSaveState[String(recipient.id)]
+                                      ?.message
+                                  : undefined)
+                              }
+                              onRetry={
+                                recipient.id &&
+                                regiondetSaveState[String(recipient.id)]
+                                  ?.status === "error"
+                                  ? () =>
+                                      retryRegiondetSave(
+                                        Number(recipient.id),
+                                      )
+                                  : undefined
+                              }
+                            />
+                          </div>
+
                           {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
                             EKTOS_EDRAS_TYPE && (
@@ -5262,7 +5313,7 @@ export function CreateDocumentDialog({
                                 `recipients.${index}.secondary_text`,
                               )}
                               placeholder="Ελεύθερο Κείμενο (προαιρετικό)"
-                              className="md:col-span-12 md:row-start-3"
+                              className="md:col-span-12 md:row-start-4"
                               autoComplete="off"
                             />
                           )}

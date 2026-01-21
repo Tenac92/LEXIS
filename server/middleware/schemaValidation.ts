@@ -17,10 +17,6 @@ import {
   budgetHistory,
   userPreferences,
   projectIndex,
-  eventTypes,
-  attachmentsRows,
-  employees,
-  Monada,
 } from "../../shared/schema";
 
 // Create Zod schemas from Drizzle tables
@@ -233,6 +229,7 @@ export function validateDatabaseConstraints(tableName: string) {
 
 // Type augmentation for Express Request
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       validatedData?: any;

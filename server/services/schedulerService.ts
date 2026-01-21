@@ -7,21 +7,9 @@
 
 import cron from 'node-cron';
 import { supabase } from '../config/db';
-// Import logger from the correct path
-// First try the utils directory, fall back to direct console if not found
-let logger: any;
-try {
-  const loggerModule = require('../utils/logger');
-  logger = loggerModule.logger;
-} catch (e) {
-  // Fallback logger if the module is not available
-  logger = {
-    debug: (message: string, ...args: any[]) => console.debug(`[DEBUG] ${message}`, ...args),
-    info: (message: string, ...args: any[]) => console.log(`[INFO] ${message}`, ...args),
-    warn: (message: string, ...args: any[]) => console.warn(`[WARN] ${message}`, ...args),
-    error: (message: string, ...args: any[]) => console.error(`[ERROR] ${message}`, ...args)
-  };
-}
+import { logger as appLogger } from '../utils/logger';
+
+const logger = appLogger;
 import type { WebSocketServer } from 'ws';
 import { broadcastNotification } from '../websocket';
 
@@ -470,7 +458,7 @@ export async function processYearEndClosure(wss?: WebSocketServer) {
  * @param year The year being closed
  * @param wss WebSocket server for notifications (optional)
  */
-async function processYearEndClosureForBudget(budget: any, year: number, wss?: WebSocketServer) {
+async function processYearEndClosureForBudget(budget: any, year: number, _wss?: WebSocketServer) {
   try {
     const userView = budget.user_view || 0;
     

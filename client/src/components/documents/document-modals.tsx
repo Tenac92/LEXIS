@@ -1,4 +1,4 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Trash2 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 interface ViewModalProps {
@@ -274,7 +274,7 @@ interface Recipient {
   installmentAmounts?: Record<string, number>;
 }
 
-export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
+export function EditDocumentModal({ isOpen, onClose, document, onEdit: _onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [protocolNumber, setProtocolNumber] = useState('');
@@ -287,7 +287,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   const processedDocumentId = useRef<string | null>(null);
 
   // Function to load enhanced project data from MIS using optimized schema
-  const loadProjectIdFromMis = async (mis: string) => {
+  const loadProjectIdFromMis = useCallback(async (mis: string) => {
     if (!mis) return null;
 
     setLoading(true); // Show loading indicator while fetching
@@ -350,7 +350,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
     } finally {
       setLoading(false); // Hide loading indicator
     }
-  };
+  }, [toast]);
 
   // Use effect with a proper cleanup to prevent memory leaks and infinite loops
   useEffect(() => {
@@ -445,13 +445,13 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
           
           // Set consistent installment number based on installments array
           if (hasInstallments && Array.isArray(r.installments)) {
-            if (r.installments.includes('Ξ•Ξ¦Ξ‘Ξ Ξ‘Ξ')) {
+            if (r.installments.includes('ΕΦΑΠΑ')) {
               recipient.installment = 1;
-            } else if (r.installments.includes('Ξ‘')) {
+            } else if (r.installments.includes('Α')) {
               recipient.installment = 1;
-            } else if (r.installments.includes('Ξ’')) {
+            } else if (r.installments.includes('Β')) {
               recipient.installment = 2;
-            } else if (r.installments.includes('Ξ“')) {
+            } else if (r.installments.includes('Γ')) {
               recipient.installment = 3;
             }
           }
@@ -472,34 +472,168 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         variant: "destructive",
       });
     }
-  }, [document, isOpen]);
+  }, [document, isOpen, loadProjectIdFromMis, toast]);
+
+  // Handle adding a new recipient
+  const addRecipient = () => {
+    const newRecipient: Recipient = {
+      firstname: '',
+      lastname: '',
+      fathername: '',
+      afm: '',
+      amount: 0,
+      installment: 1,
+    };
+    setRecipients([...recipients, newRecipient]);
+  };
+
+  // Handle removing a recipient by index
+  const removeRecipient = (index: number) => {
+    const updatedRecipients = recipients.filter((_, i) => i !== index);
+    setRecipients(updatedRecipients);
+  };
+
+  // Handle updating recipient field values
+  const handleRecipientChange = (
+    index: number,
+    field: keyof Recipient,
+    value: any
+  ) => {
+    const updatedRecipients = [...recipients];
+    updatedRecipients[index] = {
+      ...updatedRecipients[index],
+      [field]: value,
+    };
+    setRecipients(updatedRecipients);
+  };
+
+  // Calculate total amount from all recipients
+  const calculateTotalAmount = () => {
+    return recipients.reduce((sum, recipient) => sum + (recipient.amount || 0), 0);
+  };
+
+  // Handle editing/saving the document
+  const handleEdit = async () => {
+    if (!document?.id) {
+      toast({
+        title: "Error",
+        description: "Missing document ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Validate required fields
+      if (!protocolNumber.trim()) {
+        throw new Error("Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός");
+      }
+
+      if (!projectId.trim()) {
+        throw new Error("Το ID έργου είναι υποχρεωτικό");
+      }
+
+      if (!expenditureType.trim()) {
+        throw new Error("Ο τύπος δαπάνης είναι υποχρεωτικός");
+      }
+
+      if (recipients.length === 0) {
+        throw new Error("Πρέπει να προσθέσετε τουλάχιστον ένα δικαιούχο");
+      }
+
+      // Validate all recipients have required fields
+      for (const recipient of recipients) {
+        if (!recipient.firstname.trim() || !recipient.lastname.trim() || !recipient.afm.trim()) {
+          throw new Error("Όλοι οι δικαιούχοι πρέπει να έχουν όνομα, επίθετο και ΑΦΜ");
+        }
+        if (!recipient.amount || recipient.amount <= 0) {
+          throw new Error("Όλοι οι δικαιούχοι πρέπει να έχουν θετικό ποσό");
+        }
+      }
+
+      const response = await apiRequest(
+        `/api/documents/generated/${document.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            protocol_number_input: protocolNumber.trim(),
+            protocol_date: protocolDate,
+            project_id: projectId.trim(),
+            expenditure_type: expenditureType.trim(),
+            recipients: recipients.map(r => ({
+              firstname: r.firstname,
+              lastname: r.lastname,
+              fathername: r.fathername || null,
+              afm: r.afm,
+              amount: r.amount,
+              installment: r.installment,
+              ...(r.installments && r.installmentAmounts ? {
+                installments: r.installments,
+                installmentAmounts: r.installmentAmounts,
+              } : {}),
+            })),
+          }),
+        }
+      ) as any;
+
+      if (!response || !(response as any)?.success) {
+        throw new Error((response as any)?.message || "Αποτυχία ενημέρωσης εγγράφου");
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+
+      toast({
+        title: "Επιτυχία",
+        description: "Το έγγραφο ενημερώθηκε επιτυχώς",
+      });
+
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία ενημέρωσης εγγράφου",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-primary">Ξ•Ο€ΞµΞΎΞµΟΞ³Ξ±ΟƒΞ―Ξ± Ξ•Ξ³Ξ³ΟΞ¬Ο†ΞΏΟ…</DialogTitle>
-          <DialogDescription className="text-base">
-            Ξ£Ο…ΞΌΟ€Ξ»Ξ·ΟΟΟƒΟ„Ξµ Ο„Ξ± Ο€ΞµΞ΄Ξ―Ξ± Ο€Ξ±ΟΞ±ΞΊΞ¬Ο„Ο‰ Ξ³ΞΉΞ± Ξ½Ξ± Ο„ΟΞΏΟ€ΞΏΟ€ΞΏΞΉΞ®ΟƒΞµΟ„Ξµ Ο„ΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ. Ξ Ξ±Ο„Ξ®ΟƒΟ„Ξµ Ξ±Ο€ΞΏΞΈΞ®ΞΊΞµΟ…ΟƒΞ· ΟΟ„Ξ±Ξ½ Ο„ΞµΞ»ΞµΞΉΟΟƒΞµΟ„Ξµ.
-          </DialogDescription>
+          <DialogTitle className="text-xl font-bold text-primary">Επεξεργασία Εγγράφου</DialogTitle>
+            <DialogDescription className="text-base">
+            Συμπληρώστε τα πεδία παρακάτω για να τροποποιήσετε το έγγραφο. Πατήστε αποθήκευση όταν τελειώσετε.
+            </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
             {/* Project Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="space-y-2">
-                <h3 className="font-medium">Ξ£Ο„ΞΏΞΉΟ‡ΞµΞ―Ξ± Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</h3>
+                <h3 className="font-medium">Στοιχεία Πρωτοκόλλου</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Ξ‘ΟΞΉΞΈΞΌΟΟ‚ Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</Label>
+                    <Label>Αριθμός Πρωτοκόλλου</Label>
                     <Input
                       value={protocolNumber}
                       onChange={(e) => setProtocolNumber(e.target.value)}
-                      placeholder="Ξ•ΞΉΟƒΞ¬Ξ³ΞµΟ„Ξµ Ξ±ΟΞΉΞΈΞΌΟ Ο€ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…"
+                      placeholder="Εισάγετε αριθμό πρωτοκόλλου"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ξ—ΞΌΞµΟΞΏΞΌΞ·Ξ½Ξ―Ξ± Ξ ΟΟ‰Ο„ΞΏΞΊΟΞ»Ξ»ΞΏΟ…</Label>
+                    <Label>Ημερομηνία Πρωτοκόλλου</Label>
                     <Input
                       type="date"
                       value={protocolDate}
@@ -510,22 +644,22 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
               </div>
               
               <div className="space-y-2">
-                <h3 className="font-medium">Ξ£Ο„ΞΏΞΉΟ‡ΞµΞ―Ξ± ΞΟΞ³ΞΏΟ…</h3>
+                <h3 className="font-medium">Στοιχεία Έργου</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>ID ΞΟΞ³ΞΏΟ… (ΞΞ‘853)</Label>
+                    <Label>ID Έργου (ΝΑ853)</Label>
                     <div className="flex gap-2 items-start">
                       <div className="flex-1">
                         <Input
                           value={projectId}
                           onChange={(e) => setProjectId(e.target.value)}
-                          placeholder="Ξ•ΞΉΟƒΞ¬Ξ³ΞµΟ„Ξµ ID Ξ­ΟΞ³ΞΏΟ… Ξ® MIS"
+                          placeholder="Εισάγετε ID έργου ή MIS"
                           required
                           className={projectId && /^\d+$/.test(projectId) ? "border-blue-300 focus:border-blue-500 bg-blue-50" : ""}
                         />
                         {projectId && /^\d+$/.test(projectId) && (
                           <p className="text-xs text-blue-600 mt-1 font-medium">
-                            <span>Ξ‘Ξ½Ξ±Ξ³Ξ½Ο‰ΟΞ―ΟƒΟ„Ξ·ΞΊΞµ Ο€ΞΉΞΈΞ±Ξ½ΟΟ‚ ΞΊΟ‰Ξ΄ΞΉΞΊΟΟ‚ MIS</span>
+                            <span>Αναγνωρίστηκε πιθανός κωδικός MIS</span>
                           </p>
                         )}
                       </div>
@@ -540,8 +674,8 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                             loadProjectIdFromMis(mis);
                           } else {
                             toast({
-                              title: "Ξ ΟΞΏΟƒΞΏΟ‡Ξ®",
-                              description: "Ξ•ΞΉΟƒΞ¬Ξ³ΞµΟ„Ξµ Ξ­Ξ½Ξ±Ξ½ Ξ­Ξ³ΞΊΟ…ΟΞΏ ΞΊΟ‰Ξ΄ΞΉΞΊΟ MIS (ΞΌΟΞ½ΞΏ Ξ±ΟΞΉΞΈΞΌΞΏΞ―)",
+                              title: "Προσοχή",
+                              description: "Εισάγετε έναν έγκυρο κωδικό MIS (μόνο αριθμοί)",
                               variant: "destructive",
                             });
                           }
@@ -554,21 +688,21 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Ξ‘Ξ½Ξ±Ξ¶Ξ®Ο„Ξ·ΟƒΞ·...
+                            Αναζήτηση...
                           </>
                         ) : (
-                          <>Ξ•ΟΟΞµΟƒΞ· ΞΞ‘853</>
+                          <>Έρευση ΝΑ853</>
                         )}
                       </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">ΞΞ±Ο„Ξ±Ο‡Ο‰ΟΞ―ΟƒΟ„Ξµ ΞΊΟ‰Ξ΄ΞΉΞΊΟ MIS ΞΊΞ±ΞΉ Ο€Ξ±Ο„Ξ®ΟƒΟ„Ξµ Ο„ΞΏ ΞΊΞΏΟ…ΞΌΟ€Ξ―</p>
+                    <p className="text-xs text-muted-foreground mt-1">Καταχωρίστε κωδικό MIS και πατήστε το κουμπί</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Ξ¤ΟΟ€ΞΏΟ‚ Ξ”Ξ±Ο€Ξ¬Ξ½Ξ·Ο‚</Label>
+                    <Label>Τύπος Δαπάνης</Label>
                     <Input
                       value={expenditureType}
                       onChange={(e) => setExpenditureType(e.target.value)}
-                      placeholder="Ξ•ΞΉΟƒΞ¬Ξ³ΞµΟ„Ξµ Ο„ΟΟ€ΞΏ Ξ΄Ξ±Ο€Ξ¬Ξ½Ξ·Ο‚"
+                      placeholder="Εισάγετε τύπο δαπάνης"
                       required
                     />
                   </div>
@@ -580,9 +714,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-lg font-medium">Ξ”ΞΉΞΊΞ±ΞΉΞΏΟΟ‡ΞΏΞΉ</h3>
+                  <h3 className="text-lg font-medium">Δικαιούχοι</h3>
                   <p className="text-sm text-muted-foreground">
-                    Ξ ΟΞΏΟƒΞΈΞ®ΞΊΞ· Ξ­Ο‰Ο‚ 10 Ξ΄ΞΉΞΊΞ±ΞΉΞΏΟΟ‡Ο‰Ξ½
+                    Προσθήκη έως 10 δικαιούχων
                   </p>
                 </div>
                 <Button
@@ -596,58 +730,58 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                   <svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Ξ ΟΞΏΟƒΞΈΞ®ΞΊΞ· Ξ”ΞΉΞΊΞ±ΞΉΞΏΟΟ‡ΞΏΟ…
+                  Προσθήκη Δικαιούχου
                 </Button>
               </div>
               <div className="space-y-3 max-h-[calc(70vh-150px)] overflow-y-auto pr-2">
                 {recipients.map((recipient, index) => (
                   <Card key={index} className="p-4 relative">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
-                      {/* ΞΞ½ΞΏΞΌΞ± */}
+                      {/* Όνομα */}
                       <Input
                         value={recipient.firstname}
                         onChange={(e) => handleRecipientChange(index, 'firstname', e.target.value)}
-                        placeholder="ΞΞ½ΞΏΞΌΞ±"
+                        placeholder="Όνομα"
                         className="md:col-span-2 md:row-span-1"
                         autoComplete="off"
                         required
                       />
 
-                      {/* Ξ•Ο€ΟΞ½Ο…ΞΌΞΏ */}
+                      {/* Επίθετο */}
                       <Input
                         value={recipient.lastname}
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
-                        placeholder="Ξ•Ο€Ξ―ΞΈΞµΟ„ΞΏ"
+                        placeholder="Επίθετο"
                         className="md:col-span-2 md:row-span-1"
                         autoComplete="off"
                         required
                       />
 
-                      {/* Ξ Ξ±Ο„ΟΟΞ½Ο…ΞΌΞΏ */}
+                      {/* Πατρώνυμο */}
                       <Input
                         value={recipient.fathername || ''}
                         onChange={(e) => handleRecipientChange(index, 'fathername', e.target.value)}
-                        placeholder="Ξ Ξ±Ο„ΟΟΞ½Ο…ΞΌΞΏ"
+                        placeholder="Πατρώνυμο"
                         className="md:col-span-2 md:row-span-1"
                         autoComplete="off"
                       />
 
-                      {/* Ξ‘Ξ¦Ξ */}
+                      {/* ΑΦΜ */}
                       <Input
                         value={recipient.afm}
                         onChange={(e) => handleRecipientChange(index, 'afm', e.target.value)}
-                        placeholder="Ξ‘Ξ¦Ξ"
+                        placeholder="ΑΦΜ"
                         maxLength={9}
                         className="md:col-span-2 md:row-span-1"
                         autoComplete="off"
                         required
                       />
 
-                      {/* Ξ ΞΏΟƒΟ */}
+                      {/* Ποσό */}
                       <NumberInput
                         value={recipient.amount || ''}
-                        onChange={(formatted, numeric) => handleRecipientChange(index, 'amount', numeric)}
-                        placeholder="Ξ ΞΏΟƒΟ"
+                        onChange={(_formatted, numeric) => handleRecipientChange(index, 'amount', numeric)}
+                        placeholder="Ποσό"
                         className="md:col-span-2 md:row-span-1"
                         decimals={2}
                         required
@@ -671,7 +805,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         value={recipient.installment}
                         type="number"
                         onChange={(e) => handleRecipientChange(index, 'installment', e.target.value)}
-                        placeholder="Ξ”ΟΟƒΞ·"
+                        placeholder="Δόση"
                         min="1"
                         max="12"
                         className="md:col-span-2 md:row-start-2"
@@ -682,9 +816,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                       <div className="md:col-span-8 md:row-start-2">
                         {/* For installment type info */}
                         <div className="text-xs text-muted-foreground">
-                          {recipient.installment === 1 ? 'Ξ•Ξ¦Ξ‘Ξ Ξ‘Ξ / Ξ‘' : 
-                           recipient.installment === 2 ? 'Ξ’' : 
-                           recipient.installment === 3 ? 'Ξ“' : `Ξ”ΟΟƒΞ· #${recipient.installment}`}
+                          {recipient.installment === 1 ? 'ΕΦΑΠΑ / Α' : 
+                           recipient.installment === 2 ? 'Β' : 
+                           recipient.installment === 3 ? 'Γ' : `Δόση #${recipient.installment}`}
                         </div>
                       </div>
                     </div>
@@ -696,7 +830,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             {/* Total Amount */}
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg shadow-sm">
               <div className="flex justify-between items-center">
-                <span className="font-medium text-primary-foreground">Ξ£Ο…Ξ½ΞΏΞ»ΞΉΞΊΟ Ξ ΞΏΟƒΟ:</span>
+                <span className="font-medium text-primary-foreground">Συνολικό Ποσό:</span>
                 <span className="text-lg font-bold text-primary">
                   {new Intl.NumberFormat('el-GR', {
                     style: 'currency',
@@ -709,10 +843,10 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ξ‘ΞΊΟΟΟ‰ΟƒΞ·
+            Κλείσιμο
           </Button>
           <Button onClick={handleEdit} disabled={loading}>
-            {loading ? "Ξ‘Ο€ΞΏΞΈΞ®ΞΊΞµΟ…ΟƒΞ·..." : "Ξ‘Ο€ΞΏΞΈΞ®ΞΊΞµΟ…ΟƒΞ· Ξ‘Ξ»Ξ»Ξ±Ξ³ΟΞ½"}
+            {loading ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -740,8 +874,8 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
         method: 'DELETE'
       });
       toast({
-        title: "Ξ•Ο€ΞΉΟ„Ο…Ο‡Ξ―Ξ±",
-        description: "Ξ¤ΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ Ξ΄ΞΉΞ±Ξ³ΟΞ¬Ο†Ξ·ΞΊΞµ ΞµΟ€ΞΉΟ„Ο…Ο‡ΟΟ‚",
+        title: "Επιτυχία",
+        description: "Το έγγραφο διαγράφηκε επιτυχώς",
       });
       onDelete();
       onClose();
@@ -763,17 +897,17 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ξ”ΞΉΞ±Ξ³ΟΞ±Ο†Ξ® Ξ•Ξ³Ξ³ΟΞ¬Ο†ΞΏΟ…</DialogTitle>
+          <DialogTitle>Διαγραφή Εγγράφου</DialogTitle>
           <DialogDescription>
-            Ξ•Ξ―ΟƒΟ„Ξµ Ξ²Ξ­Ξ²Ξ±ΞΉΞΏΞΉ ΟΟ„ΞΉ ΞΈΞ­Ξ»ΞµΟ„Ξµ Ξ½Ξ± Ξ΄ΞΉΞ±Ξ³ΟΞ¬ΟΞµΟ„Ξµ Ξ±Ο…Ο„Ο Ο„ΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ; Ξ‘Ο…Ο„Ξ® Ξ· ΞµΞ½Ξ­ΟΞ³ΞµΞΉΞ± Ξ΄ΞµΞ½ ΞΌΟ€ΞΏΟΞµΞ― Ξ½Ξ± Ξ±Ξ½Ξ±ΞΉΟΞµΞΈΞµΞ―.
+            Είστε βέβαιοι ότι θέλετε να διαγράψετε αυτό το έγγραφο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ξ‘ΞΊΟΟΟ‰ΟƒΞ·
+            Κλείσιμο
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
-            {loading ? "Ξ”ΞΉΞ±Ξ³ΟΞ±Ο†Ξ®..." : "Ξ”ΞΉΞ±Ξ³ΟΞ±Ο†Ξ®"}
+            {loading ? "Διαγραφή..." : "Διαγραφή"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -790,16 +924,16 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
   const handleExport = async () => {
     try {
       setLoading(true);
-      console.log('ΞΞ½Ξ±ΟΞΎΞ· Ξ΄ΞΉΞ±Ξ΄ΞΉΞΊΞ±ΟƒΞ―Ξ±Ο‚ ΞµΞΎΞ±Ξ³Ο‰Ξ³Ξ®Ο‚ ΞµΞ³Ξ³ΟΞ¬Ο†Ο‰Ξ½...');
+      console.log('Έναρξη διαδικασίας εξαγωγής εγγράφων...');
 
       const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
       const testResult = await testResponse.json();
 
       if (!testResult.success) {
-        throw new Error(testResult.message || 'Ξ‘Ο€ΞΏΟ„Ο…Ο‡Ξ―Ξ± ΞµΟ€ΞΉΞΊΟΟΟ‰ΟƒΞ·Ο‚ ΞµΞ³Ξ³ΟΞ¬Ο†ΞΏΟ…');
+        throw new Error(testResult.message || 'Αποτυχία επικύρωσης εγγράφου');
       }
 
-      console.log('Ξ•Ο€ΞΉΞΊΟΟΟ‰ΟƒΞ· ΞµΞ³Ξ³ΟΞ¬Ο†ΞΏΟ… ΞµΟ€ΞΉΟ„Ο…Ο‡Ξ®Ο‚:', testResult);
+      console.log('Επικύρωση εγγράφου επιτυχής:', testResult);
 
       // Create and trigger download using fetch and blob approach for better handling
       const downloadUrl = `/api/documents/generated/${document.id}/export?format=both`;
@@ -834,18 +968,18 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       URL.revokeObjectURL(objectUrl);
 
       toast({
-        title: "Ξ•Ο€ΞΉΟ„Ο…Ο‡Ξ―Ξ±",
-        description: "Ξ— Ξ»Ξ®ΟΞ· Ο„Ο‰Ξ½ ΞµΞ³Ξ³ΟΞ¬Ο†Ο‰Ξ½ ΞΎΞµΞΊΞ―Ξ½Ξ·ΟƒΞµ",
+        title: "Επιτυχία",
+        description: "Η λήψη των εγγράφων ξεκίνησε",
       });
 
       setTimeout(() => setLoading(false), 1000);
       onClose();
 
     } catch (error) {
-      console.error('Ξ£Ο†Ξ¬Ξ»ΞΌΞ± ΞµΞΎΞ±Ξ³Ο‰Ξ³Ξ®Ο‚:', error);
+      console.error('Σφάλμα εξαγωγής:', error);
       toast({
-        title: "Ξ£Ο†Ξ¬Ξ»ΞΌΞ±",
-        description: error instanceof Error ? error.message : "Ξ‘Ο€ΞΏΟ„Ο…Ο‡Ξ―Ξ± Ξ»Ξ®ΟΞ·Ο‚ ΞµΞ³Ξ³ΟΞ¬Ο†Ο‰Ξ½",
+        title: "Σφάλμα",
+        description: error instanceof Error ? error.message : "Αποτυχία λήψης εγγράφων",
         variant: "destructive",
       });
       setLoading(false);
@@ -856,31 +990,31 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Ξ•ΞΎΞ±Ξ³Ο‰Ξ³Ξ® Ξ•Ξ³Ξ³ΟΞ¬Ο†Ο‰Ξ½</DialogTitle>
+          <DialogTitle>Εξαγωγή Εγγράφων</DialogTitle>
           <DialogDescription>
-            Ξ Ξ±Ο„Ξ®ΟƒΟ„Ξµ Ο„ΞΏ ΞΊΞΏΟ…ΞΌΟ€Ξ― Ο€Ξ±ΟΞ±ΞΊΞ¬Ο„Ο‰ Ξ³ΞΉΞ± Ξ½Ξ± ΞΊΞ±Ο„ΞµΞ²Ξ¬ΟƒΞµΟ„Ξµ Ο„Ξ± Ξ­Ξ³Ξ³ΟΞ±Ο†Ξ± (ΞΊΟΟΞΉΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ ΞΊΞ±ΞΉ Ξ Ξ΅ΞΞ£Ξ‘ΞΞ‘Ξ¤ΞΞ›Ξ™Ξ£ΞΞΞ£ ΞΞ΅Ξ™Ξ–ΞΞΞ¤Ξ™ΞΞ£) ΟƒΞµ ΞΌΞΏΟΟ†Ξ® ZIP.
+            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και ΠΕΡΙΣΤΟΛΙΚΗΣ ΔΕΙΞΙΜΟΤΗΤΑΣ) σε μορφή ZIP.
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-4 rounded-md bg-blue-50 border border-blue-200 text-blue-700 text-sm">
-          <div className="font-semibold mb-1">Ξ Ξ»Ξ·ΟΞΏΟ†ΞΏΟΞ―ΞµΟ‚:</div>
-          <p>Ξ¤ΞΏ Ξ±ΟΟ‡ΞµΞ―ΞΏ ZIP Ο€ΞµΟΞΉΞ­Ο‡ΞµΞΉ Ξ΄ΟΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†Ξ± DOCX:</p>
+          <div className="font-semibold mb-1">Πληροφορίες:</div>
+          <p>Το αρχείο ZIP περιέχει δύο έγγραφα DOCX:</p>
           <ul className="list-disc pl-5 mt-1">
-            <li>Ξ¤ΞΏ ΞΊΟΟΞΉΞΏ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ ΞΌΞµ ΟΞ»Ξ± Ο„Ξ± ΟƒΟ„ΞΏΞΉΟ‡ΞµΞ―Ξ±</li>
-            <li>Ξ¤ΞΏ ΟƒΟ…ΞΌΟ€Ξ»Ξ·ΟΟ‰ΞΌΞ±Ο„ΞΉΞΊΟ Ξ­Ξ³Ξ³ΟΞ±Ο†ΞΏ "Ξ Ξ΅ΞΞ£Ξ‘ΞΞ‘Ξ¤ΞΞ›Ξ™Ξ£ΞΞΞ£ ΞΞ΅Ξ™Ξ–ΞΞΞ¤Ξ™ΞΞ£" ΞΌΞµ Ο„Ξ± ΟƒΟ„ΞΏΞΉΟ‡ΞµΞ―Ξ± Ο€Ξ±ΟΞ±Ξ»Ξ·Ο€Ο„ΟΞ½ ΞΊΞ±ΞΉ Ο„ΟΟ€ΞΏ Ξ ΟΞ¬ΞΎΞ·Ο‚</li>
+            <li>Το κύριο έγγραφο με όλα τα στοιχεία</li>
+            <li>Το συμπληρωματικό έγγραφο "ΠΕΡΙΣΤΟΛΙΚΗΣ ΔΕΙΞΙΜΟΤΗΤΑΣ" με τα στοιχεία παραληπτών και τόπο Πράξης</li>
           </ul>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ξ‘ΞΊΟΟΟ‰ΟƒΞ·
+            Κλείσιμο
           </Button>
           <Button
             onClick={handleExport}
             disabled={loading}
             className="min-w-[100px]"
           >
-            {loading ? "Ξ•Ο€ΞµΞΎΞµΟΞ³Ξ±ΟƒΞ―Ξ±..." : "Ξ›Ξ®ΟΞ·"}
+            {loading ? "Επεξεργασία..." : "Λήψη"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -900,4 +1034,3 @@ interface ExportModalProps {
   onClose: () => void;
   document: GeneratedDocument;
 }
-

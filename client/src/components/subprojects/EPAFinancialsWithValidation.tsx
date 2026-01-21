@@ -55,7 +55,7 @@ export function EPAFinancialsWithValidation({
   const { data: validationData, isLoading: isValidating } = useQuery({
     queryKey: ['epa-financial-validation', epaVersionId],
     queryFn: async () => {
-      const response = await apiRequest(`/api/epa-versions/${epaVersionId}/financial-validation`) as {
+      const response = await apiRequest(`/api/projects/epa-versions/${epaVersionId}/financial-validation`) as {
         validation: ValidationResult[];
         has_overall_mismatch: boolean;
       };

@@ -66,6 +66,7 @@ function useLoginMutation() {
           name: userData.name || "Guest User",
           email: userData.email,
           role: userData.role,
+          is_active: userData.is_active ?? true,
           unit_id: userData.unit_id || []
         };
         
@@ -86,6 +87,7 @@ function useLoginMutation() {
         name: user.name,
         email: user.email,
         role: user.role,
+        is_active: user.is_active ?? true,
         unit_id: user.unit_id || []
       };
       
@@ -255,6 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: userData.name || "Guest User",
             email: userData.email,
             role: userData.role,
+            is_active: userData.is_active ?? true,
             unit_id: userData.unit_id || []
           };
           

@@ -328,6 +328,8 @@ export class DocumentGenerator {
         documentData.unit,
       );
 
+      const mainContent = await this.createMainContent(documentData, unitDetails as UnitDetails);
+
       const children: any[] = [
         await this.createDocumentHeader(documentData, unitDetails),
         DocumentUtilities.createBlankLine(5),
@@ -335,7 +337,7 @@ export class DocumentGenerator {
         ...DocumentGenerator.createLegalReferences(
           documentData.expenditure_type,
         ),
-        ...this.createMainContent(documentData, unitDetails as UnitDetails),
+        ...mainContent,
         ...DocumentGenerator.createProjectInfo(
           documentData,
           documentData.expenditure_type,
@@ -447,14 +449,36 @@ export class DocumentGenerator {
   }
 
   /** Main content */
-  private static createMainContent(
+  private static async createMainContent(
     documentData: DocumentData,
     unitDetails: UnitDetails,
-  ): Paragraph[] {
+  ): Promise<Paragraph[]> {
     const expenditureType = documentData.expenditure_type || "ΔΑΠΑΝΗ";
     const config = DocumentUtilities.getExpenditureConfig(expenditureType);
     const mainText = config.mainText;
-    const greekAmount = safeAmountToGreekText(documentData.total_amount);
+    
+    // For ΕΚΤΟΣ ΕΔΡΑΣ: use ΣΥΝΟΛΟ (total_expense) instead of ΣΤΟΥΣ ΔΙΚΑΙΟΥΧΟΥΣ (net_payable)
+    let amountForGreekText = documentData.total_amount;
+    if (expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ" && documentData.id) {
+      try {
+        // Fetch total_expense sum from EmployeePayments (this is the ΣΥΝΟΛΟ column)
+        const { data: payments, error } = await supabase
+          .from("EmployeePayments")
+          .select("total_expense")
+          .eq("document_id", documentData.id);
+        
+        if (!error && payments && payments.length > 0) {
+          const totalExpense = payments.reduce((sum, p) => sum + (Number(p.total_expense) || 0), 0);
+          amountForGreekText = totalExpense;
+          logger.info(`[DocumentGenerator] Using ΣΥΝΟΛΟ (${totalExpense}) instead of ΣΤΟΥΣ ΔΙΚΑΙΟΥΧΟΥΣ (${documentData.total_amount}) for ΕΚΤΟΣ ΕΔΡΑΣ Greek text`);
+        }
+      } catch (error) {
+        logger.error("[DocumentGenerator] Error fetching total_expense for ΕΚΤΟΣ ΕΔΡΑΣ:", error);
+        // Fallback to documentData.total_amount if query fails
+      }
+    }
+    
+    const greekAmount = safeAmountToGreekText(amountForGreekText);
     const prop =
       expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ"
         ? unitDetails?.unit_name?.propgen || "της"
@@ -1353,8 +1377,7 @@ export class DocumentGenerator {
       "Διεύθυνση Οικονομικής Διαχείρισης",
       "Τμήμα Ελέγχου Εκκαθάρισης και Λογιστικής Παρακολούθησης Δαπανών",
       "Γραφείο Π.Δ.Ε. (ιδίου υπουργείου)",
-      "Δημοκρίτου 2",
-      "151 23 Μαρούσι",
+      "Δημοκρίτου 2, 151 23 Mαρούσι",
     ].map(cleanText);
 
     // Inner "ΠΡΟΣ:" table (single row, two cells)
@@ -1372,7 +1395,7 @@ export class DocumentGenerator {
     );
 
     const reservedRow = new TableRow({
-      height: { value: 2400, rule: HeightRule.EXACT },
+      height: { value: 2800, rule: HeightRule.EXACT },
       children: [
         new TableCell({
           borders: BORDER_NONE,

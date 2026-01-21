@@ -123,11 +123,7 @@ export default function DocumentsPage() {
   }, [location, setLocation]);
 
   // Fetch units data for dropdown with aggressive caching
-  const {
-    data: allUnits = [],
-    isLoading: unitsLoading,
-    error: unitsError,
-  } = useQuery<Unit[]>({
+  const { data: allUnits = [] } = useQuery<Unit[]>({
     queryKey: ["/api/public/units"],
     staleTime: 30 * 60 * 1000, // 30 minutes cache - units rarely change
     gcTime: 60 * 60 * 1000, // 1 hour cache retention (v5 renamed from cacheTime)
@@ -178,7 +174,7 @@ export default function DocumentsPage() {
         unit: defaultUnit.id.toString(), // Use unit.id as filter value
       }));
     }
-  }, [user?.unit_id, userUnits.length]);
+  }, [filters.unit, user?.unit_id, userUnits]);
 
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -193,12 +189,6 @@ export default function DocumentsPage() {
     protocolNumber: "",
   });
 
-  // For main category filters (unit, status, user) - apply immediately
-  const setMainFilters = (newFilters: Partial<Filters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-  };
-
   // For advanced filters - only store the values, don't refresh
   const setAdvancedFilterValues = (
     newValues: Partial<typeof advancedFilters>,
@@ -209,16 +199,6 @@ export default function DocumentsPage() {
   // Pagination state
   const PAGE_SIZE = 30;
   const [page, setPage] = useState(0);
-
-  // Apply advanced filters only when button is clicked
-  const applyAdvancedFilters = () => {
-    // Update the main filters with advanced filter values
-    setFilters((prev) => ({
-      ...prev,
-      ...advancedFilters,
-    }));
-    setPage(0);
-  };
 
   // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
   const { data: matchingUsers = [] } = useQuery({
@@ -605,7 +585,7 @@ export default function DocumentsPage() {
                         <NumberInput
                           placeholder="Ελάχιστο ποσό"
                           value={advancedFilters.amountFrom}
-                          onChange={(formatted, numeric) =>
+                          onChange={(formatted, _numeric) =>
                             setAdvancedFilterValues({ amountFrom: formatted })
                           }
                         />
@@ -617,7 +597,7 @@ export default function DocumentsPage() {
                         <NumberInput
                           placeholder="Μέγιστο ποσό"
                           value={advancedFilters.amountTo}
-                          onChange={(formatted, numeric) =>
+                          onChange={(formatted, _numeric) =>
                             setAdvancedFilterValues({ amountTo: formatted })
                           }
                         />

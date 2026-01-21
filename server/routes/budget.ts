@@ -64,12 +64,7 @@ router.post(
         });
       }
 
-      const {
-        project_id,
-        amount,
-        reason,
-        type = "manual_adjustment",
-      } = req.body;
+      const { project_id, amount, reason } = req.body;
 
       if (!project_id || !amount || !reason) {
         return res.status(400).json({
@@ -224,7 +219,7 @@ router.post(
   "/broadcast-update",
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, amount, sessionId, simpleBudgetData } = req.body;
+      const { mis, amount, simpleBudgetData } = req.body;
       const requestedAmount = parseFloat(amount.toString());
 
       if (!mis) {
@@ -530,7 +525,7 @@ router.get(
       // Calculate overview metrics
       let totalBudget = 0;
       let allocatedBudget = 0;
-      let quarterlyBreakdown = { q1: 0, q2: 0, q3: 0, q4: 0 };
+      const quarterlyBreakdown = { q1: 0, q2: 0, q3: 0, q4: 0 };
 
       budgetData?.forEach((budget) => {
         const ethsiaPistosi = parseFloat(
@@ -636,7 +631,7 @@ router.get(
       console.log("[Budget] Fetching budget trends for monitoring dashboard");
 
       // Get budget history with aggregated data by month
-      const { data: budgetHistory, error: historyError } = await supabase
+      const { data: _budgetHistory, error: historyError } = await supabase
         .from("budget_history")
         .select(
           `
@@ -783,7 +778,6 @@ router.get(
             const budget = project.project_budget?.[0];
             const allocated = parseFloat(budget?.katanomes_etous || "0");
             const spent = parseFloat(budget?.user_view || "0");
-            const ethsia = parseFloat(budget?.ethsia_pistosi || "0");
             const documentCount = project.generated_documents?.length || 0;
 
             const utilizationRate =
@@ -950,7 +944,6 @@ router.get(
       const dateFrom = req.query.date_from as string | undefined;
       const dateTo = req.query.date_to as string | undefined;
       const creator = req.query.creator as string | undefined;
-      const expenditureType = req.query.expenditure_type as string | undefined;
 
       // Get user unit IDs for access control - admins see all data
       const userUnitIds =
@@ -1215,6 +1208,69 @@ router.get(
       `)
         .range(0, 9999);
 
+      // Helper: extract geo names from beneficiary regiondet entries (one entry per payment)
+      const extractGeoNamesFromRegiondet = (
+        regiondet: any,
+        paymentId?: number,
+      ): { regions: string[]; units: string[]; municipalities: string[] } => {
+        const result = {
+          regions: new Set<string>(),
+          units: new Set<string>(),
+          municipalities: new Set<string>(),
+        };
+
+        if (!regiondet) {
+          return { regions: [], units: [], municipalities: [] };
+        }
+
+        const entries = Array.isArray(regiondet) ? regiondet : [regiondet];
+        const match = paymentId !== undefined
+          ? entries.find((entry: any) => {
+              if (!entry || typeof entry !== "object") return false;
+              const ids: Array<string | number> = [];
+              if (entry.payment_id !== undefined && entry.payment_id !== null) {
+                ids.push(entry.payment_id);
+              }
+              if (Array.isArray(entry.payment_ids)) {
+                ids.push(...entry.payment_ids);
+              }
+              return ids.map(String).includes(String(paymentId));
+            })
+          : undefined;
+
+        const chosen = (match || entries[entries.length - 1]) as any;
+        if (!chosen || typeof chosen !== "object") {
+          return { regions: [], units: [], municipalities: [] };
+        }
+
+        if (Array.isArray(chosen.regions)) {
+          chosen.regions.forEach((r: any) => {
+            const name = r?.name || r?.code;
+            if (name) result.regions.add(String(name));
+          });
+        }
+
+        if (Array.isArray(chosen.regional_units)) {
+          chosen.regional_units.forEach((u: any) => {
+            const name = u?.name || u?.code;
+            if (name) result.units.add(String(name));
+          });
+        }
+
+        if (Array.isArray(chosen.municipalities)) {
+          chosen.municipalities.forEach((m: any) => {
+            const name = m?.name || m?.code;
+            if (name) result.municipalities.add(String(name));
+          });
+        }
+
+        return {
+          regions: Array.from(result.regions),
+          units: Array.from(result.units),
+          municipalities: Array.from(result.municipalities),
+        };
+      };
+
       // Create a map of project_id to geographic data
       const projectGeoMap = new Map<
         number,
@@ -1292,13 +1348,86 @@ router.get(
       }
 
       // Fetch Monada (unit) data for unit names
-      const { data: monadaData } = await supabase
-        .from("Monada")
-        .select("id, unit");
-      const monadaMap = new Map((monadaData || []).map((m) => [m.id, m.unit]));
-
       // Create budget map for quick lookups
       const budgetMap = new Map((budgetData || []).map((b) => [b.mis, b]));
+
+      // Build geo map from beneficiary payments per document (uses regiondet stored per payment)
+      const documentIds = Array.from(
+        new Set(
+          (historyData || [])
+            .map((entry: any) => entry.document_id)
+            .filter(
+              (id: any) => id !== null && id !== undefined && !Number.isNaN(id),
+            ),
+        ),
+      );
+
+      const docGeoMap = new Map<
+        number,
+        { regions: string[]; units: string[]; municipalities: string[] }
+      >();
+
+      if (documentIds.length > 0) {
+        const { data: paymentData, error: paymentError } = await supabase
+          .from("beneficiary_payments")
+          .select(
+            `
+            id,
+            document_id,
+            beneficiaries!inner ( regiondet )
+          `,
+          )
+          .in("document_id", documentIds);
+
+        if (paymentError) {
+          console.error(
+            "[Budget] Error fetching beneficiary payments for geo export:",
+            paymentError,
+          );
+        } else if (paymentData) {
+          paymentData.forEach((payment: any) => {
+            if (payment.document_id === null || payment.document_id === undefined) {
+              return;
+            }
+
+            const geo = extractGeoNamesFromRegiondet(
+              payment.beneficiaries?.regiondet,
+              payment.id,
+            );
+
+            if (
+              geo.regions.length === 0 &&
+              geo.units.length === 0 &&
+              geo.municipalities.length === 0
+            ) {
+              return;
+            }
+
+            if (!docGeoMap.has(payment.document_id)) {
+              docGeoMap.set(payment.document_id, {
+                regions: [],
+                units: [],
+                municipalities: [],
+              });
+            }
+
+            const existing = docGeoMap.get(payment.document_id)!;
+            const regions = new Set(existing.regions);
+            const units = new Set(existing.units);
+            const municipalities = new Set(existing.municipalities);
+
+            geo.regions.forEach((r) => regions.add(r));
+            geo.units.forEach((u) => units.add(u));
+            geo.municipalities.forEach((m) => municipalities.add(m));
+
+            docGeoMap.set(payment.document_id, {
+              regions: Array.from(regions),
+              units: Array.from(units),
+              municipalities: Array.from(municipalities),
+            });
+          });
+        }
+      }
 
       // Import XLSX library
       const XLSX = await import("xlsx");
@@ -1394,12 +1523,12 @@ router.get(
       const detailedHistory = (historyData || []).map((entry: any) => {
         const project = entry.Projects || {};
         const projectId = project.id;
-        const geo = projectGeoMap.get(projectId) || {
+        const docGeo = docGeoMap.get(entry.document_id);
+        const geo = docGeo || projectGeoMap.get(projectId) || {
           regions: [],
           units: [],
           municipalities: [],
         };
-        const budget = budgetMap.get(project.mis);
         const genDocs = entry.generated_documents;
         const document = Array.isArray(genDocs) && genDocs.length > 0 ? genDocs[0] : genDocs;
 
@@ -1479,7 +1608,8 @@ router.get(
         if (!mis) return;
 
         if (!projectSummaryMap.has(mis)) {
-          const geo = projectGeoMap.get(project.id) || {
+          const docGeo = docGeoMap.get(entry.document_id);
+          const geo = docGeo || projectGeoMap.get(project.id) || {
             regions: [],
             units: [],
             municipalities: [],
@@ -1604,6 +1734,71 @@ router.get(
         }));
 
       // ============================================
+      // WORKSHEET (new): Municipality-level Summary
+      // ============================================
+      const municipalitySummaryMap = new Map<
+        string,
+        {
+          region: string;
+          unit: string;
+          municipality: string;
+          changeCount: number;
+          netChange: number;
+        }
+      >();
+
+      (historyData || []).forEach((entry: any) => {
+        const project = entry.Projects || {};
+        const projectId = project.id;
+        const docGeo = docGeoMap.get(entry.document_id);
+        const geo = docGeo || projectGeoMap.get(projectId) || {
+          regions: [],
+          units: [],
+          municipalities: [],
+        };
+
+        const prevAmount = parseFloat(entry.previous_amount) || 0;
+        const newAmount = parseFloat(entry.new_amount) || 0;
+        const change = newAmount - prevAmount;
+
+        const regions =
+          geo.regions.length > 0 ? geo.regions : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+        const units =
+          geo.units.length > 0 ? geo.units : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+        const municipalities =
+          geo.municipalities.length > 0
+            ? geo.municipalities
+            : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+
+        municipalities.forEach((muni) => {
+          const key = `${regions[0]}|${units[0]}|${muni}`;
+          if (!municipalitySummaryMap.has(key)) {
+            municipalitySummaryMap.set(key, {
+              region: regions[0],
+              unit: units[0],
+              municipality: muni,
+              changeCount: 0,
+              netChange: 0,
+            });
+          }
+
+          const summary = municipalitySummaryMap.get(key)!;
+          summary.changeCount++;
+          summary.netChange += change;
+        });
+      });
+
+      const municipalitySummary = Array.from(municipalitySummaryMap.values())
+        .sort((a, b) => a.region.localeCompare(b.region))
+        .map((m) => ({
+          Region: m.region,
+          "Regional Unit": m.unit,
+          Municipality: m.municipality,
+          Changes: m.changeCount,
+          "Net Change": m.netChange,
+        }));
+
+      // ============================================
       // WORKSHEET 4: Expenditure Type Analysis
       // ============================================
       const expenditureTypeSummary = new Map<
@@ -1718,7 +1913,7 @@ router.get(
 
       const monthlyAnalysis = Array.from(monthlyTrend.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([key, m]) => ({
+        .map(([_key, m]) => ({
           Μήνας: m.month,
           Έτος: m.year,
           "Πλήθος Αλλαγών": m.count,
@@ -1861,6 +2056,16 @@ router.get(
           "Διαθέσιμο",
         ]);
         XLSX.utils.book_append_sheet(wb, ws3, "Ανά Περιφέρεια");
+      }
+
+      // 3b. Municipality Summary (new)
+      if (municipalitySummary.length > 0) {
+        const wsMuni = XLSX.utils.json_to_sheet(municipalitySummary);
+        wsMuni["!cols"] = Object.keys(municipalitySummary[0]).map((key) => ({
+          wch: key.length < 12 ? 18 : key.length + 5,
+        }));
+        applyEuropeanNumberFormatting(wsMuni, ["Net Change"]);
+        XLSX.utils.book_append_sheet(wb, wsMuni, "Municipalities");
       }
 
       // 4. Expenditure Type Analysis

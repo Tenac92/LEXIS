@@ -255,6 +255,8 @@ const DocumentCard = memo(function DocumentCard({
         kilometers_traveled?: number;
         tickets_tolls_rental?: number;
         secondary_text?: string;
+        payment_date?: string | null;
+        freetext?: string | null;
       }>;
     }>();
 
@@ -281,7 +283,9 @@ const DocumentCard = memo(function DocumentCard({
         accommodation_expenses: r.accommodation_expenses,
         kilometers_traveled: r.kilometers_traveled,
         tickets_tolls_rental: r.tickets_tolls_rental,
-        secondary_text: r.secondary_text
+        secondary_text: r.secondary_text,
+        payment_date: (r as any).payment_date || null,
+        freetext: (r as any).freetext || null,
       });
     });
 
@@ -737,6 +741,28 @@ const DocumentCard = memo(function DocumentCard({
                       {(doc as any).expenditure_type || "-"}
                     </span>
                   </div>
+                  {(doc as any).latest_payment_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">
+                        Πληρωμή:
+                      </span>
+                      <span className="text-orange-900">
+                        {new Date((doc as any).latest_payment_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {(doc as any).latest_eps && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">
+                        EPS:
+                      </span>
+                      <span className="text-orange-900 truncate">
+                        {(doc as any).latest_eps}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Orthi Epanalipsi Details */}
@@ -786,21 +812,34 @@ const DocumentCard = memo(function DocumentCard({
                         {group.payments.length > 0 && (
                           <div className="mt-1 pl-3 border-l-2 border-orange-300 space-y-1">
                             {group.payments.map((payment, pIndex) => (
-                              <div key={pIndex} className="flex justify-between items-center text-xs text-orange-700">
-                                <span>
-                                  {payment.month 
-                                    ? `Μήνας: ${payment.month}${payment.days ? ` (${payment.days} ημ.)` : ''}`
-                                    : payment.installment || `Πληρωμή ${pIndex + 1}`
-                                  }
-                                </span>
-                                <span className="font-medium ml-2">
-                                  {payment.amount.toLocaleString("el-GR", {
-                                    style: "currency",
-                                    currency: "EUR",
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
-                                </span>
+                              <div key={pIndex} className="text-xs text-orange-700 space-y-0.5">
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    {payment.month 
+                                      ? `Μήνας: ${payment.month}${payment.days ? ` (${payment.days} ημ.)` : ''}`
+                                      : payment.installment || `Πληρωμή ${pIndex + 1}`
+                                    }
+                                  </span>
+                                  <span className="font-medium ml-2">
+                                    {payment.amount.toLocaleString("el-GR", {
+                                      style: "currency",
+                                      currency: "EUR",
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-orange-600">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>
+                                    Πληρωμή: {payment.payment_date
+                                      ? new Date(payment.payment_date).toLocaleDateString("el-GR")
+                                      : "—"}
+                                  </span>
+                                  <span className="ml-2 truncate" title={payment.freetext || "—"}>
+                                    EPS: {payment.freetext || "—"}
+                                  </span>
+                                </div>
                               </div>
                             ))}
                           </div>

@@ -482,6 +482,42 @@ export function DocumentDetailsModal({
               </div>
             </div>
           )}
+
+          {/* Payments Information */}
+          {docAny.payment_count > 0 && (
+            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Πληρωμές ({docAny.payment_count})
+              </h3>
+              {docAny.latest_payment_date && (
+                <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-blue-700">
+                        Ημερομηνία Πληρωμής (Τελευταία)
+                      </label>
+                      <p className="text-blue-900 font-semibold bg-blue-50 px-3 py-2 rounded">
+                        {new Date(docAny.latest_payment_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </p>
+                    </div>
+                    {docAny.latest_eps && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-blue-700">
+                          EPS (Ελεύθερο κείμενο)
+                        </label>
+                        <p className="text-blue-900 font-semibold bg-blue-50 px-3 py-2 rounded truncate">
+                          {docAny.latest_eps}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </DialogContent>
 

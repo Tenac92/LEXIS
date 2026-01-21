@@ -52,6 +52,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   role: text("role").notNull().default("user"),
+  is_active: boolean("is_active").notNull().default(true),
   unit_id: integer("unit_id").array(),
   telephone: bigint("telephone", { mode: "number" }),
   department: text("department"),
@@ -1019,6 +1020,7 @@ export const extendedUserSchema = insertUserSchema.extend({
   role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
     message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
+  is_active: z.boolean().default(true),
   telephone: z
     .number()
     .int()
@@ -1060,6 +1062,17 @@ export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
 });
 
 // Schema for document recipients
+export const regiondetSchema = z.object({
+  region_code: z.number().optional(),
+  region_name: z.string().optional(),
+  unit_code: z.number().optional(),
+  unit_name: z.string().optional(),
+  municipality_code: z.number().optional(),
+  municipality_name: z.string().optional(),
+}).optional().nullable();
+
+export type RegiondetSelection = z.infer<typeof regiondetSchema>;
+
 export const recipientSchema = z.object({
   id: z.number().optional(), // For existing beneficiary/employee payment records
   employee_id: z.number().optional(), // For linking to employees table (ΕΚΤΟΣ ΕΔΡΑΣ)
@@ -1077,6 +1090,7 @@ export const recipientSchema = z.object({
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
   installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }), // Πεδίο για ποσά ανά δόση
   status: z.string().optional(), // For payment status
+  regiondet: regiondetSchema, // Region details
   // Employee payment fields (ΕΚΤΟΣ ΕΔΡΑΣ only)
   month: z.string().optional(),
   days: z.number().optional(),
@@ -1128,6 +1142,7 @@ export const editDocumentSchema = insertGeneratedDocumentSchema
     total_amount: z.number().min(0).optional(),
     esdian_field1: z.string().optional(),
     esdian_field2: z.string().optional(),
+    esdian_fields: z.array(z.string().optional()).optional().default([]),
     is_correction: z.boolean().default(false),
     original_protocol_number: z.string().optional(),
     original_protocol_date: z.string().optional(),

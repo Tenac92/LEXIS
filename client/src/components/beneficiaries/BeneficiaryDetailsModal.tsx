@@ -10,36 +10,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { 
   User, 
   MapPin, 
   FileText, 
   Calendar, 
-  Euro,
-  Building2,
   Hash,
-  Phone,
-  Mail,
   X,
   CreditCard,
   DollarSign,
   Copy,
-  TrendingUp,
-  Clock,
   Receipt,
   Edit3,
   Save,
   Plus,
-  Trash2,
-  CheckCircle,
   AlertCircle,
   HardHat,
   Search,
@@ -58,14 +42,18 @@ import {
   FormControl,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import type { Beneficiary } from "@shared/schema";
 import { insertBeneficiarySchema } from "@shared/schema";
 import { z } from "zod";
-import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
-import { convertGeographicDataToKallikratis } from "@shared/utils/geographic-utils";
+import { BeneficiaryGeoSelector } from "@/components/documents/components/BeneficiaryGeoSelector";
+import {
+  isRegiondetComplete,
+  mergeRegiondetPreservingPayments,
+  normalizeRegiondetEntry,
+  type RegiondetSelection,
+} from "@/components/documents/utils/beneficiary-geo";
 
 interface BeneficiaryDetailsModalProps {
   beneficiary: Beneficiary | null;
@@ -157,6 +145,7 @@ interface PaymentRecord {
   updated_at: string;
   expenditure_type?: string;
   protocol?: string;
+  freetext?: string | null;
 }
 
 interface EngineerComboboxProps {
@@ -321,6 +310,11 @@ export function BeneficiaryDetailsModal({
   const [isEditing, setIsEditing] = useState(false);
   const [editingPayment, setEditingPayment] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState("details");
+  const [regiondetSelection, setRegiondetSelection] = useState<RegiondetSelection | null>(null);
+  const regiondetSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRegiondetValueRef = useRef<RegiondetSelection | null>(null);
+  const [regiondetStatus, setRegiondetStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [regiondetError, setRegiondetError] = useState<string | null>(null);
   
   // Initialize form with react-hook-form (MOVED BEFORE CONDITIONAL RETURN)
   const form = useForm<BeneficiaryEditForm>({
@@ -439,6 +433,13 @@ export function BeneficiaryDetailsModal({
             }
           });
         }
+        const regiondetValue = normalizeRegiondetEntry(
+          (dataSource as any).regiondet,
+        );
+        setRegiondetSelection(regiondetValue as RegiondetSelection | null);
+        lastRegiondetValueRef.current = regiondetValue as RegiondetSelection | null;
+        setRegiondetStatus("idle");
+        setRegiondetError(null);
         form.reset({
           afm: dataSource.afm || "",
           surname: dataSource.surname || "",
@@ -454,6 +455,8 @@ export function BeneficiaryDetailsModal({
         setTimeout(() => form.trigger(), 100);
       } else {
         // Create new beneficiary - start with empty form
+        setRegiondetSelection(null);
+        lastRegiondetValueRef.current = null;
         form.reset({
           afm: "",
           surname: "",
@@ -480,7 +483,7 @@ export function BeneficiaryDetailsModal({
       return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${beneficiary.id}`);
     },
     enabled: open && !!beneficiary?.id,
-  });
+  }) as { data: PaymentRecord[]; isLoading: boolean };
 
   // Fetch geographic data for region selection
   const { data: geographicData } = useQuery({
@@ -491,40 +494,44 @@ export function BeneficiaryDetailsModal({
     enabled: open, // Only fetch when modal is open
   });
 
-  // Get region data directly from geographic data for code/name mapping
-  const availableRegions = useMemo(() => {
-    if (!geographicData) return [];
-    
-    // Handle geographic data safely with type assertion
+  const regionOptions = useMemo(() => {
     const data = geographicData as any;
-    const regions = data?.regions;
-    
-    if (!Array.isArray(regions)) return [];
-    
-    return regions
-      .map((r: any) => ({ code: String(r.code), name: r.name }))
-      .sort((a: any, b: any) => a.name.localeCompare(b.name, 'el'));
+    return Array.isArray(data?.regions)
+      ? data.regions
+          .map((r: any) => ({
+            code: String(r.code || r.region_code),
+            name: r.name,
+          }))
+          .filter((r: any) => r.code && r.name)
+      : [];
   }, [geographicData]);
 
-  // Convert geographic data to kallikratis format for SmartGeographicMultiSelect
-  const kallikratisData = useMemo(() => {
-    if (!geographicData) return [];
+  const regionalUnitOptions = useMemo(() => {
     const data = geographicData as any;
-    return convertGeographicDataToKallikratis({
-      regions: data?.regions || [],
-      regionalUnits: data?.regionalUnits || [],
-      municipalities: data?.municipalities || []
-    });
+    return Array.isArray(data?.regionalUnits)
+      ? data.regionalUnits
+          .map((u: any) => ({
+            code: String(u.code || u.unit_code),
+            name: u.name,
+            region_code: u.region_code,
+          }))
+          .filter((u: any) => u.code && u.name)
+      : [];
   }, [geographicData]);
 
-  // Helper function to get region name from region code (for display)
-  const getRegionNameFromCode = (regionCode: string | null | undefined): string => {
-    if (!regionCode || !availableRegions.length) return regionCode || 'Δεν έχει καθοριστεί';
-    
-    // Look up region name by code
-    const region = availableRegions.find(r => r.code === regionCode);
-    return region?.name || regionCode;
-  };
+  const municipalityOptions = useMemo(() => {
+    const data = geographicData as any;
+    return Array.isArray(data?.municipalities)
+      ? data.municipalities
+          .map((m: any) => ({
+            id: m.id,
+            code: String(m.code || m.muni_code),
+            name: m.name,
+            unit_code: m.unit_code,
+          }))
+          .filter((m: any) => m.code && m.name)
+      : [];
+  }, [geographicData]);
 
   // Helper function to get engineer name from ID (for display)
   const getEngineerName = (engineerId: number | null | undefined): string => {
@@ -728,6 +735,62 @@ export function BeneficiaryDetailsModal({
     });
   };
 
+  const handleRegiondetChange = (next: RegiondetSelection | null) => {
+    const merged = mergeRegiondetPreservingPayments(
+      next as RegiondetSelection,
+      normalizeRegiondetEntry(regiondetSelection),
+    );
+    setRegiondetSelection(merged);
+    lastRegiondetValueRef.current = merged;
+    if (!beneficiary?.id) return;
+    if (regiondetSaveTimerRef.current) {
+      clearTimeout(regiondetSaveTimerRef.current);
+    }
+    regiondetSaveTimerRef.current = setTimeout(async () => {
+      try {
+        setRegiondetStatus("saving");
+        setRegiondetError(null);
+        await apiRequest(`/api/beneficiaries/${beneficiary.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ regiondet: merged }),
+        });
+        setRegiondetStatus("saved");
+        queryClient.invalidateQueries({
+          queryKey: ["/api/beneficiaries", beneficiary.id],
+        });
+      } catch (error: any) {
+        setRegiondetStatus("error");
+        setRegiondetError(
+          error?.message || "Failed to save geographical selection",
+        );
+      }
+    }, 400);
+  };
+
+  const retryRegiondetSave = () => {
+    if (!beneficiary?.id || !lastRegiondetValueRef.current) return;
+    setRegiondetStatus("saving");
+    setRegiondetError(null);
+    apiRequest(`/api/beneficiaries/${beneficiary.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regiondet: lastRegiondetValueRef.current }),
+    })
+      .then(() => {
+        setRegiondetStatus("saved");
+        queryClient.invalidateQueries({
+          queryKey: ["/api/beneficiaries", beneficiary.id],
+        });
+      })
+      .catch((error: any) => {
+        setRegiondetStatus("error");
+        setRegiondetError(
+          error?.message || "Failed to save geographical selection",
+        );
+      });
+  };
+
   // Calculate total amount from payments
   const totalAmount = Array.isArray(payments) ? 
     payments.reduce((sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0), 0) : 0;
@@ -743,18 +806,13 @@ export function BeneficiaryDetailsModal({
       return acc;
     }, {}) : {};
 
-  // Parse financial data (legacy support)
-  let financialData = null;
-  try {
-    const oikonomika = beneficiary ? (beneficiary as any).oikonomika : null;
-    if (oikonomika && typeof oikonomika === 'string') {
-      financialData = JSON.parse(oikonomika);
-    } else if (oikonomika && typeof oikonomika === 'object') {
-      financialData = oikonomika;
-    }
-  } catch (error) {
-    console.error('Error parsing financial data:', error);
-  }
+    useEffect(() => {
+    return () => {
+      if (regiondetSaveTimerRef.current) {
+        clearTimeout(regiondetSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -967,76 +1025,80 @@ export function BeneficiaryDetailsModal({
                 </div>
               </div>
 
-              {/* Geographic Information - Show in edit mode or when data exists */}
+                            {/* Geographic Information - Show in edit mode or when data exists */}
               {(() => {
-                const regionData = formatRegiondet(beneficiary?.regiondet as Record<string, unknown> | null | undefined);
-                const hasRegionData = regionData.regions.length > 0 || regionData.regionalUnits.length > 0 || regionData.municipalities.length > 0;
-                
-                // Always show in edit mode, or when there's data to display
+                const regionData = formatRegiondet(
+                  (regiondetSelection as any) ||
+                    (beneficiary?.regiondet as
+                      | Record<string, unknown>
+                      | null
+                      | undefined),
+                );
+                const hasRegionData =
+                  regionData.regions.length > 0 ||
+                  regionData.regionalUnits.length > 0 ||
+                  regionData.municipalities.length > 0;
+
                 if (!isEditing && !hasRegionData) return null;
-                
+
                 return (
                   <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200 shadow-sm">
                     <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
                       <MapPin className="w-5 h-5" />
-                      Γεωγραφικές Πληροφορίες
+                      Γεωγραφικά Στοιχεία
                     </h3>
                     {isEditing ? (
-                      <FormField
-                        control={form.control}
-                        name="geographic_areas"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <SmartGeographicMultiSelect
-                                value={field.value || []}
-                                onChange={field.onChange}
-                                kallikratisData={kallikratisData}
-                                placeholder="Επιλέξτε γεωγραφικές περιοχές..."
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                      <BeneficiaryGeoSelector
+                        regions={regionOptions}
+                        regionalUnits={regionalUnitOptions}
+                        municipalities={municipalityOptions}
+                        value={regiondetSelection as RegiondetSelection}
+                        onChange={handleRegiondetChange}
+                        required
+                        loading={regiondetStatus === 'saving'}
+                        error={regiondetError || undefined}
+                        onRetry={
+                          regiondetStatus === 'error' ? retryRegiondetSave : undefined
+                        }
                       />
                     ) : (
                       <div className="bg-white/70 p-4 rounded-lg border border-green-200">
-                        <div className="space-y-3">
-                          {regionData.regions.length > 0 ? (
-                            regionData.regions.map((region, idx) => (
-                              <div key={idx} className="text-sm">
-                                <div className="font-semibold text-green-800">{region}</div>
-                                {regionData.regionalUnits.length > 0 && (
-                                  <div className="ml-4 text-green-700">
-                                    <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
-                                    <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
-                                  </div>
-                                )}
-                                {regionData.municipalities.length > 0 && (
-                                  <div className="ml-4 text-green-700">
-                                    <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
-                                    <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
-                                  </div>
-                                )}
+                        {(() => {
+                          const formatted = formatRegiondet(
+                            (regiondetSelection as any) || beneficiary?.regiondet,
+                          );
+                          if (
+                            formatted.regions.length === 0 &&
+                            formatted.regionalUnits.length === 0 &&
+                            formatted.municipalities.length === 0
+                          ) {
+                            return (
+                              <div className="text-sm text-green-700 flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-amber-500" />
+                                No region selected
                               </div>
-                            ))
-                          ) : (
-                            <div className="text-sm space-y-2">
-                              {regionData.regionalUnits.length > 0 && (
-                                <div className="text-green-700">
-                                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
-                                  <div className="ml-2 text-green-600">{regionData.regionalUnits.join(', ')}</div>
+                            );
+                          }
+                          return (
+                            <div className="space-y-2">
+                              {formatted.regions.length > 0 && (
+                                <div className="text-sm font-semibold text-green-800">
+                                  {formatted.regions.join(', ')}
                                 </div>
                               )}
-                              {regionData.municipalities.length > 0 && (
-                                <div className="text-green-700">
-                                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
-                                  <div className="ml-2 text-green-600">{regionData.municipalities.join(', ')}</div>
+                              {formatted.regionalUnits.length > 0 && (
+                                <div className="text-xs text-green-700">
+                                  Περιφερειακές Ενότητες: {formatted.regionalUnits.join(', ')}
+                                </div>
+                              )}
+                              {formatted.municipalities.length > 0 && (
+                                <div className="text-xs text-green-700">
+                                  Δήμοι/Κοινότητες: {formatted.municipalities.join(', ')}
                                 </div>
                               )}
                             </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -1240,11 +1302,11 @@ export function BeneficiaryDetailsModal({
               </div>
 
               {/* Payments Summary */}
-              {Array.isArray(payments) && payments.length > 0 && (
+              {Array.isArray(payments) && (payments as any[]).length > 0 && (
                 <div className="bg-white p-6 rounded-xl border border-green-200 shadow-sm">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                     <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-3xl font-bold text-green-900">{payments.length}</div>
+                      <div className="text-3xl font-bold text-green-900">{(payments as any[]).length}</div>
                       <div className="text-sm text-green-700 font-medium">Συνολικές Πληρωμές</div>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg">
@@ -1318,7 +1380,7 @@ export function BeneficiaryDetailsModal({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                         <div>
                           <label className="text-gray-600 font-medium">Τύπος Δαπάνης:</label>
                           <p className="text-gray-900">{payment.expenditure_type || 'Δ/Υ'}</p>
@@ -1328,6 +1390,10 @@ export function BeneficiaryDetailsModal({
                           <p className="text-gray-900">
                             {payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('el-GR') : 'Δ/Υ'}
                           </p>
+                        </div>
+                        <div>
+                          <label className="text-gray-600 font-medium">EPS:</label>
+                          <p className="text-gray-900 truncate">{payment.freetext || 'Δ/Υ'}</p>
                         </div>
                         <div>
                           <label className="text-gray-600 font-medium">Καταχωρήθηκε:</label>
@@ -1353,6 +1419,64 @@ export function BeneficiaryDetailsModal({
                   </Button>
                 </div>
               )}
+              <div className="bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-blue-700" />
+                    <h4 className="text-lg font-semibold text-blue-900">Geographical details</h4>
+                  </div>
+                  {!isRegiondetComplete(regiondetSelection as RegiondetSelection) && (
+                    <Badge variant="outline" className="text-xs text-destructive border-destructive">
+                      Required
+                    </Badge>
+                  )}
+                </div>
+                {isEditing ? (
+                  <BeneficiaryGeoSelector
+                    regions={regionOptions}
+                    regionalUnits={regionalUnitOptions}
+                    municipalities={municipalityOptions}
+                    value={regiondetSelection as RegiondetSelection}
+                    onChange={handleRegiondetChange}
+                    required
+                    loading={regiondetStatus === "saving"}
+                    error={regiondetError || undefined}
+                    onRetry={regiondetStatus === "error" ? retryRegiondetSave : undefined}
+                  />
+                ) : (
+                  <div className="bg-white p-4 rounded-lg border border-blue-100">
+                    {(() => {
+                      const formatted = formatRegiondet((regiondetSelection as any) || (beneficiary as any)?.regiondet);
+                      if (
+                        formatted.regions.length === 0 &&
+                        formatted.regionalUnits.length === 0 &&
+                        formatted.municipalities.length === 0
+                      ) {
+                        return (
+                          <div className="text-sm text-blue-800 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-500" />
+                            No region selected
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="space-y-2 text-sm text-blue-900">
+                          {formatted.regions.length > 0 && (
+                            <div>Region: {formatted.regions.join(", ")}</div>
+                          )}
+                          {formatted.regionalUnits.length > 0 && (
+                            <div>Prefecture: {formatted.regionalUnits.join(", ")}</div>
+                          )}
+                          {formatted.municipalities.length > 0 && (
+                            <div>Municipality: {formatted.municipalities.join(", ")}</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+
             </div>
           </TabsContent>
         </Tabs>

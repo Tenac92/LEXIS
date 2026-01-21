@@ -48,7 +48,7 @@ export default function ProjectDetailsPage() {
             </div>
             <Card className="p-6 bg-red-50">
               <p className="text-red-600">
-                The requested project could not be found or you don't have permission to view it.
+                The requested project could not be found or you don&apos;t have permission to view it.
               </p>
             </Card>
           </div>

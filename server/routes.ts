@@ -71,6 +71,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register units controller for for_yl (implementing agencies) and other unit-related endpoints
   const { router: unitsRouter } = await import('./controllers/unitsController');
   app.use('/api/units', unitsRouter);
+
+  const { default: importsRouter } = await import('./routes/imports');
+  app.use('/api/imports', importsRouter);
   
   // Register notifications router for budget reallocation requests
   const { default: notificationsRouter } = await import('./routes/api/notifications');
@@ -351,7 +354,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (beneficiaryIds.length > 0) {
         const { data, error } = await supabase
           .from('beneficiary_payments')
-          .select('*')
+          .select(`
+            *,
+            project_index:project_index_id (
+              expenditure_type_id,
+              expenditure_types:expenditure_types (
+                expenditure_types
+              )
+            )
+          `)
           .in('beneficiary_id', beneficiaryIds)
           .in('unit_id', userUnits);
 
@@ -360,7 +371,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
         }
 
-        return res.json(data || []);
+        const enriched = (data || []).map((payment) => {
+          const expName = payment.project_index?.expenditure_types?.expenditure_types || null;
+          return {
+            ...payment,
+            expenditure_type: expName,
+          };
+        });
+
+        return res.json(enriched);
       }
 
       // Fallback: previous behavior (fetch payments for beneficiaries in first unit)

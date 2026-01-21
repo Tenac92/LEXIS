@@ -105,6 +105,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  is_active?: boolean;
   unit_id?: number[];
   units?: string[];
 }

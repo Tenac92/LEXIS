@@ -9,12 +9,9 @@ import { Link } from "wouter";
 import {
   FileText,
   AlertTriangle,
-  CheckCircle2,
   Euro,
   BarChart3,
-  Calendar,
   Users,
-  Building,
   ArrowUpRight,
   TrendingUp,
   TrendingDown,
@@ -49,14 +46,6 @@ export function ManagerDashboard() {
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Get budget overview for manager view
-  const { data: budgetOverview } = useQuery({
-    queryKey: ["/api/budget/overview"],
-    retry: 1,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
   });
 
   // Compute budget totals for display
@@ -362,7 +351,7 @@ export function ManagerDashboard() {
         <CardContent>
           <div className="space-y-4">
             {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-              stats.recentActivity.slice(0, 8).map((activity, index) => (
+              stats.recentActivity.slice(0, 8).map((activity) => (
                 <div 
                   key={activity.id} 
                   className="relative p-4 rounded-lg border hover:shadow-sm transition-all duration-200 bg-gradient-to-r from-card to-card/50"

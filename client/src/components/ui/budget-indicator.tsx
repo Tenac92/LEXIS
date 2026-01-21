@@ -1,7 +1,7 @@
 import { type BudgetData, type BudgetUpdate } from "@/lib/types";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { BadgeInfo, Calculator, CalendarFold, PiggyBank, RefreshCw } from "lucide-react";
+import { BadgeInfo, Calculator, PiggyBank, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
@@ -15,7 +15,7 @@ interface BudgetIndicatorProps {
 // Compact version of the budget indicator for project cards
 export function CompactBudgetIndicator({ 
   budgetData,
-  mis
+  _mis
 }: { 
   budgetData: BudgetData | null;
   mis: string;
@@ -91,7 +91,7 @@ export function BudgetIndicator({
 }: BudgetIndicatorProps) {
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
-  const [realTimeBudgetValues, setRealTimeBudgetValues] = useState<{
+  const [_realTimeBudgetValues, setRealTimeBudgetValues] = useState<{
     available_budget?: number;
     yearly_available?: number;
     quarter_available?: number;
@@ -101,7 +101,7 @@ export function BudgetIndicator({
   console.log('[BudgetIndicator] Received budget data:', budgetData);
   
   // Subscribe to WebSocket updates and get real-time budget updates
-  const { lastMessage, isConnected } = useWebSocketUpdates();
+  const { lastMessage } = useWebSocketUpdates();
   
   // Effect to handle budget updates from WebSocket
   useEffect(() => {
@@ -146,7 +146,7 @@ export function BudgetIndicator({
       
       return () => clearTimeout(timer);
     }
-  }, [budgetData?.available_budget]); // Removed currentAmount dependency to prevent excessive refreshes
+  }, [budgetData]);
   
   // Enhanced debug output for main budget indicator 
   // Rendering BudgetIndicator with current budget data and amount
@@ -232,7 +232,7 @@ export function BudgetIndicator({
       // Invalid amount detected and corrected to zero to prevent display issues
       // This prevents scientific notation or overflow display issues for extremely large numbers
     }
-  } catch (e) {
+  } catch {
     // Error handling: If amount parsing fails, reset to 0 as a safe default
     // This ensures the component always displays something valid even with data issues
     amount = 0;
@@ -258,30 +258,8 @@ export function BudgetIndicator({
   
   // IMPROVEMENT: Check if we have real-time budget data from WebSocket
   // This will override the initial values from budgetData if available
-  const hasRealTimeBudget = realTimeBudgetValues && 
-    realTimeBudgetValues.available_budget !== undefined &&
-    realTimeBudgetValues.yearly_available !== undefined;
-  
   // Parse new budget indicators
   // If we have real-time values from the WebSocket, use those instead
-  const availableBudget = hasRealTimeBudget 
-    ? realTimeBudgetValues.available_budget
-    : (typeof budgetData.available_budget === 'number'
-      ? budgetData.available_budget
-      : parseFloat(budgetData.available_budget?.toString() || (katanomesEtous - userView).toString()));
-  
-  const quarterAvailable = hasRealTimeBudget && realTimeBudgetValues.quarter_available !== undefined
-    ? realTimeBudgetValues.quarter_available
-    : (typeof budgetData.quarter_available === 'number'
-      ? budgetData.quarter_available
-      : parseFloat(budgetData.quarter_available?.toString() || '0'));
-  
-  const yearlyAvailable = hasRealTimeBudget
-    ? realTimeBudgetValues.yearly_available
-    : (typeof budgetData.yearly_available === 'number'
-      ? budgetData.yearly_available
-      : parseFloat(budgetData.yearly_available?.toString() || (ethsiaPistosi - userView).toString()));
-  
   // Log if we're using real-time values
   // If we have real-time budget data from WebSocket, it overrides the static data
   // This ensures the most current budget information is displayed to the user
@@ -352,12 +330,6 @@ export function BudgetIndicator({
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks
-  const safeAvailableBudget = typeof availableBudget === 'number' ? availableBudget : 0;
-  const safeYearlyAvailable = typeof yearlyAvailable === 'number' ? yearlyAvailable : 0;
-  
-  // Calculate percentage for progress bar, showing real-time usage as user types
-  const percentageUsed = safeAvailableBudget > 0 ? ((amount / safeAvailableBudget) * 100) : 0;
-  
   // Check budget thresholds for warnings (showing in real-time as they type)
   const isExceeding20Percent = amount > (katanomesEtous * 0.2);
   const isExceedingEthsiaPistosi = amount > ethsiaPistosi;

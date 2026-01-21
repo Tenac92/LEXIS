@@ -34,7 +34,8 @@ import {
   FolderOpen,
   Briefcase,
   AlertCircle,
-  PlayCircle
+  PlayCircle,
+  Upload
 } from "lucide-react";
 import React, { useMemo } from 'react';
 
@@ -331,12 +332,20 @@ export function AdminDashboard() {
                 <Euro className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Διαχείριση Προϋπολογισμού</CardTitle>
               </div>
-              <Button size="sm" asChild>
-                <Link href="/admin/budget-upload">
-                  <Plus className="w-4 h-4 mr-1" />
-                  Upload
-                </Link>
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" asChild>
+                  <Link href="/admin/budget-upload">
+                    <Plus className="w-4 h-4 mr-1" />
+                    Upload
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/admin/payments-import">
+                    <Upload className="w-4 h-4 mr-1" />
+                    Payments Import
+                  </Link>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

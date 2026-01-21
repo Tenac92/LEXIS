@@ -180,12 +180,44 @@ export const authenticateSession = async (
       throw invalidSessionError;
     }
 
+    // Keep account status in sync to prevent inactive users from accessing the app
+    const { data: userStatus, error: statusError } = await supabase
+      .from("users")
+      .select("is_active")
+      .eq("id", sessionUser.id)
+      .single();
+
+    if (statusError) {
+      console.error("[Auth] Error checking user active status:", statusError);
+    }
+
+    const isActive = userStatus?.is_active ?? sessionUser.is_active ?? true;
+
+    if (!isActive) {
+      console.log("[Auth] Blocking inactive user session:", {
+        userId: sessionUser.id,
+        email: sessionUser.email,
+      });
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("[Auth] Failed to destroy session for inactive user:", err);
+        }
+      });
+      return res
+        .status(403)
+        .json({ message: "Account is inactive. Please contact an administrator." });
+    }
+
+    // Persist latest status on the session for downstream handlers
+    req.session.user.is_active = isActive;
+
     // Add user to request with all required fields
     req.user = {
       id: sessionUser.id,
       email: sessionUser.email,
       name: sessionUser.name || "",
       role: sessionUser.role,
+      is_active: isActive,
       unit_id: sessionUser.unit_id || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
@@ -572,6 +604,15 @@ export async function setupAuth(app: Express) {
         });
       }
 
+      // Deny access to inactive accounts early to prevent sign-in
+      if (userData.is_active === false) {
+        console.log("[Auth] Login blocked for inactive user:", email);
+        return res.status(403).json({
+          message: "Account is inactive. Please contact an administrator.",
+          code: "ACCOUNT_INACTIVE",
+        });
+      }
+
       // Enhanced password validation logic
       // Check if password field exists and validate
       if (!userData.password) {
@@ -596,6 +637,7 @@ export async function setupAuth(app: Express) {
         email: userData.email,
         name: userData.name,
         role: userData.role,
+        is_active: userData.is_active ?? true,
         unit_id: userData.unit_id || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
@@ -681,6 +723,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
+        is_active: sessionUser.is_active ?? true,
         unit_id: sessionUser.unit_id || [],
       };
 
@@ -823,6 +866,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name || "",
         email: sessionUser.email,
         role: sessionUser.role,
+        is_active: sessionUser.is_active ?? true,
         unit_id: sessionUser.unit_id || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,

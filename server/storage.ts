@@ -4,6 +4,7 @@ import { supabase } from "./config/db";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
+import { mergeRegiondetWithPayments } from './utils/regiondet-merge';
 
 type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute'>;
 
@@ -77,6 +78,7 @@ export interface IStorage {
   getBeneficiaryById(id: number): Promise<Beneficiary | null>;
   createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
+  appendPaymentIdToRegiondet(beneficiaryId: number, paymentId: number | string): Promise<void>;
   deleteBeneficiary(id: number): Promise<void>;
   
   // Document search operations - SECURITY: Searches encrypted AFM via hash
@@ -2246,12 +2248,36 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
-      const beneficiaryToUpdate = {
+      let mergedRegiondet = beneficiary.regiondet;
+
+      // Merge payment_ids to preserve existing entries when regiondet is provided
+      if (Object.prototype.hasOwnProperty.call(beneficiary, 'regiondet')) {
+        const { data: existing, error: existingError } = await supabase
+          .from('beneficiaries')
+          .select('regiondet')
+          .eq('id', id)
+          .single();
+
+        if (existingError) {
+          console.error('[Storage] Error fetching existing regiondet for merge:', existingError);
+        }
+
+        mergedRegiondet = mergeRegiondetWithPayments(
+          existing?.regiondet,
+          beneficiary.regiondet,
+        );
+      }
+
+      const beneficiaryToUpdate: any = {
         ...beneficiary,
         afm: beneficiary.afm ? encryptAFM(beneficiary.afm) : undefined,
         afm_hash: beneficiary.afm ? hashAFM(beneficiary.afm) : undefined,
         updated_at: new Date().toISOString()
       };
+
+      if (Object.prototype.hasOwnProperty.call(beneficiary, 'regiondet')) {
+        beneficiaryToUpdate.regiondet = mergedRegiondet;
+      }
       
       const { data, error } = await supabase
         .from('beneficiaries')
@@ -2574,6 +2600,39 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error('[Storage] Error in deleteBeneficiaryPayment:', error);
       throw error;
+    }
+  }
+
+  async appendPaymentIdToRegiondet(beneficiaryId: number, paymentId: number | string): Promise<void> {
+    try {
+      const { data: existing, error: existingError } = await supabase
+        .from('beneficiaries')
+        .select('regiondet')
+        .eq('id', beneficiaryId)
+        .single();
+
+      if (existingError) {
+        console.error('[Storage] Error fetching regiondet for payment append:', existingError);
+        return;
+      }
+
+      const merged = mergeRegiondetWithPayments(existing?.regiondet, {
+        payment_ids: [paymentId],
+      });
+
+      const { error: updateError } = await supabase
+        .from('beneficiaries')
+        .update({
+          regiondet: merged,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', beneficiaryId);
+
+      if (updateError) {
+        console.error('[Storage] Error appending payment id to regiondet:', updateError);
+      }
+    } catch (error) {
+      console.error('[Storage] Error in appendPaymentIdToRegiondet:', error);
     }
   }
 

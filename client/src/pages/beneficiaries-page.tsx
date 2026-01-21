@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   AlertCircle,
   CreditCard,
+  Hash,
   X,
   MapPin,
   Building2,
@@ -472,6 +473,24 @@ export default function BeneficiariesPage() {
     return types ? Array.from(types) : [];
   };
 
+  // Get latest payment (by payment_date desc, then created_at desc)
+  const getLatestPaymentForBeneficiary = (beneficiaryId: number) => {
+    const payments = getPaymentsForBeneficiary(beneficiaryId);
+    if (!payments || payments.length === 0) return null;
+
+    const sorted = [...payments].sort((a: any, b: any) => {
+      const dateA = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+      const dateB = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+
+      const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return createdB - createdA;
+    });
+
+    return sorted[0];
+  };
+
   // Handle loading state
   if (isLoading) {
     return (
@@ -626,6 +645,27 @@ export default function BeneficiariesPage() {
                                       </span>
                                     </div>
                                   )}
+                                  {(() => {
+                                    const latest = getLatestPaymentForBeneficiary(beneficiary.id);
+                                    return (
+                                      <div className="space-y-1 text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                                          <span>
+                                            Πληρωμή: {latest?.payment_date
+                                              ? new Date(latest.payment_date).toLocaleDateString("el-GR")
+                                              : "—"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Hash className="w-4 h-4 flex-shrink-0" />
+                                          <span className="truncate" title={latest?.freetext || "—"}>
+                                            EPS: {latest?.freetext || "—"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
                                   {formatRegiondet(beneficiary.regiondet).length > 0 && (
                                     <div className="flex items-center gap-2 text-muted-foreground">
                                       <MapPin className="w-4 h-4 flex-shrink-0 text-blue-600" />
@@ -860,6 +900,29 @@ export default function BeneficiariesPage() {
                                     </div>
                                   </div>
                                 )}
+
+                                {/* Latest payment info */}
+                                {(() => {
+                                  const latest = getLatestPaymentForBeneficiary(beneficiary.id);
+                                  return (
+                                    <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                      <Calendar className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-xs text-purple-600 font-medium">
+                                          Πληρωμή & EPS
+                                        </span>
+                                        <p className="text-sm text-purple-900 font-medium leading-tight">
+                                          Πληρωμή: {latest?.payment_date
+                                            ? new Date(latest.payment_date).toLocaleDateString("el-GR")
+                                            : "—"}
+                                        </p>
+                                        <p className="text-xs text-purple-800 truncate" title={latest?.freetext || "—"}>
+                                          EPS: {latest?.freetext || "—"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
 
                                 {/* Region Info from regiondet */}
                                 {formatRegiondet(beneficiary.regiondet).length > 0 && (

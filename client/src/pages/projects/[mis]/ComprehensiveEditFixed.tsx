@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   useQuery,
-  useQueries,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -36,6 +35,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SmartGeographicMultiSelect } from "@/components/forms/SmartGeographicMultiSelect";
 import { SubprojectsIntegrationCard } from "@/components/subprojects/SubprojectsIntegrationCard";
 import {
+  buildPersistedLocationSnapshot,
+  cloneLocation,
+  hasPersistedLocationChanges,
+  prepareLocationForSave,
+} from "./location-helpers";
+import {
   Plus,
   Trash2,
   Save,
@@ -59,76 +64,20 @@ import {
   formatEuropeanNumber,
 } from "@/lib/number-format";
 import {
-  getGeographicInfo,
-  formatGeographicDisplay,
-  getGeographicCodeForSave,
-  getRegionalUnitsForRegion,
-  getMunicipalitiesForRegionalUnit,
   buildNormalizedGeographicData,
   getGeographicCodeForSaveNormalized,
   convertGeographicDataToKallikratis,
 } from "@shared/utils/geographic-utils";
-
-// European number input component that allows free typing with formatting
-function EuropeanNumberInput({ 
-  value, 
-  onChange, 
-  placeholder, 
-  onBlur 
-}: { 
-  value: number | undefined | null; 
-  onChange: (value: number | undefined) => void; 
-  placeholder?: string;
-  onBlur?: () => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [displayValue, setDisplayValue] = useState<string>(() => 
-    value !== undefined && value !== null ? formatEuropeanNumber(value) : ""
-  );
-
-  // Sync displayValue when the external value changes (e.g., from form reset or cross-field validation)
-  useEffect(() => {
-    // Only skip update if THIS specific input is currently focused
-    const isThisInputFocused = document.activeElement === inputRef.current;
-    
-    if (!isThisInputFocused) {
-      if (value !== undefined && value !== null) {
-        setDisplayValue(formatEuropeanNumber(value));
-      } else {
-        setDisplayValue("");
-      }
-    }
-  }, [value]);
-
-  return (
-    <Input 
-      ref={inputRef}
-      type="text"
-      placeholder={placeholder}
-      value={displayValue}
-      onChange={(e) => {
-        const rawValue = e.target.value;
-        setDisplayValue(rawValue);
-        
-        if (rawValue === "" || rawValue.trim() === "") {
-          onChange(undefined);
-          return;
-        }
-        
-        const numericValue = parseEuropeanNumber(rawValue);
-        if (!isNaN(numericValue)) {
-          onChange(numericValue);
-        }
-      }}
-      onBlur={() => {
-        if (value !== undefined && value !== null) {
-          setDisplayValue(formatEuropeanNumber(value));
-        }
-        onBlur?.();
-      }}
-    />
-  );
-}
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Hook for validating ΣΑ numbers in real-time with proper debouncing
 function useSAValidation() {
@@ -180,7 +129,7 @@ function useSAValidation() {
             existingProject: response.existingProject
           } 
         }));
-      } catch (error) {
+      } catch (_error) {
         // Silently handle validation errors to reduce log spam
         setValidationStates(prev => ({ ...prev, [fieldKey]: { isChecking: false, exists: false } }));
       }
@@ -193,25 +142,42 @@ function useSAValidation() {
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    const timeouts = timeoutRef.current;
     return () => {
-      Object.values(timeoutRef.current).forEach(clearTimeout);
+      Object.values(timeouts).forEach(clearTimeout);
     };
   }, []);
 
   return { validateSA, getValidationState };
 }
 
-// Helper function to safely convert array or object fields to text
-function safeText(value: any): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "Δεν υπάρχει";
-    if (value.length === 1) return String(value[0]);
-    return value.join(", ");
-  }
+type SaKey = "NA853" | "NA271" | "E069";
+
+function normalizeSaType(value?: string | null): SaKey | "" {
+  if (!value) return "";
+  const upper = String(value).toUpperCase();
+
+  if (upper.includes("E069") || upper.endsWith("069")) return "E069";
+  if (upper.includes("853")) return "NA853";
+  if (upper.includes("271")) return "NA271";
+
   return "";
 }
+
+const emptyStringToUndefined = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const normalizeSaEnumValue = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed === "NA853") return "ΝΑ853";
+  if (trimmed === "NA271") return "ΝΑ271";
+  return trimmed;
+};
 
 // Helper function to generate enumeration code based on ΣΑ type
 function generateEnumerationCode(saType: string, currentCode?: string, existingCodes?: Record<string, string>): string {
@@ -312,6 +278,9 @@ interface ProjectData {
   event_description?: string;
   event_year?: string | number;
   status?: string;
+  inc_year?: string | number | null;
+  summary?: string | null;
+  updates?: any;
   na853?: string;
   na271?: string;
   e069?: string;
@@ -319,8 +288,10 @@ interface ProjectData {
   budget_na271?: number;
   budget_e069?: number;
   enhanced_unit?: {
-    name: string;
+    name?: string;
+    unit?: string;
   };
+  enhanced_event_type?: { name?: string; id?: number };
 }
 
 // Form schema
@@ -329,6 +300,7 @@ const comprehensiveProjectSchema = z.object({
   decisions: z
     .array(
       z.object({
+        id: z.number().optional().nullable(),
         protocol_number: z.string().default(""),
         fek: z
           .object({
@@ -342,9 +314,10 @@ const comprehensiveProjectSchema = z.object({
         implementing_agency_for_yl: z.record(z.string(), z.number().nullable()).default({}),
         decision_budget: z.string().default(""),
         expenditure_type: z.array(z.number()).default([]),
-        decision_type: z
-          .enum(["Έγκριση", "Τροποποίηση", "Παράταση", "Συμπληρωματική"])
-          .default("Έγκριση"),
+        decision_type: z.preprocess(
+          emptyStringToUndefined,
+          z.enum(["Έγκριση", "Τροποποίηση", "Παράταση", "Συμπληρωματική"]).default("Έγκριση"),
+        ),
         included: z.boolean().default(true),
         comments: z.string().default(""),
       }),
@@ -363,6 +336,12 @@ const comprehensiveProjectSchema = z.object({
   location_details: z
     .array(
       z.object({
+        id: z.number().optional().nullable(),
+        project_index_id: z.number().optional().nullable(),
+        ada: z.string().optional(),
+        protocol_number: z.string().optional(),
+        isClone: z.boolean().optional(),
+        _originalId: z.number().optional().nullable(),
         implementing_agency: z.string().default(""),
         for_yl_id: z.number().optional().nullable(), // For YL (implementing agency that differs from parent Monada)
         event_type: z.string().default(""),
@@ -415,15 +394,21 @@ const comprehensiveProjectSchema = z.object({
   formulation_details: z
     .array(
       z.object({
-        sa: z.enum(["ΝΑ853", "ΝΑ271", "E069"]).default("ΝΑ853"),
+        id: z.number().optional().nullable(),
+        sa: z.preprocess(
+          normalizeSaEnumValue,
+          z.enum(["ΝΑ853", "ΝΑ271", "E069"]).default("ΝΑ853"),
+        ),
         enumeration_code: z.string().default(""),
         decision_year: z.string().default(""),
-        decision_status: z
-          .enum(["Ενεργή", "Ανενεργή", "Αναστολή"])
-          .default("Ενεργή"),
-        change_type: z
-          .enum(["Τροποποίηση", "Παράταση", "Έγκριση"])
-          .default("Έγκριση"),
+        decision_status: z.preprocess(
+          emptyStringToUndefined,
+          z.enum(["Ενεργή", "Ανενεργή", "Αναστολή"]).default("Ενεργή"),
+        ),
+        change_type: z.preprocess(
+          emptyStringToUndefined,
+          z.enum(["Τροποποίηση", "Παράταση", "Έγκριση"]).default("Έγκριση"),
+        ),
         comments: z.string().default(""),
         budget_versions: z.object({
           pde: z.array(z.object({
@@ -434,7 +419,10 @@ const comprehensiveProjectSchema = z.object({
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
-            action_type: z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"), // Renamed from decision_type
+            action_type: z.preprocess(
+              emptyStringToUndefined,
+              z.enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"]).default("Έγκριση"),
+            ), // Renamed from decision_type
             comments: z.string().default(""),
           })).default([]),
           epa: z.array(z.object({
@@ -445,11 +433,14 @@ const comprehensiveProjectSchema = z.object({
             protocol_number: z.string().default(""),
             ada: z.string().default(""),
             decision_date: z.string().default(""),
-            action_type: z.enum(["Έγκριση", "Τροποποίηση", "Ολοκλήρωση"]).default("Έγκριση"), // Renamed from decision_type
+            action_type: z.preprocess(
+              emptyStringToUndefined,
+              z.enum(["Έγκριση", "Τροποποίηση", "Ολοκλήρωση"]).default("Έγκριση"),
+            ), // Renamed from decision_type
             comments: z.string().default(""),
             // New normalized "Οικονομικά" section for EPA with year-based financial records
             financials: z.array(z.object({
-              year: z.number().min(2020).max(2050), // Έτος
+              year: z.coerce.number().min(2020).max(2050), // Έτος
               total_public_expense: z.string().default(""), // Συνολική Δημόσια Δαπάνη (stored as string for better form handling)
               eligible_public_expense: z.string().default(""), // Επιλέξιμη Δημόσια Δαπάνη (stored as string for better form handling)
             })).default([]),
@@ -466,7 +457,21 @@ const comprehensiveProjectSchema = z.object({
         timestamp: z.string().default(""),
         user_id: z.number().optional(),
         user_name: z.string().default(""),
-        change_type: z.enum(["Initial Creation", "Budget Update", "Status Change", "Document Update", "Other"]).default("Other"),
+        change_type: z.preprocess(
+          (value) => (typeof value === "string" ? value.trim() : value),
+          z
+            .union([
+              z.enum([
+                "Initial Creation",
+                "Budget Update",
+                "Status Change",
+                "Document Update",
+                "Other",
+              ]),
+              z.literal(""),
+            ])
+            .optional(),
+        ).default(""),
         description: z.string().default(""),
         notes: z.string().default(""),
       }),
@@ -474,7 +479,7 @@ const comprehensiveProjectSchema = z.object({
     .default([{ 
       timestamp: new Date().toISOString(),
       user_name: "",
-      change_type: "Other",
+      change_type: "",
       description: "",
       notes: ""
     }]),
@@ -482,20 +487,104 @@ const comprehensiveProjectSchema = z.object({
 
 type ComprehensiveFormData = z.infer<typeof comprehensiveProjectSchema>;
 
-export default function ComprehensiveEditFixed() {
-  const { id } = useParams();
+export type ComprehensiveProjectFormMode = "create" | "edit";
+
+export const getEmptyProjectDefaults = (): ComprehensiveFormData => ({
+  decisions: [
+    {
+      protocol_number: "",
+      fek: { year: "", issue: "", number: "" },
+      ada: "",
+      implementing_agency: [],
+      implementing_agency_for_yl: {},
+      decision_budget: "",
+      expenditure_type: [],
+      decision_type: "Έγκριση",
+      included: true,
+      comments: "",
+    },
+  ],
+  event_details: {
+    event_name: "",
+    event_year: "",
+  },
+  location_details: [
+    {
+      implementing_agency: "",
+      for_yl_id: null,
+      event_type: "",
+      expenditure_types: [],
+      geographic_areas: [],
+    },
+  ],
+  project_details: {
+    mis: "",
+    sa: "ΝΑ853",
+    inc_year: "",
+    project_title: "",
+    project_description: "",
+    summary_description: "",
+    expenses_executed: "",
+    project_status: "Ενεργό",
+  },
+  previous_entries: [],
+  formulation_details: [
+    {
+      sa: "ΝΑ853",
+      enumeration_code: "",
+      decision_year: "",
+      decision_status: "Ενεργή",
+      change_type: "Έγκριση",
+      comments: "",
+      budget_versions: {
+        pde: [],
+        epa: [],
+      },
+    },
+  ],
+  changes: [
+    {
+      timestamp: new Date().toISOString(),
+      user_name: "",
+      change_type: "",
+      description: "",
+      notes: "",
+    },
+  ],
+});
+
+type ComprehensiveProjectFormProps = {
+  mode: ComprehensiveProjectFormMode;
+  mis?: string;
+};
+
+export function ComprehensiveProjectForm({
+  mode,
+  mis,
+}: ComprehensiveProjectFormProps) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [hasPreviousEntries, setHasPreviousEntries] = useState(false);
+  const isDev = process.env.NODE_ENV !== "production";
+  const devLog = (...args: any[]) => {
+    if (isDev) {
+      console.log(...args);
+    }
+  };
+  const isCreateMode = mode === "create";
+  const isEditMode = mode === "edit";
   
   // Batch selection state for decisions, formulations and locations
   const [selectedDecisions, setSelectedDecisions] = useState<Set<number>>(new Set());
   const [selectedFormulations, setSelectedFormulations] = useState<Set<number>>(new Set());
   const [selectedLocations, setSelectedLocations] = useState<Set<number>>(new Set());
   
-  // Parse the project ID from the URL parameter
-  const projectId = id ? parseInt(id, 10) : undefined;
+  // Parse the project ID from the route param (edit only)
+  const projectId = useMemo(() => {
+    if (!mis) return undefined;
+    const parsed = parseInt(mis, 10);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }, [mis]);
 
   // REMOVED: connected_decisions field no longer exists in schema
   /*
@@ -528,7 +617,7 @@ export default function ComprehensiveEditFixed() {
         // Ενημέρωση form
         form.setValue(`formulation_details.${formulationIndex}.budget_versions.${budgetType}`, versions);
         
-        console.log(`[Auto-Inheritance] Decision ${newDecisionId} added to ${budgetType} version ${versionIndex} and ${versions.length - versionIndex - 1} later versions`);
+        devLog(`[Auto-Inheritance] Decision ${newDecisionId} added to ${budgetType} version ${versionIndex} and ${versions.length - versionIndex - 1} later versions`);
       }
     }
   };
@@ -548,7 +637,7 @@ export default function ComprehensiveEditFixed() {
     
     form.setValue(`formulation_details.${formulationIndex}.budget_versions.${budgetType}`, versions);
     
-    console.log(`[Decision Removal] Decision ${decisionIdToRemove} removed from ${budgetType} version ${versionIndex}`);
+    devLog(`[Decision Removal] Decision ${decisionIdToRemove} removed from ${budgetType} version ${versionIndex}`);
   };
 
   // 🔍 Helper για εντοπισμό inherited vs direct decisions
@@ -573,81 +662,24 @@ export default function ComprehensiveEditFixed() {
   };
   */
 
-  const [userInteractedFields, setUserInteractedFields] = useState<Set<string>>(
-    new Set(),
-  );
   const hasInitialized = useRef(false);
-  const [initializationTime, setInitializationTime] = useState<number>(0);
   const [formKey, setFormKey] = useState<number>(0);
   const [currentTab, setCurrentTab] = useState("project");
+  const initialLocationSnapshotRef = useRef<Map<string, string>>(new Map());
+  const [persistedLocationConfirmOpen, setPersistedLocationConfirmOpen] =
+    useState(false);
+  const [pendingPersistedLocationSubmit, setPendingPersistedLocationSubmit] =
+    useState<ComprehensiveFormData | null>(null);
+  const persistedLocationConfirmMessage =
+    "This will update existing persisted location data used elsewhere. Continue?";
   const isInitializingRef = useRef(false);
-  const { validateSA, getValidationState } = useSAValidation();
+  const { getValidationState } = useSAValidation();
 
   // ALL HOOKS MUST BE CALLED FIRST - NO CONDITIONAL HOOK CALLS
   const form = useForm<ComprehensiveFormData>({
     resolver: zodResolver(comprehensiveProjectSchema),
     mode: "onChange",
-    defaultValues: {
-      decisions: [
-        {
-          protocol_number: "",
-          fek: { year: "", issue: "", number: "" },
-          ada: "",
-          implementing_agency: [],
-          implementing_agency_for_yl: {},
-          decision_budget: "",
-          expenditure_type: [],
-          decision_type: "Έγκριση",
-          included: true,
-          comments: "",
-        },
-      ],
-      event_details: {
-        event_name: "",
-        event_year: "",
-      },
-      location_details: [
-        {
-          implementing_agency: "",
-          for_yl_id: null,
-          event_type: "",
-          expenditure_types: [],
-          geographic_areas: [],
-        },
-      ],
-      project_details: {
-        mis: "",
-        sa: "ΝΑ853",
-        inc_year: "",
-        project_title: "",
-        project_description: "",
-        summary_description: "",
-        expenses_executed: "",
-        project_status: "Συμπληρωμένο",
-      },
-      previous_entries: [],
-      formulation_details: [
-        {
-          sa: "ΝΑ853",
-          enumeration_code: "",
-          decision_year: "",
-          decision_status: "Ενεργή",
-          change_type: "Έγκριση",
-          comments: "",
-          budget_versions: {
-            pde: [],
-            epa: []
-          }
-        },
-      ],
-      changes: [{ 
-        timestamp: new Date().toISOString(),
-        user_name: "",
-        change_type: "Other",
-        description: "",
-        notes: ""
-      }],
-    },
+    defaultValues: getEmptyProjectDefaults(),
   });
 
   // PERFORMANCE OPTIMIZATION: Split into project data and reference data queries
@@ -655,9 +687,9 @@ export default function ComprehensiveEditFixed() {
     data: completeProjectData,
     isLoading: isCompleteDataLoading,
     error: completeDataError,
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/projects/${projectId}/complete`],
-    enabled: !!projectId,
+    enabled: isEditMode && !!projectId,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for project-specific data
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
@@ -669,7 +701,7 @@ export default function ComprehensiveEditFixed() {
     data: referenceData,
     isLoading: isReferenceDataLoading,
     error: referenceDataError,
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: ['/api/projects/reference-data'],
     staleTime: 60 * 60 * 1000, // 1 hour cache for reference data
     gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
@@ -682,7 +714,7 @@ export default function ComprehensiveEditFixed() {
     data: geographicData,
     isLoading: isGeographicDataLoading,
     error: geographicDataError,
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: ['/api/geographic-data'],
     staleTime: 60 * 60 * 1000, // 1 hour cache for geographic data
     gcTime: 4 * 60 * 60 * 1000, // 4 hours cache retention
@@ -703,20 +735,22 @@ export default function ComprehensiveEditFixed() {
   const forYlData = (referenceData?.forYl?.length > 0 ? referenceData.forYl : completeProjectData?.forYl) as Array<{ id: number; title: string; monada_id: string }> | undefined;
 
   // Extract existing ΣΑ types and enumeration codes from formulations data
-  const existingSATypes = [...new Set(formulationsData?.map(f => f.sa).filter(Boolean) || [])];
-  const existingEnumerationCodes = formulationsData?.reduce((acc, f) => {
-    if (f.sa && f.enumeration_code) {
-      acc[f.sa] = f.enumeration_code;
+  const existingSATypes = Array.from(new Set(
+    formulationsData?.map((f: any) => f.sa_type || f.sa).filter(Boolean) || [],
+  )) as string[];
+  const existingEnumerationCodes = (formulationsData || []).reduce((acc: Record<string, string>, f: any) => {
+    const saType = f.sa_type || f.sa;
+    if (saType && f.enumeration_code) {
+      acc[saType] = f.enumeration_code;
     }
     return acc;
-  }, {} as Record<string, string>) || {};
+  }, {});
 
   // Check if all essential data is loading
   const isEssentialDataLoading = isCompleteDataLoading;
-  const isAllDataLoading = isCompleteDataLoading || isReferenceDataLoading || isGeographicDataLoading;
   
   // Debug logging for optimized data fetch
-  console.log("DEBUG - Project Data:", {
+  devLog("DEBUG - Project Data:", {
     hasProjectData: !!completeProjectData,
     hasReferenceData: !!referenceData,
     projectData: !!projectData,
@@ -729,7 +763,7 @@ export default function ComprehensiveEditFixed() {
   });
 
   // Debug logging for geographic data status  
-  console.log("DEBUG - Geographic Data Status:", {
+  devLog("DEBUG - Geographic Data Status:", {
     hasNormalizedGeographicData: !!geographicData,
     normalizedRegions: geographicData?.regions?.length || 0,
     normalizedRegionalUnits: geographicData?.regionalUnits?.length || 0,
@@ -737,7 +771,7 @@ export default function ComprehensiveEditFixed() {
   });
 
   // Debug logging for ΣΑ types and enumeration codes
-  console.log("DEBUG - ΣΑ Data:", {
+  devLog("DEBUG - ΣΑ Data:", {
     existingSATypes,
     existingEnumerationCodes,
     formulationsDataSample: formulationsData?.slice(0, 2),
@@ -770,52 +804,14 @@ export default function ComprehensiveEditFixed() {
   // Helper functions for geographic data - Updated for normalized structure
   const getUniqueRegions = () => {
     if (geographicData?.regions) {
-      return geographicData.regions.map(r => r.name).filter(Boolean);
+      return geographicData.regions.map((r: any) => r.name).filter(Boolean);
     }
     // Return empty array if geographic data isn't available
     return [];
   };
 
-  const getRegionalUnitsForRegionNormalized = (region: string) => {
-    if (!region) return [];
-    
-    if (geographicData?.regions && geographicData?.regionalUnits) {
-      const selectedRegion = geographicData.regions.find(r => r.name === region);
-      if (selectedRegion) {
-        return getRegionalUnitsForRegion(geographicData.regionalUnits, selectedRegion.code)
-          .map(ru => ru.name);
-      }
-    }
-    
-    // Return empty array if normalized geographic data isn't available
-    return [];
-  };
-
-  const getMunicipalitiesForRegionalUnitNormalized = (
-    region: string,
-    regionalUnit: string,
-  ) => {
-    if (!region || !regionalUnit) return [];
-    
-    if (geographicData?.regions && geographicData?.regionalUnits && geographicData?.municipalities) {
-      const selectedRegion = geographicData.regions.find(r => r.name === region);
-      if (selectedRegion) {
-        const selectedRegionalUnit = geographicData.regionalUnits.find(
-          ru => ru.name === regionalUnit && ru.region_code === selectedRegion.code
-        );
-        if (selectedRegionalUnit) {
-          return getMunicipalitiesForRegionalUnit(geographicData.municipalities, selectedRegionalUnit.code)
-            .map(m => m.name);
-        }
-      }
-    }
-    
-    // Return empty array if normalized geographic data isn't available
-    return [];
-  };
-
   // Additional debug logging now that variables are properly initialized
-  console.log("DEBUG - Geographic Data:", {
+  devLog("DEBUG - Geographic Data:", {
     uniqueRegionsCount: getUniqueRegions().length,
     uniqueRegions: getUniqueRegions().slice(0, 3),
     // Normalized data info
@@ -850,6 +846,7 @@ export default function ComprehensiveEditFixed() {
       if (original) {
         const duplicated = {
           ...original,
+          id: undefined,
           enumeration_code: generateEnumerationCode(original.sa, "", existingEnumerationCodes),
           budget_versions: {
             pde: [...(original.budget_versions?.pde || [])],
@@ -929,6 +926,7 @@ export default function ComprehensiveEditFixed() {
       if (original) {
         const duplicated = {
           ...original,
+          id: undefined,
           implementing_agency: [...(original.implementing_agency || [])],
           expenditure_type: [...(original.expenditure_type || [])]
         };
@@ -997,20 +995,11 @@ export default function ComprehensiveEditFixed() {
     if (selectedLocations.size === 0) return;
     
     const locations = form.getValues("location_details");
-    const newLocations = [...locations];
-    
-    // Duplicate selected locations
-    selectedLocations.forEach(index => {
-      const original = locations[index];
-      if (original) {
-        const duplicated = {
-          ...original,
-          geographic_areas: [...(original.geographic_areas || [])],
-          expenditure_types: [...(original.expenditure_types || [])]
-        };
-        newLocations.push(duplicated);
-      }
-    });
+    const newLocations = locations.flatMap((location, index) =>
+      selectedLocations.has(index)
+        ? [location, cloneLocation(location)]
+        : [location],
+    );
     
     form.setValue("location_details", newLocations);
     setSelectedLocations(new Set());
@@ -1094,30 +1083,12 @@ export default function ComprehensiveEditFixed() {
     }
   };
 
-  // Helper function to validate and limit numeric input to database constraints
-  const validateAndLimitNumericInput = (
-    value: string,
-    fieldName: string,
-  ): string => {
-    const parsed = parseEuropeanNumber(value);
-    if (parsed && parsed > 9999999999.99) {
-      console.warn(
-        `${fieldName} value ${parsed} exceeds database limit, limiting input`,
-      );
-      toast({
-        title: "Προσοχή",
-        description: `${fieldName}: Το ποσό περιορίστηκε στο μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`,
-        variant: "destructive",
-      });
-      return formatEuropeanNumber(9999999999.99);
-    }
-    return value;
-  };
+  
 
   const mutation = useMutation({
     mutationFn: async (data: ComprehensiveFormData) => {
-      console.log("=== COMPREHENSIVE FORM SUBMISSION ===");
-      console.log("Form data:", data);
+      devLog("=== COMPREHENSIVE FORM SUBMISSION ===");
+      devLog("Form data:", data);
 
 
       // Track what operations have been completed for potential rollback
@@ -1127,21 +1098,79 @@ export default function ComprehensiveEditFixed() {
         formulations: [],
         changes: false,
       };
+      let activeProjectId = projectId;
+      let createdProject: any = null;
 
       try {
+        const hasFormulations =
+          Array.isArray(data.formulation_details) &&
+          data.formulation_details.length > 0;
+
+        const getFormulationBySa = (saKey: SaKey) =>
+          data.formulation_details.find(
+            (f) => normalizeSaType(f.sa) === saKey,
+          );
+
+        const getEnumerationCode = (
+          saKey: SaKey,
+          fallback?: string | null,
+        ) => {
+          if (!hasFormulations) return fallback ?? null;
+          const entry = getFormulationBySa(saKey);
+          if (!entry) return null;
+          const code = (entry.enumeration_code || "").trim();
+          return code ? code : null;
+        };
+
+        const getLatestBoundaryBudget = (
+          saKey: SaKey,
+          fallback?: number | null,
+        ) => {
+          if (!hasFormulations) return fallback ?? null;
+          const formEntry = getFormulationBySa(saKey);
+          if (
+            formEntry?.budget_versions?.pde &&
+            formEntry.budget_versions.pde.length > 0
+          ) {
+            for (
+              let i = formEntry.budget_versions.pde.length - 1;
+              i >= 0;
+              i--
+            ) {
+              const boundary = formEntry.budget_versions.pde[i].boundary_budget;
+              if (boundary !== undefined && boundary !== null && boundary !== "") {
+                const parsed = parseEuropeanNumber(boundary);
+                if (Number.isFinite(parsed)) {
+                  devLog(
+                    `Budget ${saKey}: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
+                  );
+                  return parsed;
+                }
+              }
+            }
+          }
+          return fallback ?? null;
+        };
+
+        if (Array.isArray(data.location_details)) {
+          data.location_details = data.location_details.map(prepareLocationForSave);
+        }
+
         // 1. Update core project data
-        const projectUpdateData = {
+        const projectUpdateData: Record<string, any> = {
           project_title: data.project_details.project_title,
           event_description: data.project_details.project_description,
           summary: data.project_details.summary_description || null,
           // New fields: inc_year and updates (enumeration_code removed from project details)  
           inc_year: data.project_details.inc_year ? parseInt(data.project_details.inc_year) : null,
           updates: data.changes || [],
-          na853: data.project_details.sa,
+          na853: getEnumerationCode("NA853", typedProjectData?.na853 ?? null),
+          na271: getEnumerationCode("NA271", typedProjectData?.na271 ?? null),
+          e069: getEnumerationCode("E069", typedProjectData?.e069 ?? null),
           // Convert event_name to event_type_id if needed
           event_type: (() => {
             if (!data.event_details.event_name) {
-              console.log("No event name provided");
+              devLog("No event name provided");
               return null;
             }
 
@@ -1151,120 +1180,120 @@ export default function ComprehensiveEditFixed() {
                   et.name === data.event_details.event_name ||
                   et.id.toString() === data.event_details.event_name,
               );
-              console.log("Event type conversion:", {
+              devLog("Event type conversion:", {
                 input: data.event_details.event_name,
                 found: eventType,
                 result: eventType ? eventType.id : null,
               });
               return eventType ? eventType.id : null;
             }
-            console.log("No event types data available for conversion");
+            devLog("No event types data available for conversion");
             return null;
           })(),
           event_year: data.event_details.event_year,
           status: data.project_details.project_status,
 
           // Budget fields - take latest boundary_budget from PDE versions and parse to number
-          budget_e069: (() => {
-            const formEntry = data.formulation_details.find(
-              (f) => f.sa === "E069",
-            );
-            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              // Take the latest (last) non-null boundary_budget
-              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
-                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null && boundary !== "") {
-                  const parsed = parseEuropeanNumber(boundary);
-                  console.log(
-                    `Budget E069: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
-                  );
-                  return parsed;
-                }
-              }
-            }
-            return typedProjectData?.budget_e069 || null;
-          })(),
-          budget_na271: (() => {
-            const formEntry = data.formulation_details.find(
-              (f) => f.sa === "ΝΑ271",
-            );
-            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              // Take the latest (last) non-null boundary_budget
-              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
-                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null && boundary !== "") {
-                  const parsed = parseEuropeanNumber(boundary);
-                  console.log(
-                    `Budget ΝΑ271: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
-                  );
-                  return parsed;
-                }
-              }
-            }
-            return typedProjectData?.budget_na271 || null;
-          })(),
-          budget_na853: (() => {
-            const formEntry = data.formulation_details.find(
-              (f) => f.sa === "ΝΑ853",
-            );
-            if (formEntry?.budget_versions?.pde && formEntry.budget_versions.pde.length > 0) {
-              // Take the latest (last) non-null boundary_budget
-              for (let i = formEntry.budget_versions.pde.length - 1; i >= 0; i--) {
-                const boundary = formEntry.budget_versions.pde[i].boundary_budget;
-                if (boundary !== undefined && boundary !== null && boundary !== "") {
-                  const parsed = parseEuropeanNumber(boundary);
-                  console.log(
-                    `Budget ΝΑ853: latest boundary_budget from version ${i + 1} -> ${boundary} (parsed: ${parsed})`,
-                  );
-                  return parsed;
-                }
-              }
-            }
-            return typedProjectData?.budget_na853 || null;
-          })(),
+          budget_e069: getLatestBoundaryBudget(
+            "E069",
+            typedProjectData?.budget_e069,
+          ),
+          budget_na271: getLatestBoundaryBudget(
+            "NA271",
+            typedProjectData?.budget_na271,
+          ),
+          budget_na853: getLatestBoundaryBudget(
+            "NA853",
+            typedProjectData?.budget_na853,
+          ),
           // Location details to be processed as project_lines
           location_details: data.location_details || [],
         };
 
-        console.log("1. Updating core project data:", projectUpdateData);
-        console.log("🔍 Key fields being sent:", {
+        devLog("1. Prepared core project data:", projectUpdateData);
+        devLog("🔍 Key fields being sent:", {
           inc_year: projectUpdateData.inc_year,
           na853: projectUpdateData.na853,
           project_title: projectUpdateData.project_title,
         });
-        try {
-          const projectResponse = await apiRequest(`/api/projects/${projectId}`, {
-            method: "PATCH",
-            body: JSON.stringify(projectUpdateData),
+        const parsedMis = parseInt(data.project_details.mis);
+        const projectCreateData: Record<string, any> = {
+          mis: Number.isFinite(parsedMis) ? parsedMis : 0,
+          project_title: projectUpdateData.project_title,
+          event_description: projectUpdateData.event_description,
+          summary: projectUpdateData.summary,
+          inc_year: projectUpdateData.inc_year,
+          updates: projectUpdateData.updates,
+          na853: projectUpdateData.na853,
+          na271: projectUpdateData.na271,
+          e069: projectUpdateData.e069,
+          event_type: projectUpdateData.event_type,
+          event_year: projectUpdateData.event_year,
+          status: projectUpdateData.status,
+          budget_e069: projectUpdateData.budget_e069,
+          budget_na271: projectUpdateData.budget_na271,
+          budget_na853: projectUpdateData.budget_na853,
+        };
+
+        if (isCreateMode) {
+          devLog("1a. Creating new project:", projectCreateData);
+          createdProject = await apiRequest("/api/projects", {
+            method: "POST",
+            body: JSON.stringify(projectCreateData),
           });
-          completedOperations.projectUpdate = true;
-          console.log("✓ Project update successful:", projectResponse);
-        } catch (error) {
-          console.error("✗ Project update failed:", error);
-          throw new Error(
-            `Failed to update project data: ${error.message || error}`,
-          );
+          activeProjectId = createdProject?.id;
+          if (!activeProjectId) {
+            throw new Error("Project creation did not return an id");
+          }
+          devLog("Project creation successful:", createdProject);
         }
 
+        if (!activeProjectId) {
+          throw new Error("Project id is required to continue");
+        }
+
+        const decisionsToProcess = isCreateMode
+          ? data.decisions.filter((decision) =>
+              (decision.protocol_number || "").trim(),
+            )
+          : data.decisions;
         // 2. Handle project decisions using individual CRUD endpoints
-        if (data.decisions && data.decisions.length > 0) {
-          console.log("2. Processing project decisions:", data.decisions);
+        if (decisionsToProcess && decisionsToProcess.length > 0) {
+          devLog("2. Processing project decisions:", decisionsToProcess);
 
           // Get existing decisions to compare
           let existingDecisions: any[] = [];
           try {
             existingDecisions = (await apiRequest(
-              `/api/projects/${projectId}/decisions`,
+              `/api/projects/${activeProjectId}/decisions`,
             )) as any[];
           } catch (error) {
             console.warn("Could not fetch existing decisions:", error);
             existingDecisions = [];
           }
 
+          const existingDecisionById = new Map<number, any>();
+          existingDecisions.forEach((decision) => {
+            if (decision?.id !== undefined && decision?.id !== null) {
+              existingDecisionById.set(decision.id, decision);
+            }
+          });
+
+          const currentDecisionIds = new Set<number>();
+          decisionsToProcess.forEach((decision) => {
+            if (decision?.id !== undefined && decision?.id !== null) {
+              currentDecisionIds.add(decision.id);
+            }
+          });
+
           // Process each decision
-          for (let i = 0; i < data.decisions.length; i++) {
-            const decision = data.decisions[i];
-            const existingDecision = existingDecisions[i];
+          for (let i = 0; i < decisionsToProcess.length; i++) {
+            const decision = decisionsToProcess[i];
+            const decisionId = decision?.id;
+            const existingDecision =
+              decisionId !== undefined && decisionId !== null
+                ? existingDecisionById.get(decisionId)
+                : undefined;
 
             // Use implementing_agency IDs directly (already converted in form)
             const implementing_agency_ids = Array.isArray(
@@ -1298,12 +1327,12 @@ export default function ComprehensiveEditFixed() {
             try {
               if (existingDecision) {
                 // Update existing decision
-                console.log(
+                devLog(
                   `Updating decision ${existingDecision.id}:`,
                   decisionData,
                 );
                 await apiRequest(
-                  `/api/projects/${projectId}/decisions/${existingDecision.id}`,
+                  `/api/projects/${activeProjectId}/decisions/${existingDecision.id}`,
                   {
                     method: "PATCH",
                     body: JSON.stringify(decisionData),
@@ -1311,69 +1340,97 @@ export default function ComprehensiveEditFixed() {
                 );
               } else {
                 // Create new decision
-                console.log(`Creating new decision:`, decisionData);
-                await apiRequest(`/api/projects/${projectId}/decisions`, {
+                devLog(`Creating new decision:`, decisionData);
+                await apiRequest(`/api/projects/${activeProjectId}/decisions`, {
                   method: "POST",
                   body: JSON.stringify(decisionData),
                 });
               }
             } catch (error) {
               console.error(`Error processing decision ${i}:`, error);
-              throw error;
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              throw new Error(
+                `Failed to update decision ${i + 1}: ${errorMessage}`,
+              );
             }
           }
 
-          // Delete any extra existing decisions
-          if (existingDecisions.length > data.decisions.length) {
-            for (
-              let i = data.decisions.length;
-              i < existingDecisions.length;
-              i++
-            ) {
-              try {
-                console.log(
-                  `Deleting excess decision ${existingDecisions[i].id}`,
-                );
-                await apiRequest(
-                  `/api/projects/${projectId}/decisions/${existingDecisions[i].id}`,
-                  {
-                    method: "DELETE",
-                  },
-                );
-              } catch (error) {
-                console.error(
-                  `Error deleting decision ${existingDecisions[i].id}:`,
-                  error,
-                );
+          if (!isCreateMode) {
+            // Delete decisions removed from the form
+            for (const existingDecision of existingDecisions) {
+              if (
+                existingDecision?.id !== undefined &&
+                existingDecision?.id !== null &&
+                !currentDecisionIds.has(existingDecision.id)
+              ) {
+                try {
+                  devLog(`Deleting removed decision ${existingDecision.id}`);
+                  await apiRequest(
+                    `/api/projects/${activeProjectId}/decisions/${existingDecision.id}`,
+                    {
+                      method: "DELETE",
+                    },
+                  );
+                } catch (error) {
+                  console.error(
+                    `Error deleting decision ${existingDecision.id}:`,
+                    error,
+                  );
+                }
               }
             }
           }
 
-          console.log("✓ Decisions processing completed");
+          devLog("✓ Decisions processing completed");
         }
 
+        const formulationsToProcess = isCreateMode
+          ? data.formulation_details.filter((formulation) =>
+              (formulation.enumeration_code || "").trim(),
+            )
+          : data.formulation_details;
+
         // 3. Handle project formulations using individual CRUD endpoints
-        if (data.formulation_details && data.formulation_details.length > 0) {
-          console.log(
+        if (formulationsToProcess && formulationsToProcess.length > 0) {
+          devLog(
             "3. Processing project formulations:",
-            data.formulation_details,
+            formulationsToProcess,
           );
 
           // Get existing formulations to compare
-          let existingFormulations = [];
+          let existingFormulations: any[] = [];
           try {
-            existingFormulations = await apiRequest(
-              `/api/projects/${projectId}/formulations`,
-            );
+            existingFormulations = (await apiRequest(
+              `/api/projects/${activeProjectId}/formulations`,
+            )) as any[];
           } catch (error) {
             console.warn("Could not fetch existing formulations:", error);
             existingFormulations = [];
           }
 
+          const existingFormulationById = new Map<number, any>();
+          existingFormulations.forEach((formulation) => {
+            if (formulation?.id !== undefined && formulation?.id !== null) {
+              existingFormulationById.set(formulation.id, formulation);
+            }
+          });
+
+          const currentFormulationIds = new Set<number>();
+          formulationsToProcess.forEach((formulation) => {
+            if (formulation?.id !== undefined && formulation?.id !== null) {
+              currentFormulationIds.add(formulation.id);
+            }
+          });
+
           // Process each formulation
-          for (let i = 0; i < data.formulation_details.length; i++) {
-            const formulation = data.formulation_details[i];
-            const existingFormulation = existingFormulations[i];
+          for (let i = 0; i < formulationsToProcess.length; i++) {
+            const formulation = formulationsToProcess[i];
+            const formulationId = formulation?.id;
+            const existingFormulation =
+              formulationId !== undefined && formulationId !== null
+                ? existingFormulationById.get(formulationId)
+                : undefined;
 
 
             const formulationData = {
@@ -1398,20 +1455,20 @@ export default function ComprehensiveEditFixed() {
                   })) || []
                 }))
               },
-              decision_status: formulation.decision_status,
-              change_type: formulation.change_type,
+      decision_status: "Ενεργή",
+      change_type: "Έγκριση",
               comments: formulation.comments,
             };
 
             try {
               if (existingFormulation) {
                 // Update existing formulation
-                console.log(
+                devLog(
                   `Updating formulation ${existingFormulation.id}:`,
                   formulationData,
                 );
                 await apiRequest(
-                  `/api/projects/${projectId}/formulations/${existingFormulation.id}`,
+                  `/api/projects/${activeProjectId}/formulations/${existingFormulation.id}`,
                   {
                     method: "PATCH",
                     body: JSON.stringify(formulationData),
@@ -1419,8 +1476,8 @@ export default function ComprehensiveEditFixed() {
                 );
               } else {
                 // Create new formulation
-                console.log(`Creating new formulation:`, formulationData);
-                await apiRequest(`/api/projects/${projectId}/formulations`, {
+                devLog(`Creating new formulation:`, formulationData);
+                await apiRequest(`/api/projects/${activeProjectId}/formulations`, {
                   method: "POST",
                   body: JSON.stringify(formulationData),
                 });
@@ -1429,10 +1486,12 @@ export default function ComprehensiveEditFixed() {
               console.error(`Error processing formulation ${i}:`, error);
 
               // Provide more specific error information for database constraints
+              const rawErrorMessage =
+                error instanceof Error ? error.message : String(error);
               let errorMessage = `Error processing formulation ${i}`;
               if (
-                error.message &&
-                error.message.includes("numeric field overflow")
+                rawErrorMessage &&
+                rawErrorMessage.includes("numeric field overflow")
               ) {
                 errorMessage = `Formulation ${i}: Το ποσό υπερβαίνει το μέγιστο επιτρεπτό όριο (9.999.999.999,99 €)`;
               }
@@ -1441,48 +1500,48 @@ export default function ComprehensiveEditFixed() {
             }
           }
 
-          // Delete any extra existing formulations
-          if (existingFormulations.length > data.formulation_details.length) {
-            for (
-              let i = data.formulation_details.length;
-              i < existingFormulations.length;
-              i++
-            ) {
-              try {
-                console.log(
-                  `Deleting excess formulation ${existingFormulations[i].id}`,
-                );
-                await apiRequest(
-                  `/api/projects/${projectId}/formulations/${existingFormulations[i].id}`,
-                  {
-                    method: "DELETE",
-                  },
-                );
-              } catch (error) {
-                console.error(
-                  `Error deleting formulation ${existingFormulations[i].id}:`,
-                  error,
-                );
+          if (!isCreateMode) {
+            // Delete formulations removed from the form
+            for (const existingFormulation of existingFormulations) {
+              if (
+                existingFormulation?.id !== undefined &&
+                existingFormulation?.id !== null &&
+                !currentFormulationIds.has(existingFormulation.id)
+              ) {
+                try {
+                  devLog(`Deleting removed formulation ${existingFormulation.id}`);
+                  await apiRequest(
+                    `/api/projects/${activeProjectId}/formulations/${existingFormulation.id}`,
+                    {
+                      method: "DELETE",
+                    },
+                  );
+                } catch (error) {
+                  console.error(
+                    `Error deleting formulation ${existingFormulation.id}:`,
+                    error,
+                  );
+                }
               }
             }
           }
 
-          console.log("✓ Formulations processing completed");
+          devLog("✓ Formulations processing completed");
         }
 
         // 4. Record changes in project history if provided
         if (data.changes && data.changes.length > 0) {
-          console.log("4. Recording project changes:", data.changes);
+          devLog("4. Recording project changes:", data.changes);
 
           for (const change of data.changes) {
             if (change.description && change.description.trim()) {
               try {
-                console.log("Recording change:", change.description);
-                await apiRequest(`/api/projects/${projectId}/changes`, {
+                devLog("Recording change:", change.description);
+                await apiRequest(`/api/projects/${activeProjectId}/changes`, {
                   method: "POST",
                   body: JSON.stringify({
                     description: change.description,
-                    change_type: "UPDATE",
+      change_type: "Έγκριση",
                   }),
                 });
               } catch (error) {
@@ -1492,13 +1551,13 @@ export default function ComprehensiveEditFixed() {
             }
           }
 
-          console.log("✓ Changes recording completed");
+          devLog("✓ Changes recording completed");
         }
 
         // 5. Process location details and include project_lines in the main update
         if (data.location_details && data.location_details.length > 0) {
-          console.log("5. Processing location details:", data.location_details);
-          console.log(
+          devLog("5. Processing location details:", data.location_details);
+          devLog(
             "5a. Form location_details structure:",
             JSON.stringify(data.location_details, null, 2),
           );
@@ -1567,13 +1626,18 @@ export default function ComprehensiveEditFixed() {
                 try {
                   // Convert to normalized format for the calculation function
                   const normalizedRegionObj = {
-                    region: regionObj.perifereia,
-                    regional_unit: regionObj.perifereiaki_enotita, 
-                    municipality: regionObj.dimos
+                    region: regionObj.perifereia || undefined,
+                    regional_unit: regionObj.perifereiaki_enotita || undefined,
+                    municipality: regionObj.dimos || undefined
                   };
                   
                   // Use normalized geographic data for calculation
-                  const normalizedData = buildNormalizedGeographicData(geographicData);
+                  const normalizedData = buildNormalizedGeographicData(
+                    normalizedRegionObj,
+                    geographicData.regions,
+                    geographicData.regionalUnits,
+                    geographicData.municipalities
+                  );
                   
                   // Determine the appropriate level based on what data is actually populated
                   const forceLevel =
@@ -1589,7 +1653,7 @@ export default function ComprehensiveEditFixed() {
                     forceLevel,
                   );
 
-                  console.log("Normalized Geographic Code Calculation:", {
+                  devLog("Normalized Geographic Code Calculation:", {
                     perifereia: regionObj.perifereia,
                     perifereiaki_enotita: regionObj.perifereiaki_enotita,
                     dimos: regionObj.dimos,
@@ -1624,7 +1688,7 @@ export default function ComprehensiveEditFixed() {
           }
 
           if (projectLines.length > 0) {
-            console.log(
+            devLog(
               "Including project_lines in main project update:",
               projectLines,
             );
@@ -1634,28 +1698,33 @@ export default function ComprehensiveEditFixed() {
         }
 
         // 6. Update the project with all data including project_lines in a single call
-        console.log(
+        devLog(
           "6. Final project update with all data:",
           projectUpdateData,
         );
         try {
           const finalProjectResponse = await apiRequest(
-            `/api/projects/${projectId}`,
+            `/api/projects/${activeProjectId}`,
             {
               method: "PATCH",
               body: JSON.stringify(projectUpdateData),
             },
           );
-          console.log(
+          completedOperations.projectUpdate = true;
+          devLog(
             "✓ Final project update successful:",
             finalProjectResponse,
           );
         } catch (error) {
           console.error("✗ Final project update failed:", error);
-          throw error;
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          throw new Error(
+            `Failed to update project data: ${errorMessage}`,
+          );
         }
 
-        return { success: true };
+        return isCreateMode ? createdProject : { success: true };
       } catch (error) {
         console.error("=== COMPREHENSIVE FORM SUBMISSION ERROR ===");
         console.error("Error details:", error);
@@ -1684,10 +1753,25 @@ export default function ComprehensiveEditFixed() {
         throw enhancedError;
       }
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (isCreateMode) {
+        toast({
+          title: "Success",
+          description: "Project created successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+        const createdId = result?.id ?? result?.mis;
+        if (createdId) {
+          navigate(`/projects/${createdId}/edit`);
+        } else {
+          navigate("/projects");
+        }
+        return;
+      }
+
       toast({
-        title: "Επιτυχία",
-        description: "Όλα τα στοιχεία του έργου ενημερώθηκαν επιτυχώς",
+        title: "Success",
+        description: "Changes saved successfully.",
       });
 
       // Invalidate all relevant queries to refresh data
@@ -1710,8 +1794,8 @@ export default function ComprehensiveEditFixed() {
 
       // Stay on the edit page to show updated data
       // Data will refresh automatically due to query invalidation
-      console.log(
-        "✅ Save successful - staying on edit page with refreshed data",
+      devLog(
+        "Save successful - staying on edit page with refreshed data",
       );
     },
     onError: (error) => {
@@ -1725,8 +1809,55 @@ export default function ComprehensiveEditFixed() {
     },
   });
 
+  // Queue a confirmation modal before persisting edits to existing locations.
+  const requestPersistedLocationConfirm = (data: ComprehensiveFormData) => {
+    if (typeof document === "undefined") {
+      if (typeof window !== "undefined" && typeof window.confirm === "function") {
+        if (window.confirm(persistedLocationConfirmMessage)) {
+          mutation.mutate(data);
+        }
+      }
+      return;
+    }
+
+    setPendingPersistedLocationSubmit(data);
+    setPersistedLocationConfirmOpen(true);
+  };
+
+  // Confirm and continue with the pending persisted-location submit.
+  const handlePersistedLocationConfirm = () => {
+    if (pendingPersistedLocationSubmit) {
+      mutation.mutate(pendingPersistedLocationSubmit);
+    }
+    setPendingPersistedLocationSubmit(null);
+    setPersistedLocationConfirmOpen(false);
+  };
+
+  // Cancel the pending persisted-location submit.
+  const handlePersistedLocationCancel = () => {
+    setPendingPersistedLocationSubmit(null);
+    setPersistedLocationConfirmOpen(false);
+  };
+
+  // Submit with a persisted-location change confirmation when needed.
+  const handleSubmitWithPersistedLocationConfirm = form.handleSubmit((data) => {
+    const locations = data.location_details || [];
+    if (
+      isEditMode &&
+      hasPersistedLocationChanges(locations, initialLocationSnapshotRef.current)
+    ) {
+      requestPersistedLocationConfirm(data);
+      return;
+    }
+    mutation.mutate(data);
+  });
+
   // Helper function to consolidate location details processing
   const getLocationDetailsFromData = () => {
+    const units = typedUnitsData || [];
+    const eventTypes = typedEventTypesData || [];
+    const expenditureTypes = typedExpenditureTypesData || [];
+
     if (
       projectIndexData &&
       Array.isArray(projectIndexData) &&
@@ -1739,11 +1870,11 @@ export default function ComprehensiveEditFixed() {
 
       // Group by implementing agency and event type
       projectIndexData.forEach((indexItem) => {
-        const unit = typedUnitsData.find((u) => u.id === indexItem.monada_id);
-        const eventType = typedEventTypesData.find(
+        const unit = units.find((u) => u.id === indexItem.monada_id);
+        const eventType = eventTypes.find(
           (et) => et.id === indexItem.event_types_id,
         );
-        const expenditureType = typedExpenditureTypesData.find(
+        const expenditureType = expenditureTypes.find(
           (et) => et.id === indexItem.expenditure_type_id,
         );
 
@@ -1759,7 +1890,8 @@ export default function ComprehensiveEditFixed() {
           const implementingAgencyName =
             unit?.unit_name?.name || unit?.name || unit?.unit || "";
 
-          let locationDetail = {
+          const locationDetail = {
+            project_index_id: indexItem.id ?? null,
             implementing_agency: implementingAgencyName,
             for_yl_id: indexItem.for_yl_id || null, // Include for_yl_id from project_index
             event_type: eventType?.name || "",
@@ -1771,6 +1903,14 @@ export default function ComprehensiveEditFixed() {
         } else if (indexItem.for_yl_id && !locationDetailsMap.get(key).for_yl_id) {
           // Update for_yl_id if this index item has one and the existing entry doesn't
           locationDetailsMap.get(key).for_yl_id = indexItem.for_yl_id;
+        }
+        if (
+          indexItem.id !== undefined &&
+          indexItem.id !== null &&
+          (locationDetailsMap.get(key).project_index_id === undefined ||
+            locationDetailsMap.get(key).project_index_id === null)
+        ) {
+          locationDetailsMap.get(key).project_index_id = indexItem.id;
         }
 
         const locationDetail = locationDetailsMap.get(key);
@@ -1786,7 +1926,7 @@ export default function ComprehensiveEditFixed() {
       if (projectGeographicData) {
         const { regions, regionalUnits, municipalities } = projectGeographicData;
         
-        console.log('DEBUG: Processing geographic data with project_index_id mapping:', {
+        devLog('DEBUG: Processing geographic data with project_index_id mapping:', {
           regionsCount: regions?.length || 0,
           regionalUnitsCount: regionalUnits?.length || 0,
           municipalitiesCount: municipalities?.length || 0,
@@ -1870,7 +2010,7 @@ export default function ComprehensiveEditFixed() {
           }
         });
         
-        console.log('DEBUG: Geographic areas by location after processing:', 
+        devLog('DEBUG: Geographic areas by location after processing:', 
           Object.fromEntries(
             Array.from(geographicAreasByLocation.entries()).map(([k, v]) => [k, Array.from(v)])
           )
@@ -1882,7 +2022,7 @@ export default function ComprehensiveEditFixed() {
         ? locationDetailsArray
         : [
             {
-              implementing_agency: typedProjectData.enhanced_unit?.name || "",
+              implementing_agency: typedProjectData?.enhanced_unit?.name || "",
               event_type: "",
               expenditure_types: [],
               geographic_areas: [],
@@ -1891,31 +2031,24 @@ export default function ComprehensiveEditFixed() {
     }
 
     // Default location detail if no project index data
-    console.log(
+    devLog(
       "DEBUG - Creating fallback location entry for project without project_index data",
     );
 
     // Try to get implementing agency from various sources
     const implementingAgency =
-      typedProjectData.enhanced_unit?.name ||
-      typedProjectData.enhanced_unit?.unit ||
-      (typedUnitsData && typedUnitsData.length > 0
-        ? typedUnitsData[0].unit
-        : "") ||
+      typedProjectData?.enhanced_unit?.name ||
+      typedProjectData?.enhanced_unit?.unit ||
+      (units.length > 0 ? units[0].unit : "") ||
       "ΔΑΕΦΚ-ΚΕ";
 
     return [
       {
         implementing_agency: implementingAgency,
+        for_yl_id: null,
         event_type: "",
         expenditure_types: [],
-        regions: [
-          {
-            region: "",
-            regional_unit: "",
-            municipality: "",
-          },
-        ],
+        geographic_areas: [],
       },
     ];
   };
@@ -1929,8 +2062,8 @@ export default function ComprehensiveEditFixed() {
       typedExpenditureTypesData &&
       !hasInitialized.current
     ) {
-      console.log("🚀 INITIALIZING FORM with project data:", typedProjectData);
-      console.log("Project index data:", projectIndexData);
+      devLog("🚀 INITIALIZING FORM with project data:", typedProjectData);
+      devLog("Project index data:", projectIndexData);
 
       // Set initialization flag to prevent field clearing during setup
       isInitializingRef.current = true;
@@ -1939,7 +2072,8 @@ export default function ComprehensiveEditFixed() {
 
       const decisions =
         decisionsData && decisionsData.length > 0
-          ? decisionsData.map((decision) => ({
+          ? decisionsData.map((decision: any) => ({
+              id: decision.id ?? undefined,
               protocol_number: decision.protocol_number || "",
               fek: normalizeFekData(decision.fek),
               ada: decision.ada || "",
@@ -1959,6 +2093,7 @@ export default function ComprehensiveEditFixed() {
             }))
           : [
               {
+                id: undefined,
                 protocol_number: "",
                 fek: { year: "", issue: "", number: "" },
                 ada: "",
@@ -1972,12 +2107,12 @@ export default function ComprehensiveEditFixed() {
               },
             ];
 
-      console.log("DEBUG - Final decisions array:", decisions);
+      devLog("DEBUG - Final decisions array:", decisions);
 
       // Populate formulation details from database or create default from project data
       const formulations =
         formulationsData && formulationsData.length > 0
-          ? formulationsData.map((formulation) => {
+          ? formulationsData.map((formulation: any) => {
               // Convert connected_decision_ids from database to form format
               let connectedDecisions: number[] = [];
               if (
@@ -1986,14 +2121,14 @@ export default function ComprehensiveEditFixed() {
                 decisionsData
               ) {
                 // FIX: More robust mapping with error handling
-                console.log(
+                devLog(
                   `[ConnectedDecisions] Processing for formulation ${formulation.sa_type}:`,
                   {
                     connected_decision_ids: formulation.connected_decision_ids,
                     decisionsData_available: !!decisionsData,
                     decisionsData_length: decisionsData?.length || 0,
                     available_decision_ids:
-                      decisionsData?.map((d) => d.id) || [],
+                    decisionsData?.map((d: any) => d.id) || [],
                   },
                 );
 
@@ -2003,7 +2138,7 @@ export default function ComprehensiveEditFixed() {
                       const decisionIndex = decisionsData.findIndex(
                         (d: any) => d.id === decisionId,
                       );
-                      console.log(
+                      devLog(
                         `[ConnectedDecisions] Mapping ID ${decisionId} to index ${decisionIndex}`,
                       );
                       // Only return valid indices (>= 0)
@@ -2021,7 +2156,7 @@ export default function ComprehensiveEditFixed() {
                 }
               }
 
-              console.log(
+              devLog(
                 `[FormulationInit] Formulation ${formulation.sa_type}:`,
                 {
                   connected_decision_ids: formulation.connected_decision_ids,
@@ -2032,15 +2167,17 @@ export default function ComprehensiveEditFixed() {
               );
 
               return {
+                id: formulation.id ?? undefined,
                 sa: formulation.sa_type || ("ΝΑ853" as const),
                 enumeration_code: formulation.enumeration_code || "",
                 decision_year: String(
                   formulation.decision_year || formulation.year || "",
                 ),
-                decision_status:
+                decision_status: (
                   formulation.decision_status ||
                   formulation.status ||
-                  ("Ενεργή" as const),
+                  ("Ενεργή" as const)
+                ),
                 change_type: formulation.change_type || ("Έγκριση" as const),
                 comments: formulation.comments || "",
                 budget_versions: {
@@ -2149,7 +2286,11 @@ export default function ComprehensiveEditFixed() {
             ];
 
       // Use reset to properly initialize all form values
-      console.log("🔥 RESETTING FORM WITH DECISIONS:", decisions);
+      devLog("🔥 RESETTING FORM WITH DECISIONS:", decisions);
+
+      const locationDetailsArray = getLocationDetailsFromData();
+      initialLocationSnapshotRef.current =
+        buildPersistedLocationSnapshot(locationDetailsArray);
 
       const formData = {
         decisions,
@@ -2170,21 +2311,21 @@ export default function ComprehensiveEditFixed() {
           project_status: typedProjectData.status || "Ενεργό",
         },
         formulation_details: formulations,
-        location_details: getLocationDetailsFromData(),
+        location_details: locationDetailsArray,
         previous_entries: [],
         changes: Array.isArray(typedProjectData.updates) && typedProjectData.updates.length > 0 
           ? typedProjectData.updates 
           : [{ 
               timestamp: new Date().toISOString().slice(0, 16),
               user_name: "",
-              change_type: "Other",
+      change_type: "Έγκριση",
               description: "",
               notes: ""
             }],
       };
 
       // Set each field individually to force component updates
-      console.log("🔥 SETTING FORM VALUES INDIVIDUALLY:");
+      devLog("🔥 SETTING FORM VALUES INDIVIDUALLY:");
       form.setValue("decisions", formData.decisions, {
         shouldValidate: true,
         shouldDirty: true,
@@ -2223,54 +2364,111 @@ export default function ComprehensiveEditFixed() {
       // Verify the values were set
       setTimeout(() => {
         const currentProjectDetails = form.getValues("project_details");
-        console.log("🔍 PROJECT DETAILS AFTER SET:", currentProjectDetails);
+        devLog("🔍 PROJECT DETAILS AFTER SET:", currentProjectDetails);
       }, 100);
 
       // Populate location details using consolidated function
-      const locationDetailsArray = getLocationDetailsFromData();
-
-      console.log("🔥 SETTING LOCATION DETAILS:", locationDetailsArray);
+      devLog("🔥 SETTING LOCATION DETAILS:", locationDetailsArray);
       form.setValue("location_details", locationDetailsArray);
-      console.log(
+      devLog(
         "🔍 FORM location_details AFTER SET:",
         form.getValues("location_details"),
       );
 
-      form.setValue("changes", []);
       hasInitialized.current = true;
-      setInitializationTime(Date.now());
 
       // Clear initialization flag after a delay to allow form to settle
       setTimeout(() => {
         isInitializingRef.current = false;
-        console.log(
+        devLog(
           "Form initialization complete - field clearing protection disabled",
         );
       }, 3000);
     }
   }, [
-    id,
+    decisionsData,
+    devLog,
+    form,
+    formulationsData,
+    getLocationDetailsFromData,
+    projectId,
+    projectIndexData,
+    typedExpenditureTypesData,
     typedProjectData,
     typedUnitsData,
-    typedExpenditureTypesData,
   ]);
 
-  // PERFORMANCE: Only block on essential project data, allow progressive loading for reference data
+  // PERFORMANCE: Only block on essential project data; allow reference data to stream in
   const isLoading = isEssentialDataLoading;
-  const isDataReady =
-    typedProjectData &&
-    (typedEventTypesData || referenceData?.eventTypes) &&
-    (typedUnitsData || referenceData?.units) &&
-    (typedExpenditureTypesData || referenceData?.expenditureTypes);
+  const hasReferenceData =
+    (typedEventTypesData?.length || 0) > 0 &&
+    (typedUnitsData?.length || 0) > 0 &&
+    (typedExpenditureTypesData?.length || 0) > 0;
   
-  // Data readiness check
-  const hasNormalizedGeographicData = !!geographicData;
-
   // Convert geographic data to kallikratis format for SmartGeographicMultiSelect
   const kallikratisData = useMemo(() => {
     if (!geographicData) return [];
     return convertGeographicDataToKallikratis(geographicData);
   }, [geographicData]);
+
+  const tabLabels = useMemo(
+    () => ["project", "event-location", "formulation", "decisions", "subprojects", "changes"],
+    [],
+  );
+  const projectDetails = form.watch("project_details");
+  const eventDetails = form.watch("event_details");
+  const locationDetails = form.watch("location_details");
+  const formulationDetails = form.watch("formulation_details");
+  const decisions = form.watch("decisions");
+  const changes = form.watch("changes");
+  const projectMisDisplay = projectDetails?.mis || typedProjectData?.mis || "-";
+  const projectStatusDisplay =
+    projectDetails?.project_status || typedProjectData?.status || "-";
+
+  const completionByTab = useMemo(() => {
+    const projectComplete =
+      !!projectDetails?.project_title?.trim() &&
+      !!projectDetails?.project_description?.trim() &&
+      !!projectDetails?.sa?.trim();
+    const eventComplete =
+      !!eventDetails?.event_name?.trim() &&
+      !!String(eventDetails?.event_year || "").trim();
+    const locationComplete = (locationDetails?.length || 0) > 0;
+    const formulationComplete =
+      (formulationDetails?.length || 0) > 0 &&
+      formulationDetails.every((f) => (f?.sa || "").trim() && (f?.enumeration_code || "").trim());
+    const decisionsComplete = (decisions?.length || 0) > 0;
+    const changesComplete = (changes?.length || 0) > 0;
+
+    return {
+      project: projectComplete,
+      "event-location": eventComplete && locationComplete,
+      formulation: formulationComplete,
+      decisions: decisionsComplete,
+      subprojects: true,
+      changes: changesComplete,
+    };
+  }, [projectDetails, eventDetails, locationDetails, formulationDetails, decisions, changes]);
+
+  const currentTabIndex = tabLabels.indexOf(currentTab);
+  const completedTabs = Object.values(completionByTab).filter(Boolean).length;
+  const progressPercent = Math.max(
+    ((currentTabIndex + 1) / tabLabels.length) * 100,
+    (completedTabs / tabLabels.length) * 100,
+  );
+
+  const goToTab = useCallback(
+    (direction: "next" | "prev") => {
+      const nextIndex =
+        direction === "next"
+          ? Math.min(currentTabIndex + 1, tabLabels.length - 1)
+          : Math.max(currentTabIndex - 1, 0);
+      if (nextIndex !== currentTabIndex) {
+        setCurrentTab(tabLabels[nextIndex]);
+      }
+    },
+    [currentTabIndex, tabLabels],
+  );
 
   if (completeDataError) {
     return (
@@ -2332,39 +2530,27 @@ export default function ComprehensiveEditFixed() {
     );
   }
 
-  if (!isDataReady) {
-    return (
-      <div className="container mx-auto p-6">
-        Αναμονή για φόρτωση δεδομένων...
-      </div>
-    );
-  }
-
   // Debug all fetched data
-  console.log("DEBUG - Units data:", typedUnitsData?.length, "units total");
-  console.log("DEBUG - Raw unitsData:", unitsData);
-  console.log("DEBUG - referenceData?.units:", referenceData?.units?.length);
-  console.log("DEBUG - completeProjectData?.units:", completeProjectData?.units?.length);
-  console.log(
+  devLog("DEBUG - Units data:", typedUnitsData?.length, "units total");
+  devLog("DEBUG - Raw unitsData:", unitsData);
+  devLog("DEBUG - referenceData?.units:", referenceData?.units?.length);
+  devLog("DEBUG - completeProjectData?.units:", completeProjectData?.units?.length);
+  devLog(
     "DEBUG - All units:",
     typedUnitsData?.map((u) => `${u.id}: ${u.unit}`),
   );
-  console.log(
+  devLog(
     "DEBUG - Event types data:",
     typedEventTypesData?.length || 0,
     "total items",
     typedEventTypesData?.slice(0, 3),
   );
-  console.log(
+  devLog(
     "DEBUG - Expenditure types data:",
     typedExpenditureTypesData?.length || 0,
     "total items",
     typedExpenditureTypesData?.slice(0, 3),
   );
-
-  const tabLabels = ["project", "event-location", "formulation", "decisions", "subprojects", "changes"];
-  const currentTabIndex = tabLabels.indexOf(currentTab);
-  const progressPercent = ((currentTabIndex + 1) / tabLabels.length) * 100;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2377,13 +2563,13 @@ export default function ComprehensiveEditFixed() {
                 Επεξεργασία Έργου
               </h1>
               <p className="text-gray-600 text-sm truncate">
-                {typedProjectData?.project_title}
+                {projectDetails?.project_title || typedProjectData?.project_title}
               </p>
             </div>
             {mutation.isPending && (
               <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-2 rounded-md flex-shrink-0">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span className="text-sm font-medium whitespace-nowrap">Αποθήκευση...</span>
+                <span className="text-sm font-medium whitespace-nowrap">{isCreateMode ? "Creating..." : "Saving..."}</span>
               </div>
             )}
           </div>
@@ -2391,11 +2577,11 @@ export default function ComprehensiveEditFixed() {
           <div className="flex items-center gap-4 text-gray-600 mb-4 text-sm">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 flex-shrink-0" />
-              <span className="font-medium">MIS: {typedProjectData?.mis}</span>
+              <span className="font-medium">MIS: {projectMisDisplay}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
-              <span>{typedProjectData?.status || "Ενεργό"}</span>
+              <span>{projectStatusDisplay}</span>
             </div>
             <div className="text-xs text-gray-500">
               Βήμα {currentTabIndex + 1} από 6
@@ -2412,16 +2598,57 @@ export default function ComprehensiveEditFixed() {
             </div>
           </div>
 
+          {!hasReferenceData && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-md p-3 mb-3">
+              <RefreshCw className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">Τα βοηθητικά δεδομένα φορτώνουν ακόμη</p>
+                <p className="text-amber-700">
+                  Μπορείτε να συνεχίσετε την επεξεργασία· οι λίστες θα συμπληρωθούν μόλις είναι διαθέσιμες.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            <div className="text-xs text-gray-600">
+              Ολοκληρωμένα {completedTabs}/{tabLabels.length} τμήματα
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => goToTab("prev")}
+                disabled={currentTabIndex <= 0 || mutation.isPending}
+              >
+                Προηγούμενο
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => goToTab("next")}
+                disabled={currentTabIndex >= tabLabels.length - 1 || mutation.isPending}
+              >
+                Επόμενο
+              </Button>
+            </div>
+          </div>
+
           <div className="flex gap-2 flex-wrap">
             <Button
               variant="outline"
-              onClick={() => navigate(`/projects/${id}`)}
+              onClick={() =>
+                navigate(isEditMode && mis ? `/projects/${mis}` : "/projects")
+              }
               disabled={mutation.isPending}
             >
               Επιστροφή
             </Button>
             <Button
-              onClick={form.handleSubmit((data) => mutation.mutate(data))}
+              type="submit"
+              form="comprehensive-edit-form"
               disabled={mutation.isPending}
               className="bg-blue-600 hover:bg-blue-700 ml-auto"
               size="lg"
@@ -2429,12 +2656,12 @@ export default function ComprehensiveEditFixed() {
               {mutation.isPending ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Αποθήκευση...
+                  {isCreateMode ? "Creating..." : "Saving..."}
                 </>
               ) : (
                 <>
                   <Save className="h-4 w-4 mr-2" />
-                  Αποθήκευση Αλλαγών
+                  {isCreateMode ? "Create Project" : "Save Changes"}
                 </>
               )}
             </Button>
@@ -2443,7 +2670,8 @@ export default function ComprehensiveEditFixed() {
 
         <Form key={formKey} {...form}>
           <form
-            onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+            id="comprehensive-edit-form"
+            onSubmit={handleSubmitWithPersistedLocationConfirm}
             className="space-y-6"
           >
             <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-6">
@@ -2453,7 +2681,9 @@ export default function ComprehensiveEditFixed() {
                     value="project"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle
+                      className={`h-4 w-4 ${completionByTab["project"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Στοιχεία Έργου</span>
                     <span className="sm:hidden">Έργο</span>
                   </TabsTrigger>
@@ -2461,7 +2691,9 @@ export default function ComprehensiveEditFixed() {
                     value="event-location"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <Building2 className="h-4 w-4" />
+                    <Building2
+                      className={`h-4 w-4 ${completionByTab["event-location"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Γεγονός & Τοποθεσία</span>
                     <span className="sm:hidden">Θέση</span>
                   </TabsTrigger>
@@ -2469,7 +2701,9 @@ export default function ComprehensiveEditFixed() {
                     value="formulation"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <FileText className="h-4 w-4" />
+                    <FileText
+                      className={`h-4 w-4 ${completionByTab["formulation"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Διατύπωση</span>
                     <span className="sm:hidden">Διατ.</span>
                   </TabsTrigger>
@@ -2477,7 +2711,9 @@ export default function ComprehensiveEditFixed() {
                     value="decisions"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <FileText className="h-4 w-4" />
+                    <FileText
+                      className={`h-4 w-4 ${completionByTab["decisions"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Αποφάσεις</span>
                     <span className="sm:hidden">Απ.</span>
                   </TabsTrigger>
@@ -2485,7 +2721,9 @@ export default function ComprehensiveEditFixed() {
                     value="subprojects"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <FolderOpen className="h-4 w-4" />
+                    <FolderOpen
+                      className={`h-4 w-4 ${completionByTab["subprojects"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Υποέργα</span>
                     <span className="sm:hidden">Υπο.</span>
                   </TabsTrigger>
@@ -2493,7 +2731,9 @@ export default function ComprehensiveEditFixed() {
                     value="changes"
                     className="flex items-center gap-2 text-xs sm:text-sm"
                   >
-                    <RefreshCw className="h-4 w-4" />
+                    <RefreshCw
+                      className={`h-4 w-4 ${completionByTab["changes"] ? "text-green-600" : "text-gray-400"}`}
+                    />
                     <span className="hidden sm:inline">Αλλαγές</span>
                     <span className="sm:hidden">Αλλ.</span>
                   </TabsTrigger>
@@ -2630,8 +2870,15 @@ export default function ComprehensiveEditFixed() {
                                       decisions.splice(index, 1);
                                       form.setValue("decisions", decisions);
                                       setSelectedDecisions(prev => {
-                                        const newSet = new Set(prev);
-                                        newSet.delete(index);
+                                        const newSet = new Set<number>();
+                                        prev.forEach((selectedIndex) => {
+                                          if (selectedIndex === index) return;
+                                          newSet.add(
+                                            selectedIndex > index
+                                              ? selectedIndex - 1
+                                              : selectedIndex,
+                                          );
+                                        });
                                         return newSet;
                                       });
                                     }}
@@ -2977,6 +3224,7 @@ export default function ComprehensiveEditFixed() {
                             fek: { year: "", issue: "", number: "" },
                             ada: "",
                             implementing_agency: [],
+                            implementing_agency_for_yl: {},
                             decision_budget: "",
                             expenditure_type: [],
                             decision_type: "Έγκριση",
@@ -3198,8 +3446,15 @@ export default function ComprehensiveEditFixed() {
                                         form.setValue("location_details", locations);
                                         // Update selection state
                                         setSelectedLocations(prev => {
-                                          const newSet = new Set(prev);
-                                          newSet.delete(locationIndex);
+                                          const newSet = new Set<number>();
+                                          prev.forEach((selectedIndex) => {
+                                            if (selectedIndex === locationIndex) return;
+                                            newSet.add(
+                                              selectedIndex > locationIndex
+                                                ? selectedIndex - 1
+                                                : selectedIndex,
+                                            );
+                                          });
                                           return newSet;
                                         });
                                         toast({
@@ -3498,22 +3753,35 @@ export default function ComprehensiveEditFixed() {
                                 <Select
                                   onValueChange={(value) => {
                                     field.onChange(value);
-                                    // Auto-populate enumeration code based on selected ΣΑ using existing data
-                                    const currentEnumerationCode = form.getValues(
-                                      "project_details.enumeration_code",
+                                                                        const formulations = form.getValues(
+                                      "formulation_details",
                                     );
-                                    const newEnumerationCode =
-                                      generateEnumerationCode(
-                                        value,
-                                        currentEnumerationCode,
-                                        existingEnumerationCodes,
+                                    const selectedSa = normalizeSaType(value);
+                                    const targetIndex = formulations.findIndex(
+                                      (item) =>
+                                        normalizeSaType(item.sa) === selectedSa,
+                                    );
+
+                                    if (targetIndex !== -1) {
+                                      const currentCode =
+                                        formulations[targetIndex]
+                                          ?.enumeration_code || "";
+                                      const newEnumerationCode =
+                                        generateEnumerationCode(
+                                          value,
+                                          currentCode,
+                                          existingEnumerationCodes,
+                                        );
+                                      formulations[targetIndex] = {
+                                        ...formulations[targetIndex],
+                                        enumeration_code: newEnumerationCode,
+                                      };
+                                      form.setValue(
+                                        "formulation_details",
+                                        formulations,
                                       );
-                                    form.setValue(
-                                      "project_details.enumeration_code",
-                                      newEnumerationCode,
-                                    );
-                                    
-                                    // Disabled validation on change to prevent log spam
+                                    }
+// Disabled validation on change to prevent log spam
                                     // TODO: Re-enable with better controls
                                     // validateSA(value, fieldKey, mis);
                                   }}
@@ -3545,7 +3813,7 @@ export default function ComprehensiveEditFixed() {
                                 {validationState.isChecking && (
                                   <p className="text-sm text-blue-600 flex items-center gap-1" data-testid="status-sa">
                                     <RefreshCw className="h-3 w-3 animate-spin" />
-                                    Έλεγχος ΣΑ...
+                  {isCreateMode ? "Creating..." : "Saving..."}
                                   </p>
                                 )}
                                 {validationState.exists && validationState.existingProject && (
@@ -4017,7 +4285,7 @@ export default function ComprehensiveEditFixed() {
                                       <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.pde`)
                                           ?.sort((a, b) => parseFloat(a.version_number || "1.0") - parseFloat(b.version_number || "1.0"))
-                                          ?.map((versionData, pdeIndex) => {
+                                          ?.map((versionData) => {
                                             const originalIndex = form.watch(`formulation_details.${index}.budget_versions.pde`).findIndex(
                                               v => v === versionData
                                             );
@@ -4288,7 +4556,7 @@ export default function ComprehensiveEditFixed() {
                                       <Accordion type="multiple" className="w-full">
                                         {form.watch(`formulation_details.${index}.budget_versions.epa`)
                                           ?.sort((a, b) => parseFloat(a.version_number || "1.0") - parseFloat(b.version_number || "1.0"))
-                                          ?.map((versionData, epaIndex) => {
+                                          ?.map((versionData) => {
                                             const originalIndex = form.watch(`formulation_details.${index}.budget_versions.epa`).findIndex(
                                               v => v === versionData
                                             );
@@ -4495,23 +4763,34 @@ export default function ComprehensiveEditFixed() {
                                                             <Input
                                                               {...field}
                                                               placeholder="π.χ. 100.000,00"
-                                                              onChange={(e) => {
-                                                                const formatted = formatNumberWhileTyping(e.target.value);
+                                                                                                                            onChange={(e) => {
+                                                                const eligiblePath = `formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`;
+                                                                const formatted = formatNumberWhileTyping(e.target.value || "");
                                                                 field.onChange(formatted);
                                                                 
                                                                 if (formatted) {
                                                                   // Auto-validate that eligible <= total
-                                                                  const eligibleValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`);
+                                                                  const eligibleValue = form.getValues(eligiblePath as any);
                                                                   const totalNumeric = parseEuropeanNumber(formatted);
                                                                   const eligibleNumeric = parseEuropeanNumber(eligibleValue || "");
                                                                   
                                                                   if (eligibleValue && eligibleNumeric > totalNumeric && totalNumeric > 0) {
-                                                                    form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense`, formatted);
+                                                                    const clampedEligible = formatEuropeanNumber(totalNumeric);
+                                                                    form.setValue(eligiblePath as any, clampedEligible);
+                                                                    form.setError(eligiblePath as any, {
+                                                                      type: "manual",
+                                                                      message: "Η επιλέξιμη δαπάνη δεν μπορεί να υπερβαίνει τη συνολική δημόσια δαπάνη.",
+                                                                    });
+                                                                  } else {
+                                                                    form.clearErrors(eligiblePath as any);
                                                                   }
+                                                                } else {
+                                                                  form.clearErrors(eligiblePath as any);
                                                                 }
                                                               }}
                                                             />
                                                           </FormControl>
+                                                          <FormMessage />
                                                         </FormItem>
                                                       )}
                                                     />
@@ -4525,27 +4804,32 @@ export default function ComprehensiveEditFixed() {
                                                             <Input
                                                               {...field}
                                                               placeholder="π.χ. 80.000,00"
-                                                              onChange={(e) => {
-                                                                const formatted = formatNumberWhileTyping(e.target.value);
+                                                              value={field.value ?? ""}
+                                                                                                                            onChange={(e) => {
+                                                                const formatted = formatNumberWhileTyping(e.target.value || "");
                                                                 field.onChange(formatted);
                                                                 
                                                                 if (formatted) {
                                                                   // Validate that eligible <= total
-                                                                  const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense`);
+                                                                  const totalValue = form.getValues(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.total_public_expense` as any);
                                                                   const eligibleNumeric = parseEuropeanNumber(formatted);
                                                                   const totalNumeric = parseEuropeanNumber(totalValue || "");
                                                                   
                                                                   if (totalValue && eligibleNumeric > totalNumeric && totalNumeric > 0) {
-                                                                    toast({
-                                                                      title: "Προσοχή",
-                                                                      description: "Η επιλέξιμη δαπάνη δεν μπορεί να είναι μεγαλύτερη από τη συνολική δαπάνη",
-                                                                      variant: "destructive"
+                                                                    const clamped = formatEuropeanNumber(totalNumeric);
+                                                                    form.setValue(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense` as any, clamped);
+                                                                    form.setError(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense` as any, {
+                                                                      type: "manual",
+                                                                      message: "Η επιλέξιμη δαπάνη δεν μπορεί να υπερβαίνει τη συνολική δημόσια δαπάνη.",
                                                                     });
+                                                                  } else {
+                                                                    form.clearErrors(`formulation_details.${index}.budget_versions.epa.${originalIndex}.financials.${financialIndex}.eligible_public_expense` as any);
                                                                   }
                                                                 }
                                                               }}
                                                             />
                                                           </FormControl>
+                                                          <FormMessage />
                                                         </FormItem>
                                                       )}
                                                     />
@@ -4625,12 +4909,9 @@ export default function ComprehensiveEditFixed() {
                           formulations.push({
                             sa: "ΝΑ853", // Default SA type, user can change it
                             enumeration_code: "",
-                            protocol_number: "",
-                            ada: "",
                             decision_year: "",
                             decision_status: "Ενεργή",
                             change_type: "Έγκριση",
-                            connected_decisions: [],
                             comments: "",
                             budget_versions: {
                               pde: [],
@@ -4655,15 +4936,26 @@ export default function ComprehensiveEditFixed() {
 
               {/* Tab 5: Subprojects */}
               <TabsContent value="subprojects">
-                <SubprojectsIntegrationCard
-                  projectId={completeProjectData?.id || 0}
-                  formulationDetails={form.watch("formulation_details") || []}
-                  onFormulationChange={(financials) => {
-                    // Handle formulation financial changes if needed
-                    console.log("[Subprojects] Formulation change:", financials);
-                  }}
-                  isEditing={true}
-                />
+                {isEditMode && projectId ? (
+                  <SubprojectsIntegrationCard
+                    projectId={projectId}
+                    formulationDetails={form.watch("formulation_details") || []}
+                    onFormulationChange={(financials) => {
+                      // Handle formulation financial changes if needed
+                      devLog("[Subprojects] Formulation change:", financials);
+                    }}
+                    isEditing={true}
+                  />
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Subprojects</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      Create the project to enable subproject management.
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* Tab 6: Changes - Enhanced with comprehensive tracking */}
@@ -4846,8 +5138,40 @@ export default function ComprehensiveEditFixed() {
               </TabsContent>
             </Tabs>
           </form>
+          <AlertDialog
+            open={persistedLocationConfirmOpen}
+            onOpenChange={(open) => {
+              setPersistedLocationConfirmOpen(open);
+              if (!open) {
+                setPendingPersistedLocationSubmit(null);
+              }
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm persisted updates</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {persistedLocationConfirmMessage}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={handlePersistedLocationCancel}>
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handlePersistedLocationConfirm}>
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </Form>
       </div>
     </div>
   );
+}
+
+export default function ComprehensiveEditFixed() {
+  const { id } = useParams();
+
+  return <ComprehensiveProjectForm mode="edit" mis={id} />;
 }
