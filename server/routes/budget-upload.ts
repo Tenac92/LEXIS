@@ -4,7 +4,8 @@ import { User } from '@shared/schema';
 import { supabase } from '../config/db';
 import { storage } from '../storage';
 import multer from 'multer';
-import * as xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
+import { readXlsxToRows } from '../utils/safeExcel';
 import { parse } from 'csv-parse/sync';
 import { BudgetService } from '../services/budgetService';
 
@@ -116,16 +117,46 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
       console.log(`[BudgetUpload] Extracted ${rawData.length} rows from CSV`);
     } else {
       console.log('[BudgetUpload] Processing Excel file upload');
-      
-      // Process the Excel file
-      const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-      
-      // Assume the first sheet contains the data
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      
-      // Convert worksheet to JSON (array of objects)
-      rawData = xlsx.utils.sheet_to_json(worksheet);
+
+      const fileNameLower = fileName.toLowerCase();
+      // Hardened: accept only modern .xlsx files (reject legacy .xls)
+      if (!fileNameLower.endsWith('.xlsx')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Unsupported Excel type. Use .xlsx or CSV.'
+        });
+      }
+
+      // Read first sheet to rows with limits
+      const rows = await readXlsxToRows(req.file.buffer, {
+        maxRows: 20000, // consistent with uploads limit
+        maxCols: 200,
+        maxSheets: 3,
+      });
+
+      if (!rows || rows.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Excel worksheet is empty or missing header row'
+        });
+      }
+
+      // Build objects using the header row for keys
+      const headerRaw = rows[0] as unknown[];
+      const headers = headerRaw.map((h) => String(h ?? '').trim());
+      const dataRows = rows.slice(1) as unknown[][];
+      const colCount = headers.length;
+
+      rawData = dataRows.map((row) => {
+        const obj: Record<string, any> = {};
+        for (let i = 0; i < colCount; i++) {
+          const key = headers[i];
+          if (!key) continue; // skip empty header cells
+          obj[key] = row[i] ?? null;
+        }
+        return obj;
+      });
+
       console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
     }
 

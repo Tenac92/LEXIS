@@ -1,4 +1,15 @@
-import * as XLSX from "xlsx";
+// Excel date serial number conversion (XLSX epoch is 1899-12-30)
+function excelSerialToDate(serial: number): { y: number; m: number; d: number } | null {
+  if (!Number.isFinite(serial) || serial < 1) return null;
+  const epoch = new Date(Date.UTC(1899, 11, 30));
+  const msPerDay = 86400000;
+  const date = new Date(epoch.getTime() + serial * msPerDay);
+  return {
+    y: date.getUTCFullYear(),
+    m: date.getUTCMonth() + 1,
+    d: date.getUTCDate()
+  };
+}
 
 export const REQUIRED_PAYMENT_HEADERS = {
   protocol: "Αριθμός Παραστατικού",
@@ -72,7 +83,7 @@ export function parseExcelDate(input: unknown): Date | null {
   }
 
   if (typeof input === "number" && Number.isFinite(input)) {
-    const parsed = XLSX.SSF.parse_date_code(input);
+    const parsed = excelSerialToDate(input);
     if (!parsed || !parsed.y || !parsed.m || !parsed.d) {
       return null;
     }
@@ -94,7 +105,7 @@ export function parseExcelDate(input: unknown): Date | null {
   if (/^\d+(\.\d+)?$/.test(trimmed)) {
     const asNumber = Number(trimmed);
     if (Number.isFinite(asNumber)) {
-      const parsed = XLSX.SSF.parse_date_code(asNumber);
+      const parsed = excelSerialToDate(asNumber);
       if (parsed && parsed.y && parsed.m && parsed.d && isValidDateParts(parsed.y, parsed.m, parsed.d)) {
         return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
       }

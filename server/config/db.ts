@@ -4,9 +4,34 @@
  */
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase URL and key from environment variables
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_KEY || '';
+// Resolve Supabase credentials from env or DATABASE_URL to avoid startup crashes
+function resolveSupabaseCreds() {
+  let url = process.env.SUPABASE_URL || '';
+  let key = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+  if ((!url || !key) && process.env.DATABASE_URL) {
+    try {
+      const databaseUrl = process.env.DATABASE_URL;
+      const urlPattern = /postgresql:\/\/postgres:(.+)@db\.(.+)\.supabase\.co/;
+      const matches = databaseUrl.match(urlPattern);
+      if (matches && matches.length >= 3) {
+        key = matches[1];
+        const projectRef = matches[2];
+        url = `https://${projectRef}.supabase.co`;
+      }
+    } catch {
+      // Ignore and fall back to placeholder
+    }
+  }
+
+  // As a last resort, use placeholders to prevent import-time crash; runtime checks will handle failures
+  if (!url) url = 'https://placeholder.supabase.co';
+  if (!key) key = 'invalid-key';
+
+  return { url, key };
+}
+
+const { url: supabaseUrl, key: supabaseKey } = resolveSupabaseCreds();
 
 // Create Supabase client with configuration options
 export const supabase = createClient(supabaseUrl, supabaseKey, {

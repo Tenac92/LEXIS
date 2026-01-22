@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/db";
-import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from "express";

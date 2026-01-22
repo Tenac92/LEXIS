@@ -1008,27 +1008,12 @@ router.get(
             "[Budget] Manager has no projects in units, returning empty export",
           );
 
-          const XLSX = await import("xlsx");
-          const wb = XLSX.utils.book_new();
-          const ws = XLSX.utils.json_to_sheet([
-            { Μήνυμα: "Δεν υπάρχουν δεδομένα για τις μονάδες σας" },
-          ]);
-          XLSX.utils.book_append_sheet(wb, ws, "Κενό");
-
-          const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+          const { createEmptyWorkbook, sendExcelResponse } = await import('../utils/safeExcelWriter');
+          const buffer = await createEmptyWorkbook('Δεν υπάρχουν δεδομένα για τις μονάδες σας');
           const today = new Date();
           const formattedDate = `${today.getDate().toString().padStart(2, "0")}-${(today.getMonth() + 1).toString().padStart(2, "0")}-${today.getFullYear()}`;
-
-          res.setHeader(
-            "Content-Type",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          );
-          res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`,
-          );
-          res.setHeader("Content-Length", buffer.length.toString());
-          return res.end(buffer);
+          sendExcelResponse(res, buffer, `Istoriko-Proypologismou-${formattedDate}.xlsx`);
+          return;
         }
 
         const projectMisIds = projectIndexData
@@ -1044,27 +1029,12 @@ router.get(
             "[Budget] No valid MIS IDs for manager, returning empty export",
           );
 
-          const XLSX = await import("xlsx");
-          const wb = XLSX.utils.book_new();
-          const ws = XLSX.utils.json_to_sheet([
-            { Μήνυμα: "Δεν υπάρχουν δεδομένα για τις μονάδες σας" },
-          ]);
-          XLSX.utils.book_append_sheet(wb, ws, "Κενό");
-
-          const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+          const { createEmptyWorkbook, sendExcelResponse } = await import('../utils/safeExcelWriter');
+          const buffer = await createEmptyWorkbook('Δεν υπάρχουν δεδομένα για τις μονάδες σας');
           const today = new Date();
           const formattedDate = `${today.getDate().toString().padStart(2, "0")}-${(today.getMonth() + 1).toString().padStart(2, "0")}-${today.getFullYear()}`;
-
-          res.setHeader(
-            "Content-Type",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          );
-          res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`,
-          );
-          res.setHeader("Content-Length", buffer.length.toString());
-          return res.end(buffer);
+          sendExcelResponse(res, buffer, `Istoriko-Proypologismou-${formattedDate}.xlsx`);
+          return;
         }
 
         const { data: allowedProjects } = await supabase
@@ -1078,27 +1048,12 @@ router.get(
             "[Budget] No projects found for manager MIS codes, returning empty export",
           );
 
-          const XLSX = await import("xlsx");
-          const wb = XLSX.utils.book_new();
-          const ws = XLSX.utils.json_to_sheet([
-            { Μήνυμα: "Δεν υπάρχουν δεδομένα για τις μονάδες σας" },
-          ]);
-          XLSX.utils.book_append_sheet(wb, ws, "Κενό");
-
-          const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+          const { createEmptyWorkbook, sendExcelResponse } = await import('../utils/safeExcelWriter');
+          const buffer = await createEmptyWorkbook('Δεν υπάρχουν δεδομένα για τις μονάδες σας');
           const today = new Date();
           const formattedDate = `${today.getDate().toString().padStart(2, "0")}-${(today.getMonth() + 1).toString().padStart(2, "0")}-${today.getFullYear()}`;
-
-          res.setHeader(
-            "Content-Type",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          );
-          res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="Istoriko-Proypologismou-${formattedDate}.xlsx"`,
-          );
-          res.setHeader("Content-Length", buffer.length.toString());
-          return res.end(buffer);
+          sendExcelResponse(res, buffer, `Istoriko-Proypologismou-${formattedDate}.xlsx`);
+          return;
         }
 
         restrictedProjectIds = allowedProjects.map((p) => p.id);
@@ -1429,8 +1384,8 @@ router.get(
         }
       }
 
-      // Import XLSX library
-      const XLSX = await import("xlsx");
+      // Import safe Excel writer utility
+      const { createWorkbookFromData, sendExcelResponse } = await import('../utils/safeExcelWriter');
 
       // ============================================
       // EXPENDITURE TYPE LOOKUP (needed for multiple worksheets)
@@ -1993,145 +1948,81 @@ router.get(
       // ============================================
       // CREATE WORKBOOK
       // ============================================
-      const wb = XLSX.utils.book_new();
-
-      // Helper function to apply European number formatting
-      const applyEuropeanNumberFormatting = (
-        ws: any,
-        numericColumns: string[],
-      ) => {
-        for (const cell in ws) {
-          if (cell.startsWith("!")) continue;
-
-          const cellRef = XLSX.utils.decode_cell(cell);
-          const col = XLSX.utils.encode_col(cellRef.c);
-          const headerCell = ws[`${col}1`];
-
-          if (headerCell && numericColumns.includes(headerCell.v)) {
-            if (ws[cell] && typeof ws[cell].v === "number") {
-              ws[cell].z = "#,##0.00";
-            }
-          }
-        }
-      };
+      const sheets = [];
 
       // Create and add worksheets
       // 1. Detailed History
       if (detailedHistory.length > 0) {
-        const ws1 = XLSX.utils.json_to_sheet(detailedHistory);
-        ws1["!cols"] = Object.keys(detailedHistory[0]).map((key) => ({
-          wch: key.length < 12 ? 15 : key.length + 5,
-        }));
-        applyEuropeanNumberFormatting(ws1, [
-          "Προηγούμενο Ποσό",
-          "Νέο Ποσό",
-          "Μεταβολή",
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws1, "Αναλυτικό Ιστορικό");
+        sheets.push({
+          name: 'Αναλυτικό Ιστορικό',
+          data: detailedHistory,
+          currencyColumns: ['Προηγούμενο Ποσό', 'Νέο Ποσό', 'Μεταβολή']
+        });
       }
 
       // 2. Project Summary
       if (projectSummary.length > 0) {
-        const ws2 = XLSX.utils.json_to_sheet(projectSummary);
-        ws2["!cols"] = Object.keys(projectSummary[0]).map((key) => ({
-          wch: key.length < 12 ? 15 : key.length + 5,
-        }));
-        applyEuropeanNumberFormatting(ws2, [
-          "Κατανομές Έτους",
-          "Συνολικές Δαπάνες",
-          "Διαθέσιμο",
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws2, "Σύνοψη Έργων");
+        sheets.push({
+          name: 'Σύνοψη Έργων',
+          data: projectSummary,
+          currencyColumns: ['Κατανομές Έτους', 'Συνολικές Δαπάνες', 'Διαθέσιμο']
+        });
       }
 
       // 3. Regional Summary
       if (regionalSummary.length > 0) {
-        const ws3 = XLSX.utils.json_to_sheet(regionalSummary);
-        ws3["!cols"] = Object.keys(regionalSummary[0]).map((key) => ({
-          wch: key.length < 12 ? 18 : key.length + 5,
-        }));
-        applyEuropeanNumberFormatting(ws3, [
-          "Συνολικές Κατανομές",
-          "Συνολικές Δαπάνες",
-          "Διαθέσιμο",
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws3, "Ανά Περιφέρεια");
+        sheets.push({
+          name: 'Ανά Περιφέρεια',
+          data: regionalSummary,
+          currencyColumns: ['Συνολικές Κατανομές', 'Συνολικές Δαπάνες', 'Διαθέσιμο']
+        });
       }
 
       // 3b. Municipality Summary (new)
       if (municipalitySummary.length > 0) {
-        const wsMuni = XLSX.utils.json_to_sheet(municipalitySummary);
-        wsMuni["!cols"] = Object.keys(municipalitySummary[0]).map((key) => ({
-          wch: key.length < 12 ? 18 : key.length + 5,
-        }));
-        applyEuropeanNumberFormatting(wsMuni, ["Net Change"]);
-        XLSX.utils.book_append_sheet(wb, wsMuni, "Municipalities");
+        sheets.push({
+          name: 'Municipalities',
+          data: municipalitySummary,
+          currencyColumns: ['Net Change']
+        });
       }
 
       // 4. Expenditure Type Analysis
       if (expenditureTypeAnalysis.length > 0) {
-        const ws4 = XLSX.utils.json_to_sheet(expenditureTypeAnalysis);
-        ws4["!cols"] = Object.keys(expenditureTypeAnalysis[0]).map(() => ({
-          wch: 25,
-        }));
-        applyEuropeanNumberFormatting(ws4, [
-          "Συνολική Μεταβολή",
-          "Μέση Μεταβολή",
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws4, "Ανά Τύπο Δαπάνης");
+        sheets.push({
+          name: 'Ανά Τύπο Δαπάνης',
+          data: expenditureTypeAnalysis,
+          currencyColumns: ['Συνολική Μεταβολή', 'Μέση Μεταβολή']
+        });
       }
 
       // 5. Monthly Trend
       if (monthlyAnalysis.length > 0) {
-        const ws5 = XLSX.utils.json_to_sheet(monthlyAnalysis);
-        ws5["!cols"] = Object.keys(monthlyAnalysis[0]).map(() => ({ wch: 18 }));
-        applyEuropeanNumberFormatting(ws5, [
-          "Δαπάνες",
-          "Επιστροφές",
-          "Καθαρή Μεταβολή",
-        ]);
-        XLSX.utils.book_append_sheet(wb, ws5, "Μηνιαία Τάση");
+        sheets.push({
+          name: 'Μηνιαία Τάση',
+          data: monthlyAnalysis,
+          currencyColumns: ['Δαπάνες', 'Επιστροφές', 'Καθαρή Μεταβολή']
+        });
       }
 
       // 6. User Activity
       if (userActivity.length > 0) {
-        const ws6 = XLSX.utils.json_to_sheet(userActivity);
-        ws6["!cols"] = Object.keys(userActivity[0]).map(() => ({ wch: 18 }));
-        applyEuropeanNumberFormatting(ws6, ["Συνολικό Ποσό"]);
-        XLSX.utils.book_append_sheet(wb, ws6, "Δραστηριότητα Χρηστών");
-      }
-
-      // If no worksheets were added (no data), add an empty message sheet
-      if (wb.SheetNames.length === 0) {
-        const ws = XLSX.utils.json_to_sheet([
-          {
-            Μήνυμα:
-              "Δεν βρέθηκαν δεδομένα με τα επιλεγμένα κριτήρια αναζήτησης",
-          },
-        ]);
-        ws["!cols"] = [{ wch: 60 }];
-        XLSX.utils.book_append_sheet(wb, ws, "Κενό");
+        sheets.push({
+          name: 'Δραστηριότητα Χρηστών',
+          data: userActivity,
+          currencyColumns: ['Συνολικό Ποσό']
+        });
       }
 
       // Generate buffer and send
-      const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+      const buffer = await createWorkbookFromData(sheets);
 
       // Format filename with current date
       const today = new Date();
       const formattedDate = `${today.getDate().toString().padStart(2, "0")}-${(today.getMonth() + 1).toString().padStart(2, "0")}-${today.getFullYear()}`;
       const filename = `Istoriko-Proypologismou-${formattedDate}.xlsx`;
 
-      res.setHeader(
-        "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      );
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${filename}"`,
-      );
-      res.setHeader("Content-Length", buffer.length.toString());
-
-      res.end(buffer);
+      sendExcelResponse(res, buffer, filename);
       console.log(
         `[Budget] Excel export successful: ${filename} with ${historyData?.length || 0} records`,
       );

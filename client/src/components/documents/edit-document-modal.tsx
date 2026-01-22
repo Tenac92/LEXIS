@@ -32,15 +32,36 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Save, X, User, Euro, Hash, FileText, Plus, Trash2, Users, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Save,
+  X,
+  User,
+  Euro,
+  Hash,
+  FileText,
+  Plus,
+  Trash2,
+  Users,
+  AlertCircle,
+} from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
 import { editDocumentSchema, correctionDocumentSchema } from "@shared/schema";
 import { SimpleAFMAutocomplete } from "@/components/ui/simple-afm-autocomplete";
 import { MonthRangePicker } from "@/components/common/MonthRangePicker";
-import { EKTOS_EDRAS_TYPE, DKA_INSTALLMENTS, DKA_TYPES, HOUSING_ALLOWANCE_TYPE, HOUSING_QUARTERS, ALL_INSTALLMENTS } from "./constants";
+import {
+  EKTOS_EDRAS_TYPE,
+  DKA_INSTALLMENTS,
+  DKA_TYPES,
+  HOUSING_ALLOWANCE_TYPE,
+  HOUSING_QUARTERS,
+  ALL_INSTALLMENTS,
+} from "./constants";
 import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSuggestions";
 import { BeneficiaryGeoSelector } from "./components/BeneficiaryGeoSelector";
 import {
@@ -66,43 +87,61 @@ interface EditDocumentModalProps {
   document: GeneratedDocument | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode?: 'edit' | 'correction';
+  mode?: "edit" | "correction";
   onCorrectionSuccess?: (documentId: number) => void; // Callback to open protocol modal after correction
 }
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Προσχέδιο", color: "bg-gray-100 text-gray-800" },
-  { value: "pending", label: "Εκκρεμεί", color: "bg-yellow-100 text-yellow-800" },
-  { value: "approved", label: "Εγκεκριμένο", color: "bg-green-100 text-green-800" },
+  {
+    value: "pending",
+    label: "Εκκρεμεί",
+    color: "bg-yellow-100 text-yellow-800",
+  },
+  {
+    value: "approved",
+    label: "Εγκεκριμένο",
+    color: "bg-green-100 text-green-800",
+  },
   { value: "rejected", label: "Απορρίφθηκε", color: "bg-red-100 text-red-800" },
-  { value: "completed", label: "Ολοκληρώθηκε", color: "bg-blue-100 text-blue-800" },
+  {
+    value: "completed",
+    label: "Ολοκληρώθηκε",
+    color: "bg-blue-100 text-blue-800",
+  },
 ];
 
 // Helper function to get available installments based on expenditure type
 const getAvailableInstallments = (expenditureTypeName?: string): string[] => {
   if (!expenditureTypeName) return [ALL_INSTALLMENTS[0]]; // Default to ΕΦΑΠΑΞ
-  
+
   if (expenditureTypeName === HOUSING_ALLOWANCE_TYPE) {
     return HOUSING_QUARTERS;
   }
-  
-  if (DKA_TYPES.some(dka => expenditureTypeName.includes(dka))) {
+
+  if (DKA_TYPES.some((dka) => expenditureTypeName.includes(dka))) {
     return DKA_INSTALLMENTS;
   }
-  
+
   return ALL_INSTALLMENTS;
 };
 
 // Helper to normalize installment value for housing allowance
-const normalizeInstallmentValue = (value: string | number | undefined, expenditureTypeName?: string): string => {
+const normalizeInstallmentValue = (
+  value: string | number | undefined,
+  expenditureTypeName?: string,
+): string => {
   if (!value) return "";
   const strValue = String(value).trim();
-  
+
   // If it's housing allowance and value is just a number, convert to ΤΡΙΜΗΝΟ format
-  if (expenditureTypeName === HOUSING_ALLOWANCE_TYPE && /^\d+$/.test(strValue)) {
+  if (
+    expenditureTypeName === HOUSING_ALLOWANCE_TYPE &&
+    /^\d+$/.test(strValue)
+  ) {
     return `ΤΡΙΜΗΝΟ ${strValue}`;
   }
-  
+
   return strValue;
 };
 
@@ -116,18 +155,18 @@ const normalizeRegiondet = (
   ) as RegiondetSelection | null;
 };
 
-export function EditDocumentModal({ 
-  document, 
-  open, 
+export function EditDocumentModal({
+  document,
+  open,
   onOpenChange,
-  mode = 'edit',
-  onCorrectionSuccess
+  mode = "edit",
+  onCorrectionSuccess,
 }: EditDocumentModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
-  const isCorrection = mode === 'correction';
+  const isCorrection = mode === "correction";
 
   const oldProtocolNumber = useMemo(() => {
     if (!document) return "";
@@ -143,14 +182,11 @@ export function EditDocumentModal({
     const rawDate = document.protocol_date || document.original_protocol_date;
     if (!rawDate) return "";
     const parsed = new Date(rawDate as any);
-    return isNaN(parsed.getTime())
-      ? ""
-      : parsed.toLocaleDateString("el-GR");
+    return isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("el-GR");
   }, [document]);
 
   const correctionReasonTemplate = useMemo(
-    () =>
-      `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocolNumber} λόγω `,
+    () => `Ορθή επανάληψη του εγγράφου με αρ πρωτ ${oldProtocolNumber} λόγω `,
     [oldProtocolNumber],
   );
 
@@ -162,7 +198,9 @@ export function EditDocumentModal({
 
   // Initialize form with document data using the appropriate schema
   const form = useForm<DocumentForm>({
-    resolver: zodResolver(isCorrection ? correctionSchemaWithEsdian : editSchemaWithEsdian),
+    resolver: zodResolver(
+      isCorrection ? correctionSchemaWithEsdian : editSchemaWithEsdian,
+    ),
     defaultValues: {
       protocol_number_input: "",
       protocol_date: "",
@@ -183,11 +221,17 @@ export function EditDocumentModal({
   const initialRecipientsRef = useRef<any[]>([]);
 
   // Fetch beneficiary payments for this document
-  const { data: beneficiaryPayments, refetch: refetchPayments, isLoading: beneficiariesLoading } = useQuery({
-    queryKey: ['/api/documents', document?.id, 'beneficiaries'],
+  const {
+    data: beneficiaryPayments,
+    refetch: refetchPayments,
+    isLoading: beneficiariesLoading,
+  } = useQuery({
+    queryKey: ["/api/documents", document?.id, "beneficiaries"],
     queryFn: async () => {
       if (!document?.id) return [];
-      const response = await apiRequest(`/api/documents/${document.id}/beneficiaries`);
+      const response = await apiRequest(
+        `/api/documents/${document.id}/beneficiaries`,
+      );
       return response || [];
     },
     enabled: !!document?.id && open,
@@ -196,7 +240,7 @@ export function EditDocumentModal({
 
   // Fetch units for dropdown (filtered to user's assigned units)
   const { data: rawUnits = [], isLoading: unitsLoading } = useQuery<any[]>({
-    queryKey: ['/api/public/units'],
+    queryKey: ["/api/public/units"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     enabled: open,
   });
@@ -204,40 +248,50 @@ export function EditDocumentModal({
   // Filter units to only show user's assigned units (matching create dialog behavior)
   const units = useMemo(() => {
     if (!rawUnits || rawUnits.length === 0) return [];
-    
+
     // If user has no unit restrictions, show all units (admin case)
     if (userUnitIds.length === 0) {
       return rawUnits;
     }
-    
+
     // Filter units based on user's assigned unit_id array
     // IMPORTANT: Match by item.id (numeric ID), NOT item.unit (text code)
     const filteredUnits = rawUnits.filter((item: any) => {
       const itemId = Number(item.id);
-      const matches = userUnitIds.some(
-        (uid: string) => Number(uid) === itemId,
-      );
+      const matches = userUnitIds.some((uid: string) => Number(uid) === itemId);
       return matches;
     });
-    
-    console.log('[EditDocument] Units filtered:', filteredUnits.length, 'from', rawUnits.length, 'total, user units:', userUnitIds);
-    
+
+    console.log(
+      "[EditDocument] Units filtered:",
+      filteredUnits.length,
+      "from",
+      rawUnits.length,
+      "total, user units:",
+      userUnitIds,
+    );
+
     return filteredUnits;
   }, [rawUnits, userUnitIds]);
 
   // Watch selected unit_id from form (numeric)
   const selectedUnitId = form.watch("unit_id");
-  
+
   // For initial load, use document's unit_id; after form is populated, use form value
   const unitIdForProjectsQuery = selectedUnitId || document?.unit_id;
 
   // Fetch projects based on document or form unit_id
   // IMPORTANT: Use String() to match ProjectSelect's cache key format for cache sharing
   const { data: projects = [], isLoading: projectsLoading } = useQuery<any[]>({
-    queryKey: ['projects-working', unitIdForProjectsQuery ? String(unitIdForProjectsQuery) : ''],
+    queryKey: [
+      "projects-working",
+      unitIdForProjectsQuery ? String(unitIdForProjectsQuery) : "",
+    ],
     queryFn: async () => {
       if (!unitIdForProjectsQuery) return [];
-      const response = await apiRequest(`/api/projects-working/${unitIdForProjectsQuery}`);
+      const response = await apiRequest(
+        `/api/projects-working/${unitIdForProjectsQuery}`,
+      );
       return Array.isArray(response) ? response : [];
     },
     enabled: !!unitIdForProjectsQuery && open,
@@ -246,12 +300,16 @@ export function EditDocumentModal({
 
   // Track selected project and expenditure type from document
   // MUST be declared before queries that use these values
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-  const [selectedExpenditureTypeId, setSelectedExpenditureTypeId] = useState<number | null>(null);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+    null,
+  );
+  const [selectedExpenditureTypeId, setSelectedExpenditureTypeId] = useState<
+    number | null
+  >(null);
 
   // Fetch ALL expenditure types (for lookup reference)
   const { data: allExpenditureTypes = [] } = useQuery<any[]>({
-    queryKey: ['/api/public/expenditure-types'],
+    queryKey: ["/api/public/expenditure-types"],
     staleTime: 60 * 60 * 1000,
     enabled: open,
   });
@@ -260,40 +318,65 @@ export function EditDocumentModal({
   // Use the selected expenditure type from dropdown if available, otherwise use document's original type
   const docAny = document as any;
   const selectedExpenditureName = allExpenditureTypes.find(
-    (type: any) => type.id === selectedExpenditureTypeId
+    (type: any) => type.id === selectedExpenditureTypeId,
   )?.expenditure_types;
-  const isEktosEdras = selectedExpenditureName 
-    ? selectedExpenditureName === EKTOS_EDRAS_TYPE 
+  const isEktosEdras = selectedExpenditureName
+    ? selectedExpenditureName === EKTOS_EDRAS_TYPE
     : docAny?.expenditure_type === EKTOS_EDRAS_TYPE;
 
   // Fetch valid expenditure types for the selected project from project_index
   // This is the ONLY source for the dropdown - no fallback to all types
   const { data: expenditureTypes = [] } = useQuery<any[]>({
-    queryKey: ['project-expenditure-types', selectedProjectId, selectedUnitId, allExpenditureTypes?.length ?? 0],
+    queryKey: [
+      "project-expenditure-types",
+      selectedProjectId,
+      selectedUnitId,
+      allExpenditureTypes?.length ?? 0,
+    ],
     queryFn: async () => {
       if (!selectedProjectId || !selectedUnitId) return [];
-      
+
       // Wait for allExpenditureTypes to be available
       if (!allExpenditureTypes || allExpenditureTypes.length === 0) {
-        console.log('[EditDocument] Waiting for allExpenditureTypes to load...');
+        console.log(
+          "[EditDocument] Waiting for allExpenditureTypes to load...",
+        );
         return [];
       }
-      
+
       // Fetch all project_index entries for this project+unit combination
-      const response = await apiRequest(`/api/project-index/project/${selectedProjectId}/${selectedUnitId}`);
-      
+      const response = await apiRequest(
+        `/api/project-index/project/${selectedProjectId}/${selectedUnitId}`,
+      );
+
       if (!response || !Array.isArray(response)) {
-        console.log('[EditDocument] No project_index entries found for project:', selectedProjectId, 'unit:', selectedUnitId);
+        console.log(
+          "[EditDocument] No project_index entries found for project:",
+          selectedProjectId,
+          "unit:",
+          selectedUnitId,
+        );
         return [];
       }
-      
+
       // Extract unique expenditure_type_id values
-      const expenditureTypeIds = Array.from(new Set(response.map((pi: any) => pi.expenditure_type_id)));
-      console.log('[EditDocument] Valid expenditure_type_ids from project_index:', expenditureTypeIds);
-      
+      const expenditureTypeIds = Array.from(
+        new Set(response.map((pi: any) => pi.expenditure_type_id)),
+      );
+      console.log(
+        "[EditDocument] Valid expenditure_type_ids from project_index:",
+        expenditureTypeIds,
+      );
+
       // Filter allExpenditureTypes to only include valid ones from project_index
-      const filtered = allExpenditureTypes.filter((type: any) => expenditureTypeIds.includes(type.id));
-      console.log('[EditDocument] Filtered expenditure types:', filtered.length, 'types');
+      const filtered = allExpenditureTypes.filter((type: any) =>
+        expenditureTypeIds.includes(type.id),
+      );
+      console.log(
+        "[EditDocument] Filtered expenditure types:",
+        filtered.length,
+        "types",
+      );
       return filtered;
     },
     enabled: !!selectedProjectId && !!selectedUnitId && open,
@@ -301,18 +384,24 @@ export function EditDocumentModal({
   });
 
   // Fetch project_index record to resolve actual project_id from project_index_id
-  const { data: projectIndexData, isLoading: projectIndexLoading } = useQuery<any>({
-    queryKey: ['project-index', document?.project_index_id],
-    queryFn: async () => {
-      if (!document?.project_index_id) return null;
-      console.log('[EditDocument] Fetching project_index record:', document.project_index_id);
-      const response = await apiRequest(`/api/project-index/${document.project_index_id}`);
-      console.log('[EditDocument] Project_index data:', response);
-      return response;
-    },
-    enabled: !!document?.project_index_id && open,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data: projectIndexData, isLoading: projectIndexLoading } =
+    useQuery<any>({
+      queryKey: ["project-index", document?.project_index_id],
+      queryFn: async () => {
+        if (!document?.project_index_id) return null;
+        console.log(
+          "[EditDocument] Fetching project_index record:",
+          document.project_index_id,
+        );
+        const response = await apiRequest(
+          `/api/project-index/${document.project_index_id}`,
+        );
+        console.log("[EditDocument] Project_index data:", response);
+        return response;
+      },
+      enabled: !!document?.project_index_id && open,
+      staleTime: 5 * 60 * 1000,
+    });
 
   // Extract actual project_id and expenditure_type_id from project_index data
   const actualProjectId = useMemo(() => {
@@ -329,12 +418,11 @@ export function EditDocumentModal({
   // Track if form has been initialized to prevent re-resetting on user changes
   // Using STATE instead of ref so changes trigger re-renders for geographic init
   const [formInitialized, setFormInitialized] = useState(false);
-  
 
   // Per-beneficiary geographic selection state
-  const [regiondetErrors, setRegiondetErrors] = useState<Record<number, string>>(
-    {},
-  );
+  const [regiondetErrors, setRegiondetErrors] = useState<
+    Record<number, string>
+  >({});
   const regiondetSaveTimers = useRef<Record<string, NodeJS.Timeout>>({});
   const [regiondetSaveState, setRegiondetSaveState] = useState<
     Record<
@@ -358,113 +446,125 @@ export function EditDocumentModal({
   });
 
   // Project-specific geographic areas
-  const { data: projectGeographicAreas = [], isLoading: regionsLoading } = useQuery({
-    queryKey: ["project-geographic-areas", selectedProjectId],
-    queryFn: async () => {
-      if (!selectedProjectId) {
-        return [];
-      }
-
-      try {
-        // Find the project to get its MIS
-        const project = projects.find((p) => p.id === selectedProjectId);
-        if (!project) {
-          console.error("Project not found:", selectedProjectId);
+  const { data: projectGeographicAreas = [], isLoading: regionsLoading } =
+    useQuery({
+      queryKey: ["project-geographic-areas", selectedProjectId],
+      queryFn: async () => {
+        if (!selectedProjectId) {
           return [];
         }
 
-        console.log("Fetching geographic areas for project:", {
-          id: selectedProjectId,
-        });
+        try {
+          // Find the project to get its MIS
+          const project = projects.find((p) => p.id === selectedProjectId);
+          if (!project) {
+            console.error("Project not found:", selectedProjectId);
+            return [];
+          }
 
-        // Fetch project complete data which includes geographic relationships
-        const response = await apiRequest(
-          `/api/projects/${encodeURIComponent(project.id || "")}/complete`,
-        );
+          console.log("Fetching geographic areas for project:", {
+            id: selectedProjectId,
+          });
 
-        if (!response || !geographicData) {
+          // Fetch project complete data which includes geographic relationships
+          const response = await apiRequest(
+            `/api/projects/${encodeURIComponent(project.id || "")}/complete`,
+          );
+
+          if (!response || !geographicData) {
+            return [];
+          }
+
+          // Extract project-specific geographic areas
+          const projectRegions =
+            (response as any)?.projectGeographicData?.regions || [];
+          const projectUnits =
+            (response as any)?.projectGeographicData?.regionalUnits || [];
+          const projectMunicipalities =
+            (response as any)?.projectGeographicData?.municipalities || [];
+
+          console.log("[EditDocument] Project-specific geographic data:", {
+            regions: projectRegions.length,
+            units: projectUnits.length,
+            municipalities: projectMunicipalities.length,
+          });
+
+          // Remove duplicates by using a Set based on code
+          const uniqueRegions = Array.from(
+            new Map(
+              projectRegions.map((item: any) => [
+                item.region_code || item.regions?.code,
+                item,
+              ]),
+            ).values(),
+          );
+
+          const uniqueUnits = Array.from(
+            new Map(
+              projectUnits.map((item: any) => [
+                item.unit_code || item.regional_units?.code,
+                item,
+              ]),
+            ).values(),
+          );
+
+          const uniqueMunicipalities = Array.from(
+            new Map(
+              projectMunicipalities.map((item: any) => [
+                item.muni_code || item.municipalities?.code,
+                item,
+              ]),
+            ).values(),
+          );
+
+          const smartGeographicData = {
+            availableRegions: uniqueRegions.map((item: any) => ({
+              id: `region-${item.region_code || item.regions?.code}`,
+              code: item.region_code || item.regions?.code,
+              name: item.regions?.name || item.name,
+              type: "region",
+            })),
+            availableUnits: uniqueUnits.map((item: any) => ({
+              id: `unit-${item.unit_code || item.regional_units?.code}`,
+              code: item.unit_code || item.regional_units?.code,
+              name: item.regional_units?.name || item.name,
+              type: "regional_unit",
+              region_code: item.regional_units?.region_code,
+            })),
+            availableMunicipalities: uniqueMunicipalities.map((item: any) => ({
+              id: `municipality-${item.muni_code || item.municipalities?.code}`,
+              code: item.muni_code || item.municipalities?.code,
+              name: item.municipalities?.name || item.name,
+              type: "municipality",
+              unit_code: item.municipalities?.unit_code,
+            })),
+          };
+
+          console.log(
+            "[EditDocument] Smart geographic data:",
+            smartGeographicData,
+          );
+          return smartGeographicData;
+        } catch (error) {
+          console.error("Error fetching project geographic areas:", error);
+          toast({
+            title: "Σφάλμα",
+            description: "Αποτυχία φόρτωσης περιοχών",
+            variant: "destructive",
+          });
           return [];
         }
-
-        // Extract project-specific geographic areas
-        const projectRegions = (response as any)?.projectGeographicData?.regions || [];
-        const projectUnits = (response as any)?.projectGeographicData?.regionalUnits || [];
-        const projectMunicipalities = (response as any)?.projectGeographicData?.municipalities || [];
-
-        console.log("[EditDocument] Project-specific geographic data:", {
-          regions: projectRegions.length,
-          units: projectUnits.length,
-          municipalities: projectMunicipalities.length,
-        });
-
-        // Remove duplicates by using a Set based on code
-        const uniqueRegions = Array.from(
-          new Map(
-            projectRegions.map((item: any) => [
-              item.region_code || item.regions?.code,
-              item,
-            ]),
-          ).values(),
-        );
-
-        const uniqueUnits = Array.from(
-          new Map(
-            projectUnits.map((item: any) => [
-              item.unit_code || item.regional_units?.code,
-              item,
-            ]),
-          ).values(),
-        );
-
-        const uniqueMunicipalities = Array.from(
-          new Map(
-            projectMunicipalities.map((item: any) => [
-              item.muni_code || item.municipalities?.code,
-              item,
-            ]),
-          ).values(),
-        );
-
-        const smartGeographicData = {
-          availableRegions: uniqueRegions.map((item: any) => ({
-            id: `region-${item.region_code || item.regions?.code}`,
-            code: item.region_code || item.regions?.code,
-            name: item.regions?.name || item.name,
-            type: "region",
-          })),
-          availableUnits: uniqueUnits.map((item: any) => ({
-            id: `unit-${item.unit_code || item.regional_units?.code}`,
-            code: item.unit_code || item.regional_units?.code,
-            name: item.regional_units?.name || item.name,
-            type: "regional_unit",
-            region_code: item.regional_units?.region_code,
-          })),
-          availableMunicipalities: uniqueMunicipalities.map((item: any) => ({
-            id: `municipality-${item.muni_code || item.municipalities?.code}`,
-            code: item.muni_code || item.municipalities?.code,
-            name: item.municipalities?.name || item.name,
-            type: "municipality",
-            unit_code: item.municipalities?.unit_code,
-          })),
-        };
-
-        console.log("[EditDocument] Smart geographic data:", smartGeographicData);
-        return smartGeographicData;
-      } catch (error) {
-        console.error("Error fetching project geographic areas:", error);
-        toast({
-          title: "Σφάλμα",
-          description: "Αποτυχία φόρτωσης περιοχών",
-          variant: "destructive",
-        });
-        return [];
-      }
-    },
-    enabled: Boolean(selectedProjectId) && projects.length > 0 && !!geographicData && open,
-  });
+      },
+      enabled:
+        Boolean(selectedProjectId) &&
+        projects.length > 0 &&
+        !!geographicData &&
+        open,
+    });
 
   // Computed available options based on current selections
-  const availableRegions = (projectGeographicAreas as any)?.availableRegions || [];
+  const availableRegions =
+    (projectGeographicAreas as any)?.availableRegions || [];
   const availableUnits = (projectGeographicAreas as any)?.availableUnits || [];
   const availableMunicipalities =
     (projectGeographicAreas as any)?.availableMunicipalities || [];
@@ -499,8 +599,7 @@ export function EditDocumentModal({
         [key]: {
           status: "error",
           message:
-            (error as any)?.message ||
-            "Failed to save geographical selection",
+            (error as any)?.message || "Failed to save geographical selection",
         },
       }));
     },
@@ -600,21 +699,29 @@ export function EditDocumentModal({
     // eslint-disable-next-line react-hooks/incompatible-library
     const subscription = form.watch((value, { name }) => {
       // Check if any recipient amount changed
-      if (name?.startsWith('recipients.') && name?.endsWith('.amount')) {
+      if (name?.startsWith("recipients.") && name?.endsWith(".amount")) {
         const recipients = value.recipients || [];
         const total = recipients.reduce((sum: number, recipient: any) => {
           return sum + (parseFloat(recipient.amount) || 0);
         }, 0);
-        
+
+        // Round to 2 decimal places to avoid floating point precision errors
+        const roundedTotal = Math.round(total * 100) / 100;
+
         // Only update if total has changed to prevent infinite loops
         const currentTotal = form.getValues("total_amount");
-        if (total !== currentTotal) {
-          console.log('[EditDocument] Auto-updating total_amount:', { from: currentTotal, to: total });
-          form.setValue("total_amount", total, { shouldValidate: false });
+        if (roundedTotal !== currentTotal) {
+          console.log("[EditDocument] Auto-updating total_amount:", {
+            from: currentTotal,
+            to: roundedTotal,
+          });
+          form.setValue("total_amount", roundedTotal, {
+            shouldValidate: false,
+          });
         }
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, [form]);
 
@@ -623,61 +730,88 @@ export function EditDocumentModal({
     // eslint-disable-next-line react-hooks/incompatible-library
     const subscription = form.watch((value, { name }) => {
       // Check if any employee payment field changed
-      if (name?.startsWith('recipients.') && (
-        name.includes('.days') || 
-        name.includes('.daily_compensation') ||
-        name.includes('.accommodation_expenses') ||
-        name.includes('.kilometers_traveled') ||
-        name.includes('.tickets_tolls_rental') ||
-        name.includes('.has_2_percent_deduction')
-      )) {
+      if (
+        name?.startsWith("recipients.") &&
+        (name.includes(".days") ||
+          name.includes(".daily_compensation") ||
+          name.includes(".accommodation_expenses") ||
+          name.includes(".kilometers_traveled") ||
+          name.includes(".tickets_tolls_rental") ||
+          name.includes(".has_2_percent_deduction"))
+      ) {
         // Extract the recipient index from the field name
         const match = name.match(/recipients\.(\d+)\./);
         if (!match) return;
-        
+
         const index = parseInt(match[1]);
         const recipient = value.recipients?.[index];
         if (!recipient) return;
 
         // Calculate total_expense
-        const days = parseFloat(recipient.days?.toString() || '0') || 0;
-        const dailyComp = parseFloat(recipient.daily_compensation?.toString() || '0') || 0;
-        const accommodation = parseFloat(recipient.accommodation_expenses?.toString() || '0') || 0;
-        const kilometers = parseFloat(recipient.kilometers_traveled?.toString() || '0') || 0;
-        const pricePerKm = parseFloat(recipient.price_per_km?.toString() || '0.2') || 0.2;
-        const tickets = parseFloat(recipient.tickets_tolls_rental?.toString() || '0') || 0;
+        const days = parseFloat(recipient.days?.toString() || "0") || 0;
+        const dailyComp =
+          parseFloat(recipient.daily_compensation?.toString() || "0") || 0;
+        const accommodation =
+          parseFloat(recipient.accommodation_expenses?.toString() || "0") || 0;
+        const kilometers =
+          parseFloat(recipient.kilometers_traveled?.toString() || "0") || 0;
+        const pricePerKm =
+          parseFloat(recipient.price_per_km?.toString() || "0.2") || 0.2;
+        const tickets =
+          parseFloat(recipient.tickets_tolls_rental?.toString() || "0") || 0;
 
-        const totalExpense = (days * dailyComp) + accommodation + (kilometers * pricePerKm) + tickets;
+        const totalExpense =
+          days * dailyComp + accommodation + kilometers * pricePerKm + tickets;
 
         // Calculate deduction if applicable
         // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation (days * dailyComp)
         const has2PercentDeduction = recipient.has_2_percent_deduction ?? false;
-        const withholdingBase = isEktosEdras ? (days * dailyComp) : totalExpense;
+        const withholdingBase = isEktosEdras ? days * dailyComp : totalExpense;
         const deduction = has2PercentDeduction ? withholdingBase * 0.02 : 0;
         const netPayable = totalExpense - deduction;
 
         // Update the form values
-        const currentTotalExpense = form.getValues(`recipients.${index}.total_expense` as any);
-        const currentDeduction = form.getValues(`recipients.${index}.deduction_2_percent` as any);
-        const currentNetPayable = form.getValues(`recipients.${index}.net_payable` as any);
-        const currentAmount = form.getValues(`recipients.${index}.amount` as any);
+        const currentTotalExpense = form.getValues(
+          `recipients.${index}.total_expense` as any,
+        );
+        const currentDeduction = form.getValues(
+          `recipients.${index}.deduction_2_percent` as any,
+        );
+        const currentNetPayable = form.getValues(
+          `recipients.${index}.net_payable` as any,
+        );
+        const currentAmount = form.getValues(
+          `recipients.${index}.amount` as any,
+        );
 
         // Only update if values have changed
         if (totalExpense !== currentTotalExpense) {
-          form.setValue(`recipients.${index}.total_expense` as any, totalExpense, { shouldValidate: false });
+          form.setValue(
+            `recipients.${index}.total_expense` as any,
+            totalExpense,
+            { shouldValidate: false },
+          );
         }
         if (deduction !== currentDeduction) {
-          form.setValue(`recipients.${index}.deduction_2_percent` as any, deduction, { shouldValidate: false });
+          form.setValue(
+            `recipients.${index}.deduction_2_percent` as any,
+            deduction,
+            { shouldValidate: false },
+          );
         }
         if (netPayable !== currentNetPayable) {
-          form.setValue(`recipients.${index}.net_payable` as any, netPayable, { shouldValidate: false });
+          form.setValue(`recipients.${index}.net_payable` as any, netPayable, {
+            shouldValidate: false,
+          });
         }
         // Update the amount field to match net_payable (this will trigger total recalculation)
         if (netPayable !== currentAmount) {
-          form.setValue(`recipients.${index}.amount` as any, netPayable, { shouldValidate: false });
+          form.setValue(`recipients.${index}.amount` as any, netPayable, {
+            shouldValidate: false,
+          });
         }
 
-        console.log('[EditDocument] Auto-calculated employee payment:', {
+        console.log("[EditDocument] Auto-calculated employee payment:", {
           index,
           days,
           dailyComp,
@@ -687,11 +821,11 @@ export function EditDocumentModal({
           totalExpense,
           has2PercentDeduction,
           deduction,
-          netPayable
+          netPayable,
         });
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, [form]);
 
@@ -708,25 +842,30 @@ export function EditDocumentModal({
   useEffect(() => {
     // Reset when modal closes OR when document ID changes
     setFormInitialized(false);
-    
-    // Reset expenditure type state when modal closes to prevent stale NaN values
-    if (!open) {
-      setSelectedExpenditureTypeId(null);
-    }
-    
-    console.log('[EditDocument] Resetting initialization flag:', { 
-      open, 
-      documentId: document?.id 
+
+    // Note: Do NOT reset selectedExpenditureTypeId here to avoid dropdown flicker
+    // It will be properly reset when a new document loads via the form reset logic
+
+    console.log("[EditDocument] Resetting initialization flag:", {
+      open,
+      documentId: document?.id,
     });
   }, [open, document?.id]);
 
   // Populate selectedProjectId and selectedExpenditureTypeId from projectIndexData when modal opens
   useEffect(() => {
-    if (projectIndexData && projectIndexData.project_id && projectIndexData.expenditure_type_id) {
-      console.log('[EditDocument] Populating project and expenditure type from projectIndexData:', { 
-        projectId: projectIndexData.project_id,
-        expenditureTypeId: projectIndexData.expenditure_type_id 
-      });
+    if (
+      projectIndexData &&
+      projectIndexData.project_id &&
+      projectIndexData.expenditure_type_id
+    ) {
+      console.log(
+        "[EditDocument] Populating project and expenditure type from projectIndexData:",
+        {
+          projectId: projectIndexData.project_id,
+          expenditureTypeId: projectIndexData.expenditure_type_id,
+        },
+      );
       setSelectedProjectId(projectIndexData.project_id);
       setSelectedExpenditureTypeId(projectIndexData.expenditure_type_id);
     }
@@ -735,45 +874,51 @@ export function EditDocumentModal({
   // Reset form when document changes - WITH LOADING GATES (ONLY ONCE)
   useEffect(() => {
     if (!document || !open) return;
-    
+
     // Don't reset if already initialized (prevents overwriting user changes)
     if (formInitialized) {
-      console.log('[EditDocument] Form already initialized, skipping reset');
+      console.log("[EditDocument] Form already initialized, skipping reset");
       return;
     }
-    
+
     // CRITICAL: Wait for all required data to load before populating form
     // This ensures dropdowns have their options available when values are set
-    
+
     // Check if queries are still loading
     if (unitsLoading || beneficiariesLoading) {
-      console.log('[EditDocument] Still loading basic data:', {
+      console.log("[EditDocument] Still loading basic data:", {
         unitsLoading,
-        beneficiariesLoading
+        beneficiariesLoading,
       });
       return;
     }
-    
+
     // If document has unit_id, also wait for projects to load
     if (document.unit_id && projectsLoading) {
-      console.log('[EditDocument] Still loading projects for unit:', document.unit_id);
+      console.log(
+        "[EditDocument] Still loading projects for unit:",
+        document.unit_id,
+      );
       return;
     }
-    
+
     // If document has project_index_id, wait for project_index data to load
     if (document.project_index_id && projectIndexLoading) {
-      console.log('[EditDocument] Still loading project_index data:', document.project_index_id);
+      console.log(
+        "[EditDocument] Still loading project_index data:",
+        document.project_index_id,
+      );
       return;
     }
 
-    console.log('[EditDocument] All data loaded, resetting form ONCE');
+    console.log("[EditDocument] All data loaded, resetting form ONCE");
 
-    const protocolDate = document.protocol_date 
-      ? new Date(document.protocol_date).toISOString().split('T')[0] 
+    const protocolDate = document.protocol_date
+      ? new Date(document.protocol_date).toISOString().split("T")[0]
       : "";
 
     const originalProtocolDate = document.original_protocol_date
-      ? new Date(document.original_protocol_date).toISOString().split('T')[0]
+      ? new Date(document.original_protocol_date).toISOString().split("T")[0]
       : "";
 
     // Extract ESDIAN fields (preserve all entries)
@@ -786,54 +931,63 @@ export function EditDocumentModal({
     const esdianField2 = esdianFieldsArray[1] || "";
 
     // Calculate initial recipients from beneficiary or employee payments
-    const initialRecipients = (Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []).map((payment: any) => {
+    const initialRecipients = (
+      Array.isArray(beneficiaryPayments) ? beneficiaryPayments : []
+    ).map((payment: any) => {
       // Check if this is employee payment data (has month field)
       if (payment.month) {
         // ΕΚΤΟΣ ΕΔΡΑΣ employee payment
         return {
           id: payment.id,
           employee_id: payment.employee_id,
-          firstname: payment.firstname || '',
-          lastname: payment.lastname || '',
-          fathername: payment.fathername || '',
-          afm: payment.afm || '',
+          firstname: payment.firstname || "",
+          lastname: payment.lastname || "",
+          fathername: payment.fathername || "",
+          afm: payment.afm || "",
           amount: parseFloat(payment.amount) || 0,
-          month: payment.month || '',
+          month: payment.month || "",
           days: payment.days || 0,
           daily_compensation: payment.daily_compensation || 0,
           accommodation_expenses: payment.accommodation_expenses || 0,
           kilometers_traveled: payment.kilometers_traveled || 0,
+          price_per_km: payment.price_per_km || 0.2,
           tickets_tolls_rental: payment.tickets_tolls_rental || 0,
-          tickets_tolls_rental_entries: payment.tickets_tolls_rental_entries || (payment.tickets_tolls_rental > 0 ? [payment.tickets_tolls_rental] : []),
+          tickets_tolls_rental_entries:
+            payment.tickets_tolls_rental_entries ||
+            (payment.tickets_tolls_rental > 0
+              ? [payment.tickets_tolls_rental]
+              : []),
           net_payable: parseFloat(payment.amount) || 0,
-          status: payment.status || 'pending',
-          secondary_text: payment.secondary_text || '',
-          installment: 'Προκαταβολή',
-          installments: ['Προκαταβολή'],
-          installmentAmounts: { 'Προκαταβολή': parseFloat(payment.amount) || 0 },
+          status: payment.status || "pending",
+          secondary_text: payment.secondary_text || "",
+          installment: "Προκαταβολή",
+          installments: ["Προκαταβολή"],
+          installmentAmounts: { Προκαταβολή: parseFloat(payment.amount) || 0 },
           regiondet: normalizeRegiondet(payment.regiondet, payment.id),
         };
       }
-      
+
       // Standard beneficiary payment
       const beneficiaryData = Array.isArray(payment.beneficiaries)
         ? payment.beneficiaries[0]
         : payment.beneficiaries;
-      const installmentKey = payment.installment || 'Προκαταβολή';
+      const installmentKey = payment.installment || "Προκαταβολή";
       return {
         id: payment.id,
         beneficiary_id: payment.beneficiary_id,
-        firstname: beneficiaryData?.name || '',
-        lastname: beneficiaryData?.surname || '',
-        fathername: beneficiaryData?.fathername || '',
-        afm: beneficiaryData?.afm || '',
+        firstname: beneficiaryData?.name || "",
+        lastname: beneficiaryData?.surname || "",
+        fathername: beneficiaryData?.fathername || "",
+        afm: beneficiaryData?.afm || "",
         amount: parseFloat(payment.amount) || 0,
         installment: installmentKey,
         installments: [installmentKey],
-        installmentAmounts: { [installmentKey]: parseFloat(payment.amount) || 0 } as Record<string, number>,
+        installmentAmounts: {
+          [installmentKey]: parseFloat(payment.amount) || 0,
+        } as Record<string, number>,
         tickets_tolls_rental_entries: [],
-        status: payment.status || 'pending',
-        secondary_text: payment.freetext || '',
+        status: payment.status || "pending",
+        secondary_text: payment.freetext || "",
         regiondet: normalizeRegiondet(beneficiaryData?.regiondet, payment.id),
       };
     });
@@ -842,14 +996,19 @@ export function EditDocumentModal({
     const recipientsFromDocument =
       initialRecipients.length === 0 && Array.isArray(docAny?.recipients)
         ? (docAny.recipients as any[]).map((r) => {
-            const amountNumber = typeof r.amount === "string" ? parseFloat(r.amount) || 0 : Number(r.amount) || 0;
-            const key = r.installment || r.month || 'ΝΣΧΝΣΟΝΤΏΟΑ';
+            const amountNumber =
+              typeof r.amount === "string"
+                ? parseFloat(r.amount) || 0
+                : Number(r.amount) || 0;
+            const key = r.installment || r.month || "ΝΣΧΝΣΟΝΤΏΟΑ";
             return {
               ...r,
               amount: amountNumber,
               installment: key,
               installments: r.installments || [key],
-              installmentAmounts: r.installmentAmounts || { [key]: amountNumber },
+              installmentAmounts: r.installmentAmounts || {
+                [key]: amountNumber,
+              },
               regiondet: normalizeRegiondet(
                 r.regiondet || (r as any).region || null,
                 r.id as number | string | undefined,
@@ -858,19 +1017,26 @@ export function EditDocumentModal({
           })
         : [];
 
-    const hydratedRecipients = initialRecipients.length > 0 ? initialRecipients : recipientsFromDocument;
+    const hydratedRecipients =
+      initialRecipients.length > 0 ? initialRecipients : recipientsFromDocument;
 
     // Cache initial recipients for fallback usage during submission
     initialRecipientsRef.current = hydratedRecipients;
 
     // Calculate initial total from recipients or document
-    const initialTotal = hydratedRecipients.length > 0
-      ? hydratedRecipients.reduce((sum: number, r: any) => sum + (parseFloat(r.amount) || 0), 0)
-      : parseFloat(document.total_amount?.toString() || "0") || 0;
+    const initialTotal =
+      hydratedRecipients.length > 0
+        ? hydratedRecipients.reduce(
+            (sum: number, r: any) => sum + (parseFloat(r.amount) || 0),
+            0,
+          )
+        : parseFloat(document.total_amount?.toString() || "0") || 0;
 
     // For correction mode, prepare to archive current protocol info
     const formData: Partial<DocumentForm> = {
-      protocol_number_input: isCorrection ? "" : (document.protocol_number_input || ""),
+      protocol_number_input: isCorrection
+        ? ""
+        : document.protocol_number_input || "",
       protocol_date: isCorrection ? "" : protocolDate,
       status: isCorrection ? "pending" : (document.status as any) || "draft",
       comments: document.comments || "",
@@ -879,61 +1045,117 @@ export function EditDocumentModal({
       esdian_field2: esdianField2,
       esdian_fields: esdianFieldsArray,
       is_correction: isCorrection ? true : Boolean(document.is_correction),
-      original_protocol_number: isCorrection ? document.protocol_number_input || "" : (document.original_protocol_number || ""),
-      original_protocol_date: isCorrection ? protocolDate : originalProtocolDate,
+      original_protocol_number: isCorrection
+        ? document.protocol_number_input || ""
+        : document.original_protocol_number || "",
+      original_protocol_date: isCorrection
+        ? protocolDate
+        : originalProtocolDate,
       correction_reason: (document as any)?.correction_reason || "",
       recipients: hydratedRecipients,
-      project_index_id: document.project_index_id || undefined,  // KEEP original project_index.id for backend
+      project_index_id: document.project_index_id || undefined, // KEEP original project_index.id for backend
       // Use document.unit_id if available, otherwise fall back to projectIndexData.monada_id
-      unit_id: document.unit_id ? Number(document.unit_id) : (projectIndexData?.monada_id ? Number(projectIndexData.monada_id) : undefined),
-      expenditure_type_id: documentExpenditureTypeId || undefined,  // Set expenditure type for dropdown display
+      unit_id: document.unit_id
+        ? Number(document.unit_id)
+        : projectIndexData?.monada_id
+          ? Number(projectIndexData.monada_id)
+          : undefined,
+      expenditure_type_id: documentExpenditureTypeId || undefined, // Set expenditure type for dropdown display
     };
 
-    const resolvedUnitId = document.unit_id ? Number(document.unit_id) : (projectIndexData?.monada_id ? Number(projectIndexData.monada_id) : undefined);
-    console.log('[EditDocument] Form data:', formData);
-    console.log('[EditDocument] Unit ID resolution:', {
+    const resolvedUnitId = document.unit_id
+      ? Number(document.unit_id)
+      : projectIndexData?.monada_id
+        ? Number(projectIndexData.monada_id)
+        : undefined;
+    console.log("[EditDocument] Form data:", formData);
+    console.log("[EditDocument] Unit ID resolution:", {
       documentUnitId: document.unit_id,
       projectIndexMonadaId: projectIndexData?.monada_id,
       resolvedUnitId: resolvedUnitId,
-      source: document.unit_id ? 'document.unit_id' : (projectIndexData?.monada_id ? 'projectIndexData.monada_id' : 'none')
+      source: document.unit_id
+        ? "document.unit_id"
+        : projectIndexData?.monada_id
+          ? "projectIndexData.monada_id"
+          : "none",
     });
-    console.log('[EditDocument] Document project_index_id:', document.project_index_id, 'resolved project_id:', actualProjectId);
-    console.log('[EditDocument] Units available:', units?.length, 'first unit:', units?.[0]);
+    console.log(
+      "[EditDocument] Document project_index_id:",
+      document.project_index_id,
+      "resolved project_id:",
+      actualProjectId,
+    );
+    console.log(
+      "[EditDocument] Units available:",
+      units?.length,
+      "first unit:",
+      units?.[0],
+    );
     form.reset(formData);
-    
+
     // Force re-render of unit_id field by triggering watch
     setTimeout(() => {
-      const currentValue = form.getValues('unit_id');
-      console.log('[EditDocument] After reset, unit_id value:', currentValue, 'expected:', resolvedUnitId);
+      const currentValue = form.getValues("unit_id");
+      console.log(
+        "[EditDocument] After reset, unit_id value:",
+        currentValue,
+        "expected:",
+        resolvedUnitId,
+      );
     }, 0);
 
     // Set selectedProjectId and selectedExpenditureTypeId for dropdowns and queries
     if (actualProjectId) {
       setSelectedProjectId(actualProjectId);
-      console.log('[EditDocument] Set selectedProjectId to resolved project.id:', actualProjectId, 'for geographic queries and dropdown display');
+      console.log(
+        "[EditDocument] Set selectedProjectId to resolved project.id:",
+        actualProjectId,
+        "for geographic queries and dropdown display",
+      );
     }
-    
+
     if (documentExpenditureTypeId && !isNaN(documentExpenditureTypeId)) {
       setSelectedExpenditureTypeId(documentExpenditureTypeId);
-      console.log('[EditDocument] Set selectedExpenditureTypeId:', documentExpenditureTypeId);
+      console.log(
+        "[EditDocument] Set selectedExpenditureTypeId:",
+        documentExpenditureTypeId,
+      );
     }
 
-    // Mark as initialized to prevent re-resetting on user changes
+    // CRITICAL FIX: Mark as initialized AFTER state is fully set to prevent race conditions
+    // This ensures findAndUpdateProjectIndex has correct values when user changes dropdowns
     setFormInitialized(true);
-  }, [document, open, form, isCorrection, unitsLoading, beneficiariesLoading, projectsLoading, projectIndexLoading, actualProjectId, beneficiaryPayments, units, projectIndexData, correctionReasonTemplate, docAny?.recipients, documentExpenditureTypeId, formInitialized]);
+  }, [
+    document,
+    open,
+    form,
+    isCorrection,
+    unitsLoading,
+    beneficiariesLoading,
+    projectsLoading,
+    projectIndexLoading,
+    actualProjectId,
+    beneficiaryPayments,
+    units,
+    projectIndexData,
+    correctionReasonTemplate,
+    docAny?.recipients,
+    documentExpenditureTypeId,
+    formInitialized,
+  ]);
 
   // Initialize geographic selection dropdowns from document's region JSONB
-  
 
   // Update or create correction mutation
   const updateMutation = useMutation({
     mutationFn: async (data: DocumentForm) => {
       if (!document?.id) throw new Error("No document ID");
 
-      // Always preserve recipients even if the form array was cleared by accident
-      const recipientsPayload = data.recipients?.length
-        ? data.recipients
-        : initialRecipientsRef.current || [];
+      // Preserve recipients; only use fallback if recipients field is missing entirely (undefined/null)
+      const recipientsPayload =
+        data.recipients !== undefined && data.recipients !== null
+          ? data.recipients
+          : initialRecipientsRef.current || [];
 
       // Prefer dynamic esdian_fields; fall back to legacy fields if needed
       const esdianSource =
@@ -992,12 +1214,16 @@ export function EditDocumentModal({
 
         // Update beneficiaries if they exist and have data
         if (recipientsPayload && recipientsPayload.length > 0) {
-          const validRecipients = recipientsPayload.filter(r => 
-            r.firstname || r.lastname || r.afm || (r.amount && r.amount > 0)
+          const validRecipients = recipientsPayload.filter(
+            (r) =>
+              r.firstname || r.lastname || r.afm || (r.amount && r.amount > 0),
           );
-          
+
           if (validRecipients.length > 0) {
-            console.log('[EditDocument] Sending recipients to backend:', JSON.stringify(validRecipients, null, 2));
+            console.log(
+              "[EditDocument] Sending recipients to backend:",
+              JSON.stringify(validRecipients, null, 2),
+            );
             await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
@@ -1011,58 +1237,85 @@ export function EditDocumentModal({
       setIsLoading(false);
       toast({
         title: "Επιτυχία",
-        description: isCorrection 
-          ? "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς. Προσθέστε τώρα το νέο πρωτόκολλο." 
+        description: isCorrection
+          ? "Η ορθή επανάληψη δημιουργήθηκε επιτυχώς. Προσθέστε τώρα το νέο πρωτόκολλο."
           : "Το έγγραφο ενημερώθηκε επιτυχώς",
       });
-      
+
       // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["documents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-      queryClient.invalidateQueries({ queryKey: ['/api/documents', document?.id, 'beneficiaries'] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/documents", document?.id, "beneficiaries"],
+      });
       refetchPayments();
-      
+
       // For corrections, trigger the protocol modal callback before closing
       if (isCorrection && onCorrectionSuccess && document?.id) {
         onCorrectionSuccess(document.id);
       }
-      
+
       onOpenChange(false);
     },
     onError: (error: any) => {
-      console.error(`Error ${isCorrection ? 'creating correction' : 'updating document'}:`, error);
+      console.error(
+        `Error ${isCorrection ? "creating correction" : "updating document"}:`,
+        error,
+      );
       setIsLoading(false);
       toast({
         title: "Σφάλμα",
-        description: error?.message || `Παρουσιάστηκε σφάλμα κατά ${isCorrection ? 'τη δημιουργία της διόρθωσης' : 'την ενημέρωση του εγγράφου'}`,
+        description:
+          error?.message ||
+          `Παρουσιάστηκε σφάλμα κατά ${isCorrection ? "τη δημιουργία της διόρθωσης" : "την ενημέρωση του εγγράφου"}`,
         variant: "destructive",
       });
     },
   });
 
   // Function to find matching project_index entry and update form
-  const findAndUpdateProjectIndex = async (projectId: number, unitId: number, expenditureTypeId: number) => {
+  const findAndUpdateProjectIndex = async (
+    projectId: number,
+    unitId: number,
+    expenditureTypeId: number,
+  ) => {
     try {
-      console.log('[EditDocument] Finding project_index for:', { projectId, unitId, expenditureTypeId });
-      
-      const response = await apiRequest(`/api/project-index/find/${projectId}/${unitId}/${expenditureTypeId}`) as { id: number; project_id: number; monada_id: number; expenditure_type_id: number };
-      
+      console.log("[EditDocument] Finding project_index for:", {
+        projectId,
+        unitId,
+        expenditureTypeId,
+      });
+
+      const response = (await apiRequest(
+        `/api/project-index/find/${projectId}/${unitId}/${expenditureTypeId}`,
+      )) as {
+        id: number;
+        project_id: number;
+        monada_id: number;
+        expenditure_type_id: number;
+      };
+
       if (response && response.id) {
-        console.log('[EditDocument] Found matching project_index:', response.id);
-        form.setValue('project_index_id', response.id);
+        console.log(
+          "[EditDocument] Found matching project_index:",
+          response.id,
+        );
+        form.setValue("project_index_id", response.id);
         return response.id;
       } else {
         // Clear project_index_id if no match found
-        form.setValue('project_index_id', undefined);
+        form.setValue("project_index_id", undefined);
         return null;
       }
     } catch (error: any) {
-      console.error('[EditDocument] Error finding project_index:', error);
+      console.error("[EditDocument] Error finding project_index:", error);
       // Clear project_index_id to prevent saving with stale data
-      form.setValue('project_index_id', undefined);
+      form.setValue("project_index_id", undefined);
       toast({
         title: "Σφάλμα",
-        description: error?.details || "Δεν βρέθηκε αντίστοιχο έργο για αυτόν τον συνδυασμό. Επιλέξτε άλλο έργο ή τύπο δαπάνης.",
+        description:
+          error?.details ||
+          "Δεν βρέθηκε αντίστοιχο έργο για αυτόν τον συνδυασμό. Επιλέξτε άλλο έργο ή τύπο δαπάνης.",
         variant: "destructive",
       });
       return null;
@@ -1070,14 +1323,23 @@ export function EditDocumentModal({
   };
 
   const handleSubmit = (data: DocumentForm) => {
-    console.log('[EditDocument] ========== FORM SUBMIT ATTEMPT ==========');
-    console.log('[EditDocument] Form validation errors:', form.formState.errors);
-    console.log('[EditDocument] Form isValid:', form.formState.isValid);
-    console.log('[EditDocument] Form isDirty:', form.formState.isDirty);
-    console.log('[EditDocument] Form isSubmitting:', form.formState.isSubmitting);
-    console.log('[EditDocument] Submitting data:', data);
-    console.log('[EditDocument] project_index_id in data:', data.project_index_id);
-    console.log('[EditDocument] =============================================');
+    console.log("[EditDocument] ========== FORM SUBMIT ATTEMPT ==========");
+    console.log(
+      "[EditDocument] Form validation errors:",
+      form.formState.errors,
+    );
+    console.log("[EditDocument] Form isValid:", form.formState.isValid);
+    console.log("[EditDocument] Form isDirty:", form.formState.isDirty);
+    console.log(
+      "[EditDocument] Form isSubmitting:",
+      form.formState.isSubmitting,
+    );
+    console.log("[EditDocument] Submitting data:", data);
+    console.log(
+      "[EditDocument] project_index_id in data:",
+      data.project_index_id,
+    );
+    console.log("[EditDocument] =============================================");
     if (!validateBeneficiaryRegions()) {
       return;
     }
@@ -1093,7 +1355,7 @@ export function EditDocumentModal({
   // Add recipient
   const addRecipient = () => {
     const currentRecipients = form.getValues("recipients") || [];
-    
+
     if (currentRecipients.length >= 15) {
       toast({
         title: "Προσοχή",
@@ -1102,22 +1364,22 @@ export function EditDocumentModal({
       });
       return;
     }
-    
+
     form.setValue("recipients", [
       ...currentRecipients,
-      { 
-        firstname: "", 
-        lastname: "", 
-        fathername: "", 
-        afm: "", 
-        amount: 0, 
+      {
+        firstname: "",
+        lastname: "",
+        fathername: "",
+        afm: "",
+        amount: 0,
         installment: "ΕΦΑΠΑΞ",
         installments: ["ΕΦΑΠΑΞ"],
         installmentAmounts: { ΕΦΑΠΑΞ: 0 },
         tickets_tolls_rental_entries: [],
         secondary_text: "",
         regiondet: null,
-      }
+      },
     ]);
   };
 
@@ -1129,39 +1391,84 @@ export function EditDocumentModal({
   };
 
   const currentStatus = form.watch("status");
-  const statusOption = STATUS_OPTIONS.find(option => option.value === currentStatus);
+  const statusOption = STATUS_OPTIONS.find(
+    (option) => option.value === currentStatus,
+  );
 
   if (!document) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-2 shrink-0">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4 shrink-0 border-b">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {isCorrection ? (
               <>
                 <AlertCircle className="w-5 h-5 text-orange-500" />
-                Δημιουργία Ορθής Επανάληψης #{document.id}
+                Δημιουργία Ορθής Επανάληψης
               </>
             ) : (
               <>
                 <FileText className="w-5 h-5" />
-                Επεξεργασία Εγγράφου #{document.id}
+                Επεξεργασία Εγγράφου
               </>
             )}
           </DialogTitle>
-          <DialogDescription>
-            {isCorrection 
-              ? "Συμπληρώστε τα στοιχεία για τη δημιουργία ορθής επανάληψης του εγγράφου"
-              : "Επεξεργασία στοιχείων και μεταδεδομένων του εγγράφου"
-            }
+          <DialogDescription className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-medium">#{document.id}</span>
+              {document.protocol_number_input && (
+                <>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-sm font-mono truncate max-w-xs">
+                    {document.protocol_number_input}
+                  </span>
+                </>
+              )}
+              {statusOption && (
+                <Badge className={statusOption.color} variant="secondary">
+                  {statusOption.label}
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isCorrection
+                ? "Συμπληρώστε τα στοιχεία για τη δημιουργία ορθής επανάληψης του εγγράφου"
+                : "Επεξεργασία στοιχείων και μεταδεδομένων του εγγράφου"}
+            </p>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6">
+        <ScrollArea className="flex-1 px-6 py-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4">
-              
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
+              {/* Error Summary */}
+              {Object.keys(form.formState.errors).length > 0 && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Σφάλματα φόρμας</AlertTitle>
+                  <AlertDescription>
+                    <p className="text-sm mb-2">
+                      Παρακαλώ διορθώστε τα παρακάτω πεδία:
+                    </p>
+                    <ul className="text-sm space-y-1 list-disc list-inside">
+                      {Object.entries(form.formState.errors).map(
+                        ([key, error]) => (
+                          <li key={key}>
+                            <span className="font-medium">
+                              {key.replace(/_/g, " ")}:
+                            </span>{" "}
+                            {error.message?.toString() || "Μη έγκυρη τιμή"}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
               {(isCorrection || form.watch("is_correction")) && (
                 <Card className="border-blue-200 bg-blue-50">
                   <CardHeader>
@@ -1181,7 +1488,11 @@ export function EditDocumentModal({
                               <Input
                                 {...field}
                                 readOnly={isCorrection}
-                                className={isCorrection ? "bg-gray-100" : ""}
+                                className={
+                                  isCorrection
+                                    ? "bg-muted cursor-not-allowed"
+                                    : ""
+                                }
                                 data-testid="input-original-protocol-number"
                               />
                             </FormControl>
@@ -1201,7 +1512,11 @@ export function EditDocumentModal({
                                 type="date"
                                 {...field}
                                 readOnly={isCorrection}
-                                className={isCorrection ? "bg-gray-100" : ""}
+                                className={
+                                  isCorrection
+                                    ? "bg-muted cursor-not-allowed"
+                                    : ""
+                                }
                                 data-testid="input-original-protocol-date"
                               />
                             </FormControl>
@@ -1214,28 +1529,34 @@ export function EditDocumentModal({
                 </Card>
               )}
 
-              
-
               {isCorrection && (
-                <Card className="border-orange-200 bg-orange-50">
+                <Card className="border-l-4 border-l-amber-500 bg-amber-50/50 border-amber-200">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 text-orange-700">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2 text-amber-900">
                       <AlertCircle className="w-4 h-4" />
                       Λόγος Διόρθωσης
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2 text-sm">
-                      <Badge variant="outline" className="bg-white text-orange-700 border-orange-200">
-                        Πρωτόκολλο προς διόρθωση: {oldProtocolNumber || "Δεν έχει οριστεί"}
+                      <Badge
+                        variant="outline"
+                        className="bg-white text-orange-700 border-orange-200"
+                      >
+                        Πρωτόκολλο προς διόρθωση:{" "}
+                        {oldProtocolNumber || "Δεν έχει οριστεί"}
                       </Badge>
                       {originalProtocolDateDisplay ? (
-                        <Badge variant="outline" className="bg-white text-orange-700 border-orange-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-white text-orange-700 border-orange-200"
+                        >
                           Ημ/νία πρωτοκόλλου: {originalProtocolDateDisplay}
                         </Badge>
                       ) : null}
                       <span className="text-xs text-muted-foreground">
-                        Χρησιμοποίησε το έτοιμο κείμενο και συνέχισε την αιτιολόγηση.
+                        Χρησιμοποίησε το έτοιμο κείμενο και συνέχισε την
+                        αιτιολόγηση.
                       </span>
                     </div>
                     <FormField
@@ -1244,7 +1565,9 @@ export function EditDocumentModal({
                       render={({ field }) => (
                         <FormItem>
                           <div className="flex items-center justify-between gap-3">
-                            <FormLabel className="mb-0">Αιτιολογία Ορθής Επανάληψης *</FormLabel>
+                            <FormLabel className="mb-0">
+                              Αιτιολογία Ορθής Επανάληψης *
+                            </FormLabel>
                             <Button
                               type="button"
                               variant="secondary"
@@ -1262,14 +1585,19 @@ export function EditDocumentModal({
                             </Button>
                           </div>
                           <FormControl>
-                            <Textarea 
-                              {...field} 
+                            <Textarea
+                              {...field}
                               className="min-h-[100px]"
-                              placeholder={correctionReasonTemplate || "Εισάγετε τον λόγο για τον οποίο δημιουργείται η ορθή επανάληψη..."}
+                              placeholder={
+                                correctionReasonTemplate ||
+                                "Εισάγετε τον λόγο για τον οποίο δημιουργείται η ορθή επανάληψη..."
+                              }
                             />
                           </FormControl>
                           <p className="text-xs text-muted-foreground">
-                            Το πεδίο ξεκινά με το πρότυπο κείμενο για το παλιό πρωτόκολλο· συνέχισε με τα αίτια της ορθής επανάληψης.
+                            Το πεδίο ξεκινά με το πρότυπο κείμενο για το παλιό
+                            πρωτόκολλο· συνέχισε με τα αίτια της ορθής
+                            επανάληψης.
                           </p>
                           <FormMessage />
                         </FormItem>
@@ -1336,7 +1664,10 @@ export function EditDocumentModal({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Κατάσταση</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-status">
                                 <SelectValue placeholder="Επιλέξτε κατάσταση">
@@ -1350,7 +1681,10 @@ export function EditDocumentModal({
                             </FormControl>
                             <SelectContent>
                               {STATUS_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
+                                <SelectItem
+                                  key={option.value}
+                                  value={option.value}
+                                >
                                   <Badge className={option.color}>
                                     {option.label}
                                   </Badge>
@@ -1368,19 +1702,15 @@ export function EditDocumentModal({
                       name="total_amount"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="flex items-center gap-2">
+                          <FormLabel className="flex items-center gap-2 text-sm">
                             <Euro className="w-4 h-4" />
-                            Συνολικό Ποσό (Αυτόματος Υπολογισμός)
+                            Συνολικό Ποσό
                           </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              value={`€ ${(field.value || 0).toFixed(2)}`}
-                              readOnly
-                              className="bg-gray-100 font-semibold"
-                              data-testid="input-total-amount"
-                            />
-                          </FormControl>
+                          <div className="flex items-center h-10 px-3 py-2 rounded-md border border-input bg-muted">
+                            <span className="text-lg font-bold text-primary">
+                              € {(field.value || 0).toFixed(2)}
+                            </span>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Υπολογίζεται αυτόματα από τα ποσά των δικαιούχων
                           </p>
@@ -1396,16 +1726,19 @@ export function EditDocumentModal({
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Έργο & Μονάδα</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Επιλέξτε τη μονάδα, το έργο και τον τύπο δαπάνης
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="unit_id"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Μονάδα</FormLabel>
-                          <Select 
+                          <Select
                             key={`unit-select-${document?.id}-${formInitialized}`}
                             onValueChange={(value) => {
                               const numericValue = parseInt(value);
@@ -1415,9 +1748,15 @@ export function EditDocumentModal({
                               setSelectedProjectId(null);
                               setSelectedExpenditureTypeId(null);
                               // Invalidate projects query to fetch new projects
-                              queryClient.invalidateQueries({ queryKey: ['projects-working', numericValue] });
-                            }} 
-                            value={field.value != null ? String(field.value) : ""}
+                              queryClient.invalidateQueries({
+                                queryKey: ["projects-working", numericValue],
+                              });
+                            }}
+                            value={
+                              field.value !== undefined && field.value !== null
+                                ? String(field.value)
+                                : ""
+                            }
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-unit">
@@ -1425,11 +1764,16 @@ export function EditDocumentModal({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {units && Array.isArray(units) && units.map((unit: any) => (
-                                <SelectItem key={unit.id} value={String(unit.id)}>
-                                  {unit.name || unit.unit}
-                                </SelectItem>
-                              ))}
+                              {units &&
+                                Array.isArray(units) &&
+                                units.map((unit: any) => (
+                                  <SelectItem
+                                    key={unit.id}
+                                    value={String(unit.id)}
+                                  >
+                                    {unit.name || unit.unit}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1443,31 +1787,54 @@ export function EditDocumentModal({
                       render={() => (
                         <FormItem>
                           <FormLabel>Έργο</FormLabel>
-                          <Select 
+                          <Select
                             onValueChange={async (value) => {
                               const projectId = parseInt(value);
                               setSelectedProjectId(projectId);
-                              
+
                               // Find and update project_index_id if we have all required values
-                              const unitId = form.getValues('unit_id');
-                              if (projectId && unitId && selectedExpenditureTypeId) {
-                                await findAndUpdateProjectIndex(projectId, unitId, selectedExpenditureTypeId);
+                              const unitId = form.getValues("unit_id");
+                              if (
+                                projectId &&
+                                unitId &&
+                                selectedExpenditureTypeId
+                              ) {
+                                await findAndUpdateProjectIndex(
+                                  projectId,
+                                  unitId,
+                                  selectedExpenditureTypeId,
+                                );
                               }
-                            }} 
+                            }}
                             value={selectedProjectId?.toString() || ""}
                             disabled={!selectedUnitId}
                           >
                             <FormControl>
                               <SelectTrigger data-testid="select-project">
-                                <SelectValue placeholder={!selectedUnitId ? "Επιλέξτε πρώτα μονάδα" : "Επιλέξτε έργο"} />
+                                <SelectValue
+                                  placeholder={
+                                    !selectedUnitId
+                                      ? "Επιλέξτε πρώτα μονάδα"
+                                      : "Επιλέξτε έργο"
+                                  }
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {projects && Array.isArray(projects) && projects.map((project: any) => (
-                                <SelectItem key={project.id} value={project.id.toString()}>
-                                  {project.event_description || project.name || project.project_title || `Project ${project.mis}`} ({project.na853})
-                                </SelectItem>
-                              ))}
+                              {projects &&
+                                Array.isArray(projects) &&
+                                projects.map((project: any) => (
+                                  <SelectItem
+                                    key={project.id}
+                                    value={project.id.toString()}
+                                  >
+                                    {project.event_description ||
+                                      project.name ||
+                                      project.project_title ||
+                                      `Project ${project.mis}`}{" "}
+                                    ({project.na853})
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -1477,45 +1844,74 @@ export function EditDocumentModal({
 
                     <FormItem>
                       <FormLabel>Τύπος Δαπάνης</FormLabel>
-                      <Select 
+                      <Select
                         onValueChange={async (value) => {
                           const expenditureTypeId = parseInt(value);
                           if (!isNaN(expenditureTypeId)) {
                             setSelectedExpenditureTypeId(expenditureTypeId);
-                            
+
                             // Find and update project_index_id if we have all required values
-                            const unitId = form.getValues('unit_id');
-                            if (selectedProjectId && unitId && expenditureTypeId) {
-                              await findAndUpdateProjectIndex(selectedProjectId, unitId, expenditureTypeId);
+                            const unitId = form.getValues("unit_id");
+                            if (
+                              selectedProjectId &&
+                              unitId &&
+                              expenditureTypeId
+                            ) {
+                              await findAndUpdateProjectIndex(
+                                selectedProjectId,
+                                unitId,
+                                expenditureTypeId,
+                              );
                             }
                           }
-                        }} 
+                        }}
                         value={selectedExpenditureTypeId?.toString() || ""}
                         disabled={!selectedProjectId}
                         onOpenChange={(open) => {
                           if (open) {
-                            console.log('[EditDocument] Expenditure Select opened:', {
-                              selectedExpenditureTypeId,
-                              value: selectedExpenditureTypeId ? selectedExpenditureTypeId.toString() : undefined,
-                              expenditureTypesCount: expenditureTypes?.length,
-                              expenditureTypes,
-                              hasMatchingItem: expenditureTypes?.some((t: any) => t.id === selectedExpenditureTypeId)
-                            });
+                            console.log(
+                              "[EditDocument] Expenditure Select opened:",
+                              {
+                                selectedExpenditureTypeId,
+                                value: selectedExpenditureTypeId
+                                  ? selectedExpenditureTypeId.toString()
+                                  : undefined,
+                                expenditureTypesCount: expenditureTypes?.length,
+                                expenditureTypes,
+                                hasMatchingItem: expenditureTypes?.some(
+                                  (t: any) =>
+                                    t.id === selectedExpenditureTypeId,
+                                ),
+                              },
+                            );
                           }
                         }}
                       >
                         <SelectTrigger data-testid="select-expenditure-type">
-                          <SelectValue placeholder={!selectedProjectId ? "Επιλέξτε πρώτα έργο" : "Επιλέξτε τύπο δαπάνης"} />
+                          <SelectValue
+                            placeholder={
+                              !selectedProjectId
+                                ? "Επιλέξτε πρώτα έργο"
+                                : "Επιλέξτε τύπο δαπάνης"
+                            }
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          {expenditureTypes && Array.isArray(expenditureTypes) && expenditureTypes.map((type: any) => (
-                            <SelectItem key={type.id} value={type.id.toString()}>
-                              {type.expenditure_types || type.expenditure_types_minor || `Τύπος #${type.id}`}
-                            </SelectItem>
-                          ))}
+                          {expenditureTypes &&
+                            Array.isArray(expenditureTypes) &&
+                            expenditureTypes.map((type: any) => (
+                              <SelectItem
+                                key={type.id}
+                                value={type.id.toString()}
+                              >
+                                {type.expenditure_types ||
+                                  type.expenditure_types_minor ||
+                                  `Τύπος #${type.id}`}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Επιλέξτε τον τύπο δαπάνης για το έργο
                       </p>
                     </FormItem>
@@ -1526,15 +1922,24 @@ export function EditDocumentModal({
               {/* Beneficiaries Management Card */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Διαχείριση Δικαιούχων
-                  </CardTitle>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Users className="w-5 h-5" />
+                        Διαχείριση Δικαιούχων
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Προσθέστε ή επεξεργαστείτε τους δικαιούχους και τα ποσά
+                        τους
+                      </p>
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-muted-foreground">
-                      Επεξεργασία των στοιχείων των δικαιούχων ({form.watch("recipients")?.length || 0})
+                      Επεξεργασία των στοιχείων των δικαιούχων (
+                      {form.watch("recipients")?.length || 0})
                     </p>
                     <Button
                       type="button"
@@ -1550,29 +1955,44 @@ export function EditDocumentModal({
 
                   <Separator />
 
-                  {(!form.watch("recipients") || form.watch("recipients")?.length === 0) && (
+                  {(!form.watch("recipients") ||
+                    form.watch("recipients")?.length === 0) && (
                     <div className="text-center py-8 text-muted-foreground">
                       <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
                       <p>Δεν υπάρχουν δικαιούχοι</p>
-                      <p className="text-sm">Πατήστε &quot;Προσθήκη Δικαιούχου&quot; για να προσθέσετε</p>
+                      <p className="text-sm">
+                        Πατήστε &quot;Προσθήκη Δικαιούχου&quot; για να
+                        προσθέσετε
+                      </p>
                     </div>
                   )}
 
                   {form.watch("recipients")?.map((recipient, index) => (
-                    <Card key={index} className="border-2">
-                      <CardHeader className="pb-3">
+                    <Card
+                      key={index}
+                      className={
+                        "border-2 transition-shadow hover:shadow-md " +
+                        (regiondetErrors[index] ? "border-destructive" : "")
+                      }
+                    >
+                      <CardHeader className="pb-3 bg-muted/30">
                         <div className="flex justify-between items-center">
-                          <CardTitle className="text-md flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            Δικαιούχος #{index + 1}
-                          </CardTitle>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary font-semibold text-sm">
+                              {index + 1}
+                            </div>
+                            <CardTitle className="text-base font-semibold">
+                              Δικαιούχος #{index + 1}
+                            </CardTitle>
+                          </div>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removeRecipient(index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             data-testid={`button-remove-recipient-${index}`}
+                            aria-label={`Αφαίρεση δικαιούχου ${index + 1}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1587,8 +2007,8 @@ export function EditDocumentModal({
                               <FormItem>
                                 <FormLabel>Όνομα *</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
+                                  <Input
+                                    {...field}
                                     data-testid={`input-recipient-firstname-${index}`}
                                   />
                                 </FormControl>
@@ -1604,8 +2024,8 @@ export function EditDocumentModal({
                               <FormItem>
                                 <FormLabel>Επώνυμο *</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
+                                  <Input
+                                    {...field}
                                     data-testid={`input-recipient-lastname-${index}`}
                                   />
                                 </FormControl>
@@ -1621,8 +2041,8 @@ export function EditDocumentModal({
                               <FormItem>
                                 <FormLabel>Πατρώνυμο</FormLabel>
                                 <FormControl>
-                                  <Input 
-                                    {...field} 
+                                  <Input
+                                    {...field}
                                     data-testid={`input-recipient-fathername-${index}`}
                                   />
                                 </FormControl>
@@ -1637,18 +2057,35 @@ export function EditDocumentModal({
                             <FormLabel>ΑΦΜ *</FormLabel>
                             <SimpleAFMAutocomplete
                               expenditureType=""
-                              value={form.watch(`recipients.${index}.afm`) || ""}
+                              value={
+                                form.watch(`recipients.${index}.afm`) || ""
+                              }
                               onChange={(afm) => {
                                 form.setValue(`recipients.${index}.afm`, afm);
                               }}
                               onSelectPerson={(personData) => {
                                 if (personData) {
-                                  form.setValue(`recipients.${index}.firstname`, personData.name || "");
-                                  form.setValue(`recipients.${index}.lastname`, personData.surname || "");
-                                  form.setValue(`recipients.${index}.fathername`, personData.fathername || "");
-                                  const secondaryText = (personData as any).freetext || (personData as any).attribute || "";
+                                  form.setValue(
+                                    `recipients.${index}.firstname`,
+                                    personData.name || "",
+                                  );
+                                  form.setValue(
+                                    `recipients.${index}.lastname`,
+                                    personData.surname || "",
+                                  );
+                                  form.setValue(
+                                    `recipients.${index}.fathername`,
+                                    personData.fathername || "",
+                                  );
+                                  const secondaryText =
+                                    (personData as any).freetext ||
+                                    (personData as any).attribute ||
+                                    "";
                                   if (secondaryText) {
-                                    form.setValue(`recipients.${index}.secondary_text`, secondaryText);
+                                    form.setValue(
+                                      `recipients.${index}.secondary_text`,
+                                      secondaryText,
+                                    );
                                   }
                                 }
                               }}
@@ -1681,7 +2118,11 @@ export function EditDocumentModal({
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    onChange={(e) =>
+                                      field.onChange(
+                                        parseFloat(e.target.value) || 0,
+                                      )
+                                    }
                                     data-testid={`input-recipient-amount-${index}`}
                                   />
                                 </FormControl>
@@ -1696,34 +2137,47 @@ export function EditDocumentModal({
                             render={({ field }) => {
                               // Get the expenditure type name to determine available installments
                               const expenditureType = allExpenditureTypes?.find(
-                                (t: any) => t.id === selectedExpenditureTypeId
+                                (t: any) => t.id === selectedExpenditureTypeId,
                               );
-                              const expenditureTypeName = expenditureType?.expenditure_types || expenditureType?.expenditure_types_minor;
-                              const availableInstallments = getAvailableInstallments(expenditureTypeName);
+                              const expenditureTypeName =
+                                expenditureType?.expenditure_types ||
+                                expenditureType?.expenditure_types_minor;
+                              const availableInstallments =
+                                getAvailableInstallments(expenditureTypeName);
                               // Normalize the saved value for housing allowance (e.g., "12" → "ΤΡΙΜΗΝΟ 12")
-                              const normalizedValue = normalizeInstallmentValue(field.value, expenditureTypeName);
-                              
+                              const normalizedValue = normalizeInstallmentValue(
+                                field.value,
+                                expenditureTypeName,
+                              );
+
                               return (
                                 <FormItem>
                                   <FormLabel>Δόση</FormLabel>
-                                  <Select 
-                                    value={normalizedValue} 
+                                  <Select
+                                    value={normalizedValue}
                                     onValueChange={(value) => {
                                       // When selecting, store as-is (either "ΤΡΙΜΗΝΟ 12" or "ΕΦΑΠΑΞ" etc.)
                                       field.onChange(value);
                                     }}
                                   >
                                     <FormControl>
-                                      <SelectTrigger data-testid={`select-recipient-installment-${index}`}>
+                                      <SelectTrigger
+                                        data-testid={`select-recipient-installment-${index}`}
+                                      >
                                         <SelectValue placeholder="Επιλέξτε δόση" />
                                       </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                      {availableInstallments.map((installment: string) => (
-                                        <SelectItem key={installment} value={installment}>
-                                          {installment}
-                                        </SelectItem>
-                                      ))}
+                                      {availableInstallments.map(
+                                        (installment: string) => (
+                                          <SelectItem
+                                            key={installment}
+                                            value={installment}
+                                          >
+                                            {installment}
+                                          </SelectItem>
+                                        ),
+                                      )}
                                     </SelectContent>
                                   </Select>
                                   <FormMessage />
@@ -1734,21 +2188,38 @@ export function EditDocumentModal({
                         </div>
 
                         {(() => {
-                          const saveKey = recipient?.beneficiary_id ?? recipient?.id;
-                          const saveState = regiondetSaveState[String(saveKey)] || { status: "idle" };
-                          const geoError = regiondetErrors[index] || (saveState.status === "error" ? saveState.message : undefined);
+                          const saveKey =
+                            recipient?.beneficiary_id ?? recipient?.id;
+                          const saveState = regiondetSaveState[
+                            String(saveKey)
+                          ] || { status: "idle" };
+                          const geoError =
+                            regiondetErrors[index] ||
+                            (saveState.status === "error"
+                              ? saveState.message
+                              : undefined);
                           return (
                             <div className="md:col-span-3">
                               <BeneficiaryGeoSelector
                                 regions={availableRegions}
                                 regionalUnits={availableUnits}
                                 municipalities={availableMunicipalities}
-                                value={recipient?.regiondet as RegiondetSelection}
-                                onChange={(value) => handleRecipientGeoChange(index, value)}
+                                value={
+                                  recipient?.regiondet as RegiondetSelection
+                                }
+                                onChange={(value) =>
+                                  handleRecipientGeoChange(index, value)
+                                }
                                 required={!recipient?.employee_id}
-                                loading={regionsLoading || regiondetMutation.isPending}
+                                loading={
+                                  regionsLoading || regiondetMutation.isPending
+                                }
                                 error={geoError || undefined}
-                                onRetry={saveState.status === "error" && saveKey ? () => retryRegiondetSave(Number(saveKey)) : undefined}
+                                onRetry={
+                                  saveState.status === "error" && saveKey
+                                    ? () => retryRegiondetSave(Number(saveKey))
+                                    : undefined
+                                }
                               />
                             </div>
                           );
@@ -1756,9 +2227,14 @@ export function EditDocumentModal({
 
                         {/* ΕΚΤΟΣ ΕΔΡΑΣ specific fields */}
                         {isEktosEdras && (
-                          <div className="space-y-4 mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                            <h4 className="font-medium text-green-800">Στοιχεία Μετακίνησης</h4>
-                            
+                          <div className="space-y-6 mt-6 p-6 bg-emerald-50/50 rounded-lg border-2 border-emerald-200 border-l-4 border-l-emerald-500">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="h-8 w-1 bg-emerald-600 rounded-full" />
+                              <h4 className="font-semibold text-emerald-900 text-base">
+                                Στοιχεία Μετακίνησης
+                              </h4>
+                            </div>
+
                             <div className="grid grid-cols-1 gap-4">
                               <FormField
                                 control={form.control}
@@ -1787,11 +2263,15 @@ export function EditDocumentModal({
                                   <FormItem>
                                     <FormLabel>Ημέρες</FormLabel>
                                     <FormControl>
-                                      <Input 
+                                      <Input
                                         {...field}
                                         type="number"
                                         min="0"
-                                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            parseInt(e.target.value) || 0,
+                                          )
+                                        }
                                         data-testid={`input-recipient-days-${index}`}
                                       />
                                     </FormControl>
@@ -1802,17 +2282,25 @@ export function EditDocumentModal({
 
                               <FormField
                                 control={form.control}
-                                name={`recipients.${index}.daily_compensation` as any}
+                                name={
+                                  `recipients.${index}.daily_compensation` as any
+                                }
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Ημερήσια Αποζημίωση (€)</FormLabel>
+                                    <FormLabel>
+                                      Ημερήσια Αποζημίωση (€)
+                                    </FormLabel>
                                     <FormControl>
-                                      <Input 
+                                      <Input
                                         {...field}
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            parseFloat(e.target.value) || 0,
+                                          )
+                                        }
                                         data-testid={`input-recipient-daily-compensation-${index}`}
                                       />
                                     </FormControl>
@@ -1822,20 +2310,35 @@ export function EditDocumentModal({
                               />
                             </div>
 
+                            {/* Accommodation & Travel Section */}
+                            <div>
+                              <h5 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                <div className="h-px flex-1 bg-border" />
+                                Δαπάνες Διαμονής & Μετακίνησης
+                                <div className="h-px flex-1 bg-border" />
+                              </h5>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <FormField
                                 control={form.control}
-                                name={`recipients.${index}.accommodation_expenses` as any}
+                                name={
+                                  `recipients.${index}.accommodation_expenses` as any
+                                }
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Δαπάνες Διαμονής (€)</FormLabel>
                                     <FormControl>
-                                      <Input 
+                                      <Input
                                         {...field}
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            parseFloat(e.target.value) || 0,
+                                          )
+                                        }
                                         data-testid={`input-recipient-accommodation-${index}`}
                                       />
                                     </FormControl>
@@ -1846,17 +2349,23 @@ export function EditDocumentModal({
 
                               <FormField
                                 control={form.control}
-                                name={`recipients.${index}.kilometers_traveled` as any}
+                                name={
+                                  `recipients.${index}.kilometers_traveled` as any
+                                }
                                 render={({ field }) => (
                                   <FormItem>
                                     <FormLabel>Χιλιόμετρα</FormLabel>
                                     <FormControl>
-                                      <Input 
+                                      <Input
                                         {...field}
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) =>
+                                          field.onChange(
+                                            parseFloat(e.target.value) || 0,
+                                          )
+                                        }
                                         data-testid={`input-recipient-kilometers-${index}`}
                                       />
                                     </FormControl>
@@ -1876,9 +2385,10 @@ export function EditDocumentModal({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => {
-                                      const currentEntries = form.getValues(
-                                        `recipients.${index}.tickets_tolls_rental_entries` as any,
-                                      ) || [];
+                                      const currentEntries =
+                                        form.getValues(
+                                          `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                        ) || [];
                                       form.setValue(
                                         `recipients.${index}.tickets_tolls_rental_entries` as any,
                                         [...currentEntries, 0],
@@ -1891,13 +2401,16 @@ export function EditDocumentModal({
                                   </Button>
                                 </div>
                                 {(() => {
-                                  const entries = form.watch(
-                                    `recipients.${index}.tickets_tolls_rental_entries` as any,
-                                  ) || [];
-                                  
+                                  const entries =
+                                    form.watch(
+                                      `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                    ) || [];
+
                                   // If no entries exist, check for legacy value to migrate
                                   if (entries.length === 0) {
-                                    const singleValue = form.getValues(`recipients.${index}.tickets_tolls_rental` as any);
+                                    const singleValue = form.getValues(
+                                      `recipients.${index}.tickets_tolls_rental` as any,
+                                    );
                                     // Only initialize if there's a legacy value, otherwise show nothing
                                     if (singleValue && singleValue > 0) {
                                       form.setValue(
@@ -1916,69 +2429,96 @@ export function EditDocumentModal({
 
                                   return (
                                     <div className="space-y-1">
-                                      {entries.map((entry: number, entryIndex: number) => (
-                                        <div key={entryIndex} className="flex gap-1">
-                                          <Input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={entry}
-                                            onChange={(e) => {
-                                              const currentEntries = form.getValues(
-                                                `recipients.${index}.tickets_tolls_rental_entries` as any,
-                                              ) || [];
-                                              const newEntries = [...currentEntries];
-                                              newEntries[entryIndex] = parseFloat(e.target.value) || 0;
-                                              form.setValue(
-                                                `recipients.${index}.tickets_tolls_rental_entries` as any,
-                                                newEntries,
-                                              );
-                                              
-                                              // Calculate sum and update tickets_tolls_rental
-                                              const sum = newEntries.reduce((a: number, b: number) => a + b, 0);
-                                              form.setValue(
-                                                `recipients.${index}.tickets_tolls_rental` as any,
-                                                sum,
-                                              );
-                                            }}
-                                            className="flex-1"
-                                            data-testid={`input-recipient-ticket-entry-${index}-${entryIndex}`}
-                                          />
-                                          {entries.length > 1 && (
-                                            <Button
-                                              type="button"
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                const currentEntries = form.getValues(
-                                                  `recipients.${index}.tickets_tolls_rental_entries` as any,
-                                                ) || [];
-                                                const newEntries = currentEntries.filter(
-                                                  (_: any, i: number) => i !== entryIndex,
-                                                );
+                                      {entries.map(
+                                        (entry: number, entryIndex: number) => (
+                                          <div
+                                            key={entryIndex}
+                                            className="flex gap-1"
+                                          >
+                                            <Input
+                                              type="number"
+                                              step="0.01"
+                                              min="0"
+                                              value={entry}
+                                              onChange={(e) => {
+                                                const currentEntries =
+                                                  form.getValues(
+                                                    `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                  ) || [];
+                                                const newEntries = [
+                                                  ...currentEntries,
+                                                ];
+                                                newEntries[entryIndex] =
+                                                  parseFloat(e.target.value) ||
+                                                  0;
                                                 form.setValue(
                                                   `recipients.${index}.tickets_tolls_rental_entries` as any,
                                                   newEntries,
                                                 );
-                                                
+
                                                 // Calculate sum and update tickets_tolls_rental
-                                                const sum = newEntries.reduce((a: number, b: number) => a + b, 0);
+                                                const sum = newEntries.reduce(
+                                                  (a: number, b: number) =>
+                                                    a + b,
+                                                  0,
+                                                );
                                                 form.setValue(
                                                   `recipients.${index}.tickets_tolls_rental` as any,
                                                   sum,
                                                 );
                                               }}
-                                              className="h-10 w-10 p-0"
-                                              data-testid={`button-remove-ticket-entry-${index}-${entryIndex}`}
-                                            >
-                                              <Trash2 className="h-3 w-3 text-destructive" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                      ))}
+                                              className="flex-1"
+                                              data-testid={`input-recipient-ticket-entry-${index}-${entryIndex}`}
+                                            />
+                                            {entries.length > 1 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                  const currentEntries =
+                                                    form.getValues(
+                                                      `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                    ) || [];
+                                                  const newEntries =
+                                                    currentEntries.filter(
+                                                      (_: any, i: number) =>
+                                                        i !== entryIndex,
+                                                    );
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental_entries` as any,
+                                                    newEntries,
+                                                  );
+
+                                                  // Calculate sum and update tickets_tolls_rental
+                                                  const sum = newEntries.reduce(
+                                                    (a: number, b: number) =>
+                                                      a + b,
+                                                    0,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental` as any,
+                                                    sum,
+                                                  );
+                                                }}
+                                                className="h-10 w-10 p-0"
+                                                data-testid={`button-remove-ticket-entry-${index}-${entryIndex}`}
+                                              >
+                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ),
+                                      )}
                                       {entries.length > 1 && (
                                         <div className="text-xs text-muted-foreground pt-1 border-t">
-                                          Σύνολο: €{entries.reduce((a: number, b: number) => a + b, 0).toFixed(2)}
+                                          Σύνολο: €
+                                          {entries
+                                            .reduce(
+                                              (a: number, b: number) => a + b,
+                                              0,
+                                            )
+                                            .toFixed(2)}
                                         </div>
                                       )}
                                     </div>
@@ -1989,65 +2529,91 @@ export function EditDocumentModal({
 
                             <Separator className="my-4" />
 
-                            {/* 2% Withholding Tax Section */}
-                            <div className="space-y-4">
-                              <FormField
-                                control={form.control}
-                                name={`recipients.${index}.has_2_percent_deduction` as any}
-                                render={({ field }) => (
-                                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value}
-                                        onCheckedChange={field.onChange}
-                                        data-testid={`checkbox-2percent-${index}`}
-                                      />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                      <FormLabel>
-                                        Παρακράτηση 2% (Φόρος Προκαταβολής)
-                                      </FormLabel>
-                                      <p className="text-sm text-muted-foreground">
-                                        {isEktosEdras 
-                                          ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση (ημέρες × ημερήσια αποζημίωση)"
-                                          : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
-                                      </p>
-                                    </div>
-                                  </FormItem>
-                                )}
-                              />
+                            {/* Tax Deduction Section */}
+                            <div>
+                              <h5 className="text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                                <div className="h-px flex-1 bg-border" />
+                                Φορολογικές Παρακρατήσεις
+                                <div className="h-px flex-1 bg-border" />
+                              </h5>
 
-                              {/* Calculated Fields Display */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-900 p-4 rounded-md">
-                                <div>
-                                  <FormLabel className="text-xs text-muted-foreground">Συνολική Δαπάνη</FormLabel>
-                                  <Input
-                                    type="text"
-                                    value={`€ ${(form.watch(`recipients.${index}.total_expense` as any) || 0).toFixed(2)}`}
-                                    readOnly
-                                    className="bg-white dark:bg-gray-800 font-semibold mt-1"
-                                    data-testid={`display-total-expense-${index}`}
-                                  />
-                                </div>
-                                <div>
-                                  <FormLabel className="text-xs text-muted-foreground">Παρακράτηση 2%</FormLabel>
-                                  <Input
-                                    type="text"
-                                    value={`€ ${(form.watch(`recipients.${index}.deduction_2_percent` as any) || 0).toFixed(2)}`}
-                                    readOnly
-                                    className="bg-white dark:bg-gray-800 font-semibold mt-1"
-                                    data-testid={`display-deduction-${index}`}
-                                  />
-                                </div>
-                                <div>
-                                  <FormLabel className="text-xs text-muted-foreground">Καθαρό Πληρωτέο</FormLabel>
-                                  <Input
-                                    type="text"
-                                    value={`€ ${(form.watch(`recipients.${index}.net_payable` as any) || 0).toFixed(2)}`}
-                                    readOnly
-                                    className="bg-white dark:bg-gray-800 font-semibold text-green-600 dark:text-green-400 mt-1"
-                                    data-testid={`display-net-payable-${index}`}
-                                  />
+                              {/* 2% Withholding Tax Section */}
+                              <div className="space-y-4">
+                                <FormField
+                                  control={form.control}
+                                  name={
+                                    `recipients.${index}.has_2_percent_deduction` as any
+                                  }
+                                  render={({ field }) => (
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value}
+                                          onCheckedChange={field.onChange}
+                                          data-testid={`checkbox-2percent-${index}`}
+                                        />
+                                      </FormControl>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel>
+                                          Παρακράτηση 2% (Φόρος Προκαταβολής)
+                                        </FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                          {isEktosEdras
+                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση (ημέρες × ημερήσια αποζημίωση)"
+                                            : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
+                                        </p>
+                                      </div>
+                                    </FormItem>
+                                  )}
+                                />
+
+                                {/* Calculated Fields Display */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-muted/50 p-4 rounded-md border">
+                                  <div>
+                                    <FormLabel className="text-xs font-medium text-muted-foreground">
+                                      Συνολική Δαπάνη
+                                    </FormLabel>
+                                    <div className="mt-1 flex items-center h-9 px-3 rounded-md bg-background border">
+                                      <span className="font-semibold text-sm">
+                                        €{" "}
+                                        {(
+                                          form.watch(
+                                            `recipients.${index}.total_expense` as any,
+                                          ) || 0
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <FormLabel className="text-xs font-medium text-muted-foreground">
+                                      Παρακράτηση 2%
+                                    </FormLabel>
+                                    <div className="mt-1 flex items-center h-9 px-3 rounded-md bg-background border">
+                                      <span className="font-semibold text-sm text-amber-700">
+                                        €{" "}
+                                        {(
+                                          form.watch(
+                                            `recipients.${index}.deduction_2_percent` as any,
+                                          ) || 0
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <FormLabel className="text-xs font-medium text-muted-foreground">
+                                      Καθαρό Πληρωτέο
+                                    </FormLabel>
+                                    <div className="mt-1 flex items-center h-9 px-3 rounded-md bg-emerald-100 border border-emerald-300">
+                                      <span className="font-bold text-sm text-emerald-700">
+                                        €{" "}
+                                        {(
+                                          form.watch(
+                                            `recipients.${index}.net_payable` as any,
+                                          ) || 0
+                                        ).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -2095,38 +2661,45 @@ export function EditDocumentModal({
                   />
                 </CardContent>
               </Card>
-
-              <div className="p-6 pt-2 border-t flex justify-end gap-2 shrink-0 -mx-6 -mb-6 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleClose}
-                  disabled={isLoading}
-                  data-testid="button-cancel"
-                >
-                  <X className="w-4 h-4 mr-2" />
-                  Ακύρωση
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  data-testid="button-save"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Αποθήκευση...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      {isCorrection ? "Δημιουργία Ορθής Επανάληψης" : "Αποθήκευση Αλλαγών"}
-                    </>
-                  )}
-                </Button>
-              </div>
             </form>
           </Form>
+        </ScrollArea>
+
+        {/* Footer Actions */}
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 p-6 border-t bg-muted/20 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isLoading}
+            data-testid="button-cancel"
+            className="w-full sm:w-auto"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Ακύρωση
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading || form.formState.isSubmitting}
+            data-testid="button-save"
+            className="w-full sm:w-auto"
+            onClick={form.handleSubmit(handleSubmit)}
+          >
+            {isLoading || form.formState.isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <span>Αποθήκευση εγγράφου...</span>
+                <span className="sr-only">Παρακαλώ περιμένετε</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                {isCorrection
+                  ? "Δημιουργία Ορθής Επανάληψης"
+                  : "Αποθήκευση Αλλαγών"}
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

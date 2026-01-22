@@ -54,7 +54,7 @@
     "@types/jsonwebtoken": "^9.0.8",
     "@types/multer": "^1.4.12",
     "@types/node-cron": "^3.0.11",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.0",
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
@@ -64,7 +64,7 @@
     "date-fns": "^3.6.0",
     "docx": "^9.5.1",
     "dotenv": "^16.4.7",
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.31.8",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.3.0",
     "exceljs": "^4.4.0",
@@ -132,5 +132,8 @@
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"
+  },
+  "overrides": {
+    "esbuild": "^0.25.11"
   }
 }

@@ -20,9 +20,9 @@ import {
   Eye,
   Filter,
   PieChart,
-  Activity
+  Activity,
 } from "lucide-react";
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 
 import type { DashboardStats } from "@/lib/dashboard";
 
@@ -38,24 +38,32 @@ const formatLargeNumber = (value: number): string => {
 
 export function ManagerDashboard() {
   const { user } = useAuth();
-  
+
   // Get manager dashboard stats
-  const { data: stats, isLoading, error } = useQuery<DashboardStats>({
+  const {
+    data: stats,
+    isLoading,
+    error,
+  } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
     retry: 2,
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!user?.unit_id && user.unit_id.length > 0, // Only fetch when user has units
   });
 
   // Compute budget totals for display
   const budgetTotals = useMemo(() => {
     if (!stats?.budgetTotals) return { total: 0, allocated: 0, remaining: 0 };
-    
-    const total = Object.values(stats.budgetTotals).reduce((sum, value) => sum + value, 0);
+
+    const total = Object.values(stats.budgetTotals).reduce(
+      (sum, value) => sum + value,
+      0,
+    );
     const allocated = stats.budgetTotals.allocated || 0;
     const remaining = total - allocated;
-    
+
     return { total, allocated, remaining };
   }, [stats?.budgetTotals]);
 
@@ -69,7 +77,7 @@ export function ManagerDashboard() {
           <Skeleton className="h-10 w-28" />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="p-6">
@@ -83,7 +91,7 @@ export function ManagerDashboard() {
           </Card>
         ))}
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {Array.from({ length: 2 }).map((_, i) => (
           <Card key={i} className="p-6">
@@ -110,23 +118,31 @@ export function ManagerDashboard() {
     return (
       <div className="p-6 text-center">
         <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-destructive" />
-        <h3 className="text-lg font-semibold mb-2">Σφάλμα φόρτωσης δεδομένων</h3>
-        <p className="text-muted-foreground">Δεν ήταν δυνατή η φόρτωση των στατιστικών διαχείρισης.</p>
+        <h3 className="text-lg font-semibold mb-2">
+          Σφάλμα φόρτωσης δεδομένων
+        </h3>
+        <p className="text-muted-foreground">
+          Δεν ήταν δυνατή η φόρτωση των στατιστικών διαχείρισης.
+        </p>
       </div>
     );
   }
 
-  const completionRate = stats?.totalDocuments ? 
-    Math.round((stats.completedDocuments / stats.totalDocuments) * 100) : 0;
+  const completionRate = stats?.totalDocuments
+    ? Math.round((stats.completedDocuments / stats.totalDocuments) * 100)
+    : 0;
 
   return (
     <div className="space-y-6">
       {/* Manager Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Πίνακας Διαχείρισης</h1>
+          <h1 className="text-3xl font-bold text-foreground">
+            Πίνακας Διαχείρισης
+          </h1>
           <p className="text-muted-foreground mt-1">
-            Καλώς ήρθες, {user?.name}. Παρακολούθηση και εποπτεία της συνολικής δραστηριότητας.
+            Καλώς ήρθες, {user?.name}. Παρακολούθηση και εποπτεία της συνολικής
+            δραστηριότητας.
           </p>
         </div>
         <div className="flex gap-2">
@@ -156,8 +172,12 @@ export function ManagerDashboard() {
                   <FileText className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Συνολικά Έγγραφα</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{stats?.totalDocuments || 0}</p>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Συνολικά Έγγραφα
+                  </CardTitle>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.totalDocuments || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -179,8 +199,12 @@ export function ManagerDashboard() {
                   <Clock className="h-5 w-5 text-orange-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Προς Επισκόπηση</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{stats?.pendingDocuments || 0}</p>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Προς Επισκόπηση
+                  </CardTitle>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.pendingDocuments || 0}
+                  </p>
                 </div>
               </div>
               {(stats?.pendingDocuments || 0) > 0 && (
@@ -207,8 +231,12 @@ export function ManagerDashboard() {
                   <Euro className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Συνολικός Προϋπολογισμός</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{formatLargeNumber(budgetTotals.total)}</p>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Συνολικός Προϋπολογισμός
+                  </CardTitle>
+                  <p className="text-2xl font-bold text-foreground">
+                    {formatLargeNumber(budgetTotals.total)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -229,8 +257,12 @@ export function ManagerDashboard() {
                   <Target className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Ενεργά Έργα</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{stats?.projectStats?.active || 0}</p>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Ενεργά Έργα
+                  </CardTitle>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats?.projectStats?.active || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -250,7 +282,9 @@ export function ManagerDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Ανάλυση Προϋπολογισμού</CardTitle>
+                <CardTitle className="text-lg">
+                  Ανάλυση Προϋπολογισμού
+                </CardTitle>
               </div>
               <Button variant="outline" size="sm" asChild>
                 <Link href="/budget/history">
@@ -264,18 +298,33 @@ export function ManagerDashboard() {
             <div className="space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Συνολικός Προϋπολογισμός</span>
-                  <span className="text-sm font-bold">{formatLargeNumber(budgetTotals.total)}</span>
+                  <span className="text-sm font-medium">
+                    Συνολικός Προϋπολογισμός
+                  </span>
+                  <span className="text-sm font-bold">
+                    {formatLargeNumber(budgetTotals.total)}
+                  </span>
                 </div>
-                <Progress value={budgetTotals.total > 0 ? (budgetTotals.allocated / budgetTotals.total) * 100 : 0} className="h-2" />
-                
+                <Progress
+                  value={
+                    budgetTotals.total > 0
+                      ? (budgetTotals.allocated / budgetTotals.total) * 100
+                      : 0
+                  }
+                  className="h-2"
+                />
+
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <div className="text-lg font-bold text-green-600">{formatLargeNumber(budgetTotals.allocated)}</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {formatLargeNumber(budgetTotals.allocated)}
+                    </div>
                     <div className="text-xs text-green-700">Κατανεμημένα</div>
                   </div>
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <div className="text-lg font-bold text-blue-600">{formatLargeNumber(budgetTotals.remaining)}</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {formatLargeNumber(budgetTotals.remaining)}
+                    </div>
                     <div className="text-xs text-blue-700">Διαθέσιμα</div>
                   </div>
                 </div>
@@ -304,17 +353,23 @@ export function ManagerDashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">{stats?.totalDocuments || 0}</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {stats?.totalDocuments || 0}
+                  </div>
                   <div className="text-sm text-blue-700">Συνολικά Έγγραφα</div>
                 </div>
                 <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600">{stats?.pendingDocuments || 0}</div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {stats?.pendingDocuments || 0}
+                  </div>
                   <div className="text-sm text-orange-700">Σε επεξεργασία</div>
                 </div>
               </div>
-              
+
               <div className="pt-3 border-t">
-                <div className="text-sm text-muted-foreground mb-2">Πρόοδος Ολοκλήρωσης</div>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Πρόοδος Ολοκλήρωσης
+                </div>
                 <Progress value={completionRate} className="h-3" />
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>0%</span>
@@ -333,7 +388,9 @@ export function ManagerDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Παρακολούθηση Δραστηριότητας</CardTitle>
+              <CardTitle className="text-lg">
+                Παρακολούθηση Δραστηριότητας
+              </CardTitle>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className="text-xs">
@@ -352,36 +409,51 @@ export function ManagerDashboard() {
           <div className="space-y-4">
             {stats?.recentActivity && stats.recentActivity.length > 0 ? (
               stats.recentActivity.slice(0, 8).map((activity) => (
-                <div 
-                  key={activity.id} 
+                <div
+                  key={activity.id}
                   className="relative p-4 rounded-lg border hover:shadow-sm transition-all duration-200 bg-gradient-to-r from-card to-card/50"
                 >
                   <div className="absolute left-0 top-4 w-1 h-8 bg-primary/20 rounded-r-full"></div>
-                  
+
                   <div className="pl-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm leading-relaxed mb-2">{activity.description}</p>
-                        
+                        <p className="font-medium text-sm leading-relaxed mb-2">
+                          {activity.description}
+                        </p>
+
                         <div className="flex flex-wrap items-center gap-2">
                           {activity.documentId && (
-                            <Link href={`/documents?highlight=${activity.documentId}`}>
-                              <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">
+                            <Link
+                              href={`/documents?highlight=${activity.documentId}`}
+                            >
+                              <Badge
+                                variant="outline"
+                                className="text-xs hover:bg-gray-50 cursor-pointer transition-colors"
+                              >
                                 <FileText className="w-3 h-3 mr-1" />
-                                {(activity as any).protocolNumber || `Έγγραφο #${activity.documentId}`}
+                                {(activity as any).protocolNumber ||
+                                  `Έγγραφο #${activity.documentId}`}
                               </Badge>
                             </Link>
                           )}
                           {activity.na853 && (
-                            <Badge variant="outline" className="text-xs hover:bg-gray-50 cursor-pointer transition-colors">
+                            <Badge
+                              variant="outline"
+                              className="text-xs hover:bg-gray-50 cursor-pointer transition-colors"
+                            >
                               <FileText className="w-3 h-3 mr-1" />
                               NA853: {activity.na853}
                             </Badge>
                           )}
-                          
+
                           {activity.changeAmount !== undefined && (
-                            <Badge 
-                              variant={activity.changeAmount > 0 ? "default" : "destructive"} 
+                            <Badge
+                              variant={
+                                activity.changeAmount > 0
+                                  ? "default"
+                                  : "destructive"
+                              }
                               className="text-xs font-medium"
                             >
                               {activity.changeAmount > 0 ? (
@@ -389,18 +461,21 @@ export function ManagerDashboard() {
                               ) : (
                                 <TrendingDown className="w-3 h-3 mr-1" />
                               )}
-                              {Math.abs(activity.changeAmount).toLocaleString("el-GR", {
-                                style: "currency",
-                                currency: "EUR",
-                              })}
+                              {Math.abs(activity.changeAmount).toLocaleString(
+                                "el-GR",
+                                {
+                                  style: "currency",
+                                  currency: "EUR",
+                                },
+                              )}
                             </Badge>
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="text-right">
                         <div className="text-xs text-muted-foreground">
-                          {new Date(activity.date).toLocaleDateString('el-GR')}
+                          {new Date(activity.date).toLocaleDateString("el-GR")}
                         </div>
                         {activity.createdBy && (
                           <div className="text-xs text-muted-foreground font-medium">
@@ -419,23 +494,35 @@ export function ManagerDashboard() {
               </div>
             )}
           </div>
-          
+
           {/* Summary bar at bottom */}
           {stats?.recentActivity && stats.recentActivity.length > 0 && (
             <div className="mt-6 pt-4 border-t bg-muted/30 rounded-lg p-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Συνολική δραστηριότητα</span>
+                <span className="text-muted-foreground">
+                  Συνολική δραστηριότητα
+                </span>
                 <div className="flex items-center gap-4">
                   <span className="flex items-center gap-1">
                     <TrendingUp className="w-4 h-4 text-green-600" />
                     <span className="font-medium text-green-600">
-                      {stats.recentActivity.filter(a => (a.changeAmount || 0) > 0).length} αυξήσεις
+                      {
+                        stats.recentActivity.filter(
+                          (a) => (a.changeAmount || 0) > 0,
+                        ).length
+                      }{" "}
+                      αυξήσεις
                     </span>
                   </span>
                   <span className="flex items-center gap-1">
                     <TrendingDown className="w-4 h-4 text-red-600" />
                     <span className="font-medium text-red-600">
-                      {stats.recentActivity.filter(a => (a.changeAmount || 0) < 0).length} μειώσεις
+                      {
+                        stats.recentActivity.filter(
+                          (a) => (a.changeAmount || 0) < 0,
+                        ).length
+                      }{" "}
+                      μειώσεις
                     </span>
                   </span>
                 </div>

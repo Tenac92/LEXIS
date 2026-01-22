@@ -28,11 +28,11 @@ function useLoginMutation() {
       try {
         // Security: No sensitive logging in production
 
-        const response = await fetch('/api/auth/login', {  
-          method: 'POST',
-          credentials: 'include',
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          credentials: "include",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(credentials),
         });
@@ -40,26 +40,28 @@ function useLoginMutation() {
         if (!response.ok) {
           try {
             const errorData = await response.json();
-            throw new Error(errorData.message || 'Login failed');
+            throw new Error(errorData.message || "Login failed");
           } catch (parseError) {
             // If JSON parsing fails, use the status text
-            console.error('Error parsing error response:', parseError);
-            throw new Error(`Authentication error: ${response.status} ${response.statusText}`);
+            console.error("Error parsing error response:", parseError);
+            throw new Error(
+              `Authentication error: ${response.status} ${response.statusText}`,
+            );
           }
         }
 
         let data;
         try {
           data = await response.json();
-          console.log('Login successful:', data);
+          console.log("Login successful:", data);
         } catch (parseError) {
-          console.error('Error parsing success response:', parseError);
-          throw new Error('Login failed: Invalid response format');
+          console.error("Error parsing success response:", parseError);
+          throw new Error("Login failed: Invalid response format");
         }
-        
+
         // Check if the data includes a user object (new format) or if it's the user itself (old format)
         const userData = data.user || data;
-        
+
         // Make sure we have all required fields in the expected format
         const user: User = {
           id: userData.id,
@@ -67,16 +69,16 @@ function useLoginMutation() {
           email: userData.email,
           role: userData.role,
           is_active: userData.is_active ?? true,
-          unit_id: userData.unit_id || []
+          unit_id: userData.unit_id || [],
         };
-        
+
         return user;
       } catch (err) {
-        console.error('Authentication error:', err);
+        console.error("Authentication error:", err);
         if (err instanceof Error) {
           throw new Error(`Login failed: ${err.message}`);
         }
-        throw new Error('Login failed: Unknown error');
+        throw new Error("Login failed: Unknown error");
       }
     },
     onSuccess: (user) => {
@@ -88,13 +90,13 @@ function useLoginMutation() {
         email: user.email,
         role: user.role,
         is_active: user.is_active ?? true,
-        unit_id: user.unit_id || []
+        unit_id: user.unit_id || [],
       };
-      
+
       // Update the cache with the processed user
       queryClient.setQueryData(["/api/auth/me"], processedUser);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      
+
       // PREFETCH: hydrate critical queries so the documents page renders instantly post-login
       const defaultDocumentFilters = {
         unit: processedUser.unit_id[0]?.toString() || "",
@@ -128,7 +130,7 @@ function useLoginMutation() {
         queryFn: async () => {
           const response = await fetch(
             `/api/documents${docParams.toString() ? `?${docParams.toString()}` : ""}`,
-            { credentials: 'include' },
+            { credentials: "include" },
           );
           if (!response.ok) {
             throw new Error("Failed to prefetch documents");
@@ -137,41 +139,48 @@ function useLoginMutation() {
         },
       });
 
-      void queryClient.prefetchQuery({
-        queryKey: ["/api/public/units"],
-        staleTime: 30 * 60 * 1000,
-        gcTime: 60 * 60 * 1000,
-        queryFn: async () => {
-          const response = await fetch('/api/public/units');
-          if (!response.ok) {
-            throw new Error("Failed to prefetch units");
-          }
-          return response.json();
-        },
-      });
-      
+      // Synchronously fetch units so dashboard query hits cache immediately (avoid duplicate request)
+      try {
+        await queryClient.fetchQuery({
+          queryKey: ["/api/public/units"],
+          staleTime: 30 * 60 * 1000, // Align with all other units queries (was 10 min in dashboard, 30 min in prefetch)
+          gcTime: 60 * 60 * 1000,
+          queryFn: async () => {
+            const response = await fetch("/api/public/units");
+            if (!response.ok) {
+              throw new Error("Failed to prefetch units");
+            }
+            return response.json();
+          },
+        });
+        console.log("[Auth] Units cached synchronously post-login");
+      } catch (err) {
+        console.log("[Auth] Units prefetch failed (non-critical):", err);
+      }
+
       // BACKGROUND PREFETCH: Start prefetching beneficiary/employee AFM data in the background
       // This runs silently while user navigates, making autocomplete instant later
-      fetch('/api/beneficiaries/prefetch', { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          console.log('[Auth] Background AFM prefetch initiated:', data);
+      fetch("/api/beneficiaries/prefetch", { credentials: "include" })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("[Auth] Background AFM prefetch initiated:", data);
         })
-        .catch(err => {
+        .catch((err) => {
           // Silent failure - prefetch is optional optimization
-          console.log('[Auth] Background prefetch failed (non-critical):', err);
+          console.log("[Auth] Background prefetch failed (non-critical):", err);
         });
-      
+
       toast({
         title: "Login successful",
         description: `Welcome back, ${processedUser.name}!`,
       });
     },
     onError: (error: Error) => {
-      console.error('Authentication error:', error);
+      console.error("Authentication error:", error);
       toast({
         title: "Login failed",
-        description: error.message || "Authentication failed. Please try again.",
+        description:
+          error.message || "Authentication failed. Please try again.",
         variant: "destructive",
       });
     },
@@ -184,26 +193,26 @@ function useLogoutMutation() {
 
   return useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/auth/logout', { 
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
         headers: {
-          'Content-Type': 'application/json'
-        }
+          "Content-Type": "application/json",
+        },
       });
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Logout failed');
+        throw new Error(error.message || "Logout failed");
       }
     },
     onSuccess: () => {
       // Clear ALL cached queries to prevent stale data from previous user
       // This is critical for security and proper user experience when switching accounts
       queryClient.clear();
-      
+
       // Use client-side navigation instead of full page reload
-      navigate('/auth');
-      
+      navigate("/auth");
+
       // Show success message after navigation
       setTimeout(() => {
         toast({
@@ -225,30 +234,35 @@ function useLogoutMutation() {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: user, error, isLoading, refetch } = useQuery<User | null>({
+  const {
+    data: user,
+    error,
+    isLoading,
+    refetch,
+  } = useQuery<User | null>({
     queryKey: ["/api/auth/me"],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include'
+        const response = await fetch("/api/auth/me", {
+          credentials: "include",
         });
         if (!response.ok) {
           if (response.status === 401) return null;
-          throw new Error('Failed to fetch user data');
+          throw new Error("Failed to fetch user data");
         }
-        
+
         const responseData = await response.json();
-        console.log('ME endpoint response:', responseData);
-        
+        console.log("ME endpoint response:", responseData);
+
         // If not authenticated according to the response
         if (responseData && responseData.authenticated === false) {
           return null;
         }
-        
+
         // Check if response is wrapped in an object with 'user' property (new format)
         // or if it's the direct user object (old format)
         const userData = responseData.user || responseData;
-        
+
         // If we have a valid user object with required fields
         if (userData && userData.id) {
           // Ensure consistent format for user data
@@ -258,15 +272,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: userData.email,
             role: userData.role,
             is_active: userData.is_active ?? true,
-            unit_id: userData.unit_id || []
+            unit_id: userData.unit_id || [],
           };
-          
+
           return user;
         }
-        
+
         return null;
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error("Error fetching user:", error);
         // Ensure we always return null on error to prevent unhandled rejections
         return null;
       }
@@ -275,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refetchOnWindowFocus: false,
     refetchInterval: false,
     staleTime: 10 * 60 * 1000,
-    gcTime: 15 * 60 * 1000
+    gcTime: 15 * 60 * 1000,
   });
 
   // Simplified session management for faster startup
@@ -283,32 +297,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Only for authenticated users, set up minimal session monitoring
     if (user) {
       let inactivityTimer: number | undefined;
-      
+
       const checkSession = () => {
         // Only check if user is still active
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === "visible") {
           refetch();
         }
       };
-      
+
       // Set up a single inactivity timer (15 minutes for less frequent checks)
       const resetTimer = () => {
         clearTimeout(inactivityTimer);
         inactivityTimer = window.setTimeout(checkSession, 15 * 60 * 1000);
       };
-      
+
       // Listen for user activity (minimal event set for better performance)
-      const activityEvents = ['click', 'keydown'];
-      activityEvents.forEach(event => {
+      const activityEvents = ["click", "keydown"];
+      activityEvents.forEach((event) => {
         window.addEventListener(event, resetTimer, { passive: true });
       });
-      
+
       resetTimer();
-      
+
       // Cleanup
       return () => {
         clearTimeout(inactivityTimer);
-        activityEvents.forEach(event => {
+        activityEvents.forEach((event) => {
           window.removeEventListener(event, resetTimer);
         });
       };
@@ -322,18 +336,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const prefetchKey = `afm_prefetch_${user.id}`;
       const lastPrefetch = sessionStorage.getItem(prefetchKey);
       const now = Date.now();
-      
+
       // Only prefetch if we haven't done it in the last 5 minutes
       if (!lastPrefetch || now - parseInt(lastPrefetch) > 5 * 60 * 1000) {
         sessionStorage.setItem(prefetchKey, now.toString());
-        
-        fetch('/api/beneficiaries/prefetch', { credentials: 'include' })
-          .then(res => res.json())
-          .then(data => {
-            console.log('[Auth] Background AFM prefetch on app load:', data);
+
+        fetch("/api/beneficiaries/prefetch", { credentials: "include" })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log("[Auth] Background AFM prefetch on app load:", data);
           })
-          .catch(err => {
-            console.log('[Auth] Background prefetch failed (non-critical):', err);
+          .catch((err) => {
+            console.log(
+              "[Auth] Background prefetch failed (non-critical):",
+              err,
+            );
           });
       }
     }
@@ -341,31 +358,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
-  
+
   // Function to manually refresh the user session with debouncing
   const refreshUser = async (): Promise<User | null> => {
     try {
       // Use a static variable to track last refresh time to prevent excessive refreshes
       const now = Date.now();
-      if ((refreshUser as any).lastRefresh && now - (refreshUser as any).lastRefresh < 5000) {
-        console.log('[Auth] Skipping refresh - too soon since last refresh');
+      if (
+        (refreshUser as any).lastRefresh &&
+        now - (refreshUser as any).lastRefresh < 5000
+      ) {
+        console.log("[Auth] Skipping refresh - too soon since last refresh");
         return user ?? null;
       }
-      
-      console.log('[Auth] Manually refreshing user session');
+
+      console.log("[Auth] Manually refreshing user session");
       (refreshUser as any).lastRefresh = now;
-      
+
       const result = await refetch();
       return result.data ?? null;
     } catch (error) {
-      console.error('[Auth] Error refreshing user session:', error);
+      console.error("[Auth] Error refreshing user session:", error);
       return null;
     }
   };
-  
+
   // Shorthand for logout functionality
   const logout = () => {
-    console.log('[Auth] Initiating logout');
+    console.log("[Auth] Initiating logout");
     logoutMutation.mutate();
   };
 

@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import multer from "multer";
-import * as XLSX from "xlsx";
+import { readXlsxToRows } from "../utils/safeExcel";
 import {
   AuthenticatedRequest,
   authenticateSession,
@@ -82,34 +82,23 @@ router.post(
       }
 
       const fileName = req.file.originalname.toLowerCase();
-      if (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls")) {
+      // Hardened: accept only modern .xlsx files (reject legacy .xls)
+      if (!fileName.endsWith(".xlsx")) {
         return res.status(400).json({
           success: false,
-          message: "Unsupported file type. Use .xlsx or .xls.",
+          message: "Unsupported file type. Use .xlsx",
         });
       }
 
       const override =
         String(req.body?.override ?? "").trim().toLowerCase() === "true";
 
-      const workbook = XLSX.read(req.file.buffer, {
-        type: "buffer",
-        cellDates: true,
-      });
-      const sheetName = workbook.SheetNames[0];
-      if (!sheetName) {
-        return res.status(400).json({
-          success: false,
-          message: "No worksheet found in the uploaded file",
-        });
-      }
-
-      const worksheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: null,
-        raw: true,
-      }) as unknown[];
+      // Use exceljs-based reader with limits to prevent resource exhaustion
+      const rows = (await readXlsxToRows(req.file.buffer, {
+        maxRows: MAX_ROWS + 1, // include header row
+        maxCols: 200, // reasonable upper bound for columns
+        maxSheets: 3,
+      })) as unknown[];
 
       if (rows.length === 0) {
         return res.status(400).json({
