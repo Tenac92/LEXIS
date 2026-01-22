@@ -7,12 +7,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -572,34 +567,31 @@ function ImportEmployeesDialog({
     if (!file) return;
 
     try {
-      const XLSX = await import("xlsx");
-      const workbook = XLSX.read(await file.arrayBuffer());
-      const worksheet =
-        workbook.Sheets["ΥΠΑΛΛΗΛΟΙ ΓΔΑΕΦΚ"] ||
-        workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      // Send file to server for safe Excel parsing (uses exceljs, not vulnerable xlsx)
+      const formData = new FormData();
+      formData.append("file", file);
 
-      const employees: InsertEmployee[] = data
-        .map((row: any) => {
-          return {
-            surname: row.surname || row.Surname || "",
-            name: row.name || row.Name || "",
-            fathername: row.fathername || row.Fathername || "",
-            afm: row.afm || row.AFM || "",
-            klados: row.klados || row.Klados || "",
-            attribute: row.attribute || row.Attribute || "",
-            workaf: row.workaf || row.Workaf || "",
-            monada: row.monada || row.Monada || "",
-          };
-        })
-        .filter((emp: InsertEmployee) => emp.surname && emp.name); // Filter out empty rows
+      const response = await fetch("/api/employees/parse-excel", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (employees.length === 0) {
+      if (!response.ok) {
+        const error = await response.json();
+        alert(
+          `Σφάλμα κατά την ανάγνωση του αρχείου: ${error.message || "Unknown error"}`,
+        );
+        return;
+      }
+
+      const data: InsertEmployee[] = await response.json();
+
+      if (data.length === 0) {
         alert("Δεν βρέθηκαν έγκυρα δεδομένα υπαλλήλων στο αρχείο");
         return;
       }
 
-      onImport(employees);
+      onImport(data);
       onOpenChange(false);
     } catch (error) {
       console.error("Error importing file:", error);

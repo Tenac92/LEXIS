@@ -144,17 +144,17 @@ export function AdminDashboard() {
       });
     }
 
-    // System health issues (if available)
-    if (systemStats && (systemStats as any).healthPercentage < 95) {
-      items.push({
-        id: "system-health",
-        title: "Η υγεία του συστήματος χρειάζεται προσοχή",
-        description: `Διαθεσιμότητα: ${(systemStats as any).healthPercentage}%`,
-        severity: "medium",
-        icon: Database,
-        href: "/admin/system-health",
-      });
-    }
+    // System health monitoring not yet implemented - route doesn't exist
+    // if (systemStats && (systemStats as any).healthPercentage < 95) {
+    //   items.push({
+    //     id: "system-health",
+    //     title: "Η υγεία του συστήματος χρειάζεται προσοχή",
+    //     description: `Διαθεσιμότητα: ${(systemStats as any).healthPercentage}%`,
+    //     severity: "medium",
+    //     icon: Database,
+    //     href: "/admin/budget-monitoring",
+    //   });
+    // }
 
     return items;
   }, [stats, alerts, systemStats]);
@@ -244,13 +244,13 @@ export function AdminDashboard() {
 
         <KpiCard
           label="Υγεία Συστήματος"
-          value="98%"
+          value="N/A"
           icon={Database}
           iconColor="text-purple-600"
           iconBgColor="bg-purple-50"
           borderColor="border-l-purple-500"
-          detail="Διαθεσιμότητα συστήματος"
-          badge={<CheckCircle2 className="h-4 w-4 text-green-600" />}
+          detail="Παρακολούθηση υπό ανάπτυξη"
+          badge={<AlertTriangle className="h-4 w-4 text-amber-600" />}
         />
       </div>
 
@@ -317,17 +317,7 @@ export function AdminDashboard() {
                     Προβολή όλων των έργων
                   </Link>
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="w-full justify-start"
-                >
-                  <Link href="/admin/project-analysis">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Ανάλυση απόδοσης
-                  </Link>
-                </Button>
+                {/* Project Analysis feature disabled - under development */}
               </div>
             </div>
           </CardContent>
@@ -469,17 +459,7 @@ export function AdminDashboard() {
                   Πρότυπα εγγράφων
                 </Link>
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="w-full justify-start"
-              >
-                <Link href="/admin/system-settings">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Ρυθμίσεις συστήματος
-                </Link>
-              </Button>
+              {/* System Settings feature disabled - under development */}
             </div>
           </CardContent>
         </Card>

@@ -1876,10 +1876,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================================
+  // PHASE 2: API ENDPOINT STUBS FOR NOT-YET-IMPLEMENTED FEATURES
+  // These return 501 Not Implemented with clear messaging
+  // ============================================================================
+
+  // Budget Overview - PLACEHOLDER (TODO: implement)
+  app.get('/api/budget/overview', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Budget overview endpoint is not yet implemented',
+      message: 'This feature is under development. Use /api/budget/data/:projectId instead.',
+      developmentStatus: 'planned',
+      expectedDate: 'Q1 2026'
+    });
+  });
+
+  // Templates CRUD - PLACEHOLDER (TODO: implement backend)
+  app.get('/api/templates', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Templates API not yet implemented',
+      message: 'Template listing endpoint is under development',
+      developmentStatus: 'in_progress',
+      note: 'UI exists but backend is incomplete'
+    });
+  });
+
+  app.post('/api/templates', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Templates API not yet implemented',
+      message: 'Template creation endpoint is under development',
+      developmentStatus: 'in_progress'
+    });
+  });
+
+  app.get('/api/templates/:id/preview', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Template preview not yet implemented',
+      message: 'Template preview endpoint is under development',
+      developmentStatus: 'planned'
+    });
+  });
+
+  app.put('/api/templates/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Template update not yet implemented',
+      message: 'Template edit endpoint is under development',
+      developmentStatus: 'planned'
+    });
+  });
+
+  // Project Analysis - PLACEHOLDER (TODO: implement)
+  app.get('/api/admin/project-analysis', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'Project analysis endpoint not yet implemented',
+      message: 'Project performance analysis is under development',
+      developmentStatus: 'planned',
+      expectedDate: 'Q1 2026'
+    });
+  });
+
+  // System Settings - PLACEHOLDER (TODO: implement)
+  app.get('/api/admin/system-settings', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'System settings endpoint not yet implemented',
+      message: 'System configuration endpoints are under development',
+      developmentStatus: 'planned',
+      expectedDate: 'Q2 2026'
+    });
+  });
+
+  app.put('/api/admin/system-settings', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    if (req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    return res.status(501).json({
+      status: 'not_implemented',
+      error: 'System settings update not yet implemented',
+      message: 'System configuration updates are under development',
+      developmentStatus: 'planned'
+    });
+  });
+
   // Create HTTP server
   const httpServer = createServer(app);
   
   log('[Routes] All routes registered successfully');
+  log('[Routes] Phase 2 API stubs registered - unimplemented endpoints now return 501 Not Implemented');
   
   return httpServer;
 }

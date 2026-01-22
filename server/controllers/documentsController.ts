@@ -909,6 +909,8 @@ router.post(
       // TWO-TIER VALIDATION:
       // - ετήσια πίστωση exceeded = HARD BLOCK (cannot save)
       // - κατανομή έτους exceeded = SOFT WARNING (save with warning)
+      // WARNING: RACE CONDITION POSSIBLE - Multiple concurrent requests can pass validation
+      // and all create documents. True fix requires database transaction with row-level locking.
       const spendingAmount = parseFloat(String(total_amount)) || 0;
       let budgetWarning: { message: string; budgetType: string } | null = null;
       
@@ -981,6 +983,7 @@ router.post(
         beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
         employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
         region: regionJsonb, // Geographic region data (parsed from Region|RegionalUnit|Municipality format)
+        needs_xrimatodotisi: budgetWarning?.budgetType === 'katanomi' ? true : false, // Flag for budget warning requiring approval
         created_at: now,
         updated_at: now,
       };
@@ -1017,6 +1020,7 @@ router.post(
       // Create beneficiary payments OR employee payments for each recipient using project_index_id
       const beneficiaryPaymentsIds = [];
       const employeePaymentsIds = [];
+      const createdBeneficiaryIds: number[] = []; // Track newly created beneficiaries for rollback
       let beneficiaryPaymentFailed = false;
       let beneficiaryPaymentError: any = null;
       let employeePaymentFailed = false;
@@ -1201,6 +1205,7 @@ router.post(
                 );
               } else {
                 beneficiaryId = createdBeneficiary.id;
+                createdBeneficiaryIds.push(beneficiaryId); // Track for potential rollback
                 console.log(
                   "[DocumentsController] V2 Created new beneficiary:",
                   beneficiaryId,
@@ -1471,9 +1476,32 @@ router.post(
                   .from("beneficiary_payments")
                   .delete()
                   .in("id", beneficiaryPaymentsIds);
+                console.log(
+                  "[DocumentsController] V2 Rollback: Deleted beneficiary payments:",
+                  beneficiaryPaymentsIds,
+                );
               } catch (deleteError) {
                 console.error(
                   "[DocumentsController] V2 Rollback failed while deleting partial beneficiary payments:",
+                  deleteError,
+                );
+              }
+            }
+
+            // Delete newly created beneficiaries to prevent orphan records
+            if (createdBeneficiaryIds.length > 0) {
+              try {
+                await supabase
+                  .from("beneficiaries")
+                  .delete()
+                  .in("id", createdBeneficiaryIds);
+                console.log(
+                  "[DocumentsController] V2 Rollback: Deleted orphan beneficiaries:",
+                  createdBeneficiaryIds,
+                );
+              } catch (deleteError) {
+                console.error(
+                  "[DocumentsController] V2 Rollback failed while deleting beneficiaries:",
                   deleteError,
                 );
               }
@@ -1610,7 +1638,7 @@ router.post(
           }
           
           // Return error to client
-          return res.status(400).json({
+          return res.status(422).json({
             message: "Ανεπαρκής προϋπολογισμός",
             error: errorMessage.replace('BUDGET_EXCEEDED: ', ''),
             budget_error: true
@@ -2532,8 +2560,16 @@ router.patch(
             
             if (oldProjectError) {
               console.error(`[DocumentsController] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, oldProjectError);
+              return res.status(500).json({
+                message: "Cannot update document - failed to fetch project configuration",
+                error: oldProjectError.message
+              });
             } else if (!oldProjectIndex?.project_id) {
               console.error(`[DocumentsController] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+              return res.status(500).json({
+                message: "Cannot update document - missing project configuration",
+                error: `project_index ${oldProjectIndexId} has invalid data (no project_id)`
+              });
             } else {
               oldProjectId = oldProjectIndex.project_id;
             }
@@ -2548,8 +2584,16 @@ router.patch(
             
             if (newProjectError) {
               console.error(`[DocumentsController] ERROR: Failed to fetch project_index ${newProjectIndexId}:`, newProjectError);
+              return res.status(500).json({
+                message: "Cannot update document - failed to fetch new project configuration",
+                error: newProjectError.message
+              });
             } else if (!newProjectIndex?.project_id) {
               console.error(`[DocumentsController] ERROR: project_index ${newProjectIndexId} has no project_id`);
+              return res.status(500).json({
+                message: "Cannot update document - missing new project configuration",
+                error: `project_index ${newProjectIndexId} has invalid data (no project_id)`
+              });
             } else {
               newProjectId = newProjectIndex.project_id;
             }
@@ -3151,8 +3195,16 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
           
           if (oldProjectError) {
             console.error(`[Correction] ERROR: Failed to fetch project_index ${oldProjectIndexId}:`, oldProjectError);
+            return res.status(500).json({
+              message: "Cannot create correction - failed to fetch project configuration",
+              error: oldProjectError.message
+            });
           } else if (!oldProjectIndex?.project_id) {
             console.error(`[Correction] ERROR: project_index ${oldProjectIndexId} has no project_id`);
+            return res.status(500).json({
+              message: "Cannot create correction - missing project configuration",
+              error: `project_index ${oldProjectIndexId} has invalid data (no project_id)`
+            });
           } else {
             oldProjectId = oldProjectIndex.project_id;
           }
@@ -3167,8 +3219,16 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
           
           if (newProjectError) {
             console.error(`[Correction] ERROR: Failed to fetch project_index ${newProjectIndexId}:`, newProjectError);
+            return res.status(500).json({
+              message: "Cannot create correction - failed to fetch new project configuration",
+              error: newProjectError.message
+            });
           } else if (!newProjectIndex?.project_id) {
             console.error(`[Correction] ERROR: project_index ${newProjectIndexId} has no project_id`);
+            return res.status(500).json({
+              message: "Cannot create correction - missing new project configuration",
+              error: `project_index ${newProjectIndexId} has invalid data (no project_id)`
+            });
           } else {
             newProjectId = newProjectIndex.project_id;
           }

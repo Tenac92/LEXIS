@@ -17,7 +17,6 @@ const PopoverContent = React.forwardRef<
       ref={ref}
       align={align}
       sideOffset={sideOffset}
-      data-popover-content
       onPointerDown={(e) => {
         e.stopPropagation();
       }}

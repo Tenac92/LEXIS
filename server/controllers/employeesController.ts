@@ -4,13 +4,23 @@
  */
 
 import { Router, Request, Response } from 'express';
+import multer from 'multer';
 import { storage } from '../storage';
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from '@shared/schema';
 import { AuthenticatedRequest, authenticateSession } from '../authentication';
 import { createLogger } from '../utils/logger';
+import { readXlsxToRows } from '../utils/safeExcel';
 
 const logger = createLogger('EmployeesController');
 const router = Router();
+
+// Multer configuration for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit for employee files
+  },
+});
 
 // All employee operations require an authenticated session
 router.use(authenticateSession);
@@ -297,5 +307,96 @@ router.post('/cleanup-duplicates', async (req: AuthenticatedRequest, res: Respon
     });
   }
 });
+
+/**
+ * POST /api/employees/parse-excel
+ * Parse an Excel file and extract employee data (safe, uses exceljs, not vulnerable xlsx)
+ */
+router.post('/parse-excel', upload.single('file'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Παρακαλώ επιλέξτε ένα αρχείο',
+      });
+    }
+
+    const fileName = req.file.originalname.toLowerCase();
+    if (!fileName.endsWith('.xlsx')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Υποστηρίζονται μόνο αρχεία .xlsx',
+      });
+    }
+
+    logger.info(`Parsing Excel file: ${req.file.originalname}`);
+
+    // Use exceljs-based reader with limits (safe from vulnerabilities)
+    const rows = (await readXlsxToRows(req.file.buffer, {
+      maxRows: 5000,
+      maxCols: 50,
+      maxSheets: 1,
+    })) as unknown[][];
+
+    if (rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Το αρχείο είναι κενό',
+      });
+    }
+
+    // Extract header row
+    const headerRow = (rows[0] as unknown[]).map((h) => (typeof h === 'string' ? h.toLowerCase().trim() : ''));
+    const dataRows = rows.slice(1);
+
+    // Map employee fields flexibly
+    const employees: InsertEmployee[] = dataRows
+      .map((row: unknown) => {
+        const rowArray = row as unknown[];
+        return {
+          surname: extractField(rowArray, headerRow, ['surname', 'επώνυμο']) || '',
+          name: extractField(rowArray, headerRow, ['name', 'όνομα']) || '',
+          fathername: extractField(rowArray, headerRow, ['fathername', 'patronymic', 'όνομα πατρός', 'πατρώνυμο']) || '',
+          afm: extractField(rowArray, headerRow, ['afm', 'τιν', 'tax_id']) || '',
+          klados: extractField(rowArray, headerRow, ['klados', 'κλάδος']) || '',
+          attribute: extractField(rowArray, headerRow, ['attribute', 'ιδιότητα']) || '',
+          workaf: extractField(rowArray, headerRow, ['workaf', 'workaf_no', 'αριθμός εργασίας']) || '',
+          monada: extractField(rowArray, headerRow, ['monada', 'μονάδα']) || '',
+        };
+      })
+      .filter((emp: InsertEmployee) => emp.surname && emp.name); // Filter out empty rows
+
+    if (employees.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Δεν βρέθηκαν έγκυρα δεδομένα υπαλλήλων στο αρχείο',
+      });
+    }
+
+    logger.info(`Successfully parsed ${employees.length} employees from Excel file`);
+    res.json(employees);
+  } catch (error) {
+    logger.error('Error parsing Excel file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την ανάγνωση του αρχείου',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * Helper function to extract field value from row based on header column
+ */
+function extractField(row: unknown[], headerRow: string[], fieldNames: string[]): string {
+  for (const fieldName of fieldNames) {
+    const index = headerRow.indexOf(fieldName);
+    if (index !== -1 && row[index]) {
+      const value = row[index];
+      return typeof value === 'string' ? value.trim() : String(value);
+    }
+  }
+  return '';
+}
 
 export default router;
