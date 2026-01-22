@@ -6,6 +6,7 @@ import { log } from './vite';
 import { createServer } from 'http';
 import { storage } from './storage';
 import { getBudgetByMis } from './controllers/budgetController';
+import { validateBudgetAllocation } from './services/budgetNotificationService';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -62,6 +63,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Standalone subprojects routes
   app.use('/api/subprojects', subprojectsRouter);
+
+  // Register budget notifications controller
+  const { router: budgetNotificationsRouter } = await import('./controllers/budgetNotificationsController');
+  app.use('/api/budget-notifications', budgetNotificationsRouter);
+  
+  // Register units controller for for_yl (implementing agencies) and other unit-related endpoints
+  const { router: unitsRouter } = await import('./controllers/unitsController');
+  app.use('/api/units', unitsRouter);
+
+  const { default: importsRouter } = await import('./routes/imports');
+  app.use('/api/imports', importsRouter);
+  
+  // Register notifications router for budget reallocation requests
+  const { default: notificationsRouter } = await import('./routes/api/notifications');
+  app.use('/api/notifications', authenticateSession, notificationsRouter);
   
   // Project Index endpoint - get project_index record by ID
   app.get('/api/project-index/:id', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
@@ -195,9 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Projects by unit endpoint for document creation
-  app.get('/api/projects-working/:unitName', async (req: AuthenticatedRequest, res: Response) => {
+  // OPTIMIZED: Uses reference cache and targeted project queries
+  app.get('/api/projects-working/:unitName', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { unitName } = req.params;
+      const startTime = Date.now();
       
       if (!unitName) {
         return res.status(400).json({ error: 'Unit name is required' });
@@ -208,6 +226,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       log(`[Projects Working] Fetching projects for unit: ${decodedUnitName}`);
       
+      // Get cached reference data (Monada, event_types, expenditure_types)
+      const { getReferenceData, getMonadaByUnit } = await import('./utils/reference-cache');
+      const refData = await getReferenceData();
+      
       // Check if unitName is numeric (unit ID) or string (unit name)
       let unitId: number | null = null;
       
@@ -215,16 +237,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // It's a numeric unit ID
         unitId = parseInt(decodedUnitName, 10);
       } else {
-        // It's a unit name, find the corresponding ID
-        const unitResult = await supabase
-          .from('Monada')
-          .select('id')
-          .eq('unit', decodedUnitName)
-          .single();
-          
-        if (unitResult.data) {
-          unitId = unitResult.data.id;
-        }
+        // It's a unit name, find from cache
+        const unit = refData.monada.find(m => m.unit === decodedUnitName);
+        unitId = unit?.id || null;
       }
       
       if (!unitId) {
@@ -232,56 +247,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json([]);
       }
       
-      // Get projects linked to this unit through project_index
-      const [projectIndexRes, projectsRes, monadaRes, eventTypesRes, expenditureTypesRes] = await Promise.all([
-        supabase.from('project_index').select('*').eq('monada_id', unitId),
-        supabase.from('Projects').select('*'),
-        supabase.from('Monada').select('*'),
-        supabase.from('event_types').select('*'),
-        supabase.from('expenditure_types').select('*')
-      ]);
+      // Step 1: Get project_index entries for this unit (targeted query)
+      const projectIndexRes = await supabase
+        .from('project_index')
+        .select('id, project_id, monada_id, expenditure_type_id, event_types_id')
+        .eq('monada_id', unitId);
 
       if (projectIndexRes.error) {
         console.error('[Projects Working] Database error:', projectIndexRes.error);
         return res.status(500).json({ error: 'Failed to fetch project index' });
       }
+      
+      const projectIndexItems = projectIndexRes.data || [];
+      
+      if (projectIndexItems.length === 0) {
+        log(`[Projects Working] No projects found for unit ${decodedUnitName}`);
+        return res.json([]);
+      }
+      
+      // Step 2: Get unique project IDs and fetch ONLY those projects
+      const projectIds = Array.from(new Set(projectIndexItems.map(item => item.project_id)));
+      
+      const projectsRes = await supabase
+        .from('Projects')
+        .select('id, mis, na853, project_title, event_description, created_at, updated_at')
+        .in('id', projectIds);
 
       if (projectsRes.error) {
         console.error('[Projects Working] Database error:', projectsRes.error);
         return res.status(500).json({ error: 'Failed to fetch projects' });
       }
       
-      const projectIndexItems = projectIndexRes.data || [];
-      const allProjects = projectsRes.data || [];
-      const monadaData = monadaRes.data || [];
-      const eventTypes = eventTypesRes.data || [];
-      const expenditureTypes = expenditureTypesRes.data || [];
+      const projects = projectsRes.data || [];
       
-      // Get unique project IDs for this unit
-      const projectIds = Array.from(new Set(projectIndexItems.map(item => item.project_id)));
+      // Create a map for quick lookup
+      const projectsMap = new Map(projects.map(p => [p.id, p]));
       
-      // Filter projects to those linked to this unit
-      const unitProjects = allProjects.filter(project => projectIds.includes(project.id));
-      
-      log(`[Projects Working] Found ${unitProjects.length} projects for unit ${decodedUnitName}`);
+      log(`[Projects Working] Found ${projects.length} projects for unit ${decodedUnitName}`);
       
       // Group project_index items by project to aggregate expenditure types
-      // IMPORTANT: Only aggregate expenditure types for THIS UNIT to avoid showing invalid options
+      // Use cached reference data for lookups
       const projectMap = new Map();
       
       projectIndexItems.forEach(projectIndexItem => {
-        const project = allProjects.find(p => p.id === projectIndexItem.project_id);
+        const project = projectsMap.get(projectIndexItem.project_id);
         if (!project) return;
         
-        const expenditureType = expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
-        const eventType = eventTypes.find(et => et.id === projectIndexItem.event_types_id);
+        const expenditureType = refData.expenditureTypes.find(et => et.id === projectIndexItem.expenditure_type_id);
+        const eventType = refData.eventTypes.find(et => et.id === projectIndexItem.event_types_id);
         
         if (!projectMap.has(project.id)) {
-          // First time seeing this project - create entry
           projectMap.set(project.id, {
-            id: project.id,  // Use project.id for dropdown binding
+            id: project.id,
             project_id: project.id,
-            project_index_ids: [projectIndexItem.id],  // Track all project_index IDs for this unit
+            project_index_ids: [projectIndexItem.id],
             mis: project.mis,
             na853: project.na853,
             project_name: project.project_title || project.event_description,
@@ -294,7 +313,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updated_at: project.updated_at
           });
         } else {
-          // Project already exists - add expenditure type only if it's for this unit
           const existingProject = projectMap.get(project.id);
           if (expenditureType?.expenditure_types && !existingProject.expenditure_types.includes(expenditureType.expenditure_types)) {
             existingProject.expenditure_types.push(expenditureType.expenditure_types);
@@ -306,8 +324,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const enhancedProjects = Array.from(projectMap.values());
+      const elapsed = Date.now() - startTime;
       
-      log(`[Projects Working] Returning ${enhancedProjects.length} unique projects with unit-specific expenditure types`);
+      log(`[Projects Working] Returning ${enhancedProjects.length} unique projects with unit-specific expenditure types in ${elapsed}ms`);
       
       res.json(enhancedProjects);
       
@@ -320,14 +339,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Beneficiary payments endpoint for enhanced display
   app.get('/api/beneficiary-payments', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!req.user?.unit_id) {
+      const userUnits = req.user?.unit_id || [];
+      if (userUnits.length === 0) {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      // Get all beneficiaries for user's units first
-      const beneficiaries = await storage.getBeneficiariesByUnit(req.user.unit_id[0].toString());
-      
-      // Get payments for all these beneficiaries
+      // Optional narrowing by beneficiary IDs to avoid scanning the entire table
+      const beneficiaryIdsParam = (req.query.beneficiaryIds as string | undefined) || '';
+      const beneficiaryIds = beneficiaryIdsParam
+        .split(',')
+        .map(id => parseInt(id, 10))
+        .filter(id => Number.isFinite(id));
+
+      if (beneficiaryIds.length > 0) {
+        const { data, error } = await supabase
+          .from('beneficiary_payments')
+          .select(`
+            *,
+            project_index:project_index_id (
+              expenditure_type_id,
+              expenditure_types:expenditure_types (
+                expenditure_types
+              )
+            )
+          `)
+          .in('beneficiary_id', beneficiaryIds)
+          .in('unit_id', userUnits);
+
+        if (error) {
+          console.error('[Beneficiary Payments] Error fetching filtered payments:', error);
+          return res.status(500).json({ message: 'Failed to fetch beneficiary payments' });
+        }
+
+        const enriched = (data || []).map((payment) => {
+          const expName = payment.project_index?.expenditure_types?.expenditure_types || null;
+          return {
+            ...payment,
+            expenditure_type: expName,
+          };
+        });
+
+        return res.json(enriched);
+      }
+
+      // Fallback: previous behavior (fetch payments for beneficiaries in first unit)
+      const beneficiaries = await storage.getBeneficiariesByUnit(userUnits[0].toString());
       const allPayments = [];
       for (const beneficiary of beneficiaries) {
         const payments = await storage.getBeneficiaryPayments(beneficiary.id);
@@ -348,7 +404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Authentication required' });
       }
 
-      const { beneficiary_id, installment, amount, status, payment_date, expenditure_type } = req.body;
+      const { beneficiary_id, installment, amount, status, payment_date, unit_id, project_index_id } = req.body;
 
       // Validate required fields
       if (!beneficiary_id || !installment || !amount) {
@@ -370,7 +426,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: amount.toString(),
           status: status || 'pending',
           payment_date: payment_date || null,
-          expenditure_type: expenditure_type || null,
+          unit_id: unit_id || req.user.unit_id[0] || null,
+          project_index_id: project_index_id || null,
           created_at: now,
           updated_at: now
         }])
@@ -397,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { id } = req.params;
-      const { installment, amount, status, payment_date, expenditure_type } = req.body;
+      const { installment, amount, status, payment_date, unit_id, project_index_id } = req.body;
 
       if (!id || isNaN(parseInt(id))) {
         return res.status(400).json({ message: 'Invalid payment ID' });
@@ -422,7 +479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (amount !== undefined) updateData.amount = amount.toString();
       if (status !== undefined) updateData.status = status;
       if (payment_date !== undefined) updateData.payment_date = payment_date;
-      if (expenditure_type !== undefined) updateData.expenditure_type = expenditure_type;
+      if (unit_id !== undefined) updateData.unit_id = unit_id;
+      if (project_index_id !== undefined) updateData.project_index_id = project_index_id;
 
       const { data, error } = await supabase
         .from('beneficiary_payments')
@@ -481,6 +539,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Beneficiary Payments] Error in delete payment:', error);
       res.status(500).json({ message: 'Failed to delete beneficiary payment' });
+    }
+  });
+  
+  // Backfill beneficiary regiondet data from existing payments (admin only)
+  app.post('/api/admin/backfill-regiondet', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      // Only allow admins to run the backfill
+      if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+      }
+
+      console.log('[Admin] Starting regiondet backfill...');
+      const result = await storage.backfillBeneficiaryRegiondet();
+      
+      console.log('[Admin] Regiondet backfill completed:', result);
+      res.json({ 
+        message: 'Regiondet backfill completed', 
+        ...result 
+      });
+    } catch (error) {
+      console.error('[Admin] Error in regiondet backfill:', error);
+      res.status(500).json({ message: 'Failed to run regiondet backfill' });
     }
   });
   
@@ -545,6 +625,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('[DIRECT_ROUTE] Document created successfully:', data.id);
+      
+      // Trigger notification creation if document has a project_id and amount
+      if (project_id && total_amount && total_amount > 0) {
+        try {
+          // Get project MIS for budget validation
+          const { data: projectData } = await supabase
+            .from('Projects')
+            .select('mis')
+            .eq('id', project_id)
+            .single();
+          
+          if (projectData?.mis) {
+            // Validate budget and create notifications if needed
+            await validateBudgetAllocation(projectData.mis, total_amount, req.user?.id);
+            console.log('[DIRECT_ROUTE] Budget validation and notification creation completed for project:', project_id);
+          }
+        } catch (notificationError) {
+          console.error('[DIRECT_ROUTE] Error creating notifications:', notificationError);
+          // Don't fail the document creation if notifications fail
+        }
+      }
       
       res.status(201).json({ id: data.id });
     } catch (error) {
@@ -670,6 +771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const { router: usersRouter } = await import('./controllers/usersController');
   const { router: projectRouter } = await import('./controllers/projectController');
   const { default: budgetRouter } = await import('./routes/budget');
+  const { default: budgetUploadRouter } = await import('./routes/budget-upload');
   // Remove problematic expenditure types router for now
   
   // Mount API routes
@@ -677,7 +779,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/documents', documentsRouter);
   app.use('/api/projects', projectRouter);
   app.use('/api/users', usersRouter);
-  app.use('/api/budget', budgetRouter);
+  // Register more specific routes before general routes
+  app.use('/api/budget/upload', budgetUploadRouter);
   app.use('/api/budget', budgetRouter);
   
   // User preferences endpoints for ESDIAN suggestions (Enhanced Smart Suggestions)
@@ -686,6 +789,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const projectId = req.query.project_id as string;
       const expenditureType = req.query.expenditure_type as string;
+      const userUnitIdRaw = req.user?.unit_id?.[0];
+      const userUnitIdNum =
+        typeof userUnitIdRaw === 'number'
+          ? userUnitIdRaw
+          : userUnitIdRaw
+          ? parseInt(String(userUnitIdRaw), 10)
+          : null;
       
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated' });
@@ -694,7 +804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[UserPreferences] ESDIAN request for user:', userId, 'project:', projectId, 'type:', expenditureType);
 
       // Get user's unit_id to get relevant suggestions
-      const userUnitId = req.user?.unit_id?.[0];
+      const userUnitId = userUnitIdNum;
       
       // Fetch comprehensive data for smart suggestions
       let baseQuery = supabase
@@ -715,22 +825,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
         baseQuery = baseQuery.eq('unit_id', userUnitId);
       }
       
-      const { data: allDocuments, error } = await baseQuery.limit(100);
+      let { data: allDocuments, error } = await baseQuery.limit(100);
+
+      // Fallback: if no data came back with a unit filter, try without it to avoid empty suggestions
+      if (!error && (!allDocuments || allDocuments.length === 0)) {
+        const fallbackQuery = supabase
+          .from('generated_documents')
+          .select(`
+            esdian, 
+            created_at, 
+            generated_by, 
+            project_index_id,
+            unit_id,
+            id
+          `)
+          .not('esdian', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        const fallbackResult = await fallbackQuery;
+        if (!fallbackResult.error && fallbackResult.data) {
+          allDocuments = fallbackResult.data;
+        }
+      }
       
       if (error) {
         console.error('[UserPreferences] Error fetching ESDIAN suggestions:', error);
         return res.status(500).json({ message: 'Failed to fetch suggestions' });
       }
 
-      // Find project_index_id for current context
+      // Find project_index_id for current context (handle multiple rows per project)
       let currentProjectIndexId = null;
       if (projectId) {
-        const { data: projectIndex } = await supabase
+        const projectIdNum = parseInt(String(projectId), 10);
+        let projectIndexQuery = supabase
           .from('project_index')
-          .select('id')
-          .eq('project_id', projectId)
-          .single();
-        currentProjectIndexId = projectIndex?.id;
+          .select('id, monada_id, expenditure_type_id')
+          .eq('project_id', isNaN(projectIdNum) ? projectId : projectIdNum);
+
+        // Prefer entries matching the user's unit/monada when available
+        if (userUnitId) {
+          projectIndexQuery = projectIndexQuery.eq('monada_id', userUnitId);
+        }
+
+        // If an expenditure type is provided, resolve it to id and filter
+        if (expenditureType) {
+          const { data: expType } = await supabase
+            .from('expenditure_types')
+            .select('id')
+            .eq('expenditure_types', expenditureType)
+            .maybeSingle();
+          if (expType?.id) {
+            projectIndexQuery = projectIndexQuery.eq('expenditure_type_id', expType.id);
+          }
+        }
+
+        const { data: projectIndexRows, error: projectIndexError } = await projectIndexQuery
+          .order('id', { ascending: true })
+          .limit(1);
+
+        if (projectIndexError) {
+          console.warn('[UserPreferences] project_index lookup warning:', projectIndexError);
+        }
+
+        currentProjectIndexId = projectIndexRows?.[0]?.id || null;
       }
 
       // Analyze suggestions with metadata
@@ -1272,19 +1429,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { data: units, error } = await supabase
         .from('Monada')
         .select('id, unit, unit_name')
-        .order('id');
+        .order('unit');
       
       if (error) {
         console.error('[API] Error fetching units:', error);
         return res.status(500).json({ error: error.message });
       }
       
-      // Transform the data to match the expected format
+      
+      // Return units with proper field mapping for frontend lookup
       const transformedData = units.map(unit => ({
-        id: unit.unit || unit.id, // String identifier (e.g., "ΔΑΕΦΚ-ΚΕ")
-        unit: unit.id, // Numeric ID for filtering (e.g., 2)
+        id: unit.id, // Numeric ID for lookup
+        unit: unit.unit, // String identifier
         unit_name: unit.unit_name, // Full JSONB object
-        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || unit.id)
+        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || `Μονάδα ${unit.id}`)
       }));
       
       res.json(transformedData);
@@ -1649,115 +1807,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   log('[Routes] API routes registered');
   
-  // Additional project endpoints
-  app.get('/api/projects-working/:unitIdentifier', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      let { unitIdentifier } = req.params;
-      
-      // Decode URL-encoded Greek characters
-      try {
-        unitIdentifier = decodeURIComponent(unitIdentifier);
-      } catch (decodeError) {
-        console.log(`[ProjectsWorking] URL decode failed, using original: ${unitIdentifier}`);
-      }
-      
-      console.log(`[ProjectsWorking] Fetching projects for unit: ${unitIdentifier}`);
-      
-      // Get projects with enhanced data using optimized schema
-      const [projectsRes, monadaRes, eventTypesRes, expenditureTypesRes, indexRes] = await Promise.all([
-        supabase.from('Projects').select('*'),
-        supabase.from('Monada').select('*'),
-        supabase.from('event_types').select('*'),
-        supabase.from('expenditure_types').select('*'),
-        supabase.from('project_index').select('*')
-      ]);
-      
-      if (projectsRes.error) {
-        console.error(`[ProjectsWorking] Query failed:`, projectsRes.error);
-        return res.status(500).json({
-          message: 'Database query failed',
-          error: projectsRes.error.message
-        });
-      }
-      
-      const projects = projectsRes.data || [];
-      const monadaData = monadaRes.data || [];
-      const eventTypes = eventTypesRes.data || [];
-      const expenditureTypes = expenditureTypesRes.data || [];
-      const indexData = indexRes.data || [];
-      
-      // Determine if unitIdentifier is numeric ID or unit name
-      const isNumericId = /^\d+$/.test(unitIdentifier);
-      let targetUnitId: number | null = null;
-      let targetUnitName: string | null = null;
-      
-      if (isNumericId) {
-        // If numeric, find the unit name from Monada table
-        targetUnitId = parseInt(unitIdentifier);
-        const unitData = monadaData.find(m => m.id === targetUnitId);
-        if (unitData) {
-          targetUnitName = unitData.unit;
-          console.log(`[ProjectsWorking] Numeric ID ${targetUnitId} maps to unit: ${targetUnitName}`);
-        } else {
-          console.log(`[ProjectsWorking] No unit found for ID: ${targetUnitId}`);
-          return res.json([]);
-        }
-      } else {
-        // If not numeric, use as unit name directly
-        targetUnitName = unitIdentifier;
-        const unitData = monadaData.find(m => m.unit === targetUnitName);
-        if (unitData) {
-          targetUnitId = unitData.id;
-          console.log(`[ProjectsWorking] Unit name ${targetUnitName} maps to ID: ${targetUnitId}`);
-        }
-      }
-      
-      // Filter projects by unit using project_index directly
-      const unitProjects = projects.filter(project => {
-        const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
-        return projectIndexEntries.some(idx => {
-          // Match by either unit ID or unit name
-          return idx.monada_id === targetUnitId || 
-                 (monadaData.find(m => m.id === idx.monada_id)?.unit === targetUnitName);
-        });
-      });
-      
-      console.log(`[ProjectsWorking] Found ${unitProjects.length} projects for unit ${unitIdentifier} (ID: ${targetUnitId}, Name: ${targetUnitName})`);
-      
-      // Enhance projects with expenditure_types array
-      const enhancedProjects = unitProjects.map(project => {
-        // Get all project_index entries for this project
-        const projectIndexEntries = indexData.filter(idx => idx.project_id === project.id);
-        
-        // Extract unique expenditure type IDs
-        const expenditureTypeIds = Array.from(new Set(projectIndexEntries
-          .map(idx => idx.expenditure_type_id)
-          .filter(id => id !== null && id !== undefined)));
-        
-        // Map expenditure type IDs to names
-        const expenditureTypeNames = expenditureTypeIds
-          .map(id => {
-            const expType = expenditureTypes.find(et => et.id === id);
-            return expType ? expType.expenditure_types : null;
-          })
-          .filter(name => name !== null);
-        
-        return {
-          ...project,
-          expenditure_types: expenditureTypeNames,
-          expenditure_type: expenditureTypeNames // Keep for backward compatibility
-        };
-      });
-      
-      res.json(enhancedProjects);
-    } catch (error) {
-      console.error(`[ProjectsWorking] Error:`, error);
-      res.status(500).json({
-        message: 'Error fetching projects',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // NOTE: Duplicate /api/projects-working/:unitIdentifier route removed
+  // The optimized version is defined earlier in this file at line ~207
 
   // Geographic API routes
   app.get('/api/geographic/regions', async (req, res) => {

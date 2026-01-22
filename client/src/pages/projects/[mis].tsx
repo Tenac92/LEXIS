@@ -9,15 +9,15 @@ import { type Project } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function ProjectDetailsPage() {
-  const { mis } = useParams<{ mis: string }>();
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
-  console.log("Project Details Page - MIS Parameter:", mis);
+  console.log("Project Details Page - ID Parameter:", id);
 
   const { data: project, isLoading, error } = useQuery<Project>({
-    queryKey: [`/api/projects/${mis}`], // Direct API route matching
-    enabled: !!mis && !!user // Only fetch if we have both MIS and user
+    queryKey: [`/api/projects/${id}`], // Using project ID from route
+    enabled: !!id && !!user // Only fetch if we have both ID and user
   });
 
   if (isLoading) {
@@ -48,7 +48,7 @@ export default function ProjectDetailsPage() {
             </div>
             <Card className="p-6 bg-red-50">
               <p className="text-red-600">
-                The requested project could not be found or you don't have permission to view it.
+                The requested project could not be found or you don&apos;t have permission to view it.
               </p>
             </Card>
           </div>
@@ -126,7 +126,7 @@ export default function ProjectDetailsPage() {
             </div>
             {isAdmin && (
               <Button variant="outline" asChild>
-                <Link href={`/projects/${mis}/edit`}>
+                <Link href={`/projects/${project.id}/edit`}>
                   Edit Project
                 </Link>
               </Button>

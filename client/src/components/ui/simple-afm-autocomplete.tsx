@@ -86,16 +86,46 @@ export function SimpleAFMAutocomplete({
   projectNa853 = ""
 }: SimpleAFMAutocompleteProps) {
   const [searchTerm, setSearchTerm] = useState(value);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Update search term when value prop changes
   useEffect(() => {
     if (value !== searchTerm) {
       setSearchTerm(value);
+      setDebouncedSearchTerm(value);
     }
   }, [value]);
+  
+  // Debounce search term to reduce API calls
+  // OPTIMIZATION: Skip debounce for exact 9-digit AFM (paste operation) for instant response
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // Check if this is a complete 9-digit AFM (likely pasted)
+    const isExactAFM = searchTerm.length === 9 && /^\d{9}$/.test(searchTerm);
+    
+    if (isExactAFM) {
+      // No debounce for exact AFM - search immediately
+      setDebouncedSearchTerm(searchTerm);
+    } else {
+      // Normal debounce for typing
+      debounceTimerRef.current = setTimeout(() => {
+        setDebouncedSearchTerm(searchTerm);
+      }, 150); // 150ms debounce for faster response
+    }
+    
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [searchTerm]);
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -116,30 +146,73 @@ export function SimpleAFMAutocomplete({
   const useEmployeeData = expenditureType === "ΕΚΤΟΣ ΕΔΡΑΣ";
   
   // Fetch employees when expenditure type is "ΕΚΤΟΣ ΕΔΡΑΣ"
+  // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
-    queryKey: ['/api/employees/search', searchTerm],
+    queryKey: ['/api/employees/search-fast', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 1) return [];
-      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
+      
+      const startTime = performance.now();
+      
+      // Use the optimized fast search endpoint
+      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Employee search results for "${searchTerm}":`, data);
-      return data.success ? data.data : [];
+      
+      const elapsed = Math.round(performance.now() - startTime);
+      
+      if (data.success && data.data.length > 0) {
+        console.log(`[SimpleAFM] Employee search (${data.source}) for "${debouncedSearchTerm}": ${data.data.length} results in ${elapsed}ms`);
+        return data.data;
+      }
+      
+      // If cache miss (fallback), try regular search only for prefix searches
+      if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
+        console.log(`[SimpleAFM] Cache miss, falling back to regular employee search`);
+        const fallbackResponse = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackData = await fallbackResponse.json();
+        return fallbackData.success ? fallbackData.data : [];
+      }
+      
+      return data.data || [];
     },
-    enabled: useEmployeeData && searchTerm.length >= 1,
+    enabled: useEmployeeData && debouncedSearchTerm.length >= 4,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   // Fetch beneficiaries when expenditure type is NOT "ΕΚΤΟΣ ΕΔΡΑΣ"
+  // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
-    queryKey: ['/api/beneficiaries/search', searchTerm],
+    queryKey: ['/api/beneficiaries/search-fast', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm || searchTerm.length < 1) return [];
-      // Fast search without financial data for instant autocomplete
-      const response = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(searchTerm)}`);
+      if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
+      
+      const startTime = performance.now();
+      
+      // Use the optimized fast search endpoint
+      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}`);
       const data = await response.json();
-      console.log(`[SimpleAFM] Beneficiary search results for "${searchTerm}":`, data);
-      return data.success ? data.data : [];
+      
+      const elapsed = Math.round(performance.now() - startTime);
+      
+      if (data.success && data.data.length > 0) {
+        console.log(`[SimpleAFM] Beneficiary search (${data.source}) for "${debouncedSearchTerm}": ${data.data.length} results in ${elapsed}ms`);
+        return data.data;
+      }
+      
+      // If cache miss (fallback), try regular search only for prefix searches
+      if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
+        console.log(`[SimpleAFM] Cache miss, falling back to regular beneficiary search`);
+        const fallbackResponse = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackData = await fallbackResponse.json();
+        return fallbackData.success ? fallbackData.data : [];
+      }
+      
+      return data.data || [];
     },
-    enabled: !useEmployeeData && searchTerm.length >= 1,
+    enabled: !useEmployeeData && debouncedSearchTerm.length >= 4,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
@@ -310,8 +383,8 @@ export function SimpleAFMAutocomplete({
     // Notify parent component when user types
     onChange?.(numericValue);
     
-    // Show dropdown when user types at least 2 characters
-    if (numericValue.length >= 2) {
+    // Show dropdown when user types at least 4 characters
+    if (numericValue.length >= 4) {
       setShowDropdown(true);
     } else {
       setShowDropdown(false);
@@ -327,7 +400,7 @@ export function SimpleAFMAutocomplete({
           placeholder={placeholder}
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => searchTerm.length >= 2 && setShowDropdown(true)}
+          onFocus={() => searchTerm.length >= 4 && setShowDropdown(true)}
           disabled={disabled}
           className="w-full pr-8"
           data-testid="input-afm-search"
@@ -344,7 +417,7 @@ export function SimpleAFMAutocomplete({
       </div>
       
       {/* Dropdown results */}
-      {showDropdown && searchTerm.length >= 2 && (
+      {showDropdown && searchTerm.length >= 4 && (
         <div 
           ref={dropdownRef}
           className="absolute z-50 min-w-full w-[500px] mt-1 bg-popover border border-border rounded-md shadow-lg max-h-[400px] overflow-auto"
@@ -356,8 +429,8 @@ export function SimpleAFMAutocomplete({
             </div>
           ) : searchResults.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
-              {searchTerm.length < 2 ? (
-                "Πληκτρολογήστε τουλάχιστον 2 χαρακτήρες"
+              {searchTerm.length < 4 ? (
+                "Πληκτρολογήστε τουλάχιστον 4 χαρακτήρες"
               ) : (
                 "Δεν βρέθηκαν αποτελέσματα"
               )}

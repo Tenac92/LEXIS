@@ -1,0 +1,83 @@
+[DocumentsController] V2 Document creation request received!
+[DocumentsController] V2 Authenticated user ID: 96
+[DocumentsController] V2 Request summary: {
+  unit: '2',
+  project_id: 32,
+  expenditure_type: 'ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ',
+  recipientsCount: 1,
+  total_amount: 720
+}
+[DocumentsController] V2 DEBUG - Recipients from request: [
+  {
+    "firstname": "fggffg",
+    "lastname": "fgfgfg",
+    "fathername": "gfgfggf",
+    "afm": "456789033",
+    "amount": 720,
+    "secondary_text": "",
+    "installment": "ΕΦΑΠΑΞ",
+    "installments": [
+      "ΕΦΑΠΑΞ"
+    ],
+    "installmentAmounts": {
+      "ΕΦΑΠΑΞ": 720
+    }
+  }
+]
+[DocumentsController] V2 Looking up unit by numeric ID: 2
+[DocumentsController] V2 Resolved unit 2 to numeric ID: 2
+[DocumentsController] V2 Looking up project with numeric ID: 32
+[DocumentsController] V2 Projects query completed - found 10 projects
+[DocumentsController] V2 Found project: 5185960 NA853: 2024ΝΑ85300039
+[DocumentsController] V2 Using director signature from request
+[DocumentsController] V2 Using numeric project_id: 32
+[DocumentsController] V2 Looking up expenditure_type_id for: ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ
+[DocumentsController] V2 Found expenditure_type_id: 1 for type: ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ
+[DocumentsController] V2 Looking up project_index with project_id: 32 monada_id: 2 expenditure_type_id: 1
+[DocumentsController] V2 Successfully found project_index_id: 171 for project: 32 unit: 2 expenditure_type: ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ
+[DocumentsController] V2 Selected attachments: [
+  'Φωτοτυπίες των βιβλιαρίων',
+  'Οι εκδοθείσες εγκρίσεις ΣΣ',
+  'Συγκεντρωτικός  πίνακας των δικαιούχων',
+  'Φωτοτυπίες αστυνομικών ταυτοτήτων των δικαιούχων.',
+  'Τα απαραίτητα δικαιολογητικά',
+  'Υπεύθυνες δηλώσεις δικαιούχων'
+]
+[DocumentsController] V2 Mapped to attachment IDs: [ 4, 1, 6, 8, 2, 3 ]
+[DocumentsController] V2 Pre-validating budget before document creation
+[DocumentsController] V2 Project ID: 32 Amount: 720
+[DocumentsController] V2 Budget pre-validation PASSED. Available: 721
+[DocumentsController] V2 Document payload prepared: {
+  unit_id: 2,
+  total_amount: 720,
+  generated_by: 96,
+  project_index_id: 171,
+  attachment_id: [ 4, 1, 6, 8, 2, 3 ],
+  status: 'pending',
+  protocol_date: '2025-11-26',
+  protocol_number_input: null,
+  is_correction: false,
+  comments: 'Document created for project 32',
+  esdian: [ 'Φ.3.103.40', 'Φ.2.701.40', 'Φ. Ενδιαφερομένου ' ],
+  director_signature: {
+    name: 'ΑΒΡΑΜΟΠΟΥΛΟΣ ΙΩΑΝΝΗΣ',
+    order: 'ΜΕ ΕΝΤΟΛΗ ΥΦΥΠΟΥΡΓΟΥ',
+    title: 'Ο ΠΡΟΪΣΤΑΜΕΝΟΣ ΤΜΗΜΑΤΟΣ ΠΡΟΓΡΑΜΜΑΤΙΣΜΟΥ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΚΑΙ ΕΚΠΑΙΔΕΥΣΗΣ',
+    degree: "ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ με Α'β.",
+    prepose: 'Ο'
+  },
+  beneficiary_payments_id: [],
+  employee_payments_id: [],
+  region: null,
+  created_at: '2025-11-26T09:20:34.912Z',
+  updated_at: '2025-11-26T09:20:34.912Z',
+  needs_xrimatodotisi: false
+}
+[DocumentsController] V2 Error creating document: {
+  code: 'PGRST204',
+  details: null,
+  hint: null,
+  message: "Could not find the 'needs_xrimatodotisi' column of 'generated_documents' in the schema cache"
+}
+9:20:35 AM [express] POST /api/documents/v2 500 in 1242ms
+[WebSocket] Heartbeat - Clients: 2 (2 active, 0 terminated)

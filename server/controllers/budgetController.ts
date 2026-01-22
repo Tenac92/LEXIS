@@ -36,6 +36,7 @@ export function formatBudgetData(budgetData: any) {
   return {
     user_view: budgetData.user_view?.toString() || '0',
     total_budget: budgetData.katanomes_etous?.toString() || '0',
+    proip: budgetData.proip?.toString() || '0',
     annual_budget: budgetData.ethsia_pistosi?.toString() || '0',
     katanomes_etous: budgetData.katanomes_etous?.toString() || '0',
     ethsia_pistosi: budgetData.ethsia_pistosi?.toString() || '0',

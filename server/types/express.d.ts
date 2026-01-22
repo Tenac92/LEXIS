@@ -4,6 +4,16 @@ import 'express-session';
 declare module 'express-session' {
   interface SessionData {
     user?: User;
+    geoVerified?: boolean;
+    geoVerifiedAt?: string;
+    geoVerifiedIp?: string;
+    geoVerifiedCountry?: string;
+    createdAt?: Date;
+    diagnostic?: {
+      lastChecked?: string;
+      accessCount?: number;
+      [key: string]: any;
+    };
   }
 }
 
@@ -14,7 +24,6 @@ declare module 'express' {
   }
 }
 
-// Extend multer types
 declare namespace Express {
   namespace Multer {
     interface File {

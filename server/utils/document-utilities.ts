@@ -370,7 +370,7 @@ export class DocumentUtilities {
    */
   public static createBorderlessTable(
     rows: TableRow[],
-    columnWidths?: number[],
+    _columnWidths?: number[],
   ): Table {
     const tableOptions: any = {
       layout: TableLayoutType.FIXED,
@@ -782,7 +782,7 @@ export class DocumentUtilities {
               project = result.data;
               break;
             }
-          } catch (searchError) {
+          } catch {
             continue;
           }
         }

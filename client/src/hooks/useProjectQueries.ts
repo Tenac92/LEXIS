@@ -1,10 +1,10 @@
 // Custom hooks for project data fetching
 import { useQuery } from '@tanstack/react-query';
 
-export function useProjectData(mis: string | undefined) {
+export function useProjectData(id: string | number | undefined) {
   return useQuery({
-    queryKey: [`/api/projects/${mis}/complete`],
-    enabled: !!mis,
+    queryKey: [`/api/projects/${id}/complete`],
+    enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 minutes cache for project-specific data
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,

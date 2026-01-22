@@ -1,19 +1,40 @@
 import { Router, Request, Response } from "express";
 import { supabase } from "../config/db";
-import type { GeneratedDocument } from "@shared/schema";
-import type { User } from "@shared/schema";
 import type { AuthenticatedRequest } from "../authentication";
 import { authenticateSession } from "../authentication";
 import { DocumentGenerator } from "../utils/document-generator";
 import { broadcastDocumentUpdate } from "../services/websocketService";
 import { createLogger } from "../utils/logger";
 import { storage } from "../storage";
+import { encryptAFM, hashAFM, decryptAFM } from "../utils/crypto";
+import { validateBudgetAllocation } from "../services/budgetNotificationService";
+import { mergeRegiondetWithPayments } from "../utils/regiondet-merge";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
 
 // Create the router
 export const router = Router();
+
+const extractCorrectionReason = (doc: any): string | undefined => {
+  const directReason =
+    typeof doc?.correction_reason === "string"
+      ? doc.correction_reason.trim()
+      : "";
+
+  if (directReason) {
+    return directReason;
+  }
+
+  if (typeof doc?.comments === "string") {
+    const match = doc.comments.match(/Λόγος Διόρθωσης:\s*([^\n\r]+)/i);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  return undefined;
+};
 
 // Export the router as default
 // Debug endpoint to check expenditure type data
@@ -94,7 +115,6 @@ router.post(
         expenditure_type,
         recipients,
         total_amount,
-        attachments,
         esdian_field1,
         esdian_field2,
       } = req.body;
@@ -106,19 +126,45 @@ router.post(
         });
       }
 
-      // SECURITY: Resolve unit string to numeric ID and verify authorization
+      // The frontend may send unit as either:
+      // 1. A numeric ID (like "2" or 2)
+      // 2. A text string (like "ΔΑΕΦΚ-ΚΕ")
+      // We need to resolve this to the numeric unit_id
       let numericUnitId: number;
       try {
-        const { data: unitData, error: unitError } = await supabase
-          .from("Monada")
-          .select("id")
-          .eq("unit", unit)
-          .single();
+        // Check if unit is already a numeric ID
+        const parsedUnitId = parseInt(String(unit));
+        const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(unit).trim();
+        
+        let unitData: { id: number } | null = null;
+        let unitError: any = null;
+        
+        if (isNumericUnit) {
+          // Unit is a numeric ID, lookup by id column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("id", parsedUnitId)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V1 Looking up unit by numeric ID:", parsedUnitId);
+        } else {
+          // Unit is a text string, lookup by unit column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("unit", unit)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V1 Looking up unit by string:", unit);
+        }
 
         if (unitData) {
           numericUnitId = unitData.id;
           console.log(
-            "[DocumentsController] V1 Resolved unit string",
+            "[DocumentsController] V1 Resolved unit",
             unit,
             "to numeric ID:",
             numericUnitId,
@@ -162,19 +208,9 @@ router.post(
       }
 
       // Get project data with enhanced information using optimized schema
-      const [
-        projectRes,
-        eventTypesRes,
-        expenditureTypesRes,
-        monadaRes,
-        kallikratisRes,
-        indexRes,
-      ] = await Promise.all([
+      const [projectRes, expenditureTypesRes, indexRes] = await Promise.all([
         supabase.from("Projects").select("*").eq("id", project_id).single(),
-        supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
-        supabase.from("Monada").select("*"),
-        supabase.from("kallikratis").select("*"),
         supabase.from("project_index").select("*"),
       ]);
 
@@ -186,10 +222,7 @@ router.post(
       }
 
       const projectData = projectRes.data;
-      const eventTypes = eventTypesRes.data || [];
       const expenditureTypes = expenditureTypesRes.data || [];
-      const monadaData = monadaRes.data || [];
-      const kallikratisData = kallikratisRes.data || [];
       const indexData = indexRes.data || [];
 
       // Get enhanced data for this project
@@ -218,33 +251,7 @@ router.post(
         }
       }
       
-      const eventType = selectedProjectIndexItem
-        ? eventTypes.find((et) => et.id === selectedProjectIndexItem.event_types_id)
-        : null;
-      const expenditureTypeData = selectedProjectIndexItem
-        ? expenditureTypes.find((et) => et.id === selectedProjectIndexItem.expenditure_type_id)
-        : null;
-      const monadaItem = selectedProjectIndexItem
-        ? monadaData.find((m) => m.id === selectedProjectIndexItem.monada_id)
-        : null;
-      const kallikratisItem = selectedProjectIndexItem
-        ? kallikratisData.find((k) => k.id === selectedProjectIndexItem.kallikratis_id)
-        : null;
-
       // Project data logging removed for cleaner console output
-
-      // Format recipients data
-      const formattedRecipients = recipients.map((r: any) => ({
-        firstname: String(r.firstname).trim(),
-        lastname: String(r.lastname).trim(),
-        fathername: String(r.fathername).trim(),
-        afm: String(r.afm).trim(),
-        amount: parseFloat(String(r.amount)),
-        installment: String(r.installment).trim(),
-        secondary_text: r.secondary_text
-          ? String(r.secondary_text).trim()
-          : undefined,
-      }));
 
       const now = new Date().toISOString();
 
@@ -361,6 +368,8 @@ router.post(
         esdian,
         director_signature,
         region,
+        for_yl_id,
+        for_yl_title,
       } = req.body;
 
       console.log("[DocumentsController] V2 Request summary:", {
@@ -373,20 +382,45 @@ router.post(
       
       console.log("[DocumentsController] V2 DEBUG - Recipients from request:", JSON.stringify(recipients, null, 2));
 
-      // Important: The frontend is sending unit as a string like "ΔΑΕΦΚ-ΚΕ", but we need the numeric unit_id
-      // Let's resolve this by looking up the unit from the Monada table
+      // The frontend may send unit as either:
+      // 1. A numeric ID (like "2" or 2)
+      // 2. A text string (like "ΔΑΕΦΚ-ΚΕ")
+      // We need to resolve this to the numeric unit_id
       let numericUnitId: number;
       try {
-        const { data: unitData, error: unitError } = await supabase
-          .from("Monada")
-          .select("id")
-          .eq("unit", unit)
-          .single();
+        // Check if unit is already a numeric ID
+        const parsedUnitId = parseInt(String(unit));
+        const isNumericUnit = !isNaN(parsedUnitId) && String(parsedUnitId) === String(unit).trim();
+        
+        let unitData: { id: number } | null = null;
+        let unitError: any = null;
+        
+        if (isNumericUnit) {
+          // Unit is a numeric ID, lookup by id column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("id", parsedUnitId)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V2 Looking up unit by numeric ID:", parsedUnitId);
+        } else {
+          // Unit is a text string, lookup by unit column
+          const result = await supabase
+            .from("Monada")
+            .select("id")
+            .eq("unit", unit)
+            .single();
+          unitData = result.data;
+          unitError = result.error;
+          console.log("[DocumentsController] V2 Looking up unit by string:", unit);
+        }
 
         if (unitData) {
           numericUnitId = unitData.id;
           console.log(
-            "[DocumentsController] V2 Resolved unit string",
+            "[DocumentsController] V2 Resolved unit",
             unit,
             "to numeric ID:",
             numericUnitId,
@@ -511,7 +545,7 @@ router.post(
       }
 
       // Format recipients data consistently
-      const formattedRecipients = recipients.map((r: any) => {
+      let formattedRecipients = recipients.map((r: any) => {
         const baseRecipient = {
           firstname: String(r.firstname || "").trim(),
           lastname: String(r.lastname || "").trim(),
@@ -536,13 +570,101 @@ router.post(
             daily_compensation: r.daily_compensation,
             accommodation_expenses: r.accommodation_expenses,
             kilometers_traveled: r.kilometers_traveled,
+            price_per_km:
+              r.price_per_km !== undefined && r.price_per_km !== null
+                ? Number(r.price_per_km)
+                : 0.2,
             tickets_tolls_rental: r.tickets_tolls_rental,
+            tickets_tolls_rental_entries: r.tickets_tolls_rental_entries || [],
+            has_2_percent_deduction: Boolean(r.has_2_percent_deduction),
             net_payable: r.net_payable,
           };
         }
 
         return baseRecipient;
       });
+
+      const isEktosEdrasType = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+
+      // Resolve employee IDs for ΕΚΤΟΣ ΕΔΡΑΣ recipients and block creation when missing
+      if (isEktosEdrasType) {
+        const resolvedRecipients = [];
+
+        for (const recipient of formattedRecipients) {
+          let employeeId = recipient.employee_id;
+
+          // Fallback: try to resolve employee_id by AFM hash if not provided by the client
+          if (!employeeId && recipient.afm) {
+            try {
+              const afmHash = hashAFM(recipient.afm);
+              const { data: existingEmployee } = await supabase
+                .from("Employees")
+                .select("id")
+                .eq("afm_hash", afmHash)
+                .limit(1);
+
+              if (existingEmployee && existingEmployee.length > 0) {
+                employeeId = existingEmployee[0].id;
+              }
+            } catch (lookupError) {
+              console.error(
+                "[DocumentsController] V2 Error resolving employee by AFM hash:",
+                lookupError,
+              );
+            }
+          }
+
+          resolvedRecipients.push({
+            ...recipient,
+            employee_id: employeeId,
+          });
+        }
+
+        const recipientsMissingEmployee = resolvedRecipients.filter(
+          (recipient) => !recipient.employee_id,
+        );
+
+        if (recipientsMissingEmployee.length > 0) {
+          return res.status(400).json({
+            message:
+              "Employee selection is required for ΕΚΤΟΣ ΕΔΡΑΣ payments. Please select a valid employee from the search results.",
+          });
+        }
+
+        formattedRecipients = resolvedRecipients;
+      }
+
+      // Pre-validate ΕΚΤΟΣ ΕΔΡΑΣ recipients before creating the document to avoid orphan records
+      if (isEktosEdrasType) {
+        const hasMissingMonth = formattedRecipients.some(
+          (recipient) => !recipient.month || !String(recipient.month).trim(),
+        );
+
+        if (hasMissingMonth) {
+          return res.status(400).json({
+            message:
+              "Month selection is required for ΕΚΤΟΣ ΕΔΡΑΣ recipients",
+          });
+        }
+
+        const hasZeroExpenses = formattedRecipients.some((recipient) => {
+          const dailyComp = Number(recipient.daily_compensation) || 0;
+          const accommodation = Number(recipient.accommodation_expenses) || 0;
+          const kmTraveled = Number(recipient.kilometers_traveled) || 0;
+          const pricePerKm = Number(recipient.price_per_km) || 0.2;
+          const tickets = Number(recipient.tickets_tolls_rental) || 0;
+          const kmCost = kmTraveled * pricePerKm;
+
+          return dailyComp + accommodation + kmCost + tickets <= 0;
+        });
+
+        if (hasZeroExpenses) {
+          return res.status(400).json({
+            message:
+              "Total expenses must be greater than zero for ΕΚΤΟΣ ΕΔΡΑΣ recipients",
+          });
+        }
+      }
 
       const now = new Date().toISOString();
 
@@ -746,7 +868,8 @@ router.post(
       }
 
       // Parse region data from string format (Region|RegionalUnit|Municipality) to JSONB
-      let regionJsonb = null;
+      // Also include for_yl (delegated implementing agency) info if provided
+      let regionJsonb: any = null;
       if (region && typeof region === 'string' && region.trim() !== '') {
         const parts = region.split('|');
         const regionName = parts[0] || '';
@@ -769,6 +892,71 @@ router.post(
         };
         
         console.log('[DocumentsController] V2 Parsed region data:', regionJsonb);
+      }
+      
+      // Add for_yl (delegated implementing agency) to region JSONB if provided
+      if (for_yl_id) {
+        if (!regionJsonb) {
+          regionJsonb = {};
+        }
+        regionJsonb.for_yl_id = for_yl_id;
+        regionJsonb.for_yl_title = for_yl_title || null;
+        console.log('[DocumentsController] V2 Added for_yl to region:', { for_yl_id, for_yl_title });
+      }
+
+      // PRE-VALIDATE BUDGET BEFORE CREATING DOCUMENT
+      // This ensures we don't create documents that would exceed budget limits
+      // TWO-TIER VALIDATION:
+      // - ετήσια πίστωση exceeded = HARD BLOCK (cannot save)
+      // - κατανομή έτους exceeded = SOFT WARNING (save with warning)
+      const spendingAmount = parseFloat(String(total_amount)) || 0;
+      let budgetWarning: { message: string; budgetType: string } | null = null;
+      
+      if (spendingAmount > 0 && project_id) {
+        console.log('[DocumentsController] V2 Pre-validating budget before document creation');
+        console.log('[DocumentsController] V2 Project ID:', project_id, 'Amount:', spendingAmount);
+        
+        try {
+          const { storage } = await import("../storage");
+          const budgetCheck = await storage.checkBudgetAvailability(project_id, spendingAmount);
+          
+          // HARD BLOCK: Only block if ετήσια πίστωση is exceeded (hardBlock = true)
+          if (budgetCheck.hardBlock) {
+            console.log('[DocumentsController] V2 BUDGET HARD BLOCK (πίστωση exceeded):', budgetCheck.message);
+            return res.status(400).json({
+              message: "Υπέρβαση Ετήσιας Πίστωσης - Δεν μπορείτε να αποθηκεύσετε",
+              error: budgetCheck.message,
+              budget_error: true,
+              budget_type: budgetCheck.budgetType,
+              hard_block: true,
+              available_budget: budgetCheck.availableBudget,
+              yearly_available: budgetCheck.yearlyAvailable,
+              katanomes_etous: budgetCheck.katanomesEtous,
+              ethsia_pistosi: budgetCheck.ethsiaPistosi,
+              requested_amount: spendingAmount
+            });
+          }
+          
+          // SOFT WARNING: κατανομή έτους exceeded - allow save but log warning
+          if (budgetCheck.budgetType === 'katanomi') {
+            console.log('[DocumentsController] V2 BUDGET SOFT WARNING (κατανομή exceeded):', budgetCheck.message);
+            budgetWarning = {
+              message: budgetCheck.message,
+              budgetType: 'katanomi'
+            };
+            // Don't return - continue with document creation
+          } else {
+            console.log('[DocumentsController] V2 Budget pre-validation PASSED. Available:', budgetCheck.availableBudget);
+          }
+        } catch (budgetCheckError) {
+          console.error('[DocumentsController] V2 Error during budget pre-validation:', budgetCheckError);
+          // If we can't validate budget, we should still block the document creation for safety
+          return res.status(500).json({
+            message: "Σφάλμα ελέγχου προϋπολογισμού",
+            error: budgetCheckError instanceof Error ? budgetCheckError.message : "Unknown error",
+            budget_error: true
+          });
+        }
       }
 
       // Create document with exact schema match and default values where needed
@@ -829,6 +1017,10 @@ router.post(
       // Create beneficiary payments OR employee payments for each recipient using project_index_id
       const beneficiaryPaymentsIds = [];
       const employeePaymentsIds = [];
+      let beneficiaryPaymentFailed = false;
+      let beneficiaryPaymentError: any = null;
+      let employeePaymentFailed = false;
+      let employeePaymentError: any = null;
       try {
         console.log(
           "[DocumentsController] V2 Creating payments for",
@@ -844,7 +1036,7 @@ router.post(
         );
 
         // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (out-of-office expenses)
-        const isEktosEdras = expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
+        const isEktosEdras = isEktosEdrasType;
 
         for (const recipient of formattedRecipients) {
           // ΕΚΤΟΣ ΕΔΡΑΣ: Create employee payment
@@ -881,7 +1073,8 @@ router.post(
               });
             }
             
-            const deduction2Percent = recipient.has_2_percent_deduction ? totalExpense * 0.02 : 0;
+            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation (ημερήσια αποζημίωση)
+            const deduction2Percent = recipient.has_2_percent_deduction ? dailyComp * 0.02 : 0;
             const netPayable = totalExpense - deduction2Percent;
             
             const employeePayment = {
@@ -916,6 +1109,8 @@ router.post(
                 "[DocumentsController] V2 Error creating employee payment:",
                 empPaymentError,
               );
+              employeePaymentFailed = true;
+              employeePaymentError = empPaymentError;
             } else {
               employeePaymentsIds.push(empPaymentData.id);
               console.log(
@@ -926,15 +1121,16 @@ router.post(
           } 
           // Standard flow: Create beneficiary payment
           else {
-            // Step 1: Look up or create beneficiary
+            // Step 1: Look up or create/update beneficiary
             let beneficiaryId = null;
           try {
-            // Find existing beneficiary by AFM (keep as string to preserve leading zeros)
+            // Find existing beneficiary by AFM hash (since AFM is encrypted)
+            const afmHash = hashAFM(recipient.afm);
             const { data: existingBeneficiary, error: findError } =
               await supabase
                 .from("beneficiaries")
-                .select("id")
-                .eq("afm", recipient.afm)
+                .select("id, regiondet")
+                .eq("afm_hash", afmHash)
                 .single();
 
             if (existingBeneficiary) {
@@ -945,14 +1141,47 @@ router.post(
                 "for AFM:",
                 recipient.afm,
               );
+              
+              // Update beneficiary with latest details
+              const mergedRegiondet = mergeRegiondetWithPayments(
+                existingBeneficiary.regiondet,
+                recipient.regiondet || null,
+              );
+
+              const { error: updateError } = await supabase
+                .from("beneficiaries")
+                .update({
+                  surname: recipient.lastname,
+                  name: recipient.firstname,
+                  fathername: recipient.fathername,
+                  regiondet: mergedRegiondet,
+                  updated_at: now,
+                })
+                .eq("id", beneficiaryId);
+              
+              if (updateError) {
+                console.error(
+                  "[DocumentsController] V2 Error updating beneficiary:",
+                  updateError,
+                );
+              } else {
+                console.log(
+                  "[DocumentsController] V2 Updated beneficiary details for:",
+                  beneficiaryId,
+                );
+              }
             } else if (findError && findError.code === "PGRST116") {
               // Beneficiary not found, create new one
               const newBeneficiary = {
-                afm: recipient.afm, // Keep AFM as string to preserve leading zeros
+                afm: encryptAFM(recipient.afm), // Encrypt AFM for security
+                afm_hash: afmHash, // Use the hash we already computed
                 surname: recipient.lastname,
                 name: recipient.firstname,
                 fathername: recipient.fathername,
-                region: "1", // Region should be text according to schema
+                regiondet: mergeRegiondetWithPayments(
+                  null,
+                  recipient.regiondet || null,
+                ),
                 date: new Date().toISOString().split("T")[0],
                 created_at: now,
                 updated_at: now,
@@ -984,12 +1213,16 @@ router.post(
                 "[DocumentsController] V2 Error finding beneficiary:",
                 findError,
               );
+              beneficiaryPaymentFailed = true;
+              beneficiaryPaymentError = findError;
             }
           } catch (beneficiaryError) {
             console.error(
               "[DocumentsController] V2 Error during beneficiary lookup/creation:",
               beneficiaryError,
             );
+            beneficiaryPaymentFailed = true;
+            beneficiaryPaymentError = beneficiaryError;
           }
 
           // Step 2: Create separate beneficiary payment records for each installment
@@ -1052,8 +1285,21 @@ router.post(
                       "[DocumentsController] V2 Error creating installment payment:",
                       paymentError,
                     );
+                    beneficiaryPaymentFailed = true;
+                    beneficiaryPaymentError = paymentError;
                   } else {
                     beneficiaryPaymentsIds.push(paymentData.id);
+                    try {
+                      await storage.appendPaymentIdToRegiondet(
+                        beneficiaryId,
+                        paymentData.id,
+                      );
+                    } catch (appendError) {
+                      console.error(
+                        "[DocumentsController] V2 Error appending payment id to regiondet:",
+                        appendError,
+                      );
+                    }
                     console.log(
                       "[DocumentsController] V2 Created installment payment:",
                       paymentData.id,
@@ -1103,8 +1349,21 @@ router.post(
                   "[DocumentsController] V2 Error creating single payment:",
                   paymentError,
                 );
+                beneficiaryPaymentFailed = true;
+                beneficiaryPaymentError = paymentError;
               } else {
                 beneficiaryPaymentsIds.push(paymentData.id);
+                try {
+                  await storage.appendPaymentIdToRegiondet(
+                    beneficiaryId,
+                    paymentData.id,
+                  );
+                } catch (appendError) {
+                  console.error(
+                    "[DocumentsController] V2 Error appending payment id to regiondet:",
+                    appendError,
+                  );
+                }
                 console.log(
                   "[DocumentsController] V2 Created single payment:",
                   paymentData.id,
@@ -1116,12 +1375,62 @@ router.post(
               "[DocumentsController] V2 Cannot create payment: beneficiary_id is null for AFM:",
               recipient.afm,
             );
+            beneficiaryPaymentFailed = true;
           }
           } // End of else block for standard beneficiary payments
         }
 
         // Update document with appropriate payment IDs based on expenditure type
         if (isEktosEdras) {
+          // If no employee payments were created, rollback the document to avoid orphan records
+          if (employeePaymentsIds.length === 0 || employeePaymentFailed) {
+            console.error(
+              "[DocumentsController] V2 Employee payments were not created for ΕΚΤΟΣ ΕΔΡΑΣ document. Rolling back document:",
+              data.id,
+              "last error:",
+              employeePaymentError,
+            );
+
+            // Attempt to delete any partially created employee payments
+            if (employeePaymentsIds.length > 0) {
+              try {
+                await supabase
+                  .from("EmployeePayments")
+                  .delete()
+                  .in("id", employeePaymentsIds);
+                console.log(
+                  "[DocumentsController] V2 Rollback: Deleted partial employee payments:",
+                  employeePaymentsIds,
+                );
+              } catch (deleteError) {
+                console.error(
+                  "[DocumentsController] V2 Rollback failed while deleting employee payments:",
+                  deleteError,
+                );
+              }
+            }
+
+            try {
+              await supabase
+                .from("generated_documents")
+                .delete()
+                .eq("id", data.id);
+            } catch (rollbackError) {
+              console.error(
+                "[DocumentsController] V2 Rollback failed while deleting document:",
+                rollbackError,
+              );
+            }
+
+            return res.status(500).json({
+              message:
+                "Employee payments could not be saved. The document was not created.",
+              error:
+                employeePaymentError?.message || "employee_payments_not_created",
+              details: employeePaymentError || undefined,
+            });
+          }
+
           console.log(
             "[DocumentsController] V2 Updating document with employee payment IDs:",
             employeePaymentsIds,
@@ -1144,6 +1453,54 @@ router.post(
             );
           }
         } else {
+          if (
+            formattedRecipients.length > 0 &&
+            (beneficiaryPaymentsIds.length === 0 || beneficiaryPaymentFailed)
+          ) {
+            console.error(
+              "[DocumentsController] V2 Beneficiary payments were not created for non-EKTOS EDRAS document. Rolling back document:",
+              data.id,
+              "last error:",
+              beneficiaryPaymentError,
+            );
+
+            // Attempt to delete any partially created payments
+            if (beneficiaryPaymentsIds.length > 0) {
+              try {
+                await supabase
+                  .from("beneficiary_payments")
+                  .delete()
+                  .in("id", beneficiaryPaymentsIds);
+              } catch (deleteError) {
+                console.error(
+                  "[DocumentsController] V2 Rollback failed while deleting partial beneficiary payments:",
+                  deleteError,
+                );
+              }
+            }
+
+            try {
+              await supabase
+                .from("generated_documents")
+                .delete()
+                .eq("id", data.id);
+            } catch (rollbackError) {
+              console.error(
+                "[DocumentsController] V2 Rollback failed while deleting document:",
+                rollbackError,
+              );
+            }
+
+            return res.status(500).json({
+              message:
+                "Beneficiary payments could not be saved. The document was not created.",
+              error:
+                beneficiaryPaymentError?.message ||
+                "beneficiary_payments_not_created",
+              details: beneficiaryPaymentError || undefined,
+            });
+          }
+
           console.log(
             "[DocumentsController] V2 Updating document with beneficiary payment IDs:",
             beneficiaryPaymentsIds,
@@ -1195,12 +1552,73 @@ router.post(
           req.user?.id,
         );
         console.log("[DocumentsController] V2 Budget updated successfully");
+
+        // Validate budget and trigger notifications if needed
+        try {
+          await validateBudgetAllocation(
+            project_id,
+            parseFloat(String(total_amount)) || 0,
+            req.user?.id
+          );
+          console.log('[DocumentsController] V2 Budget validation completed and notifications triggered if applicable');
+        } catch (validationError) {
+          console.error('[DocumentsController] V2 Error during budget validation:', validationError);
+          // Don't fail document creation if validation fails
+        }
       } catch (budgetError) {
         console.error(
           "[DocumentsController] V2 Error updating budget:",
           budgetError,
         );
-        // Don't fail the document creation if budget update fails, just log the error
+        
+        // Since we have pre-validation, a failure here is unexpected
+        // We should rollback by deleting the document and payments
+        const errorMessage = budgetError instanceof Error ? budgetError.message : "Unknown budget error";
+        
+        // Check if this is a budget exceeded error
+        if (errorMessage.includes('BUDGET_EXCEEDED')) {
+          console.log('[DocumentsController] V2 Budget exceeded - rolling back document creation');
+          
+          try {
+            // Delete beneficiary payments first
+            if (beneficiaryPaymentsIds.length > 0) {
+              await supabase
+                .from("BeneficiaryPayments")
+                .delete()
+                .in("id", beneficiaryPaymentsIds);
+              console.log('[DocumentsController] V2 Rollback: Deleted beneficiary payments:', beneficiaryPaymentsIds);
+            }
+            
+            // Delete employee payments if any
+            if (employeePaymentsIds.length > 0) {
+              await supabase
+                .from("EmployeePayments")
+                .delete()
+                .in("id", employeePaymentsIds);
+              console.log('[DocumentsController] V2 Rollback: Deleted employee payments:', employeePaymentsIds);
+            }
+            
+            // Delete the document
+            await supabase
+              .from("generated_documents")
+              .delete()
+              .eq("id", data.id);
+            console.log('[DocumentsController] V2 Rollback: Deleted document:', data.id);
+            
+          } catch (rollbackError) {
+            console.error('[DocumentsController] V2 Rollback failed:', rollbackError);
+          }
+          
+          // Return error to client
+          return res.status(400).json({
+            message: "Ανεπαρκής προϋπολογισμός",
+            error: errorMessage.replace('BUDGET_EXCEEDED: ', ''),
+            budget_error: true
+          });
+        }
+        
+        // For non-budget errors, log but continue (document already created)
+        console.warn('[DocumentsController] V2 Non-budget error during update, document created but budget not updated');
       }
 
       // Broadcast document update to all connected clients
@@ -1213,11 +1631,22 @@ router.post(
         },
       });
 
-      res.status(201).json({
+      // Include budget warning in response if κατανομή was exceeded
+      const responsePayload: any = {
         id: data.id,
-        message: "Document created successfully",
+        message: budgetWarning 
+          ? "Το έγγραφο αποθηκεύτηκε με προειδοποίηση προϋπολογισμού" 
+          : "Document created successfully",
         beneficiary_payments_count: beneficiaryPaymentsIds.length,
-      });
+      };
+      
+      if (budgetWarning) {
+        responsePayload.budget_warning = true;
+        responsePayload.budget_warning_message = budgetWarning.message;
+        responsePayload.budget_type = budgetWarning.budgetType;
+      }
+      
+      res.status(201).json(responsePayload);
     } catch (error) {
       console.error("[DocumentsController] V2 Error creating document:", error);
       res.status(500).json({
@@ -1228,10 +1657,20 @@ router.post(
   },
 );
 
-// List documents with filters
+// List documents with filters (batched fetch to avoid N+1 queries)
 router.get("/", async (req: Request, res: Response) => {
   try {
-    // Starting document fetch with filters
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offsetParam = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+    const limit =
+      typeof limitParam === "number" && Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 500)
+        : undefined;
+    const offset =
+      typeof offsetParam === "number" && Number.isFinite(offsetParam) && offsetParam >= 0
+        ? offsetParam
+        : 0;
+
     const filters = {
       unit_id: req.query.unit ? parseInt(req.query.unit as string) : undefined,
       status: req.query.status as string,
@@ -1250,16 +1689,15 @@ router.get("/", async (req: Request, res: Response) => {
       afm: req.query.afm as string,
       expenditureType: req.query.expenditureType as string,
       na853: req.query.na853 as string,
+      protocolNumber: req.query.protocolNumber as string,
     };
 
-    // Get documents from database directly, ordered by most recent first
-    // Explicitly select all columns including payment ID arrays
+    // Base query with optional pagination
     let query = supabase
       .from("generated_documents")
       .select("*, employee_payments_id, beneficiary_payments_id")
       .order("created_at", { ascending: false });
 
-    // Apply filters only if they exist
     if (filters.unit_id) {
       query = query.eq("unit_id", filters.unit_id);
     }
@@ -1268,6 +1706,10 @@ router.get("/", async (req: Request, res: Response) => {
     }
     if (filters.generated_by) {
       query = query.eq("generated_by", filters.generated_by);
+    }
+
+    if (limit) {
+      query = query.range(offset, offset + limit - 1);
     }
 
     const { data: documents, error } = await query;
@@ -1280,291 +1722,297 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Enrich documents with beneficiary payment data and project/unit information
-    const enrichedDocuments = await Promise.all(
-      (documents || []).map(async (doc) => {
-        let recipients: any[] = [];
+    if (!documents || documents.length === 0) {
+      return res.json([]);
+    }
 
-        // Fetch employee payments for ΕΚΤΟΣ ΕΔΡΑΣ documents
-        if (
-          doc.employee_payments_id &&
-          Array.isArray(doc.employee_payments_id) &&
-          doc.employee_payments_id.length > 0
-        ) {
-          try {
-            console.log(`[DocumentsController] Fetching employee payments for document ${doc.id} with IDs:`, doc.employee_payments_id);
-            
-            const { data: empPayments, error: empPaymentsError } = await supabase
-              .from("EmployeePayments")
-              .select(
-                `
+    // Collect all related IDs for batched fetching
+    const employeePaymentIds = new Set<number>();
+    const beneficiaryPaymentIds = new Set<number>();
+    const unitIds = new Set<number>();
+    const projectIndexIds = new Set<number>();
+    const attachmentIds = new Set<number>();
+
+    for (const doc of documents) {
+      if (doc.unit_id) unitIds.add(doc.unit_id);
+      if (doc.project_index_id) projectIndexIds.add(doc.project_index_id);
+      if (Array.isArray(doc.attachment_id)) {
+        doc.attachment_id.forEach((id: number) => attachmentIds.add(id));
+      } else if (doc.attachment_id) {
+        attachmentIds.add(doc.attachment_id as number);
+      }
+      if (Array.isArray(doc.employee_payments_id)) {
+        doc.employee_payments_id.forEach((id: number) => employeePaymentIds.add(id));
+      }
+      if (Array.isArray(doc.beneficiary_payments_id)) {
+        doc.beneficiary_payments_id.forEach((id: number) => beneficiaryPaymentIds.add(id));
+      }
+    }
+
+    const [
+      employeePaymentsResult,
+      beneficiaryPaymentsResult,
+      unitsResult,
+      projectIndexResult,
+      attachmentsResult,
+    ] = await Promise.all([
+      employeePaymentIds.size
+        ? supabase
+            .from("EmployeePayments")
+            .select(
+              `
+              id,
+              net_payable,
+              month,
+              days,
+              daily_compensation,
+              accommodation_expenses,
+              kilometers_traveled,
+              tickets_tolls_rental,
+              has_2_percent_deduction,
+              total_expense,
+              deduction_2_percent,
+              status,
+              Employees (
                 id,
-                net_payable,
-                month,
-                days,
-                daily_compensation,
-                accommodation_expenses,
-                kilometers_traveled,
-                tickets_tolls_rental,
-                has_2_percent_deduction,
-                total_expense,
-                deduction_2_percent,
-                status,
-                Employees (
-                  id,
-                  afm,
-                  surname,
-                  name,
-                  fathername,
-                  klados
-                )
-              `,
+                afm,
+                surname,
+                name,
+                fathername,
+                klados
               )
-              .in("id", doc.employee_payments_id);
-
-            console.log(`[DocumentsController] Employee payments query result for doc ${doc.id}:`, {
-              error: empPaymentsError,
-              paymentsCount: empPayments?.length || 0
-            });
-
-            if (!empPaymentsError && empPayments) {
-              // Transform employee payments into recipients format
-              recipients = empPayments.map((payment) => {
-                const employee = Array.isArray(payment.Employees)
-                  ? payment.Employees[0]
-                  : payment.Employees;
-                return {
-                  id: employee?.id,
-                  firstname: employee?.name || "",
-                  lastname: employee?.surname || "",
-                  fathername: employee?.fathername || "",
-                  afm: employee?.afm ? String(employee.afm) : "",
-                  amount: parseFloat(payment.net_payable) || 0,
-                  month: payment.month || "",
-                  days: payment.days || 0,
-                  daily_compensation: payment.daily_compensation || 0,
-                  accommodation_expenses: payment.accommodation_expenses || 0,
-                  kilometers_traveled: payment.kilometers_traveled || 0,
-                  tickets_tolls_rental: payment.tickets_tolls_rental || 0,
-                  has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
-                  total_expense: payment.total_expense ?? 0,
-                  deduction_2_percent: payment.deduction_2_percent ?? 0,
-                  status: payment.status || "pending",
-                  secondary_text: employee?.klados || null,
-                };
-              });
-              console.log(`[DocumentsController] Transformed ${recipients.length} employee payments into recipients for doc ${doc.id}`);
-            } else if (empPaymentsError) {
-              console.error(`[DocumentsController] Error fetching employee payments for doc ${doc.id}:`, empPaymentsError);
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching employee payments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-        // Fetch beneficiary payments for regular documents
-        else if (
-          doc.beneficiary_payments_id &&
-          Array.isArray(doc.beneficiary_payments_id) &&
-          doc.beneficiary_payments_id.length > 0
-        ) {
-          try {
-            const { data: payments, error: paymentsError } = await supabase
-              .from("beneficiary_payments")
-              .select(
-                `
+            `,
+            )
+            .in("id", Array.from(employeePaymentIds))
+        : { data: [] },
+      beneficiaryPaymentIds.size
+        ? supabase
+            .from("beneficiary_payments")
+            .select(
+              `
+              id,
+              amount,
+              installment,
+              status,
+              freetext,
+              payment_date,
+              created_at,
+              beneficiaries (
                 id,
-                amount,
-                installment,
-                status,
-                freetext,
-                beneficiaries (
-                  id,
-                  afm,
-                  surname,
-                  name,
-                  fathername,
-                  region
-                )
-              `,
+                afm,
+                surname,
+                name,
+                fathername,
+                regiondet
               )
-              .in("id", doc.beneficiary_payments_id);
-
-            if (!paymentsError && payments) {
-              // Transform payments into recipients format
-              recipients = payments.map((payment) => {
-                const beneficiary = Array.isArray(payment.beneficiaries)
-                  ? payment.beneficiaries[0]
-                  : payment.beneficiaries;
-                return {
-                  id: beneficiary?.id,
-                  firstname: beneficiary?.name || "",
-                  lastname: beneficiary?.surname || "",
-                  fathername: beneficiary?.fathername || "",
-                  afm: beneficiary?.afm ? String(beneficiary.afm) : "",
-                  amount: parseFloat(payment.amount) || 0,
-                  installment: payment.installment || "",
-                  region: beneficiary?.region || "",
-                  status: payment.status || "pending",
-                  freetext: payment.freetext || null,
-                };
-              });
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching payments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-
-        // Fetch unit information
-        let unitInfo = null;
-        if (doc.unit_id) {
-          try {
-            const { data: unitData, error: unitError } = await supabase
-              .from("Monada")
-              .select("unit, unit_name")
-              .eq("id", doc.unit_id)
-              .single();
-
-            if (!unitError && unitData) {
-              unitInfo = unitData;
-            }
-          } catch (err) {
-            console.error("Error fetching unit for document", doc.id, ":", err);
-          }
-        }
-
-        // Fetch project information through project_index
-        let projectInfo = null;
-        let expenditureTypeInfo = null;
-        if (doc.project_index_id) {
-          try {
-            // Get project index entry with related project data
-            const { data: indexData, error: indexError } = await supabase
-              .from("project_index")
-              .select(
-                `
+            `,
+            )
+            .in("id", Array.from(beneficiaryPaymentIds))
+        : { data: [] },
+      unitIds.size
+        ? supabase.from("Monada").select("id, unit, unit_name").in("id", Array.from(unitIds))
+        : { data: [] },
+      projectIndexIds.size
+        ? supabase
+            .from("project_index")
+            .select(
+              `
+              id,
+              project_id,
+              expenditure_type_id,
+              Projects (
                 id,
-                project_id,
-                expenditure_type_id,
-                Projects (
-                  id,
-                  mis,
-                  na853,
-                  event_description,
-                  project_title
-                )
-              `,
+                mis,
+                na853,
+                event_description,
+                project_title
               )
-              .eq("id", doc.project_index_id)
-              .single();
+            `,
+            )
+            .in("id", Array.from(projectIndexIds))
+        : { data: [] },
+      attachmentIds.size
+        ? supabase
+            .from("attachments")
+            .select("id, expenditure_type_id")
+            .in("id", Array.from(attachmentIds))
+        : { data: [] },
+    ]);
 
-            if (!indexError && indexData && indexData.Projects) {
-              projectInfo = indexData.Projects;
+    const employeePayments = (employeePaymentsResult as any).data || [];
+    const beneficiaryPayments = (beneficiaryPaymentsResult as any).data || [];
+    const units = (unitsResult as any).data || [];
+    const projectIndexes = (projectIndexResult as any).data || [];
+    const attachments = (attachmentsResult as any).data || [];
 
-              // Get expenditure type information
-              if (indexData.expenditure_type_id) {
-                const { data: expTypeData, error: expTypeError } =
-                  await supabase
-                    .from("expenditure_types")
-                    .select("expenditure_types")
-                    .eq("id", indexData.expenditure_type_id)
-                    .single();
+    const expenditureTypeIds = new Set<number>();
+    projectIndexes.forEach((idx: any) => {
+      if (idx.expenditure_type_id) expenditureTypeIds.add(idx.expenditure_type_id);
+    });
+    attachments.forEach((att: any) => {
+      if (Array.isArray(att.expenditure_type_id)) {
+        att.expenditure_type_id.forEach((id: number) => expenditureTypeIds.add(id));
+      } else if (att.expenditure_type_id) {
+        expenditureTypeIds.add(att.expenditure_type_id);
+      }
+    });
 
-                if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
-                }
-              }
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching project info for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
+    const { data: expenditureTypesData = [] } = expenditureTypeIds.size
+      ? await supabase
+          .from("expenditure_types")
+          .select("id, expenditure_types")
+          .in("id", Array.from(expenditureTypeIds))
+      : { data: [] as any[] };
 
-        // Fallback: Try to get expenditure type from attachments if not found via project_index
-        if (
-          !expenditureTypeInfo &&
-          doc.attachment_id &&
-          Array.isArray(doc.attachment_id) &&
-          doc.attachment_id.length > 0
-        ) {
-          try {
-            const { data: attachmentData, error: attachmentError } =
-              await supabase
-                .from("attachments")
-                .select("expenditure_type_id")
-                .in("id", doc.attachment_id)
-                .limit(1);
-
-            if (
-              !attachmentError &&
-              attachmentData &&
-              attachmentData.length > 0 &&
-              attachmentData[0].expenditure_type_id
-            ) {
-              const expenditureTypeIds = Array.isArray(
-                attachmentData[0].expenditure_type_id,
-              )
-                ? attachmentData[0].expenditure_type_id
-                : [attachmentData[0].expenditure_type_id];
-
-              if (expenditureTypeIds.length > 0) {
-                const { data: expTypeData, error: expTypeError } =
-                  await supabase
-                    .from("expenditure_types")
-                    .select("expenditure_types")
-                    .eq("id", expenditureTypeIds[0])
-                    .single();
-
-                if (!expTypeError && expTypeData) {
-                  expenditureTypeInfo = { name: expTypeData.expenditure_types };
-                }
-              }
-            }
-          } catch (err) {
-            console.error(
-              "Error fetching expenditure type from attachments for document",
-              doc.id,
-              ":",
-              err,
-            );
-          }
-        }
-
-        // Return enriched document with all necessary data for cards
-        return {
-          ...doc,
-          recipients: recipients as any[],
-          // Add fields that the document cards expect
-          unit: unitInfo?.unit || "",
-          unit_name: unitInfo?.unit_name || "",
-          project_id: (projectInfo as any)?.mis || "",
-          mis: (projectInfo as any)?.mis || "",
-          project_na853: (projectInfo as any)?.na853 || "",
-          project_title: (projectInfo as any)?.project_title || "",
-          event_description: (projectInfo as any)?.event_description || "",
-          expenditure_type: expenditureTypeInfo?.name || "",
-        };
-      }),
+    const employeePaymentMap = new Map<number, any>(
+      employeePayments.map((p: any) => [p.id, p]),
     );
+    const beneficiaryPaymentMap = new Map<number, any>(
+      beneficiaryPayments.map((p: any) => [p.id, p]),
+    );
+    const unitMap = new Map<number, any>(units.map((u: any) => [u.id, u]));
+    const projectIndexMap = new Map<number, any>(
+      projectIndexes.map((p: any) => [p.id, p]),
+    );
+    const attachmentMap = new Map<number, any>(
+      attachments.map((a: any) => [a.id, a]),
+    );
+    const expenditureTypeMap = new Map<number, string>(
+      (expenditureTypesData as any[]).map((e: any) => [e.id, e.expenditure_types]),
+    );
+
+    const enrichedDocuments = documents.map((doc) => {
+      let recipients: any[] = [];
+
+      if (Array.isArray(doc.employee_payments_id) && doc.employee_payments_id.length > 0) {
+        recipients = doc.employee_payments_id
+          .map((id: number) => employeePaymentMap.get(id))
+          .filter(Boolean)
+          .map((payment: any) => {
+            const employee = Array.isArray(payment.Employees)
+              ? payment.Employees[0]
+              : payment.Employees;
+            return {
+              id: employee?.id,
+              firstname: employee?.name || "",
+              lastname: employee?.surname || "",
+              fathername: employee?.fathername || "",
+              afm: employee?.afm ? String(employee.afm) : "",
+              amount: parseFloat(payment.net_payable) || 0,
+              month: payment.month || "",
+              days: payment.days || 0,
+              daily_compensation: payment.daily_compensation || 0,
+              accommodation_expenses: payment.accommodation_expenses || 0,
+              kilometers_traveled: payment.kilometers_traveled || 0,
+              tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+              tickets_tolls_rental_entries: [],
+              has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
+              total_expense: payment.total_expense ?? 0,
+              deduction_2_percent: payment.deduction_2_percent ?? 0,
+              status: payment.status || "pending",
+              secondary_text: employee?.klados || null,
+            };
+          });
+      } else if (
+        Array.isArray(doc.beneficiary_payments_id) &&
+        doc.beneficiary_payments_id.length > 0
+      ) {
+        recipients = doc.beneficiary_payments_id
+          .map((id: number) => beneficiaryPaymentMap.get(id))
+          .filter(Boolean)
+          .map((payment: any) => {
+            const beneficiary = Array.isArray(payment.beneficiaries)
+              ? payment.beneficiaries[0]
+              : payment.beneficiaries;
+            return {
+              id: beneficiary?.id,
+              firstname: beneficiary?.name || "",
+              lastname: beneficiary?.surname || "",
+              fathername: beneficiary?.fathername || "",
+              afm: beneficiary?.afm ? String(beneficiary.afm) : "",
+              amount: parseFloat(payment.amount) || 0,
+              installment: payment.installment || "",
+              region: beneficiary?.regiondet || "",
+              status: payment.status || "pending",
+              freetext: payment.freetext || null,
+              payment_date: payment.payment_date || null,
+            };
+          });
+      }
+
+      // Compute aggregated payment data for the document
+      let latest_payment_date: string | null = null;
+      let latest_eps: string | null = null;
+      let payment_count = 0;
+
+      if (Array.isArray(doc.beneficiary_payments_id) && doc.beneficiary_payments_id.length > 0) {
+        const paymentsList = doc.beneficiary_payments_id
+          .map((id: number) => beneficiaryPaymentMap.get(id))
+          .filter(Boolean);
+        
+        payment_count = paymentsList.length;
+        
+        if (paymentsList.length > 0) {
+          // Sort by payment_date DESC (latest first), then by created_at DESC for tie-breaking
+          const sorted = paymentsList.sort((a: any, b: any) => {
+            const dateA = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+            const dateB = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+            if (dateA !== dateB) {
+              return dateB - dateA;
+            }
+            const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return createdB - createdA;
+          });
+          
+          const latestPayment = sorted[0];
+          latest_payment_date = latestPayment.payment_date || null;
+          latest_eps = latestPayment.freetext || null;
+        }
+      }
+
+      const unitInfo = doc.unit_id ? unitMap.get(doc.unit_id) : null;
+      const projectIndex = doc.project_index_id
+        ? projectIndexMap.get(doc.project_index_id)
+        : null;
+      const projectInfo = projectIndex?.Projects || null;
+
+      let expenditureTypeName = projectIndex?.expenditure_type_id
+        ? expenditureTypeMap.get(projectIndex.expenditure_type_id) || ""
+        : "";
+
+      if (!expenditureTypeName && Array.isArray(doc.attachment_id) && doc.attachment_id.length) {
+        const attachment = attachmentMap.get(doc.attachment_id[0]);
+        if (attachment) {
+          const firstExpId = Array.isArray(attachment.expenditure_type_id)
+            ? attachment.expenditure_type_id[0]
+            : attachment.expenditure_type_id;
+          if (firstExpId) {
+            expenditureTypeName = expenditureTypeMap.get(firstExpId) || "";
+          }
+        }
+      }
+
+      return {
+        ...doc,
+        recipients,
+        unit: unitInfo?.unit || "",
+        unit_name: unitInfo?.unit_name || "",
+        project_id: projectInfo?.mis || "",
+        mis: projectInfo?.mis || "",
+        project_na853: projectInfo?.na853 || "",
+        project_title: projectInfo?.project_title || "",
+        event_description: projectInfo?.event_description || "",
+        expenditure_type: expenditureTypeName,
+        latest_payment_date,
+        latest_eps,
+        payment_count,
+      };
+    });
 
     // Apply filters to enriched documents (client-side filtering for expenditure type and NA853)
     let filteredDocuments = enrichedDocuments;
 
-    // Filter by expenditure type
     if (filters.expenditureType) {
       filteredDocuments = filteredDocuments.filter(
         (doc) =>
@@ -1575,7 +2023,6 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Filter by NA853 code
     if (filters.na853) {
       filteredDocuments = filteredDocuments.filter(
         (doc) =>
@@ -1584,7 +2031,6 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Filter by recipient name (if not already applied in database filters)
     if (filters.recipient) {
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
@@ -1596,7 +2042,6 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Filter by AFM (if not already applied in database filters)
     if (filters.afm) {
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
@@ -1607,14 +2052,15 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ documents
-    filteredDocuments.forEach(doc => {
-      if (doc.employee_payments_id && doc.employee_payments_id.length > 0) {
-        console.log(`[DocumentsController] Document ${doc.id} - employee_payments_id:`, doc.employee_payments_id);
-        console.log(`[DocumentsController] Document ${doc.id} - recipients count:`, doc.recipients?.length || 0);
-        console.log(`[DocumentsController] Document ${doc.id} - recipients data:`, JSON.stringify(doc.recipients).substring(0, 200));
-      }
-    });
+    if (filters.protocolNumber) {
+      filteredDocuments = filteredDocuments.filter(
+        (doc) =>
+          doc.protocol_number_input &&
+          doc.protocol_number_input
+            .toLowerCase()
+            .includes(filters.protocolNumber.toLowerCase()),
+      );
+    }
 
     return res.json(filteredDocuments);
   } catch (error) {
@@ -1774,6 +2220,7 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   accommodation_expenses: payment.accommodation_expenses || 0,
                   kilometers_traveled: payment.kilometers_traveled || 0,
                   tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+                  tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
                   has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
                   total_expense: payment.total_expense ?? 0,
                   deduction_2_percent: payment.deduction_2_percent ?? 0,
@@ -1801,6 +2248,8 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
           doc.beneficiary_payments_id.length > 0
         ) {
           try {
+            console.log(`[DocumentsController] Fetching beneficiary payments for user document ${doc.id} with IDs:`, doc.beneficiary_payments_id);
+            
             const { data: payments, error: paymentsError } = await supabase
               .from("beneficiary_payments")
               .select(
@@ -1815,11 +2264,16 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   surname,
                   name,
                   fathername,
-                  region
+                  regiondet
                 )
               `,
               )
               .in("id", doc.beneficiary_payments_id);
+
+            console.log(`[DocumentsController] Beneficiary payments query result for user doc ${doc.id}:`, {
+              error: paymentsError,
+              paymentsCount: payments?.length || 0
+            });
 
             if (!paymentsError && payments) {
               recipients = payments.map((payment) => {
@@ -1834,14 +2288,17 @@ router.get("/user", async (req: AuthenticatedRequest, res: Response) => {
                   afm: beneficiary?.afm ? String(beneficiary.afm) : "",
                   amount: parseFloat(payment.amount) || 0,
                   installment: payment.installment || "",
-                  region: beneficiary?.region || "",
+                  region: beneficiary?.regiondet || "",
                   status: payment.status || "pending",
                 };
               });
+              console.log(`[DocumentsController] Transformed ${recipients.length} beneficiary payments into recipients for user doc ${doc.id}`);
+            } else if (paymentsError) {
+              console.error(`[DocumentsController] Error fetching beneficiary payments for user doc ${doc.id}:`, paymentsError);
             }
           } catch (err) {
             console.error(
-              "Error fetching payments for user document",
+              "Error fetching beneficiary payments for user document",
               doc.id,
               ":",
               err,
@@ -2139,6 +2596,52 @@ router.patch(
   },
 );
 
+// GET /api/documents/search - Search documents by AFM (encrypted search via hash)
+// IMPORTANT: This route MUST be defined BEFORE the /:id route to prevent "search" being treated as an ID
+router.get(
+  "/search",
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { afm } = req.query;
+      
+      if (!afm || typeof afm !== 'string') {
+        return res.status(400).json({
+          message: 'Το ΑΦΜ είναι υποχρεωτικό για την αναζήτηση'
+        });
+      }
+      
+      if (!/^\d{9}$/.test(afm)) {
+        return res.status(400).json({
+          message: 'Το ΑΦΜ πρέπει να περιέχει ακριβώς 9 ψηφία'
+        });
+      }
+      
+      // SECURITY: Get user's authorized units
+      const userUnits = req.user?.unit_id || [];
+      if (userUnits.length === 0) {
+        return res.status(403).json({
+          message: 'Δεν έχετε εκχωρημένες μονάδες'
+        });
+      }
+      
+      console.log(`[DocumentsController] Searching documents by AFM for units:`, userUnits);
+      
+      // Use storage method to search documents by AFM hash
+      const documents = await storage.searchDocumentsByAFM(afm, userUnits);
+      
+      console.log(`[DocumentsController] Found ${documents.length} documents matching AFM: ${afm}`);
+      res.json(documents);
+    } catch (error) {
+      console.error('[DocumentsController] Error searching documents by AFM:', error);
+      res.status(500).json({
+        message: 'Αποτυχία αναζήτησης εγγράφων',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  }
+);
+
 // Get single document
 router.get("/:id", async (req: Request, res: Response) => {
   try {
@@ -2171,7 +2674,122 @@ router.get("/:id", async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Access denied to this document" });
     }
 
-    res.json(document);
+    // Enrich document with project and expenditure type information
+    let unitInfo: any = null;
+    let projectInfo: any = null;
+    let expenditureTypeInfo: any = null;
+
+    // Fetch unit information
+    if (document.unit_id) {
+      try {
+        const { data: unitData, error: unitError } = await supabase
+          .from("Monada")
+          .select("id, unit, unit_name")
+          .eq("id", document.unit_id)
+          .single();
+
+        if (!unitError && unitData) {
+          unitInfo = unitData;
+        }
+      } catch (err) {
+        console.error("Error fetching unit info for document", document.id, ":", err);
+      }
+    }
+
+    // Fetch project information via project_index
+    if (document.project_index_id) {
+      try {
+        const { data: indexData, error: indexError } = await supabase
+          .from("project_index")
+          .select(`
+            *,
+            Projects (
+              id,
+              mis,
+              na853,
+              project_title,
+              event_description
+            )
+          `)
+          .eq("id", document.project_index_id)
+          .single();
+
+        if (!indexError && indexData && indexData.Projects) {
+          projectInfo = indexData.Projects;
+
+          // Fetch expenditure type from project_index
+          if (indexData.expenditure_type_id) {
+            const { data: expTypeData, error: expTypeError } = await supabase
+              .from("expenditure_types")
+              .select("expenditure_types")
+              .eq("id", indexData.expenditure_type_id)
+              .single();
+
+            if (!expTypeError && expTypeData) {
+              expenditureTypeInfo = { name: expTypeData.expenditure_types };
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching project info for document", document.id, ":", err);
+      }
+    }
+
+    // Fallback: Try to get expenditure type from attachments if not found via project_index
+    if (
+      !expenditureTypeInfo &&
+      document.attachment_id &&
+      Array.isArray(document.attachment_id) &&
+      document.attachment_id.length > 0
+    ) {
+      try {
+        const { data: attachmentData, error: attachmentError } = await supabase
+          .from("attachments")
+          .select("expenditure_type_id")
+          .in("id", document.attachment_id)
+          .limit(1);
+
+        if (
+          !attachmentError &&
+          attachmentData &&
+          attachmentData.length > 0 &&
+          attachmentData[0].expenditure_type_id
+        ) {
+          const expenditureTypeIds = Array.isArray(attachmentData[0].expenditure_type_id)
+            ? attachmentData[0].expenditure_type_id
+            : [attachmentData[0].expenditure_type_id];
+
+          if (expenditureTypeIds.length > 0) {
+            const { data: expTypeData, error: expTypeError } = await supabase
+              .from("expenditure_types")
+              .select("expenditure_types")
+              .eq("id", expenditureTypeIds[0])
+              .single();
+
+            if (!expTypeError && expTypeData) {
+              expenditureTypeInfo = { name: expTypeData.expenditure_types };
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching expenditure type from attachments for document", document.id, ":", err);
+      }
+    }
+
+    // Return enriched document
+    const enrichedDocument = {
+      ...document,
+      unit: unitInfo?.unit || "",
+      unit_name: unitInfo?.unit_name || "",
+      project_id: (projectInfo as any)?.mis || "",
+      mis: (projectInfo as any)?.mis || "",
+      project_na853: (projectInfo as any)?.na853 || "",
+      project_title: (projectInfo as any)?.project_title || "",
+      event_description: (projectInfo as any)?.event_description || "",
+      expenditure_type: expenditureTypeInfo?.name || "",
+    };
+
+    res.json(enrichedDocument);
   } catch (error) {
     console.error("Error fetching document:", error);
     res.status(500).json({
@@ -2244,10 +2862,13 @@ router.patch(
     try {
       const { id } = req.params;
       const { protocol_number, protocol_date } = req.body;
+      const documentId = parseInt(id);
+      const trimmedProtocolNumber = protocol_number?.trim();
+      const parsedProtocolDate = protocol_date ? new Date(protocol_date) : null;
 
       // Updating protocol information for document
 
-      if (!protocol_number?.trim()) {
+      if (!trimmedProtocolNumber) {
         return res.status(400).json({
           success: false,
           message: "Protocol number is required",
@@ -2262,11 +2883,20 @@ router.patch(
         });
       }
 
+      if (!parsedProtocolDate || Number.isNaN(parsedProtocolDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Protocol date is invalid",
+        });
+      }
+
+      const protocolYear = parsedProtocolDate.getFullYear();
+
       // Get the document first to check access rights
       const { data: document, error: fetchError } = await supabase
         .from("generated_documents")
         .select("unit_id")
-        .eq("id", parseInt(id))
+        .eq("id", documentId)
         .single();
 
       if (fetchError) {
@@ -2295,14 +2925,49 @@ router.patch(
         });
       }
 
+      // Enforce uniqueness of protocol number within the same year
+      const { data: existingProtocols, error: conflictCheckError } =
+        await supabase
+          .from("generated_documents")
+          .select("id, protocol_date")
+          .eq("protocol_number_input", trimmedProtocolNumber)
+          .neq("id", documentId);
+
+      if (conflictCheckError) {
+        console.error(
+          "Error checking protocol uniqueness:",
+          conflictCheckError,
+        );
+        return res.status(500).json({
+          success: false,
+          message: "Could not validate protocol number uniqueness",
+          error: conflictCheckError.message,
+        });
+      }
+
+      const conflictingProtocol = (existingProtocols || []).find((doc) => {
+        if (!doc?.protocol_date) return false;
+        const existingYear = new Date(doc.protocol_date).getFullYear();
+        return existingYear === protocolYear;
+      });
+
+      if (conflictingProtocol) {
+        return res.status(409).json({
+          success: false,
+          message: `Protocol number "${trimmedProtocolNumber}" is already used for ${protocolYear}. Please use a different number for this year.`,
+          code: "PROTOCOL_NUMBER_EXISTS_YEAR",
+          conflict_document_id: conflictingProtocol.id,
+        });
+      }
+
       // Update the document
       const updateData: any = {
         status: "completed", // Set to completed when protocol is added
         updated_by: req.user?.id,
       };
 
-      if (protocol_number && protocol_number.trim() !== "") {
-        updateData.protocol_number_input = protocol_number.trim();
+      if (trimmedProtocolNumber) {
+        updateData.protocol_number_input = trimmedProtocolNumber;
       }
 
       if (protocol_date && protocol_date !== "") {
@@ -2312,11 +2977,24 @@ router.patch(
       const { data: updatedDocument, error: updateError } = await supabase
         .from("generated_documents")
         .update(updateData)
-        .eq("id", parseInt(id))
+        .eq("id", documentId)
         .select()
         .single();
 
       if (updateError) {
+        const isUniqueViolation =
+          updateError.code === "23505" ||
+          (updateError.message || "")
+            .toLowerCase()
+            .includes("duplicate key value");
+        if (isUniqueViolation) {
+          return res.status(409).json({
+            success: false,
+            message: `Protocol number "${trimmedProtocolNumber}" is already in use. Please use a different number for this year.`,
+            code: "PROTOCOL_NUMBER_EXISTS_YEAR",
+          });
+        }
+
         console.error("Protocol update error:", updateError);
         throw updateError;
       }
@@ -2387,9 +3065,43 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
     }
 
     // Get new values with fallbacks
-    const newProjectIndexId = req.body.project_index_id ?? originalDoc.project_index_id;
+    const newProjectIndexId =
+      req.body.project_index_id ?? originalDoc.project_index_id;
     const newUnitId = req.body.unit_id ?? originalDoc.unit_id;
     const newTotalAmount = total_amount ?? originalDoc.total_amount;
+
+    const effectiveProjectIndexId = newProjectIndexId || originalDoc.project_index_id;
+    const effectiveUnitId = newUnitId || originalDoc.unit_id;
+
+    // Resolve expenditure type for the correction (needed to handle ΕΚΤΟΣ ΕΔΡΑΣ correctly)
+    let isCorrectionEktosEdras = false;
+
+    if (effectiveProjectIndexId) {
+      const { data: projectIndexRow, error: projectIndexLookupError } =
+        await supabase
+          .from("project_index")
+          .select("expenditure_types!inner(expenditure_types)")
+          .eq("id", effectiveProjectIndexId)
+          .single();
+
+      if (projectIndexLookupError) {
+        console.error(
+          "[Correction] Could not resolve expenditure type for project_index_id:",
+          effectiveProjectIndexId,
+          projectIndexLookupError,
+        );
+      } else {
+        const expenditureTypeName =
+          (projectIndexRow as any)?.expenditure_types?.expenditure_types;
+        if (expenditureTypeName) {
+          isCorrectionEktosEdras = expenditureTypeName === "ΕΚΤΟΣ ΕΔΡΑΣ";
+        }
+      }
+    } else {
+      console.warn(
+        "[Correction] No project_index_id found while creating correction; defaulting to non-ΕΚΤΟΣ ΕΔΡΑΣ flow",
+      );
+    }
 
     // Update the original document to mark it as corrected
     const { error: updateError } = await supabase
@@ -2481,60 +3193,285 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
       }
     }
 
-    // Update beneficiaries if provided
+    // Update payments if provided
     if (recipients && recipients.length > 0) {
-      // Delete existing beneficiary payments
-      await supabase
-        .from("beneficiary_payments")
-        .delete()
-        .eq("document_id", parseInt(id));
+      if (isCorrectionEktosEdras) {
+        // Validate and prepare employee payments for ΕΚΤΟΣ ΕΔΡΑΣ corrections
+        const employeePaymentPayloads: any[] = [];
 
-      // Create new beneficiary payments
-      for (const recipient of recipients) {
-        // First, try to find or create beneficiary
-        let beneficiaryId: number | null = null;
+        for (const recipient of recipients) {
+          let employeeId = recipient.employee_id;
 
-        if (recipient.afm) {
-          const { data: existingBeneficiary } = await supabase
-            .from("beneficiaries")
+          // Resolve employee by AFM hash if not provided
+          if (!employeeId && recipient.afm) {
+            try {
+              const afmHash = hashAFM(recipient.afm);
+              const { data: existingEmployee } = await supabase
+                .from("Employees")
+                .select("id")
+                .eq("afm_hash", afmHash)
+                .limit(1);
+
+              if (existingEmployee && existingEmployee.length > 0) {
+                employeeId = existingEmployee[0].id;
+              }
+            } catch (lookupError) {
+              console.error(
+                "[Correction] Error resolving employee by AFM hash during ΕΚΤΟΣ ΕΔΡΑΣ correction:",
+                lookupError,
+              );
+            }
+          }
+
+          if (!employeeId) {
+            return res.status(400).json({
+              message:
+                "Employee selection is required for ΕΚΤΟΣ ΕΔΡΑΣ corrections",
+            });
+          }
+
+          const month = recipient.month ? String(recipient.month).trim() : "";
+          if (!month) {
+            return res.status(400).json({
+              message: "Month selection is required for ΕΚΤΟΣ ΕΔΡΑΣ corrections",
+            });
+          }
+
+          const dailyComp = Number(recipient.daily_compensation) || 0;
+          const accommodation = Number(recipient.accommodation_expenses) || 0;
+          const kmTraveled = Number(recipient.kilometers_traveled) || 0;
+          const pricePerKm =
+            recipient.price_per_km !== undefined &&
+            recipient.price_per_km !== null
+              ? Number(recipient.price_per_km)
+              : 0.2;
+          const tickets = Number(recipient.tickets_tolls_rental) || 0;
+          const kmCost = kmTraveled * pricePerKm;
+          const calculatedTotal = dailyComp + accommodation + kmCost + tickets;
+          const totalExpense =
+            recipient.total_expense !== undefined &&
+            recipient.total_expense !== null
+              ? Number(recipient.total_expense)
+              : calculatedTotal;
+
+          if (totalExpense <= 0) {
+            return res.status(400).json({
+              message:
+                "Total expenses must be greater than zero for ΕΚΤΟΣ ΕΔΡΑΣ corrections",
+            });
+          }
+
+          const deduction2Percent = recipient.has_2_percent_deduction
+            ? totalExpense * 0.02
+            : Number(recipient.deduction_2_percent) || 0;
+          const netPayable =
+            recipient.net_payable !== undefined &&
+            recipient.net_payable !== null
+              ? Number(recipient.net_payable)
+              : totalExpense - deduction2Percent;
+
+          employeePaymentPayloads.push({
+            employee_id: employeeId,
+            document_id: parseInt(id),
+            month,
+            days: Number(recipient.days) || 1,
+            daily_compensation: dailyComp,
+            accommodation_expenses: accommodation,
+            kilometers_traveled: kmTraveled,
+            price_per_km: pricePerKm,
+            tickets_tolls_rental: tickets,
+            has_2_percent_deduction: Boolean(recipient.has_2_percent_deduction),
+            total_expense: totalExpense,
+            deduction_2_percent: deduction2Percent,
+            net_payable: netPayable,
+            status: recipient.status || "pending",
+          });
+        }
+
+        // Replace existing payments with employee payments
+        await supabase
+          .from("EmployeePayments")
+          .delete()
+          .eq("document_id", parseInt(id));
+        await supabase
+          .from("beneficiary_payments")
+          .delete()
+          .eq("document_id", parseInt(id));
+
+        const employeePaymentIds: number[] = [];
+
+        for (const payment of employeePaymentPayloads) {
+          const { data: createdPayment, error: empInsertError } = await supabase
+            .from("EmployeePayments")
+            .insert(payment)
             .select("id")
-            .eq("afm", recipient.afm)
             .single();
 
-          if (existingBeneficiary) {
-            beneficiaryId = existingBeneficiary.id;
-          } else {
-            // Create new beneficiary
-            const { data: newBeneficiary } = await supabase
+          if (empInsertError) {
+            console.error(
+              "[Correction] Error inserting employee payment during correction:",
+              empInsertError,
+            );
+            return res.status(500).json({
+              message:
+                "Failed to create employee payment during correction for ΕΚΤΟΣ ΕΔΡΑΣ document",
+              error: empInsertError.message,
+            });
+          }
+
+          if (createdPayment?.id) {
+            employeePaymentIds.push(createdPayment.id);
+          }
+        }
+
+        await supabase
+          .from("generated_documents")
+          .update({
+            employee_payments_id: employeePaymentIds,
+            beneficiary_payments_id: [],
+          })
+          .eq("id", parseInt(id));
+      } else {
+        // Non-ΕΚΤΟΣ ΕΔΡΑΣ: refresh beneficiary payments and clear any stale employee payments
+        await supabase
+          .from("EmployeePayments")
+          .delete()
+          .eq("document_id", parseInt(id));
+
+        // Delete existing beneficiary payments
+        await supabase
+          .from("beneficiary_payments")
+          .delete()
+          .eq("document_id", parseInt(id));
+
+        // Create new beneficiary payments
+        for (const recipient of recipients) {
+          // First, try to find or create/update beneficiary
+          let beneficiaryId: number | null = null;
+
+          if (recipient.afm) {
+            // Search by AFM hash (since AFM is encrypted)
+            const afmHash = hashAFM(recipient.afm);
+            const { data: existingBeneficiary } = await supabase
               .from("beneficiaries")
-              .insert({
-                afm: recipient.afm,
-                name: recipient.firstname,
-                surname: recipient.lastname,
-                fathername: recipient.fathername || null,
-              })
-              .select("id")
+              .select("id, regiondet")
+              .eq("afm_hash", afmHash)
               .single();
 
-            if (newBeneficiary) {
-              beneficiaryId = newBeneficiary.id;
+            if (existingBeneficiary) {
+              beneficiaryId = existingBeneficiary.id;
+
+              // Update beneficiary with latest details
+              const mergedRegiondet = mergeRegiondetWithPayments(
+                existingBeneficiary.regiondet,
+                recipient.regiondet || null,
+              );
+
+              await supabase
+                .from("beneficiaries")
+                .update({
+                  name: recipient.firstname,
+                  surname: recipient.lastname,
+                  fathername: recipient.fathername || null,
+                  regiondet: mergedRegiondet,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", beneficiaryId);
+            } else {
+              // Create new beneficiary with encrypted AFM
+              const { data: newBeneficiary } = await supabase
+                .from("beneficiaries")
+                .insert({
+                  afm: encryptAFM(recipient.afm),
+                  afm_hash: afmHash,
+                  name: recipient.firstname,
+                  surname: recipient.lastname,
+                  fathername: recipient.fathername || null,
+                  regiondet: mergeRegiondetWithPayments(
+                    null,
+                    recipient.regiondet || null,
+                  ),
+                  date: new Date().toISOString().split("T")[0],
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                })
+                .select("id")
+                .single();
+
+              if (newBeneficiary) {
+                beneficiaryId = newBeneficiary.id;
+              }
+            }
+          }
+
+          // Create beneficiary payment
+          if (beneficiaryId) {
+            const { data: paymentInsert, error: paymentInsertError } =
+              await supabase
+                .from("beneficiary_payments")
+                .insert({
+                  beneficiary_id: beneficiaryId,
+                  document_id: parseInt(id),
+                  installment: recipient.installment || "ΕΦΑΠΑΞ",
+                  amount: recipient.amount,
+                  status: recipient.status || "pending",
+                  project_index_id: effectiveProjectIndexId,
+                  unit_id: effectiveUnitId,
+                })
+                .select("id")
+                .single();
+
+            if (paymentInsertError) {
+              console.error(
+                "[DocumentsController] Error inserting beneficiary payment during update:",
+                paymentInsertError,
+              );
+            } else if (paymentInsert?.id) {
+              try {
+                await storage.appendPaymentIdToRegiondet(
+                  beneficiaryId,
+                  paymentInsert.id,
+                );
+              } catch (appendErr) {
+                console.error(
+                  "[DocumentsController] Error appending payment id to regiondet:",
+                  appendErr,
+                );
+              }
             }
           }
         }
 
-        // Create beneficiary payment
-        if (beneficiaryId) {
+        // Refresh beneficiary payment IDs on the document so recipients can be hydrated in UI
+        const { data: refreshedPayments, error: fetchPaymentsError } =
           await supabase
             .from("beneficiary_payments")
-            .insert({
-              beneficiary_id: beneficiaryId,
-              document_id: parseInt(id),
-              installment: recipient.installment || "ΕΦΑΠΑΞ",
-              amount: recipient.amount,
-              status: recipient.status || "pending",
-              project_index_id: originalDoc.project_index_id,
-              unit_id: originalDoc.unit_id,
-            });
+            .select("id")
+            .eq("document_id", parseInt(id));
+
+        if (fetchPaymentsError) {
+          console.error(
+            "[Correction] Failed to fetch beneficiary payments after correction:",
+            fetchPaymentsError,
+          );
+        } else {
+          const paymentIds = (refreshedPayments || [])
+            .map((p: any) => p.id)
+            .filter(Boolean);
+          const { error: updateBeneficiaryIdsError } = await supabase
+            .from("generated_documents")
+            .update({
+              beneficiary_payments_id: paymentIds,
+              employee_payments_id: [],
+            })
+            .eq("id", parseInt(id));
+
+          if (updateBeneficiaryIdsError) {
+            console.error(
+              "[Correction] Failed to update beneficiary_payments_id after correction:",
+              updateBeneficiaryIdsError,
+            );
+          }
         }
       }
     }
@@ -2666,19 +3603,6 @@ router.post("/", async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
-    // Format recipients data
-    const formattedRecipients = recipients.map((r: any) => ({
-      firstname: String(r.firstname).trim(),
-      lastname: String(r.lastname).trim(),
-      fathername: String(r.fathername || "").trim(),
-      afm: String(r.afm).trim(),
-      amount: parseFloat(String(r.amount)),
-      installment: String(r.installment).trim(),
-      secondary_text: r.secondary_text
-        ? String(r.secondary_text).trim()
-        : undefined,
-    }));
-
     const now = new Date().toISOString();
 
     // Create document with exact schema match and set initial status to pending
@@ -2786,6 +3710,83 @@ router.get(
         return res.status(404).json({ error: "Document not found" });
       }
 
+      const correctionReason = document.is_correction
+        ? extractCorrectionReason(document)
+        : undefined;
+
+      if (document.is_correction && !correctionReason) {
+        console.error(
+          "[DocumentsController] Export blocked - missing correction reason for document:",
+          id,
+        );
+        return res.status(400).json({
+          error: "CORRECTION_REASON_REQUIRED",
+          message:
+            "Η Αιτιολογία Ορθής Επανάληψης είναι υποχρεωτική για την εξαγωγή του εγγράφου.",
+        });
+      }
+
+      // BUDGET VALIDATION CHECK: Block DOCX export if document needs χρηματοδότηση approval
+      // This happens when the document was saved while exceeding Κατανομή έτους budget
+      if (document.needs_xrimatodotisi === true) {
+        console.log("[DocumentsController] Export blocked - document needs χρηματοδότηση approval (saved flag):", id);
+        return res.status(403).json({ 
+          error: "DOCX export blocked",
+          message: "Δεν είναι δυνατή η εξαγωγή DOCX. Το έγγραφο χρειάζεται έγκριση χρηματοδότησης επειδή υπερβαίνει την κατανομή έτους.",
+          code: "NEEDS_XRIMATODOTISI"
+        });
+      }
+
+      // REAL-TIME BUDGET VALIDATION: Also check current budget state for documents without the flag
+      // This handles older documents or edited documents where the flag wasn't set
+      if (document.project_index_id && document.total_amount) {
+        try {
+          // Get the project MIS from project_index
+          const { data: projectIndexData } = await supabase
+            .from("project_index")
+            .select("project_id, Projects:project_id(mis)")
+            .eq("id", document.project_index_id)
+            .single();
+          
+          const projectsData = projectIndexData?.Projects as any;
+          if (projectsData?.mis) {
+            const projectMis = projectsData.mis;
+            const documentAmount = parseFloat(document.total_amount) || 0;
+            
+            // Fetch current budget for the project
+            const { data: budgetData } = await supabase
+              .from("Budget")
+              .select("katanomes_etous, ethsia_pistosi, user_view")
+              .eq("mis", projectMis)
+              .single();
+            
+            if (budgetData) {
+              const katanomesEtous = parseFloat(budgetData.katanomes_etous) || 0;
+              const userView = parseFloat(budgetData.user_view) || 0;
+              
+              // Check if document amount + current spending exceeds Κατανομή
+              // Note: The document is already included in user_view, so we just check if user_view > katanomesEtous
+              if (userView > katanomesEtous) {
+                console.log("[DocumentsController] Export blocked - current budget exceeds Κατανομή έτους:", {
+                  id,
+                  katanomesEtous,
+                  userView,
+                  documentAmount
+                });
+                return res.status(403).json({ 
+                  error: "DOCX export blocked",
+                  message: "Δεν είναι δυνατή η εξαγωγή DOCX. Ο προϋπολογισμός υπερβαίνει την κατανομή έτους. Απαιτείται έγκριση χρηματοδότησης.",
+                  code: "NEEDS_XRIMATODOTISI"
+                });
+              }
+            }
+          }
+        } catch (budgetCheckError) {
+          console.warn("[DocumentsController] Failed to validate budget for export:", budgetCheckError);
+          // Continue with export if budget check fails - don't block on validation errors
+        }
+      }
+
       // Prepare document data with user name and contact information
       // Also fetch missing data needed for document generation
       let projectData: any = null;
@@ -2794,6 +3795,8 @@ router.get(
       let expenditureType = "ΔΑΠΑΝΗ"; // Default fallback
 
       // Fetch related project data if project_index_id exists
+      let forYlData: { id: number; title: string; monada_id: string } | null = null;
+      
       if (document.project_index_id) {
         try {
           const { data: projectIndexData, error: projectIndexError } =
@@ -2803,6 +3806,7 @@ router.get(
                 `
             id,
             project_id,
+            for_yl_id,
             Projects:project_id (
               id,
               na853,
@@ -2818,6 +3822,48 @@ router.get(
               )
               .eq("id", document.project_index_id)
               .single();
+          
+          // Fetch for_yl data if for_yl_id exists in project_index
+          if (!projectIndexError && projectIndexData?.for_yl_id) {
+            const { data: forYl } = await supabase
+              .from("for_yl")
+              .select("id, title, monada_id")
+              .eq("id", projectIndexData.for_yl_id)
+              .single();
+            
+            if (forYl) {
+              forYlData = forYl as { id: number; title: string; monada_id: string };
+              console.log("[DocumentsController] Using for_yl from project_index:", forYlData.title);
+            }
+          }
+          
+          // Fallback: Check if for_yl is stored in the document's region JSONB
+          if (!forYlData && document.region && typeof document.region === 'object') {
+            const regionData = document.region as { for_yl_id?: number; for_yl_title?: string };
+            if (regionData.for_yl_id) {
+              // If we have the title in region, use it directly
+              if (regionData.for_yl_title) {
+                forYlData = { 
+                  id: regionData.for_yl_id, 
+                  title: regionData.for_yl_title, 
+                  monada_id: '' 
+                };
+                console.log("[DocumentsController] Using for_yl from region JSONB:", forYlData.title);
+              } else {
+                // Otherwise fetch from database
+                const { data: forYl } = await supabase
+                  .from("for_yl")
+                  .select("id, title, monada_id")
+                  .eq("id", regionData.for_yl_id)
+                  .single();
+                
+                if (forYl) {
+                  forYlData = forYl as { id: number; title: string; monada_id: string };
+                  console.log("[DocumentsController] Using for_yl from region JSONB (fetched):", forYlData.title);
+                }
+              }
+            }
+          }
 
           if (!projectIndexError && projectIndexData) {
             projectData = projectIndexData.Projects;
@@ -2881,8 +3927,74 @@ router.get(
         }
       }
 
-      // Fetch beneficiary payments data
+      // Fetch employee payments data for ΕΚΤΟΣ ΕΔΡΑΣ documents
       if (
+        document.employee_payments_id &&
+        Array.isArray(document.employee_payments_id) &&
+        document.employee_payments_id.length > 0
+      ) {
+        try {
+          console.log(`[DocumentsController] Fetching employee payments for export, IDs:`, document.employee_payments_id);
+          
+          const { data: empPaymentsData, error: empPaymentsError } = await supabase
+            .from("EmployeePayments")
+            .select(
+              `
+            id,
+            net_payable,
+            month,
+            days,
+            daily_compensation,
+            accommodation_expenses,
+            kilometers_traveled,
+            tickets_tolls_rental,
+            has_2_percent_deduction,
+            total_expense,
+            deduction_2_percent,
+            status,
+            Employees (
+              id,
+              afm,
+              surname,
+              name,
+              fathername,
+              klados
+            )
+          `,
+            )
+            .in("id", document.employee_payments_id);
+
+          if (!empPaymentsError && empPaymentsData) {
+            beneficiaryData = empPaymentsData.map((payment: any) => {
+              const employee = payment.Employees;
+              const encryptedAFM = employee?.afm || "";
+              // SECURITY: Decrypt AFM for document generation
+              const decryptedAFM = encryptedAFM ? decryptAFM(encryptedAFM) : "";
+              
+              return {
+                id: payment.id,
+                firstname: employee?.name || "",
+                lastname: employee?.surname || "",
+                fathername: employee?.fathername || "",
+                afm: decryptedAFM,
+                amount: parseFloat(payment.net_payable || "0"),
+                // ΕΚΤΟΣ ΕΔΡΑΣ specific fields
+                month: payment.month || "",
+                days: payment.days || 1,
+                daily_compensation: payment.daily_compensation || 0,
+                accommodation_expenses: payment.accommodation_expenses || 0,
+                kilometers_traveled: payment.kilometers_traveled || 0,
+                tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+              };
+            });
+            console.log(`[DocumentsController] Fetched ${beneficiaryData.length} employee payment records for export`);
+          }
+        } catch (error) {
+          logger.debug("Error fetching employee payment data for document:", error);
+        }
+      }
+      // Fetch beneficiary payments data for standard documents
+      else if (
         document.beneficiary_payments_id &&
         document.beneficiary_payments_id.length > 0
       ) {
@@ -2907,16 +4019,22 @@ router.get(
             .in("id", document.beneficiary_payments_id);
 
           if (!paymentsError && paymentsData) {
-            beneficiaryData = paymentsData.map((payment: any) => ({
-              id: payment.id,
-              firstname: (payment.beneficiaries as any)?.name || "",
-              lastname: (payment.beneficiaries as any)?.surname || "",
-              fathername: (payment.beneficiaries as any)?.fathername || "",
-              afm: (payment.beneficiaries as any)?.afm || "",
-              amount: parseFloat(payment.amount || "0"),
-              installment: payment.installment || "ΕΦΑΠΑΞ",
-              freetext: payment.freetext || null,
-            }));
+            beneficiaryData = paymentsData.map((payment: any) => {
+              const encryptedAFM = (payment.beneficiaries as any)?.afm || "";
+              // SECURITY: Decrypt AFM for document generation
+              const decryptedAFM = encryptedAFM ? decryptAFM(encryptedAFM) : "";
+              
+              return {
+                id: payment.id,
+                firstname: (payment.beneficiaries as any)?.name || "",
+                lastname: (payment.beneficiaries as any)?.surname || "",
+                fathername: (payment.beneficiaries as any)?.fathername || "",
+                afm: decryptedAFM,
+                amount: parseFloat(payment.amount || "0"),
+                installment: payment.installment || "ΕΦΑΠΑΞ",
+                freetext: payment.freetext || null,
+              };
+            });
           }
         } catch (error) {
           logger.debug("Error fetching beneficiary data for document:", error);
@@ -2991,6 +4109,7 @@ router.get(
 
       const documentData = {
         ...document,
+        correction_reason: correctionReason || document.correction_reason || "",
         user_name: document.generated_by?.name || "Unknown User",
         department: document.generated_by?.department || "",
         contact_number: document.generated_by?.telephone || "",
@@ -3007,6 +4126,8 @@ router.get(
         recipients: beneficiaryData,
         // Add attachments data
         attachments: attachmentsData,
+        // Add for_yl data (delegated implementing agency)
+        for_yl: forYlData,
       };
 
       console.log(
@@ -3170,7 +4291,7 @@ router.get(
             firstname: employee?.name || "",
             lastname: employee?.surname || "",
             fathername: employee?.fathername || "",
-            afm: employee?.afm ? String(employee.afm) : "",
+            afm: employee?.afm ? decryptAFM(employee.afm) || "" : "",
             amount: parseFloat(payment.net_payable) || 0,
             month: payment.month || "",
             days: payment.days || 0,
@@ -3178,6 +4299,7 @@ router.get(
             accommodation_expenses: payment.accommodation_expenses || 0,
             kilometers_traveled: payment.kilometers_traveled || 0,
             tickets_tolls_rental: payment.tickets_tolls_rental || 0,
+            tickets_tolls_rental_entries: [], // Empty array - field not stored in DB
             has_2_percent_deduction: payment.has_2_percent_deduction ?? false,
             total_expense: payment.total_expense ?? 0,
             deduction_2_percent: payment.deduction_2_percent ?? 0,
@@ -3207,7 +4329,7 @@ router.get(
           surname,
           name,
           fathername,
-          region
+          regiondet
         )
       `,
         )
@@ -3221,7 +4343,22 @@ router.get(
         });
       }
 
-      res.json(payments || []);
+      // Decrypt AFM fields in beneficiary data
+      const paymentsWithDecryptedAFM = (payments || []).map((payment) => {
+        const beneficiary = Array.isArray(payment.beneficiaries)
+          ? payment.beneficiaries[0]
+          : payment.beneficiaries;
+        
+        return {
+          ...payment,
+          beneficiaries: beneficiary ? {
+            ...beneficiary,
+            afm: decryptAFM(beneficiary.afm) || ""
+          } : null
+        };
+      });
+
+      res.json(paymentsWithDecryptedAFM);
     } catch (error) {
       console.error("Error in beneficiaries endpoint:", error);
       res.status(500).json({
@@ -3324,25 +4461,28 @@ router.put(
             // First, find or create the employee
             let employeeId = recipient.employee_id;
 
-            if (!employeeId) {
-              // Try to find existing employee by AFM
+            if (!employeeId && recipient.afm) {
+              // Try to find existing employee by AFM hash
+              const afmHash = hashAFM(recipient.afm);
               const { data: existingEmployee } = await supabase
                 .from("Employees")
                 .select("id")
-                .eq("afm", recipient.afm)
+                .eq("afm_hash", afmHash)
                 .single();
 
               if (existingEmployee) {
                 employeeId = existingEmployee.id;
               } else {
-                // Create new employee
+                // Create new employee with encrypted AFM
+                const encryptedAFM = encryptAFM(recipient.afm);
                 const { data: newEmployee, error: employeeError } = await supabase
                   .from("Employees")
                   .insert({
                     name: recipient.firstname,
                     surname: recipient.lastname,
                     fathername: recipient.fathername || null,
-                    afm: recipient.afm,
+                    afm: encryptedAFM,
+                    afm_hash: afmHash,
                     klados: recipient.secondary_text || null,
                   })
                   .select("id")
@@ -3506,7 +4646,10 @@ router.put(
               beneficiaryUpdate.surname = recipient.lastname;
             if (recipient.fathername)
               beneficiaryUpdate.fathername = recipient.fathername;
-            if (recipient.afm) beneficiaryUpdate.afm = recipient.afm;
+            if (recipient.afm) {
+              beneficiaryUpdate.afm = encryptAFM(recipient.afm);
+              beneficiaryUpdate.afm_hash = hashAFM(recipient.afm);
+            }
 
             if (Object.keys(beneficiaryUpdate).length > 0) {
               const { error: beneficiaryError } = await supabase
@@ -3545,6 +4688,8 @@ router.put(
           updatedPayments.push(updatedPayment);
         } else if (recipient.firstname && recipient.lastname && recipient.afm) {
           // Create new beneficiary and payment if we have required data
+          const encryptedAFM = encryptAFM(recipient.afm);
+          const afmHash = hashAFM(recipient.afm);
           const { data: newBeneficiary, error: beneficiaryError } =
             await supabase
               .from("beneficiaries")
@@ -3552,7 +4697,8 @@ router.put(
                 name: recipient.firstname,
                 surname: recipient.lastname,
                 fathername: recipient.fathername || null,
-                afm: recipient.afm,
+                afm: encryptedAFM,
+                afm_hash: afmHash,
               })
               .select()
               .single();
@@ -3668,7 +4814,13 @@ router.put(
 
 /**
  * DELETE /api/documents/generated/:id
- * Delete a generated document
+ * Delete a generated document (only if it hasn't received a protocol number yet)
+ * This will:
+ * 1. Check if document has a protocol number - if yes, block deletion
+ * 2. Delete associated beneficiary payments FIRST (to avoid FK constraint)
+ * 3. Delete associated employee payments (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
+ * 4. Delete the document (after all payment references are removed)
+ * 5. Return the budget amount to the project (only after document is successfully deleted)
  */
 router.delete(
   "/generated/:id",
@@ -3684,10 +4836,10 @@ router.delete(
         });
       }
 
-      // Verify document exists before deletion
+      // Fetch document with all necessary fields for deletion logic
       const { data: existingDocument, error: fetchError } = await supabase
         .from("generated_documents")
-        .select("id, generated_by")
+        .select("id, generated_by, protocol_number_input, total_amount, project_index_id, beneficiary_payments_id")
         .eq("id", documentId)
         .single();
 
@@ -3698,7 +4850,16 @@ router.delete(
         });
       }
 
-      // Optional: Add authorization check - only allow user who created the document or admin to delete
+      // BLOCK DELETION: Check if document has a protocol number
+      // Documents with protocol numbers cannot be deleted
+      if (existingDocument.protocol_number_input && existingDocument.protocol_number_input.trim() !== "") {
+        return res.status(400).json({
+          success: false,
+          message: "Δεν μπορείτε να διαγράψετε έγγραφο που έχει ήδη αριθμό πρωτοκόλλου. Μόνο έγγραφα χωρίς πρωτόκολλο μπορούν να διαγραφούν.",
+        });
+      }
+
+      // Authorization check - only allow user who created the document or manager to delete
       if (
         req.user?.role !== "manager" &&
         existingDocument.generated_by !== req.user?.id
@@ -3709,7 +4870,63 @@ router.delete(
         });
       }
 
-      // Delete the document
+      console.log(`[DocumentsController] Deleting document ${documentId} - deleting payments first, then returning budget, then deleting document`);
+
+      // Store document info needed for cleanup
+      const projectIndexId = existingDocument.project_index_id;
+      const totalAmount = existingDocument.total_amount;
+
+      // STEP 1: Delete associated beneficiary payments FIRST (to avoid foreign key constraint)
+      const { data: linkedPayments, error: paymentsError } = await supabase
+        .from("beneficiary_payments")
+        .select("id")
+        .eq("document_id", documentId);
+
+      if (!paymentsError && linkedPayments && linkedPayments.length > 0) {
+        const paymentIds = linkedPayments.map(p => p.id);
+        
+        const { error: deletePaymentsError } = await supabase
+          .from("beneficiary_payments")
+          .delete()
+          .in("id", paymentIds);
+
+        if (deletePaymentsError) {
+          console.error("[DocumentsController] Error deleting beneficiary payments:", deletePaymentsError);
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά τη διαγραφή των πληρωμών δικαιούχων",
+            error: deletePaymentsError.message,
+          });
+        }
+        console.log(`[DocumentsController] Deleted ${paymentIds.length} beneficiary payment(s) for document ${documentId}`);
+      }
+
+      // STEP 2: Delete employee payments if any exist (for ΕΚΤΟΣ ΕΔΡΑΣ documents)
+      const { data: linkedEmployeePayments, error: employeePaymentsError } = await supabase
+        .from("employee_payments")
+        .select("id")
+        .eq("document_id", documentId);
+
+      if (!employeePaymentsError && linkedEmployeePayments && linkedEmployeePayments.length > 0) {
+        const employeePaymentIds = linkedEmployeePayments.map(p => p.id);
+        
+        const { error: deleteEmployeePaymentsError } = await supabase
+          .from("employee_payments")
+          .delete()
+          .in("id", employeePaymentIds);
+
+        if (deleteEmployeePaymentsError) {
+          console.error("[DocumentsController] Error deleting employee payments:", deleteEmployeePaymentsError);
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά τη διαγραφή των πληρωμών υπαλλήλων",
+            error: deleteEmployeePaymentsError.message,
+          });
+        }
+        console.log(`[DocumentsController] Deleted ${employeePaymentIds.length} employee payment(s) for document ${documentId}`);
+      }
+
+      // STEP 3: Delete the document (after all payment references are removed)
       const { error: deleteError } = await supabase
         .from("generated_documents")
         .delete()
@@ -3724,16 +4941,181 @@ router.delete(
         });
       }
 
+      console.log(`[DocumentsController] Document ${documentId} deleted successfully`);
+
+      // STEP 4: Return the budget amount to the project (AFTER document is successfully deleted)
+      // This ensures budget is only refunded if deletion succeeded
+      if (projectIndexId && totalAmount) {
+        try {
+          const { data: projectIndex, error: projectIndexError } = await supabase
+            .from("project_index")
+            .select("project_id")
+            .eq("id", projectIndexId)
+            .single();
+
+          if (!projectIndexError && projectIndex?.project_id) {
+            const amountToReturn = parseFloat(String(totalAmount));
+            
+            await storage.updateProjectBudgetSpending(
+              projectIndex.project_id,
+              -amountToReturn,
+              documentId,
+              req.user?.id
+            );
+            
+            console.log(`[DocumentsController] Budget returned: €${amountToReturn} for project ${projectIndex.project_id}`);
+          } else {
+            console.warn(`[DocumentsController] Could not find project for budget return - project_index_id: ${projectIndexId}`);
+          }
+        } catch (budgetError) {
+          console.error("[DocumentsController] Error returning budget (document already deleted, manual resolution needed):", budgetError);
+        }
+      }
+
       logger.info(
-        `Document ${documentId} deleted successfully by user ${req.user?.id}`,
+        `Document ${documentId} deleted successfully by user ${req.user?.id} - budget returned and payments cleaned up`,
       );
 
       res.json({
         success: true,
-        message: "Το έγγραφο διαγράφηκε επιτυχώς",
+        message: "Το έγγραφο διαγράφηκε επιτυχώς. Ο προϋπολογισμός επιστράφηκε και οι πληρωμές διαγράφηκαν.",
       });
     } catch (error) {
       console.error("Error in document deletion endpoint:", error);
+      res.status(500).json({
+        success: false,
+        message: "Εσωτερικό σφάλμα διακομιστή",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  },
+);
+
+router.post(
+  "/:id/toggle-returned",
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const documentId = parseInt(req.params.id);
+
+      if (isNaN(documentId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Μη έγκυρο ID εγγράφου",
+        });
+      }
+
+      const { data: document, error: fetchError } = await supabase
+        .from("generated_documents")
+        .select("id, is_returned, total_amount, project_index_id, generated_by")
+        .eq("id", documentId)
+        .single();
+
+      if (fetchError || !document) {
+        return res.status(404).json({
+          success: false,
+          message: "Το έγγραφο δεν βρέθηκε",
+        });
+      }
+
+      if (
+        req.user?.role !== "manager" &&
+        document.generated_by !== req.user?.id
+      ) {
+        return res.status(403).json({
+          success: false,
+          message: "Δεν έχετε άδεια να επεξεργαστείτε αυτό το έγγραφο",
+        });
+      }
+
+      const newReturnedStatus = !document.is_returned;
+      const amount = parseFloat(String(document.total_amount || 0));
+
+      const { error: updateError } = await supabase
+        .from("generated_documents")
+        .update({
+          is_returned: newReturnedStatus,
+          updated_at: new Date().toISOString(),
+          updated_by: req.user?.name || req.user?.email || String(req.user?.id),
+        })
+        .eq("id", documentId);
+
+      if (updateError) {
+        console.error("Error updating document return status:", updateError);
+        return res.status(500).json({
+          success: false,
+          message: "Σφάλμα κατά την ενημέρωση του εγγράφου",
+          error: updateError.message,
+        });
+      }
+
+      if (amount > 0 && document.project_index_id) {
+        const { data: projectIndex, error: indexError } = await supabase
+          .from("project_index")
+          .select("project_id")
+          .eq("id", document.project_index_id)
+          .single();
+
+        if (indexError || !projectIndex?.project_id) {
+          console.error(
+            "[DocumentsController] Error fetching project index:",
+            indexError,
+          );
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά την ανάκτηση δεδομένων έργου",
+            error: indexError?.message,
+          });
+        }
+
+        try {
+          const budgetAdjustment = newReturnedStatus ? -amount : amount;
+
+          await storage.updateProjectBudgetSpending(
+            projectIndex.project_id,
+            budgetAdjustment,
+            documentId,
+            req.user?.id,
+          );
+
+          console.log(
+            `[DocumentsController] Budget adjusted by ${budgetAdjustment} for document ${documentId} (returned: ${newReturnedStatus})`,
+          );
+        } catch (budgetError) {
+          console.error(
+            "[DocumentsController] Error updating budget:",
+            budgetError,
+          );
+
+          await supabase
+            .from("generated_documents")
+            .update({
+              is_returned: !newReturnedStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", documentId);
+
+          return res.status(500).json({
+            success: false,
+            message: "Σφάλμα κατά την ενημέρωση του προϋπολογισμού",
+            error: budgetError instanceof Error ? budgetError.message : "Unknown error",
+          });
+        }
+      }
+
+      logger.info(
+        `Document ${documentId} return status toggled to ${newReturnedStatus} by user ${req.user?.id}`,
+      );
+
+      res.json({
+        success: true,
+        message: newReturnedStatus
+          ? "Το έγγραφο επεστράφη"
+          : "Η επιστροφή του εγγράφου ακυρώθηκε",
+        is_returned: newReturnedStatus,
+      });
+    } catch (error) {
+      console.error("Error in toggle-returned endpoint:", error);
       res.status(500).json({
         success: false,
         message: "Εσωτερικό σφάλμα διακομιστή",

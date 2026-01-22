@@ -1,0 +1,165 @@
+Project Controller — Focused Code Review
+Date: 2025-10-30
+
+Overview
+- File: projectController.ts
+- Size: ~183506 chars, 5224 lines
+- Routes: ~30 (22 protected by authenticateSession)
+- Supabase ops: select=118, insert=22, update=4, delete=19, upsert=1
+- Async/await: 120 'await' hits, try/catch blocks: 45
+- Logging: ~304 console.* calls
+- Any-typed values: 35 uses of ': any'
+
+High-Impact Findings (Prioritized)
+1) Very large handler(s): estimated max function size ≈ 1,942 lines, median ≈ 145 lines across 7 detected blocks. This makes reasoning, testing, and reuse hard.
+   • Action: split per route into service functions (projectService.ts), keep controllers thin (< ~50 LOC).
+
+2) Excessive console logging (~304 calls):
+   • Symptom: noisy logs, potential sensitive data leakage, performance overhead.
+   • Action: use a structured logger (pino/winston) with levels (debug/info/warn/error) and redaction. Gate by ENV.
+
+3) Inconsistent authentication/authorization:
+   • 22/30 routes are protected; 8 appear open. Some endpoints look like they return project/formulation data that may be sensitive.
+   • Action: explicitly decide which routes are public. Add authenticateSession to all write ops and most reads; add per-route authorization checks (e.g., user belongs to unit/Monada or has admin role).
+
+4) Weak input coercion/validation:
+   • 27 × parseInt() with no radix; potential NaN propagation and locale pitfalls.
+   • Mixed usage of manual parsing vs helpers like parseAndValidateBudgetAmount.
+   • Action: standardize with zod schemas per endpoint for params/query/body, coerce to numbers (z.coerce.number()) and dates, return 400s with helpful messages.
+
+5) Database boundary mixed into controllers:
+   • Controllers craft Supabase queries inline, interleaved with response logic and business rules.
+   • Action: extract data-access (repositories) and business logic (services). Controllers become I/O: parse → call service → map result → respond.
+
+6) Error handling consistency:
+   • Many try/catch blocks directly send res.status().json(). Risk of “headers already sent” if code continues.
+   • Action: return immediately after sending a response; or centralize error handling via next(err) + error middleware.
+
+7) XLSX export paths:
+   • Uses XLSX.utils and XLSX.write in-process. For large datasets this can block the event loop.
+   • Action: stream or offload to a worker queue for big exports; set memory limits; sanitize column headers and check for null/undefined.
+
+8) Supabase query patterns:
+   • Frequent .single() with .eq() sequences. Watch for 406/409 misuses; ensure proper .select() projections to avoid transferring heavy payloads (attachments, comments) when not needed.
+   • Prefer upsert where idempotency is required (deterministic conflicts via unique keys).
+   • Validate server-side RLS policies align with expected access. Tests!
+
+9) Response shape and pagination:
+   • Multiple endpoints likely return large arrays without pagination.
+   • Action: adopt a standard: ?page, ?pageSize (default 50, max 500). Always return { data, page, pageSize, total }.
+
+10) Any and implicit any (35 hits):
+   • Action: harden types for request/response DTOs and internal models. Export types from @shared and reuse.
+
+Express Patterns — Recommended Baseline
+- Each route: validate → authorize → call service → map → respond.
+- Always `return res.status(...).json(...)` (or `next(err)`), never fall-through.
+- Use asyncHandler to avoid repetitive try/catch.
+
+Example Controller Refactor (pattern)
+------------------------------------
+router.get('/:mis/formulations', authenticateSession, asyncHandler(getFormulations));
+
+const getFormulations = async (req: AuthenticatedRequest, res: Response) => {
+  const dto = schemas.getFormulations.parse({
+    mis: req.params.mis,
+    q: req.query.q,
+    page: req.query.page,
+    pageSize: req.query.pageSize,
+  });
+
+  const user = req.user!; // typed in AuthenticatedRequest
+  await authz.ensureCanReadProject(user, dto.mis);
+
+  const result = await projectService.listFormulations(dto);
+  return res.json(result);
+};
+
+Validation (zod) Example
+------------------------
+const schemas = {
+  getFormulations: z.object({
+    mis: z.string().min(1),
+    q: z.string().optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(500).default(50),
+  }),
+};
+
+Service Layer Example
+---------------------
+async function listFormulations(dto: { mis: string; q?: string; page: number; pageSize: number; }) {
+  const from = (dto.page - 1) * dto.pageSize;
+  const to = from + dto.pageSize - 1;
+
+  const base = supabase
+    .from('project_formulations')
+    .select('id, mis, decision_year, sa_type, decision_status', { count: 'exact' })
+    .eq('mis', dto.mis)
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  const { data, error, count } = await base;
+  if (error) throw new HttpError(500, 'Failed to load formulations', error);
+
+  return { data, page: dto.page, pageSize: dto.pageSize, total: count ?? 0 };
+}
+
+Authorization Guard Example
+---------------------------
+async function ensureCanReadProject(user: User, mis: string) {
+  if (user.role === 'admin') return;
+  const { data, error } = await supabase
+    .from('Projects')
+    .select('id, monada_id')
+    .eq('mis', mis)
+    .single();
+  if (error) throw new HttpError(404, 'Project not found');
+  if (!user.monada_ids?.includes(data.monada_id)) {
+    throw new HttpError(403, 'Forbidden');
+  }
+}
+
+Concrete Fixes You Can Apply Now
+1) ParseInt → z.coerce.number()
+   - Replace all parseInt(x) without radix with zod coercion during validation (or use Number(x) and guard isNaN).
+
+2) Response early-returns
+   - After any res.status(...).json(...), add `return;` or structure to return the call. Create helpers: `ok(res, data)`, `badRequest(res, msg)`.
+
+3) Logger
+   - Create logger.ts using pino. Replace console.* with logger.debug/info/warn/error. Add redaction for fields like ada, protocol, afm.
+
+4) DTOs
+   - Define RequestDTO/ResponseDTO per route in @shared. Replace ': any' occurrences; export reusable types for Project, Formulation, Decision, etc.
+
+5) Pagination
+   - Introduce a middleware that parses ?page/&?pageSize and attaches `req.pagination`. Ensure services accept it and include totals via Supabase `count: 'exact'`.
+
+6) XLSX Exports
+   - For large exports: prefer CSV streaming (res.setHeader('Content-Type','text/csv')) and let the client convert to XLSX. If XLSX is required, push heavy runs to a worker via a queue (BullMQ) and email a link.
+
+7) Supabase Queries
+   - Always specify projection columns. Avoid `select('*')` on heavy tables.
+   - For write ops, use `upsert` with conflict target where appropriate for idempotency.
+   - Standardize .order(...).range(...) for list endpoints.
+
+8) Centralized Error Handling
+   - Introduce HttpError class and error middleware. In controllers, `throw new HttpError(status, message, cause)`; the middleware sets status and response shape.
+
+9) Security
+   - Protect all mutating routes (POST/PUT/DELETE).
+   - Ensure RLS policies mirror your controller authz. Add tests covering allow/deny cases.
+   - Audit the 8 open routes; decide if they must be public; if so, limit the fields.
+
+10) Tests
+   - Add integration tests per route (happy-path + authz + validation + error). Mock Supabase client or use a test project schema.
+
+Notable Nits
+- Prefer constant enums or union types over free-form string literals for fields like decision_status, change_type, sa_type.
+- Normalize date handling; ensure all timestamps are stored/returned in ISO 8601 UTC.
+- Avoid mixing Greek/English keys in APIs unless explicitly versioned or documented; provide labels separately.
+- Consider rate limiting for heavy read endpoints (especially exports).
+
+Closing Notes
+This controller is feature-rich but tries to do too much in one place. Moving DB calls and business rules into services/repositories, adding strict validation + logging, and enforcing consistent response/pagination will significantly improve reliability, testability, and performance.

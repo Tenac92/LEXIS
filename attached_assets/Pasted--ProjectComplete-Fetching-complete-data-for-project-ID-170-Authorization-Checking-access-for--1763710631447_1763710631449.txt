@@ -1,0 +1,62 @@
+
+[ProjectComplete] Fetching complete data for project ID: 170
+[Authorization] Checking access for user 49 to project 170
+[Budget] Optimized lookup failed, trying legacy MIS lookup for: 5203835
+[Budget] Handling numeric MIS: 5203835
+[Budget] Optimized lookup failed, trying legacy MIS lookup for: 5203795
+[Budget] Handling numeric MIS: 5203795
+[Budget] Optimized lookup failed, trying legacy MIS lookup for: 5203839
+[Budget] Handling numeric MIS: 5203839
+[Budget] Found budget for numeric MIS=5203815
+7:34:51 AM [express] GET /api/budget/lookup/5203815 200 in 289ms
+[Budget] Found budget for numeric MIS=5203790
+7:34:51 AM [express] GET /api/budget/lookup/5203790 200 in 294ms
+[Authorization] Supabase query result: {
+  hasProject: true,
+  hasError: false,
+  error: null,
+  projectData: { id: 170, mis: 5203928 }
+}
+[Authorization] Admin user 49 granted access to project 170
+[ProjectComplete] User authorized, fetching project data for ID: 170
+[Budget] Found budget for numeric MIS=5203835
+7:34:51 AM [express] GET /api/budget/lookup/5203835 200 in 299ms
+[Budget] Found budget for numeric MIS=5203795
+7:34:51 AM [express] GET /api/budget/lookup/5203795 200 in 284ms
+[Budget] Found budget for numeric MIS=5203839
+7:34:51 AM [express] GET /api/budget/lookup/5203839 200 in 281ms
+7:34:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+7:34:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+7:34:52 AM [express] [Request] GET /api/budget/lookup/5203928 from 10.81.2.188
+[Budget] Public access to budget data for MIS: 5203928
+[Budget] Request headers: {"accept":"*/*","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36"}
+[Budget] Decoded MIS if needed: 5203928
+[Budget] OPTIMIZED: Attempting direct project_id lookup for: 5203928
+7:34:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+7:34:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+[ProjectComplete] Before kallikratis loading - got 17 eventTypes, 11 units, 8 expenditureTypes
+[ProjectComplete] Skipping old kallikratis table (no longer in use), loading normalized geographic data instead...
+[ProjectComplete] Loading normalized geographic data...
+7:34:52 AM [geoip] [GeoIP] Dev environment exempt from GeoIP restrictions
+[Budget] Optimized lookup failed, trying legacy MIS lookup for: 5203928
+[Budget] Handling numeric MIS: 5203928
+[ProjectComplete] Loaded normalized geographic data: 13 regions, 74 regional units, 324 municipalities
+[ProjectComplete] Project has 5 index entries
+[ProjectComplete] Fetching geographic relationships for project index entries
+[Budget] Found budget for numeric MIS=5203928
+7:34:52 AM [express] GET /api/budget/lookup/5203928 304 in 281ms
+[ProjectComplete] Municipality query result: {
+  error: null,
+  dataLength: 4,
+  data: [
+    { muni_code: 9264, municipalities: [Object] },
+    { muni_code: 9264, municipalities: [Object] },
+    { muni_code: 9264, municipalities: [Object] },
+    { muni_code: 9264, municipalities: [Object] }
+  ],
+  projectIndexIds: [ 3756, 4387, 3753, 3754, 3755 ]
+}
+[ProjectComplete] Found geographic relationships: 4 regions, 4 units, 4 municipalities
+[ProjectComplete] Processed 0 budget versions for 0 formulations
+[ProjectComplete] Successfully fetched complete data for project 170
+[ProjectComplete] Data counts: decisions=1, formulations=3, index=5, eventTypes=17, units=11, expenditureTypes=8, kallikratis=0, regions=13, regionalUnits=74, municipalities=324

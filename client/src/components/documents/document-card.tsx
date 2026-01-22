@@ -21,13 +21,12 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect, memo } from "react";
+import { useState, memo, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
 import { DocumentDetailsModal } from "./DocumentDetailsModal";
 import { ViewDocumentModal } from "./document-modals";
-import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
 interface DocumentCardProps {
@@ -113,47 +112,9 @@ const DocumentCard = memo(function DocumentCard({
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showProtocolModal, setShowProtocolModal] = useState(false);
-  const [projectNa853, setProjectNa853] = useState<string>(
-    (doc as any).project_na853 || "",
-  );
+  const [isReturned, setIsReturned] = useState((doc as any).is_returned || false);
+  const [isTogglingReturn, setIsTogglingReturn] = useState(false);
   const { toast } = useToast();
-
-  // Get the MIS code from the document
-  const mis = (doc as any).project_id || (doc as any).mis || "";
-
-  // Fetch project NA853 data from project resolver endpoint
-  const { data: na853Data } = useQuery<any>({
-    queryKey: ["/api/projects/na853", mis],
-    queryFn: async () => {
-      if (!mis) return null;
-      try {
-        console.log("Fetching NA853 for MIS:", mis);
-        return await apiRequest(`/api/projects/na853/${mis}`);
-      } catch (error) {
-        console.error("Failed to fetch NA853 data:", error);
-        return null;
-      }
-    },
-    enabled: !!mis,
-  });
-
-  // Update NA853 when data is fetched from our special endpoint
-  useEffect(() => {
-    if (na853Data) {
-      // Add debug log to see the structure of the response
-      console.log("NA853 data received:", na853Data);
-
-      try {
-        // Our dedicated endpoint returns a simplified structure always containing na853
-        if (na853Data && na853Data.na853) {
-          console.log("Found NA853 from dedicated endpoint:", na853Data.na853);
-          setProjectNa853(na853Data.na853);
-        }
-      } catch (error) {
-        console.error("Error extracting NA853 from data:", error);
-      }
-    }
-  }, [na853Data]);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Allow flipping anywhere on the card
@@ -176,6 +137,23 @@ const DocumentCard = memo(function DocumentCard({
       );
 
       if (!response.ok) {
+        // Check for budget validation block (403 with NEEDS_XRIMATODOTISI code)
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json();
+            if (errorData.code === "NEEDS_XRIMATODOTISI") {
+              toast({
+                title: "Εξαγωγή DOCX Μπλοκαρισμένη",
+                description: errorData.message || "Το έγγραφο χρειάζεται έγκριση χρηματοδότησης για εξαγωγή.",
+                variant: "destructive",
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch (parseError) {
+            console.error("Failed to parse error response:", parseError);
+          }
+        }
         const errorText = await response.text();
         console.error("Export failed:", errorText);
         throw new Error("Failed to export document");
@@ -216,14 +194,103 @@ const DocumentCard = memo(function DocumentCard({
     }
   };
 
+  const handleToggleReturn = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setIsTogglingReturn(true);
+      const response = await apiRequest(`/api/documents/${doc.id}/toggle-returned`, {
+        method: "POST",
+      }) as { success: boolean; message: string; is_returned: boolean };
+
+      if (response.success) {
+        setIsReturned(response.is_returned);
+        toast({
+          description: response.message,
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Σφάλμα",
+        description: "Αποτυχία ενημέρωσης κατάστασης επιστροφής",
+        variant: "destructive",
+      });
+      console.error("Toggle return error:", error);
+    } finally {
+      setIsTogglingReturn(false);
+    }
+  };
+
   const recipients = (doc as any).recipients as Recipient[];
   const docAny = doc as any; // Use type assertion to access potentially missing properties
+  const projectNa853 = docAny.project_na853 || "";
   const statusDetails = getStatusDetails(
     doc.status || "pending",
     docAny.is_correction,
     doc.protocol_number_input || null,
   );
 
+  // Count unique recipients by AFM (group payments by recipient)
+  const uniqueRecipientCount = recipients?.length 
+    ? new Set(recipients.map(r => r.afm)).size 
+    : 0;
+
+  // Group recipients by AFM with their payments
+  const groupedRecipients = useMemo(() => {
+    if (!recipients?.length) return [];
+    
+    const grouped = new Map<string, {
+      afm: string;
+      firstname: string;
+      lastname: string;
+      fathername: string;
+      totalAmount: number;
+      payments: Array<{
+        installment: string;
+        amount: number;
+        month?: string;
+        days?: number;
+        daily_compensation?: number;
+        accommodation_expenses?: number;
+        kilometers_traveled?: number;
+        tickets_tolls_rental?: number;
+        secondary_text?: string;
+        payment_date?: string | null;
+        freetext?: string | null;
+      }>;
+    }>();
+
+    recipients.forEach(r => {
+      const key = r.afm || `${r.lastname}-${r.firstname}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          afm: r.afm,
+          firstname: r.firstname,
+          lastname: r.lastname,
+          fathername: r.fathername,
+          totalAmount: 0,
+          payments: []
+        });
+      }
+      const group = grouped.get(key)!;
+      group.totalAmount += r.amount || 0;
+      group.payments.push({
+        installment: r.installment || r.month || '',
+        amount: r.amount || 0,
+        month: r.month,
+        days: r.days,
+        daily_compensation: r.daily_compensation,
+        accommodation_expenses: r.accommodation_expenses,
+        kilometers_traveled: r.kilometers_traveled,
+        tickets_tolls_rental: r.tickets_tolls_rental,
+        secondary_text: r.secondary_text,
+        payment_date: (r as any).payment_date || null,
+        freetext: (r as any).freetext || null,
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [recipients]);
 
   // Show orthi epanalipsi info when either condition is met
   const showOrthiEpanalipsiInfo =
@@ -233,7 +300,7 @@ const DocumentCard = memo(function DocumentCard({
     return (
       <>
         <Card
-          className="transition-shadow hover:shadow-lg flex cursor-pointer"
+          className={`transition-shadow hover:shadow-lg flex cursor-pointer ${isReturned ? 'opacity-60 grayscale' : ''}`}
           onClick={() => setShowDetailsModal(true)}
         >
           <div className="p-6 flex-1">
@@ -255,10 +322,10 @@ const DocumentCard = memo(function DocumentCard({
                       <FileText className="w-4 h-4" />
                       <span>Μονάδα: {(doc as any).unit}</span>
                     </div>
-                    {recipients?.length > 0 && (
+                    {uniqueRecipientCount > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <User className="w-4 h-4" />
-                        <span>Δικαιούχοι: {recipients.length}</span>
+                        <span>Δικαιούχοι ({uniqueRecipientCount})</span>
                       </div>
                     )}
                   </div>
@@ -308,6 +375,18 @@ const DocumentCard = memo(function DocumentCard({
                   <Download className="w-4 h-4 mr-2" />
                   Εξαγωγή
                 </Button>
+                {doc.protocol_number_input && (
+                  <Button
+                    size="sm"
+                    variant={isReturned ? "default" : "outline"}
+                    onClick={handleToggleReturn}
+                    disabled={isTogglingReturn}
+                    data-testid="button-toggle-returned"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Επεστράφη
+                  </Button>
+                )}
                 <div className="flex gap-1">
                   {!docAny.is_correction && doc.protocol_number_input ? (
                     <Button
@@ -379,7 +458,7 @@ const DocumentCard = memo(function DocumentCard({
 
   return (
     <>
-      <div className="flip-card" onClick={handleCardClick}>
+      <div className={`flip-card ${isReturned ? 'opacity-60 grayscale' : ''}`} onClick={handleCardClick}>
         <div className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}>
           {/* Front of card */}
           <div className="flip-card-front">
@@ -500,7 +579,7 @@ const DocumentCard = memo(function DocumentCard({
                 <div className="flex flex-col py-1.5 px-2 bg-gray-50 rounded">
                   <span className="text-xs text-gray-600">Δικαιούχοι</span>
                   <span className="text-gray-900">
-                    {recipients?.length || 0}
+                    ({uniqueRecipientCount})
                   </span>
                 </div>
               </div>
@@ -551,20 +630,48 @@ const DocumentCard = memo(function DocumentCard({
                 )}
               </div>
 
-              <div className="flex items-center justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsFlipped(true);
-                  }}
-                  className="text-orange-600 border-orange-200 hover:bg-orange-50"
-                >
-                  <Info className="w-4 h-4 mr-2" />
-                  Δείτε δικαιούχους
-                </Button>
-              </div>
+              {doc.protocol_number_input ? (
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <Button
+                    variant={isReturned ? "default" : "outline"}
+                    size="sm"
+                    onClick={handleToggleReturn}
+                    disabled={isTogglingReturn}
+                    className="flex-1"
+                    data-testid="button-toggle-returned"
+                  >
+                    <RotateCcw className="h-4 h-4 mr-2" />
+                    Επεστράφη
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50 flex-1"
+                  >
+                    <Info className="w-4 h-4 mr-2" />
+                    Δείτε δικαιούχους
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsFlipped(true);
+                    }}
+                    className="text-orange-600 border-orange-200 hover:bg-orange-50"
+                  >
+                    <Info className="w-4 h-4 mr-2" />
+                    Δείτε δικαιούχους
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -634,6 +741,28 @@ const DocumentCard = memo(function DocumentCard({
                       {(doc as any).expenditure_type || "-"}
                     </span>
                   </div>
+                  {(doc as any).latest_payment_date && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">
+                        Πληρωμή:
+                      </span>
+                      <span className="text-orange-900">
+                        {new Date((doc as any).latest_payment_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </span>
+                    </div>
+                  )}
+                  {(doc as any).latest_eps && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-orange-700 font-medium">
+                        EPS:
+                      </span>
+                      <span className="text-orange-900 truncate">
+                        {(doc as any).latest_eps}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Orthi Epanalipsi Details */}
@@ -657,20 +786,21 @@ const DocumentCard = memo(function DocumentCard({
                   </div>
                 )}
 
-                {/* Recipients Summary */}
+                {/* Recipients Summary - Grouped by recipient */}
                 <div className="pt-2 border-t border-orange-200">
                   <span className="text-orange-700 font-medium text-sm">
-                    Δικαιούχοι ({recipients?.length || 0}):
+                    Δικαιούχοι ({uniqueRecipientCount}):
                   </span>
-                  <div className="mt-1 max-h-32 overflow-y-auto space-y-2">
-                    {recipients?.slice(0, 3).map((recipient, index) => (
-                      <div key={index} className="text-sm text-orange-900">
-                        <div className="flex justify-between items-center">
+                  <div className="mt-2 max-h-40 overflow-y-auto space-y-3">
+                    {groupedRecipients.slice(0, 5).map((group, index) => (
+                      <div key={group.afm || index} className="text-sm" data-testid={`recipient-group-${index}`}>
+                        {/* Recipient Name Header */}
+                        <div className="flex justify-between items-center text-orange-900 font-medium">
                           <span className="truncate">
-                            {recipient.lastname} {recipient.firstname}
+                            {group.lastname} {group.firstname}
                           </span>
-                          <span className="text-orange-700 font-medium ml-2 flex-shrink-0">
-                            {recipient.amount?.toLocaleString("el-GR", {
+                          <span className="text-orange-800 ml-2 flex-shrink-0">
+                            {group.totalAmount.toLocaleString("el-GR", {
                               style: "currency",
                               currency: "EUR",
                               minimumFractionDigits: 2,
@@ -678,30 +808,47 @@ const DocumentCard = memo(function DocumentCard({
                             })}
                           </span>
                         </div>
-                        {/* ΕΚΤΟΣ ΕΔΡΑΣ details */}
-                        {recipient.month && (
-                          <div className="mt-1 text-xs text-orange-700 space-y-0.5 pl-2 border-l-2 border-orange-300">
-                            <div>Μήνας: {recipient.month}</div>
-                            {recipient.days && <div>Ημέρες: {recipient.days}</div>}
-                            {recipient.daily_compensation && (
-                              <div>Ημερήσια Αποζημίωση: {recipient.daily_compensation.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
-                            {recipient.accommodation_expenses && (
-                              <div>Δαπάνες Διαμονής: {recipient.accommodation_expenses.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
-                            {recipient.kilometers_traveled && (
-                              <div>Χιλιόμετρα: {recipient.kilometers_traveled} km</div>
-                            )}
-                            {recipient.tickets_tolls_rental && (
-                              <div>Εισιτήρια/Διόδια/Ενοικίαση: {recipient.tickets_tolls_rental.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}</div>
-                            )}
+                        {/* Indented Payments List */}
+                        {group.payments.length > 0 && (
+                          <div className="mt-1 pl-3 border-l-2 border-orange-300 space-y-1">
+                            {group.payments.map((payment, pIndex) => (
+                              <div key={pIndex} className="text-xs text-orange-700 space-y-0.5">
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    {payment.month 
+                                      ? `Μήνας: ${payment.month}${payment.days ? ` (${payment.days} ημ.)` : ''}`
+                                      : payment.installment || `Πληρωμή ${pIndex + 1}`
+                                    }
+                                  </span>
+                                  <span className="font-medium ml-2">
+                                    {payment.amount.toLocaleString("el-GR", {
+                                      style: "currency",
+                                      currency: "EUR",
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[11px] text-orange-600">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>
+                                    Πληρωμή: {payment.payment_date
+                                      ? new Date(payment.payment_date).toLocaleDateString("el-GR")
+                                      : "—"}
+                                  </span>
+                                  <span className="ml-2 truncate" title={payment.freetext || "—"}>
+                                    EPS: {payment.freetext || "—"}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
                     ))}
-                    {recipients?.length > 3 && (
+                    {groupedRecipients.length > 5 && (
                       <div className="text-sm text-orange-700">
-                        +{recipients.length - 3} περισσότεροι...
+                        +{groupedRecipients.length - 5} περισσότεροι...
                       </div>
                     )}
                   </div>

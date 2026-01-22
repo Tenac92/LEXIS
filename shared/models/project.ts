@@ -44,14 +44,14 @@ export const projectSchema = z.object({
     level: z.string()
   }).nullable().optional(),
   // Legacy compatibility fields - made optional for backward compatibility
-  event_type: z.array(z.string()).optional().default([]),
+  event_type: z.array(z.string()).nullable().optional().default([]),
   region: z.object({
     region: z.array(z.string()),
     municipality: z.array(z.string()),
     regional_unit: z.array(z.string()),
-  }).optional().default({ region: [], municipality: [], regional_unit: [] }),
-  implementing_agency: z.array(z.string()).optional().default([]),
-  expenditure_type: z.array(z.string()).optional().default([]),
+  }).nullable().optional().default({ region: [], municipality: [], regional_unit: [] }),
+  implementing_agency: z.union([z.array(z.string()), z.null()]).optional().default([]).transform(v => v === null ? [] : v),
+  expenditure_type: z.union([z.array(z.string()), z.null()]).optional().default([]).transform(v => v === null ? [] : v),
 });
 
 // Type inference
@@ -88,8 +88,8 @@ export const projectHelpers = {
     'KYA': Array.isArray(project.kya) ? project.kya.join(', ') : (typeof project.kya === 'string' ? project.kya : ''),
     'FEK': Array.isArray(project.fek) ? project.fek.join(', ') : (typeof project.fek === 'string' ? project.fek : ''),
     'ADA': Array.isArray(project.ada) ? project.ada.join(', ') : (typeof project.ada === 'string' ? project.ada : ''),
-    'Created At': project.created_at?.toLocaleDateString() || '',
-    'Updated At': project.updated_at?.toLocaleDateString() || ''
+    'Created At': typeof project.created_at === 'string' ? project.created_at : project.created_at?.toLocaleDateString() || '',
+    'Updated At': typeof project.updated_at === 'string' ? project.updated_at : project.updated_at?.toLocaleDateString() || ''
   }),
 
   validateProject: (data: unknown): Project => {

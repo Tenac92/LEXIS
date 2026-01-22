@@ -56,21 +56,21 @@ export function SubprojectManager({ epaVersionId, epaVersionInfo }: SubprojectMa
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch subprojects for EPA version
+  // Fetch subprojects for EPA version - only if saved (id > 0)
   const { data: subprojects, isLoading, error, refetch } = useQuery({
     queryKey: ['epa-subprojects', epaVersionId],
     queryFn: async () => {
-      const response = await apiRequest(`/api/epa-versions/${epaVersionId}/subprojects`) as { subprojects: Subproject[] };
+      const response = await apiRequest(`/api/projects/epa-versions/${epaVersionId}/subprojects`) as { subprojects: Subproject[] };
       return response.subprojects;
     },
-    enabled: !!epaVersionId,
+    enabled: epaVersionId > 0,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Create new subproject
   const createSubprojectMutation = useMutation({
     mutationFn: async (subprojectData: typeof newSubproject) => {
-      return apiRequest(`/api/epa-versions/${epaVersionId}/subprojects`, {
+      return apiRequest(`/api/projects/epa-versions/${epaVersionId}/subprojects`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subprojectData)

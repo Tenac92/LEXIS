@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { fileURLToPath } from 'url';
 import { dirname, join } from "path";
@@ -15,6 +16,11 @@ import documentsPreHandler from './middleware/sdegdaefk/documentsPreHandler';
 import { createWebSocketServer } from './websocket';
 import { supabase, testConnection, resetConnectionPoolIfNeeded } from './config/db';
 import { initializeScheduledTasks } from './services/schedulerService';
+import { registerAdminRoutes } from './routes/admin';
+import { Router } from 'express';
+import { applyConsoleLogLevelFilter, getCurrentLogLevel } from './utils/logger';
+
+applyConsoleLogLevelFilter('server');
 
 // Enhanced error handlers
 process.on('uncaughtException', (error) => {
@@ -37,7 +43,7 @@ process.on('unhandledRejection', (reason, promise) => {
   process.exit(1);
 });
 
-console.log('[Startup] Beginning server initialization');
+console.log(`[Startup] Beginning server initialization (LOG_LEVEL=${getCurrentLogLevel()})`);
 
 // Verify required environment variables with detailed logging
 const requiredEnvVars = [
@@ -210,8 +216,9 @@ async function startServer() {
       // Error handling is already applied above
 
       // Create WebSocket server with error handling
+      let wss: any;
       try {
-        const wss = createWebSocketServer(server);
+        wss = createWebSocketServer(server);
         console.log('[Startup] WebSocket server initialized on /ws');
         
         // Store WebSocket server in app for access by routes
@@ -231,7 +238,23 @@ async function startServer() {
         console.log('[Startup] Scheduled tasks initialized including quarter transitions');
       } catch (wsError) {
         console.error('[Warning] WebSocket server initialization failed:', wsError);
+        console.warn('[Startup] Continuing without WebSocket support');
         // Continue without WebSocket support
+      }
+      
+      // Register admin routes (works even if WebSocket failed)
+      const apiRouter = Router();
+      registerAdminRoutes(apiRouter, wss);
+      app.use('/api', apiRouter);
+      console.log('[Startup] Admin routes registered successfully');
+      
+      // Preload reference cache for faster project loading
+      try {
+        const { preloadReferenceCache } = await import('./utils/reference-cache');
+        preloadReferenceCache();
+        console.log('[Startup] Reference cache preload initiated');
+      } catch (cacheError) {
+        console.warn('[Startup] Reference cache preload failed:', cacheError);
       }
 
       // Setup Vite or serve static files

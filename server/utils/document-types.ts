@@ -6,7 +6,7 @@ export interface UserDetails {
   department?: string;
   descr?: string;
   details?: {
-    gender?: 'male' | 'female';
+    gender?: "male" | "female";
     specialty?: string;
   };
 }
@@ -15,8 +15,11 @@ export interface UnitDetails {
   unit: string;
   name?: string;
   unit_name?: {
+    title: string;
     name: string;
     prop: string;
+    propgen?: string; // Genitive case (γενική πτώση) for ΕΚΤΟΣ ΕΔΡΑΣ documents
+    namegen?: string; // Name in genitive case (γενική πτώση)
   };
   manager?: {
     name: string;
@@ -45,10 +48,17 @@ export interface UnitDetails {
   };
 }
 
+export interface ForYlDetails {
+  id: number;
+  title: string;
+  monada_id: string;
+}
+
 export interface DocumentData {
   id: number;
   unit: string; // Mapped from unit_id for compatibility
   unit_id?: bigint | number; // Actual database field
+  for_yl?: ForYlDetails | null; // Delegated implementing agency (φορέας υλοποίησης)
   project_id?: string | number;
   project_index_id?: number; // Reference to project_index table
   projects?: {
@@ -76,6 +86,7 @@ export interface DocumentData {
   protocol_date?: string;
   user_name?: string;
   user_id?: number;
+  correction_reason?: string;
   attachments?: string[];
   attachment_id?: number[]; // Array of attachment IDs from database
   esdian?: string[];

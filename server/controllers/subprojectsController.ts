@@ -1,9 +1,18 @@
 import { Router, Response } from 'express';
-import { AuthenticatedRequest } from '../authentication';
+import { AuthenticatedRequest, authenticateSession } from '../authentication';
 import { supabase } from '../config/db';
 import { log } from '../vite';
 
 const router = Router();
+router.use(authenticateSession);
+
+function requireAdmin(req: AuthenticatedRequest, res: Response): boolean {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({ error: 'Admin access required' });
+    return false;
+  }
+  return true;
+}
 
 /**
  * GET /api/epa-versions/:epaVersionId/subprojects
@@ -44,31 +53,9 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
       });
     }
 
-    // If no linked subprojects found, also return unlinked ones that could be linked
-    let finalSubprojects = subprojects || [];
-    
-    if (!finalSubprojects.length) {
-      log(`[Subprojects] No linked subprojects found, checking for unlinked subprojects`);
-      const { data: unlinkedSubprojects, error: unlinkedError } = await supabase
-        .from('Subprojects')
-        .select(`
-          id,
-          epa_version_id,
-          title,
-          description,
-          status,
-          created_at,
-          updated_at
-        `)
-        .is('epa_version_id', null)
-        .order('title')
-        .limit(10); // Limit to prevent too many results
-
-      if (!unlinkedError && unlinkedSubprojects) {
-        finalSubprojects = unlinkedSubprojects;
-        log(`[Subprojects] Found ${unlinkedSubprojects.length} unlinked subprojects that could be linked`);
-      }
-    }
+    // Only return subprojects directly linked to this EPA version
+    // Security: Do not return unlinked subprojects from other projects
+    const finalSubprojects = subprojects || [];
 
     // Transform subprojects to include mock financials if needed (for compatibility)
     const transformedSubprojects = finalSubprojects.map(subproject => ({
@@ -97,6 +84,7 @@ router.get('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedR
  */
 router.post('/epa-versions/:epaVersionId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const epaVersionId = parseInt(req.params.epaVersionId);
     const { title, description, status = 'Συνεχιζόμενο' } = req.body;
     
@@ -168,6 +156,7 @@ router.post('/epa-versions/:epaVersionId/subprojects', async (req: Authenticated
  */
 router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     const { title, description, status } = req.body;
     
@@ -219,6 +208,7 @@ router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) 
  */
 router.delete('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     
     if (!subprojectId || isNaN(subprojectId)) {
@@ -262,6 +252,7 @@ router.delete('/subprojects/:id', async (req: AuthenticatedRequest, res: Respons
  */
 router.post('/subprojects/:id/financials', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.id);
     const { year, total_public, eligible_public } = req.body;
     
@@ -342,6 +333,7 @@ router.post('/subprojects/:id/financials', async (req: AuthenticatedRequest, res
  */
 router.put('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const financialId = parseInt(req.params.id);
     const { year, total_public, eligible_public } = req.body;
     
@@ -403,6 +395,7 @@ router.put('/subprojects/financials/:id', async (req: AuthenticatedRequest, res:
  */
 router.delete('/subprojects/financials/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const financialId = parseInt(req.params.id);
     
     if (!financialId || isNaN(financialId)) {
@@ -546,11 +539,10 @@ router.get('/epa-versions/:epaVersionId/financial-validation', async (req: Authe
   }
 });
 
-/**
- * GET /api/projects/:projectId/epa-versions
- * Get all EPA versions for a specific project
- */
-router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest, res: Response) => {
+const getProjectEpaVersions = async (
+  req: AuthenticatedRequest,
+  res: Response,
+) => {
   try {
     const projectId = parseInt(req.params.projectId);
     
@@ -594,12 +586,10 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
 
     // Transform data to match frontend expectations
     const transformedVersions = (epaVersions || []).map((version, index) => ({
-      id: version.id,
+      ...version, // Spread version first to avoid property conflicts
       version_number: `${index + 1}`,
       epa_version: version.epa_version || `Έκδοση ${index + 1}`,
-      project_id: version.project_id,
       formulation_index: version.formulation_id ? parseInt(version.formulation_id.toString()) - 1 : index, // Map formulation_id to 0-based index
-      ...version // Include all other fields
     }));
 
     log(`[Subprojects] Found ${transformedVersions?.length || 0} EPA versions for project ${projectId}`);
@@ -615,11 +605,19 @@ router.get('/projects/:projectId/epa-versions', async (req: AuthenticatedRequest
       error: 'Internal server error'
     });
   }
-});
+};
+
+/**
+ * GET /api/projects/:projectId/epa-versions
+ * Get all EPA versions for a specific project
+ */
+router.get('/:projectId/epa-versions', getProjectEpaVersions);
+router.get('/projects/:projectId/epa-versions', getProjectEpaVersions);
 
 // Create test EPA budget version for testing purposes
 router.post('/projects/:projectId/test-epa-version', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const projectId = parseInt(req.params.projectId);
     if (isNaN(projectId)) {
       return res.status(400).json({
@@ -721,6 +719,7 @@ router.get('/diagnostic', async (req: AuthenticatedRequest, res: Response) => {
  */
 router.post('/link-to-epa/:subprojectId/:epaVersionId', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const subprojectId = parseInt(req.params.subprojectId);
     const epaVersionId = parseInt(req.params.epaVersionId);
 
@@ -772,10 +771,12 @@ export { router as subprojectsRouter };
 /**
  * GET /api/projects/:projectId/subprojects
  * Get all subprojects for a specific project
+ * OPTIMIZED: Uses two-step query to avoid expensive joins
  */
 router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const projectId = parseInt(req.params.projectId);
+    const startTime = Date.now();
     
     if (!projectId || isNaN(projectId)) {
       return res.status(400).json({
@@ -785,7 +786,33 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
 
     log(`[Subprojects] Fetching subprojects for project ID: ${projectId}`);
 
-    // Get subprojects for this project through EPA versions
+    // OPTIMIZED: Step 1 - Get EPA version IDs for this project (simple, fast query)
+    const { data: epaVersions, error: epaError } = await supabase
+      .from('project_budget_versions')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('budget_type', 'ΕΠΑ');
+
+    if (epaError) {
+      log(`[Subprojects] Error fetching EPA versions:`, epaError.message);
+      return res.status(500).json({
+        error: 'Failed to fetch EPA versions'
+      });
+    }
+
+    // If no EPA versions, return empty array immediately
+    if (!epaVersions || epaVersions.length === 0) {
+      log(`[Subprojects] No EPA versions found for project ${projectId} in ${Date.now() - startTime}ms`);
+      return res.json({
+        success: true,
+        subprojects: []
+      });
+    }
+
+    const epaVersionIds = epaVersions.map(v => v.id);
+
+    // OPTIMIZED: Step 2 - Get subprojects for these EPA version IDs with financials
+    // Using .in() instead of inner join for better performance
     const { data: subprojects, error } = await supabase
       .from('Subprojects')
       .select(`
@@ -803,15 +830,9 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
           eligible_public,
           created_at,
           updated_at
-        ),
-        project_budget_versions!inner (
-          id,
-          project_id,
-          budget_type
         )
       `)
-      .eq('project_budget_versions.project_id', projectId)
-      .eq('project_budget_versions.budget_type', 'ΕΠΑ')
+      .in('epa_version_id', epaVersionIds)
       .order('title');
 
     if (error) {
@@ -821,11 +842,30 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
       });
     }
 
-    log(`[Subprojects] Found ${subprojects?.length || 0} subprojects for project ${projectId}`);
+    // Transform subprojects to include yearly_budgets for UI compatibility
+    const transformedSubprojects = (subprojects || []).map(subproject => {
+      // Convert subproject_financials array to yearly_budgets object
+      const yearlyBudgets: Record<number, { sdd?: number; edd?: number }> = {};
+      if (Array.isArray(subproject.subproject_financials)) {
+        for (const financial of subproject.subproject_financials) {
+          yearlyBudgets[financial.year] = {
+            sdd: parseFloat(financial.total_public?.toString() || '0') || 0,
+            edd: parseFloat(financial.eligible_public?.toString() || '0') || 0
+          };
+        }
+      }
+      
+      return {
+        ...subproject,
+        yearly_budgets: yearlyBudgets
+      };
+    });
+
+    log(`[Subprojects] Found ${transformedSubprojects.length} subprojects for project ${projectId} in ${Date.now() - startTime}ms`);
 
     res.json({
       success: true,
-      subprojects: subprojects || []
+      subprojects: transformedSubprojects
     });
 
   } catch (error) {
@@ -842,6 +882,7 @@ router.get('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Res
  */
 router.post('/:projectId/subprojects', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (!requireAdmin(req, res)) return;
     const projectId = parseInt(req.params.projectId);
     const { title, description, status = 'active', code } = req.body;
     

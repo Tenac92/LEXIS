@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -28,8 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Plus, Search, Edit2, Trash2, UserPlus, X as XIcon } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { Search, Edit2, Trash2, UserPlus, UserCheck, UserX } from "lucide-react";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -51,6 +51,7 @@ interface User {
   email: string;
   name: string;
   role: string;
+  is_active?: boolean;
   unit_id?: number[];
   created_at: string;
   telephone?: number;
@@ -87,6 +88,7 @@ export default function UsersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
   const [editUserDialogOpen, setEditUserDialogOpen] = useState(false);
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null);
 
   // Use React.useState to trigger re-render when the resolver changes
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -99,6 +101,7 @@ export default function UsersPage() {
       name: "",
       password: "",
       role: "user",
+      is_active: true,
       unit_id: [],
       telephone: undefined,
       department: ""
@@ -131,6 +134,53 @@ export default function UsersPage() {
       if (!response.ok) throw new Error("Failed to fetch units");
       return response.json();
     },
+  });
+
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ id, is_active }: { id: number; is_active: boolean }) => {
+      const response = await fetch(`/api/users/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ is_active })
+      });
+
+      if (!response.ok) {
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Failed to update user status: ${response.status}`);
+        } catch {
+          throw new Error(`Failed to update user status: ${response.status}`);
+        }
+      }
+
+      return response.json();
+    },
+    onMutate: ({ id }) => {
+      setStatusUpdatingId(id);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      refetch();
+      toast({
+        title: variables.is_active ? "User Activated" : "User Deactivated",
+        description: variables.is_active
+          ? "The user can now sign in."
+          : "The user can no longer sign in.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "An error occurred while updating the user status",
+        variant: "destructive",
+      });
+    },
+    onSettled: () => {
+      setStatusUpdatingId(null);
+    }
   });
 
   // Helper function to convert unit IDs to full names for display
@@ -339,6 +389,7 @@ export default function UsersPage() {
               name: "",
               password: "",
               role: "user",
+              is_active: true,
               unit_id: [],
               telephone: undefined,
               department: "",
@@ -396,63 +447,95 @@ export default function UsersPage() {
                   <TableHead>Unit</TableHead>
                   <TableHead>Telephone</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers?.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <span className="capitalize">{user.role}</span>
-                    </TableCell>
-                    <TableCell>{getDisplayUnits(user.unit_id).join(", ") || "-"}</TableCell>
-                    <TableCell>{user.telephone || "-"}</TableCell>
-                    <TableCell>{user.department || "-"}</TableCell>
-                    <TableCell className="text-right flex justify-end space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setFormMode('edit');
-                          setEditUserDialogOpen(true);
-                          
-                          // Map user's unit IDs to unit IDs for the form (no conversion needed)
-                          const userUnitIds = user.unit_id || [];
-                          
-                          // Pre-populate form with user data
-                          form.reset({
-                            email: user.email,
-                            name: user.name,
-                            password: "", // Don't pre-populate password for security
-                            role: user.role as "admin" | "user" | "manager",
-                            unit_id: userUnitIds,
-                            telephone: user.telephone || undefined,
-                            department: user.department || "",
-                            details: user.details || {
-                              gender: undefined,
-                              specialty: ""
-                            }
-                          });
-                        }}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setIsDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredUsers?.map((user) => {
+                  const isActive = user.is_active !== false;
+
+                  return (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <span className="capitalize">{user.role}</span>
+                      </TableCell>
+                      <TableCell>{getDisplayUnits(user.unit_id).join(", ") || "-"}</TableCell>
+                      <TableCell>{user.telephone || "-"}</TableCell>
+                      <TableCell>{user.department || "-"}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={
+                            isActive
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-destructive/20 bg-destructive/10 text-destructive"
+                          }
+                        >
+                          {isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right flex justify-end space-x-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={isActive ? "Deactivate user" : "Activate user"}
+                          title={isActive ? "Mark user as inactive" : "Mark user as active"}
+                          disabled={statusUpdatingId === user.id}
+                          onClick={() => toggleUserStatusMutation.mutate({ id: user.id, is_active: !isActive })}
+                        >
+                          {isActive ? (
+                            <UserX className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <UserCheck className="h-4 w-4 text-emerald-600" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setFormMode('edit');
+                            setEditUserDialogOpen(true);
+                            
+                            // Map user's unit IDs to unit IDs for the form (no conversion needed)
+                            const userUnitIds = user.unit_id || [];
+                            
+                            // Pre-populate form with user data
+                            form.reset({
+                              email: user.email,
+                              name: user.name,
+                              password: "", // Don't pre-populate password for security
+                              role: user.role as "admin" | "user" | "manager",
+                              is_active: user.is_active ?? true,
+                              unit_id: userUnitIds,
+                              telephone: user.telephone || undefined,
+                              department: user.department || "",
+                              details: user.details || {
+                                gender: undefined,
+                                specialty: ""
+                              }
+                            });
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -502,6 +585,7 @@ export default function UsersPage() {
               name: "",
               password: "",
               role: "user",
+              is_active: true,
               unit_id: [],
               telephone: undefined,
               department: "",
@@ -513,16 +597,17 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-screen">
           <DialogHeader>
             <DialogTitle>Add New User</DialogTitle>
             <DialogDescription>
               Enter the details for the new user below
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
@@ -583,6 +668,24 @@ export default function UsersPage() {
                       </SelectContent>
                     </Select>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Account status</FormLabel>
+                      <FormDescription>Inactive users cannot sign in.</FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />
@@ -708,20 +811,21 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setNewUserDialogOpen(false)}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={createUserMutation.isPending}>
-                  {createUserMutation.isPending ? "Creating..." : "Create User"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setNewUserDialogOpen(false)}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createUserMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              {createUserMutation.isPending ? "Creating..." : "Create User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -736,16 +840,17 @@ export default function UsersPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-screen">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
               Update the user details below
             </DialogDescription>
           </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
+          <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-4">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
@@ -819,6 +924,24 @@ export default function UsersPage() {
               />
               <FormField
                 control={form.control}
+                name="is_active"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-md border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Account status</FormLabel>
+                      <FormDescription>Inactive users cannot sign in.</FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="unit_id"
                 render={({ field }) => (
                   <FormItem>
@@ -939,20 +1062,21 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditUserDialogOpen(false)}
-                  type="button"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateUserMutation.isPending}>
-                  {updateUserMutation.isPending ? "Updating..." : "Update User"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
+              </form>
+            </Form>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setEditUserDialogOpen(false)}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateUserMutation.isPending} onClick={form.handleSubmit(onSubmit)}>
+              {updateUserMutation.isPending ? "Updating..." : "Update User"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

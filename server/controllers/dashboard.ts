@@ -117,7 +117,8 @@ export async function getDashboardStats(req: Request, res: Response) {
       .from('budget_history')
       .select(`
         id, change_type, project_id, previous_amount, new_amount, created_at, created_by, document_id, change_reason,
-        Projects!budget_history_project_id_fkey(mis, project_title)
+        Projects!budget_history_project_id_fkey(mis, project_title, na853),
+        generated_documents!budget_history_document_id_fkey(protocol_number_input)
       `);
     
     // For non-admin users, filter by unit_id through project_index relationship
@@ -178,8 +179,13 @@ export async function getDashboardStats(req: Request, res: Response) {
         : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
       
       // Create a more meaningful description using project data
-      const projectMis = activity.Projects?.[0]?.mis || activity.project_id;
-      let description = `Έργο ${projectMis}: `;
+      // Handle Projects as either single object or array
+      const projectData = Array.isArray(activity.Projects) ? activity.Projects[0] : activity.Projects;
+      const na853 = projectData?.na853 || '';
+      const mis = projectData?.mis || '';
+      // Prioritize NA853, then MIS, then project_id
+      const projectIdentifier = na853.trim() || mis.trim() || activity.project_id;
+      let description = `Έργο ${projectIdentifier}: `;
       
       if (activity.change_type === 'admin_update') {
         description += `Διοικητική ενημέρωση προϋπολογισμού (${changeText})`;
@@ -198,6 +204,9 @@ export async function getDashboardStats(req: Request, res: Response) {
         description += ` - Αιτία: ${activity.change_reason}`;
       }
       
+      const docData = Array.isArray(activity.generated_documents) ? activity.generated_documents[0] : activity.generated_documents;
+      const protocolNumber = docData?.protocol_number_input || activity.document_id;
+      
       return {
         id: activity.id,
         type: activity.change_type,
@@ -205,7 +214,9 @@ export async function getDashboardStats(req: Request, res: Response) {
         date: activity.created_at,
         createdBy: userName,
         documentId: activity.document_id,
-        mis: projectMis,
+        protocolNumber,
+        mis: mis || null,
+        na853: na853 || null,
         previousAmount,
         newAmount,
         changeAmount: difference

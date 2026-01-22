@@ -165,7 +165,7 @@ export function errorHandler(
   error: any,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   console.error('[ErrorHandler] Error caught:', {
     error: error.message,

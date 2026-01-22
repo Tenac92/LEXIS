@@ -50,19 +50,27 @@ const DialogContent = React.forwardRef<
           className
         )}
         onPointerDownOutside={(event) => {
-          const target = event.detail.originalEvent.target as HTMLElement | null;
-          if (target?.closest("[data-popover-content]")) {
+          const pointerTarget =
+            (event.target as HTMLElement | null) ??
+            ((event.detail.originalEvent as PointerEvent | undefined)?.target as HTMLElement | null);
+
+          if (pointerTarget?.closest("[data-popover-content]")) {
             event.preventDefault();
             return;
           }
+
           onPointerDownOutsideProp?.(event);
         }}
         onInteractOutside={(event) => {
-          const target = event.detail.originalEvent?.target as HTMLElement | null;
-          if (target?.closest("[data-popover-content]")) {
+          const interactiveTarget =
+            (event.target as HTMLElement | null) ??
+            ((event.detail.originalEvent as Event | undefined)?.target as HTMLElement | null);
+
+          if (interactiveTarget?.closest("[data-popover-content]")) {
             event.preventDefault();
             return;
           }
+
           onInteractOutsideProp?.(event);
         }}
         {...props}

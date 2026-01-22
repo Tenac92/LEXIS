@@ -52,6 +52,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   role: text("role").notNull().default("user"),
+  is_active: boolean("is_active").notNull().default(true),
   unit_id: integer("unit_id").array(),
   telephone: bigint("telephone", { mode: "number" }),
   department: text("department"),
@@ -92,6 +93,7 @@ export const projects = pgTable("Projects", {
   na853: text("na853").notNull().unique(),
   event_description: text("event_description").notNull().unique(),
   project_title: text("project_title"),
+  summary: text("summary"),
   event_year: jsonb("event_year").default([]),
   budget_e069: decimal("budget_e069", { precision: 12, scale: 2 }),
   budget_na271: decimal("budget_na271", { precision: 12, scale: 2 }),
@@ -127,6 +129,8 @@ export const projectBudget = pgTable("project_budget", {
     scale: 2,
   }).default("0"),
   user_view: decimal("user_view", { precision: 15, scale: 2 }).default("0"),
+  current_quarter_spent: decimal("current_quarter_spent", { precision: 15, scale: 2 }).default("0"),
+  year_close: jsonb("year_close"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
   last_quarter_check: text("last_quarter_check").default("q1"),
@@ -276,6 +280,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   }),
   original_protocol_date: date("original_protocol_date"),
   is_correction: boolean("is_correction").default(false),
+  is_returned: boolean("is_returned").default(false),
   comments: text("comments"),
   updated_by: text("updated_by"),
   updated_at: timestamp("updated_at", { withTimezone: true }),
@@ -350,6 +355,17 @@ export const monada = pgTable("Monada", {
 });
 
 /**
+ * For YL Table (Φορείς για Υλοποίηση)
+ * Contains implementing agencies that are handled by a Monada
+ * Example: "ΤΑΣ ΚΕΦΑΛΛΗΝΙΑΣ" is a for_yl handled by monada_id 5 (ΔΑΕΦΚ-ΔΕ)
+ * Used when the actual implementing agency differs from the parent Monada
+ */
+export const forYl = pgTable("for_yl", {
+  id: bigint("id", { mode: "number" }).generatedAlwaysAsIdentity().primaryKey(),
+  foreis: jsonb("foreis"), // Contains { title: string, monada_id: string }
+});
+
+/**
  * Employees Table
  * Contains employee information for autocomplete and recipient management
  */
@@ -361,6 +377,7 @@ export const employees = pgTable(
     name: text("name"),
     fathername: text("fathername"),
     afm: text("afm"),
+    afm_hash: text("afm_hash"),
     klados: text("klados"),
     attribute: text("attribute"),
     workaf: text("workaf"),
@@ -371,6 +388,7 @@ export const employees = pgTable(
       columns: [table.monada],
       foreignColumns: [monada.unit],
     }),
+    afmHashIndex: index("idx_employees_afm_hash").on(table.afm_hash),
   }),
 );
 
@@ -378,24 +396,29 @@ export const employees = pgTable(
  * Beneficiaries Table (Clean normalized structure)
  * Contains basic beneficiary information
  */
-export const beneficiaries = pgTable("beneficiaries", {
-  id: serial("id").primaryKey(),
-  afm: text("afm").notNull().unique(), // Tax ID (AFM) - text as per database
-  surname: text("surname").notNull(),
-  name: text("name").notNull(),
-  fathername: text("fathername"),
-  region: text("region"),
-  adeia: integer("adeia"), // License/permit number
-  cengsur1: text("cengsur1"), // Engineer 1 surname
-  cengname1: text("cengname1"), // Engineer 1 name
-  cengsur2: text("cengsur2"), // Engineer 2 surname
-  cengname2: text("cengname2"), // Engineer 2 name
-  onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-  freetext: text("freetext"), // Additional free text
-  date: date("date").defaultNow(),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at"),
-});
+export const beneficiaries = pgTable(
+  "beneficiaries",
+  {
+    id: serial("id").primaryKey(),
+    afm: text("afm").notNull(), // Tax ID (AFM) - encrypted, no longer unique
+    afm_hash: text("afm_hash").notNull().unique(), // Hash for uniqueness and search
+    surname: text("surname").notNull(),
+    name: text("name").notNull(),
+    fathername: text("fathername"),
+    adeia: integer("adeia"), // License/permit number
+    ceng1: integer("ceng1").references(() => employees.id), // Engineer 1 foreign key
+    ceng2: integer("ceng2").references(() => employees.id), // Engineer 2 foreign key
+    onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
+    freetext: text("freetext"), // Additional free text
+    regiondet: jsonb("regiondet"), // Region details as JSON
+    date: date("date").defaultNow(),
+    created_at: timestamp("created_at").defaultNow(),
+    updated_at: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    afmHashIndex: index("idx_beneficiaries_afm_hash").on(table.afm_hash),
+  })
+);
 
 /**
  * Beneficiary Payments Table (Replaces oikonomika JSONB)
@@ -472,6 +495,7 @@ export const employeePayments = pgTable(
       precision: 10,
       scale: 2,
     }).default("0.00"),
+    tickets_tolls_rental_entries: jsonb("tickets_tolls_rental_entries"), // Array of individual ticket/toll/rental amounts
     has_2_percent_deduction: boolean("has_2_percent_deduction").default(false),
     total_expense: decimal("total_expense", {
       precision: 10,
@@ -539,6 +563,7 @@ export const projectIndex = pgTable(
     expenditure_type_id: integer("expenditure_type_id")
       .notNull()
       .references(() => expenditureTypes.id), // NOT NULL - matches actual database schema
+    for_yl_id: integer("for_yl_id"), // Optional - implementing agency that differs from parent Monada
     // NOTE: kallikratis_id and geographic_code columns don't exist in actual database
     // Geographic data should be stored in a separate table or handled differently
   },
@@ -726,48 +751,6 @@ export const projectIndexMunis = pgTable(
 );
 
 /**
- * Legacy Beneficiary Table (for backward compatibility during migration)
- */
-export const beneficiariesLegacy = pgTable(
-  "Beneficiary",
-  {
-    id: serial("id").primaryKey(),
-    aa: integer("a / a"), // Serial number
-    region: text("region"),
-    adeia: integer("adeia"), // License/permit number
-    surname: text("surname"),
-    name: text("name"),
-    fathername: text("fathername"),
-    freetext: text("freetext"), // Additional free text
-    afm: integer("afm"), // Tax ID (AFM)
-    date: text("date"), // Date as text
-    monada: text("monada"), // Unit/Organization
-    cengsur1: text("cengsur1"), // Engineer 1 surname
-    cengname1: text("cengname1"), // Engineer 1 name
-    cengsur2: text("cengsur2"), // Engineer 2 surname
-    cengname2: text("cengname2"), // Engineer 2 name
-    onlinefoldernumber: text("onlinefoldernumber"), // Online folder number
-    project: integer("project"), // Legacy project reference (MIS code)
-    project_id: integer("project_id").references(() => projects.id, {
-      onDelete: "set null",
-    }), // New project reference by id
-    oikonomika: jsonb("oikonomika"), // Financial data - stores multiple payment records
-    created_at: timestamp("created_at").defaultNow(),
-    updated_at: timestamp("updated_at"),
-  },
-  (table) => ({
-    monadaReference: foreignKey({
-      columns: [table.monada],
-      foreignColumns: [monada.unit],
-    }),
-    projectReference: foreignKey({
-      columns: [table.project],
-      foreignColumns: [projects.mis],
-    }),
-  }),
-);
-
-/**
  * Normalized Project Decisions Table - "Αποφάσεις που τεκμηριώνουν το έργο"
  * Separate table for project decisions with proper foreign key relationships
  */
@@ -796,6 +779,7 @@ export const projectDecisions = pgTable(
 
     // Decision details
     implementing_agency: integer("implementing_agency").array(),
+    implementing_agency_for_yl: jsonb("implementing_agency_for_yl").default({}), // Maps unit_id -> for_yl_id (e.g., {"5": 12, "7": null})
     decision_budget: decimal("decision_budget", { precision: 12, scale: 2 }),
     expenditure_type: integer("expenditure_type").array(),
     decision_date: date("decision_date"),
@@ -922,7 +906,7 @@ export const projectBudgetVersions = pgTable(
     }).default("1.0"), // Sortable version number (e.g., 1.0, 1.1, 2.0)
 
     // ΠΔΕ specific fields
-    boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Οριοθέτησης
+    boundary_budget: decimal("boundary_budget", { precision: 12, scale: 2 }), // Προϋπολογισμός Κατάρτισης
 
     // ΕΠΑ specific fields
     epa_version: text("epa_version"),
@@ -1036,6 +1020,7 @@ export const extendedUserSchema = insertUserSchema.extend({
   role: z.string().refine((val) => ["admin", "user", "manager"].includes(val), {
     message: "Ο ρόλος πρέπει να είναι admin, user ή manager",
   }),
+  is_active: z.boolean().default(true),
   telephone: z
     .number()
     .int()
@@ -1063,7 +1048,7 @@ export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
   budget_type: z.enum(["ΠΔΕ", "ΕΠΑ"], {
     required_error: "Ο τύπος προϋπολογισμού είναι υποχρεωτικός",
   }),
-  boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Οριοθέτησης
+  boundary_budget: z.string().optional(), // For PDE - Προϋπολογισμός Κατάρτισης
   action_type: z
     .enum(["Έγκριση", "Τροποποίηση", "Κλείσιμο στο ύψος πληρωμών"])
     .default("Έγκριση"), // Είδος Πράξης
@@ -1072,15 +1057,22 @@ export const budgetVersionSchema = insertProjectBudgetVersionSchema.extend({
 // Schema for EPA financials with validation
 export const epaFinancialsSchema = insertEpaFinancialsSchema.extend({
   year: z.number().int().min(2000).max(2100, "Το έτος πρέπει να είναι έγκυρο"),
-  total_public_expense: z
-    .string()
-    .min(1, "Η συνολική δημόσια δαπάνη είναι υποχρεωτική"),
-  eligible_public_expense: z
-    .string()
-    .min(1, "Η επιλέξιμη δημόσια δαπάνη είναι υποχρεωτική"),
+  total_public_expense: z.string().optional().default("0"),
+  eligible_public_expense: z.string().optional().default("0"),
 });
 
 // Schema for document recipients
+export const regiondetSchema = z.object({
+  region_code: z.number().optional(),
+  region_name: z.string().optional(),
+  unit_code: z.number().optional(),
+  unit_name: z.string().optional(),
+  municipality_code: z.number().optional(),
+  municipality_name: z.string().optional(),
+}).optional().nullable();
+
+export type RegiondetSelection = z.infer<typeof regiondetSchema>;
+
 export const recipientSchema = z.object({
   id: z.number().optional(), // For existing beneficiary/employee payment records
   employee_id: z.number().optional(), // For linking to employees table (ΕΚΤΟΣ ΕΔΡΑΣ)
@@ -1098,6 +1090,7 @@ export const recipientSchema = z.object({
   installments: z.array(z.string()).default(["ΕΦΑΠΑΞ"]), // Νέο πεδίο για πολλαπλές δόσεις
   installmentAmounts: z.record(z.string(), z.number()).default({ ΕΦΑΠΑΞ: 0 }), // Πεδίο για ποσά ανά δόση
   status: z.string().optional(), // For payment status
+  regiondet: regiondetSchema, // Region details
   // Employee payment fields (ΕΚΤΟΣ ΕΔΡΑΣ only)
   month: z.string().optional(),
   days: z.number().optional(),
@@ -1106,6 +1099,7 @@ export const recipientSchema = z.object({
   kilometers_traveled: z.number().optional(),
   price_per_km: z.number().optional(),
   tickets_tolls_rental: z.number().optional(),
+  tickets_tolls_rental_entries: z.array(z.number()).optional().default([]), // Array of individual amounts
   has_2_percent_deduction: z.boolean().optional(),
   total_expense: z.number().optional(),
   deduction_2_percent: z.number().optional(),
@@ -1148,6 +1142,7 @@ export const editDocumentSchema = insertGeneratedDocumentSchema
     total_amount: z.number().min(0).optional(),
     esdian_field1: z.string().optional(),
     esdian_field2: z.string().optional(),
+    esdian_fields: z.array(z.string().optional()).optional().default([]),
     is_correction: z.boolean().default(false),
     original_protocol_number: z.string().optional(),
     original_protocol_date: z.string().optional(),
@@ -1289,6 +1284,7 @@ export type Employee = typeof employees.$inferSelect;
 export type Beneficiary = typeof beneficiaries.$inferSelect;
 export type BeneficiaryPayment = typeof beneficiaryPayments.$inferSelect;
 export type EmployeePayment = typeof employeePayments.$inferSelect;
+export type ForYl = typeof forYl.$inferSelect;
 
 // ==============================================================
 // 4. Entity Types above, Insert Types below
@@ -1359,12 +1355,16 @@ export interface OptimizedProject {
   na853: string;
   mis: string;
   budget_na853?: number;
+  budget_na271?: number;
+  budget_e069?: number;
   status?: string;
   created_at?: string;
   updated_at?: string;
   event_description?: string;
   project_title?: string;
   name?: string;
+  event_year?: string[] | number[];
+  inc_year?: number;
   event_type: {
     id?: number;
     name?: string;
@@ -1384,6 +1384,12 @@ export interface OptimizedProject {
     regional_unit?: string;
     municipality?: string;
   };
+  implementing_agency?: {
+    id?: number;
+    title?: string;
+  };
+  expenditure_types?: string[];
+  event_types?: string[];
 }
 
 // Manager information structure

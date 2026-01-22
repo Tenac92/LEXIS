@@ -28,10 +28,11 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
+import { parseEuropeanNumber } from "@/lib/number-format";
 import { apiRequest } from "@/lib/queryClient";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +40,13 @@ import {
   AlertCircle,
   Check,
   ChevronDown,
+  ChevronUp,
   FileText,
   FileX,
   Plus,
+  RotateCcw,
   Search,
+  Settings2,
   Trash2,
   User,
   Lightbulb,
@@ -98,6 +102,13 @@ import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSugges
 import { ProjectSelect } from "./components/ProjectSelect";
 import { SubprojectSelect } from "./components/SubprojectSelect";
 import { StepIndicator } from "./components/StepIndicator";
+import { BeneficiaryGeoSelector } from "./components/BeneficiaryGeoSelector";
+import {
+  isRegiondetComplete,
+  mergeRegiondetPreservingPayments,
+  normalizeRegiondetEntry,
+  type RegiondetSelection,
+} from "./utils/beneficiary-geo";
 
 // Main project interface - simplified as components are now extracted
 interface Project {
@@ -110,10 +121,18 @@ interface Project {
 // Components are now extracted to separate files
 // Main dialog component interface
 
+interface InitialBeneficiaryData {
+  firstname: string;
+  lastname: string;
+  fathername: string;
+  afm: string;
+}
+
 interface CreateDocumentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
+  initialBeneficiary?: InitialBeneficiaryData;
 }
 
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
@@ -136,12 +155,6 @@ interface BudgetData {
 }
 
 // Use the interface from the imported BudgetIndicator component
-
-interface CreateDocumentDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onClose: () => void;
-}
 
 // Animation variants
 const stepVariants = {
@@ -167,6 +180,7 @@ const stepVariants = {
 
 // Schemas
 const recipientSchema = z.object({
+  id: z.number().optional(),
   firstname: z
     .string()
     .min(2, "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες"),
@@ -195,10 +209,12 @@ const recipientSchema = z.object({
   kilometers_traveled: z.number().optional().default(0),
   price_per_km: z.number().optional().default(DEFAULT_PRICE_PER_KM),
   tickets_tolls_rental: z.number().optional().default(0),
+  tickets_tolls_rental_entries: z.array(z.number()).optional().default([]), // Array of individual amounts
   has_2_percent_deduction: z.boolean().optional().default(false),
   total_expense: z.number().optional(),
   deduction_2_percent: z.number().optional(),
   net_payable: z.number().optional(),
+  regiondet: z.any().optional().nullable(),
 });
 
 const signatureSchema = z.object({
@@ -221,12 +237,13 @@ const createDocumentSchema = z
       ),
     subproject_id: z.string().optional(),
     region: z.string().optional(),
+    for_yl_id: z.coerce.number().optional().nullable(),
     expenditure_type: z.string().min(1, "Ο τύπος δαπάνης είναι υποχρεωτικός"),
     recipients: z.array(recipientSchema).optional().default([]),
     total_amount: z.number().optional(),
     status: z.string().default("draft"),
     selectedAttachments: z.array(z.string()).optional().default([]),
-    esdian_fields: z.array(z.string()).optional().default([""]),
+    esdian_fields: z.array(z.string().optional()).optional().default([]),
     // Keep old fields for backward compatibility during transition
     esdian_field1: z.string().optional().default(""),
     esdian_field2: z.string().optional().default(""),
@@ -241,6 +258,14 @@ const createDocumentSchema = z
             code: z.ZodIssueCode.custom,
             message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
             path: ["recipients", index, "month"],
+          });
+        }
+        if (!recipient.employee_id) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "Employee selection is required for ΕΚΤΟΣ ΕΔΡΑΣ payments.",
+            path: ["recipients", index, "employee_id"],
           });
         }
         if (!recipient.net_payable || recipient.net_payable <= 0) {
@@ -259,6 +284,7 @@ export function CreateDocumentDialog({
   open,
   onOpenChange,
   onClose,
+  initialBeneficiary,
 }: CreateDocumentDialogProps) {
   // Get form state from context
   const {
@@ -276,6 +302,26 @@ export function CreateDocumentDialog({
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
+  
+  // LOCAL BUDGET VALIDATION STATE - independent of hook to prevent infinite loops
+  // This stores the real-time validation result when amounts change
+  const [localBudgetValidation, setLocalBudgetValidation] = useState<{
+    status: 'success' | 'warning' | 'error';
+    canCreate: boolean;
+    allowDocx: boolean;
+    message: string;
+    budgetType?: 'pistosi' | 'katanomi' | null; // Which budget limit is being exceeded
+  } | null>(null);
+  const [validationTimeout, setValidationTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Track which recipient indices have their housing allowance quarter details expanded
+  const [expandedQuarterDetails, setExpandedQuarterDetails] = useState<Set<number>>(new Set());
+  const [regiondetErrors, setRegiondetErrors] = useState<Record<number, string>>({});
+  const regiondetSaveTimers = useRef<Record<string, NodeJS.Timeout>>({});
+  const [regiondetSaveState, setRegiondetSaveState] = useState<
+    Record<string, { status: "idle" | "saving" | "error" | "saved"; message?: string }>
+  >({});
+  const lastRegiondetByBeneficiary = useRef<Record<string, RegiondetSelection | null>>({});
 
   // Memoize user unit IDs to avoid duplicate key warnings and improve performance
   const userUnitIds = useMemo(
@@ -318,11 +364,13 @@ export function CreateDocumentDialog({
             project_id: formValues.project_id,
             subproject_id: formValues.subproject_id,
             region: formValues.region,
+            for_yl_id: formValues.for_yl_id || null,
             expenditure_type: formValues.expenditure_type,
             recipients: formValues.recipients,
             status: formValues.status || "draft",
             selectedAttachments: formValues.selectedAttachments,
-            esdian_fields: formValues.esdian_fields || [""],
+            esdian_fields:
+              formValues.esdian_fields?.filter((field) => field) || [],
             // Keep old fields for backward compatibility during transition
             esdian_field1: formValues.esdian_field1 || "",
             esdian_field2: formValues.esdian_field2 || "",
@@ -365,24 +413,25 @@ export function CreateDocumentDialog({
       project_id: formData.project_id ? String(formData.project_id) : "", // Ensure string conversion
       subproject_id: formData.subproject_id || "",
       region: formData.region || "",
+      for_yl_id: formData.for_yl_id || null,
       expenditure_type: formData.expenditure_type || "",
       recipients: formData.recipients || [],
       status: formData.status || "draft",
       selectedAttachments: formData.selectedAttachments || [],
-      esdian_fields:
-        formData.esdian_fields ||
-        (formData.esdian_field1 || formData.esdian_field2
+      esdian_fields: Array.isArray(formData.esdian_fields)
+        ? formData.esdian_fields
+        : formData.esdian_field1 || formData.esdian_field2
           ? [formData.esdian_field1 || "", formData.esdian_field2 || ""].filter(
               Boolean,
             )
-          : [""]),
+          : [],
       // Keep old fields for backward compatibility during transition
       esdian_field1: formData.esdian_field1 || "",
       esdian_field2: formData.esdian_field2 || "",
       director_signature: formData.director_signature || undefined,
     }),
-    [formData],
-  ); // Fix: add dependencies to useMemo
+    [], // Empty deps - only initialize once, prevent re-initialization on every formData change
+  );
 
   const form = useForm<CreateDocumentForm>({
     resolver: zodResolver(createDocumentSchema),
@@ -411,12 +460,20 @@ export function CreateDocumentDialog({
     const selectedUnit = form.watch("unit");
     if (!selectedUnit) return [];
 
-    // Match by unit code (e.g., "ΔΑΕΦΚ-ΚΕ") since that's what the form stores
+    // Check if selectedUnit is a numeric ID
+    const parsedUnitId = parseInt(String(selectedUnit));
+    const isNumericUnit =
+      !isNaN(parsedUnitId) &&
+      String(parsedUnitId) === String(selectedUnit).trim();
+
+    // Match by unit ID if numeric, or by unit code if text
     return monada
-      .filter(
-        (unit: any) =>
-          unit.unit === selectedUnit && unit.director && unit.director.name,
-      )
+      .filter((unit: any) => {
+        const matchCondition = isNumericUnit
+          ? unit.id === parsedUnitId
+          : unit.unit === selectedUnit;
+        return matchCondition && unit.director && unit.director.name;
+      })
       .map((unit: any) => ({
         unit: unit.unit, // Use the unit code, not the numeric ID
         director: unit.director,
@@ -435,11 +492,21 @@ export function CreateDocumentDialog({
       return [];
     }
 
+    // Check if selectedUnit is a numeric ID
+    const parsedUnitId = parseInt(String(selectedUnit));
+    const isNumericUnit =
+      !isNaN(parsedUnitId) &&
+      String(parsedUnitId) === String(selectedUnit).trim();
+
     monada.forEach((unit: any) => {
-      // Match by unit code (e.g., "ΔΑΕΦΚ-ΚΕ") since that's what the form stores
+      // Match by unit ID if numeric, or by unit code if text
+      const matchCondition = isNumericUnit
+        ? unit.id === parsedUnitId
+        : unit.unit === selectedUnit;
+
       if (
         unit &&
-        unit.unit === selectedUnit &&
+        matchCondition &&
         unit.parts &&
         typeof unit.parts === "object"
       ) {
@@ -534,11 +601,10 @@ export function CreateDocumentDialog({
         }
 
         // Filter units based on user's assigned unit_id array
-        const userAllowedUnits = userUnitIds;
         devLog(
           "UserUnits",
           "Allowed:",
-          userAllowedUnits.length,
+          userUnitIds.length,
           "Available:",
           data.length,
         );
@@ -550,16 +616,19 @@ export function CreateDocumentDialog({
           }
 
           // Check if the unit ID matches any of the user's allowed units
-          // user.unit_id contains numeric unit IDs that match the 'unit' field in the API response
-          const unitId = String(item.unit);
-          return userAllowedUnits.includes(unitId);
+          // Handle type mismatches - both could be strings or numbers
+          const itemId = Number(item.id);
+          const matches = userUnitIds.some(
+            (uid: any) => Number(uid) === itemId,
+          );
+          return matches;
         });
 
         devLog(
           "FilteredUnits",
           filteredUnits.length,
           "restrictions:",
-          userAllowedUnits.length,
+          userUnitIds.length,
         );
 
         const processedUnits = filteredUnits.map((item: any) => {
@@ -641,6 +710,40 @@ export function CreateDocumentDialog({
     retry: 2,
   });
 
+  // Fetch for_yl (delegated implementing agencies) data
+  // Only fetch when user is authenticated to avoid HTML login page response
+  const { data: forYlData = [] } = useQuery({
+    queryKey: ["for-yl"],
+    queryFn: async () => {
+      try {
+        const response = await fetch("/api/units/for-yl", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          console.warn("[ForYl] Failed to fetch for_yl data:", response.status);
+          return [];
+        }
+
+        const data = await response.json();
+        console.log("[ForYl] Fetched data:", data);
+        console.log("[ForYl] Data type:", typeof data, "Is array:", Array.isArray(data), "Length:", Array.isArray(data) ? data.length : "N/A");
+        return data || [];
+      } catch (error) {
+        console.error("[ForYl] Error fetching for_yl:", error);
+        return [];
+      }
+    },
+    enabled: !!user, // Only fetch when user is authenticated
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // COMPLETE REWRITE: Multi-stage dialog initialization for complete flicker prevention
   // Uses advanced state management and form reconciliation techniques
   const dialogInitializationRef = useRef<{
@@ -656,31 +759,32 @@ export function CreateDocumentDialog({
   });
 
   const handleDialogOpen = useCallback(async () => {
-    // CRITICAL: Block dialog reinitialization during autocomplete operations
-    if (isDialogInitializing) {
-      return;
-    }
-
-    // CRITICAL: Block reinitialization if dialog is already open and in use
-    if (open && currentStep > 0) {
-      return;
-    }
-
-    // Prevent duplicate initializations
+    // Prevent duplicate initializations - use ref only to avoid temporal dead zone issues
     if (dialogInitializationRef.current.isInitializing) {
       return;
     }
 
+    // CRITICAL: Block reinitialization if dialog is already open and in use
+    // Use formData from context (not form.getValues()) since form may not be initialized yet
+    // Only block when we have meaningful form data AND dialog is currently in use
+    if (open && currentStep > 0 && !initialBeneficiary) {
+      return;
+    }
+
     // Only reset for truly new documents (when there's no saved state in context)
+    // EXCEPTION: Always reset when initialBeneficiary is provided (from beneficiary page)
     const hasExistingFormData =
       formData?.project_id ||
       formData?.expenditure_type ||
       (formData?.recipients && formData.recipients.length > 0);
 
-    if (!hasExistingFormData) {
+    // Force reset when initialBeneficiary is provided, even if there's existing form data
+    const shouldResetForm = !hasExistingFormData || !!initialBeneficiary;
+
+    if (shouldResetForm) {
       // Don't reset the unit if user has one assigned - preserve auto-selection
       let defaultUnit = "";
-      if (userUnitIds.length > 0) {
+      if (userUnitIds.length > 0 && units && units.length > 0) {
         // Convert user's unit ID to unit name for form
         devLog(
           "UserSetup",
@@ -689,8 +793,9 @@ export function CreateDocumentDialog({
           "available:",
           units.length,
         );
+        const userUnitIdStr = String(userUnitIds[0]);
         const userUnitData = units.find(
-          (item: any) => item.id === userUnitIds[0],
+          (item: any) => item.id === userUnitIdStr,
         );
         if (userUnitData) {
           defaultUnit = userUnitData.id; // Use unit ID, not unit name
@@ -700,13 +805,37 @@ export function CreateDocumentDialog({
         }
       }
 
+      // Create initial recipients array with prefilled beneficiary if provided
+      const initialRecipients = initialBeneficiary ? [{
+        firstname: initialBeneficiary.firstname,
+        lastname: initialBeneficiary.lastname,
+        fathername: initialBeneficiary.fathername || "",
+        afm: initialBeneficiary.afm,
+        amount: 0,
+        secondary_text: "",
+        installment: "ΕΦΑΠΑΞ",
+        installments: ["ΕΦΑΠΑΞ"],
+        installmentAmounts: {},
+        // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+        days: 1,
+        daily_compensation: 0,
+        accommodation_expenses: 0,
+        kilometers_traveled: 0,
+        price_per_km: DEFAULT_PRICE_PER_KM,
+        tickets_tolls_rental: 0,
+        tickets_tolls_rental_entries: [],
+        has_2_percent_deduction: false,
+        regiondet: null,
+      }] : [];
+
       // Reset form to default values for new document, but preserve unit
       form.reset({
         unit: defaultUnit,
         project_id: "",
         region: "",
+        for_yl_id: null,
         expenditure_type: "",
-        recipients: [],
+        recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
       });
@@ -716,8 +845,9 @@ export function CreateDocumentDialog({
         unit: defaultUnit,
         project_id: "",
         region: "",
+        for_yl_id: null,
         expenditure_type: "",
-        recipients: [],
+        recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
       });
@@ -827,14 +957,73 @@ export function CreateDocumentDialog({
 
       return () => clearTimeout(resetTimeout);
     }
-  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep]);
+  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, initialBeneficiary, units, userUnitIds, updateFormData, setCurrentStep, open]);
 
-  // Effect to handle dialog open state - FIXED: Remove handleDialogOpen from dependencies to prevent infinite loop
+  // Effect to handle dialog open state - triggers on open or when initialBeneficiary changes
   useEffect(() => {
     if (open && !dialogInitializationRef.current.isInitializing) {
       handleDialogOpen();
     }
-  }, [open]); // Removed handleDialogOpen from dependencies to break infinite loop
+  }, [open, initialBeneficiary]); // Also trigger when initialBeneficiary changes to prefill data
+
+  // SEPARATE EFFECT: Apply initialBeneficiary data directly to recipients without full form reset
+  // This ensures beneficiary prefill works even if dialog was previously used
+  const lastAppliedBeneficiaryRef = useRef<string | null>(null);
+  
+  // Reset the applied beneficiary ref when dialog closes or initialBeneficiary is cleared
+  useEffect(() => {
+    if (!open || !initialBeneficiary) {
+      // Reset when dialog closes or beneficiary is cleared, so it can be applied again next time
+      lastAppliedBeneficiaryRef.current = null;
+      return;
+    }
+    
+    // Create a unique key for this beneficiary to avoid duplicate applications
+    const beneficiaryKey = `${initialBeneficiary.afm}-${initialBeneficiary.firstname}-${initialBeneficiary.lastname}`;
+    
+    // Skip if we already applied this exact beneficiary
+    if (lastAppliedBeneficiaryRef.current === beneficiaryKey) {
+      return;
+    }
+    
+    console.log("[CreateDocument] Applying initialBeneficiary directly:", initialBeneficiary);
+    
+    // Create the recipient object from beneficiary data with all required fields
+    const newRecipient = {
+      firstname: initialBeneficiary.firstname,
+      lastname: initialBeneficiary.lastname,
+      fathername: initialBeneficiary.fathername || "",
+      afm: initialBeneficiary.afm,
+      amount: 0,
+      secondary_text: "",
+      installment: "ΕΦΑΠΑΞ",
+      installments: ["ΕΦΑΠΑΞ"],
+      installmentAmounts: {},
+      // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+      days: 1,
+      daily_compensation: 0,
+      accommodation_expenses: 0,
+      kilometers_traveled: 0,
+      price_per_km: DEFAULT_PRICE_PER_KM,
+      tickets_tolls_rental: 0,
+      tickets_tolls_rental_entries: [],
+      has_2_percent_deduction: false,
+    };
+    
+    // Apply to form - replace recipients with the prefilled beneficiary
+    form.setValue("recipients", [newRecipient], { shouldValidate: false });
+    
+    // Also update the form context
+    updateFormData({
+      ...formData,
+      recipients: [newRecipient],
+    });
+    
+    // Mark as applied to prevent duplicate applications
+    lastAppliedBeneficiaryRef.current = beneficiaryKey;
+    
+    console.log("[CreateDocument] Beneficiary applied successfully");
+  }, [open, initialBeneficiary, form, formData, updateFormData]);
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
@@ -959,6 +1148,32 @@ export function CreateDocumentDialog({
   const selectedAttachments = form.watch("selectedAttachments") || [];
   const esdianField1 = form.watch("esdian_field1") || "";
   const esdianField2 = form.watch("esdian_field2") || "";
+  const selectedForYlId = form.watch("for_yl_id");
+
+  // Effect to validate for_yl_id when unit or forYlData changes
+  // Clear for_yl_id if it no longer belongs to the available options for the selected unit
+  useEffect(() => {
+    // Skip if no for_yl_id is selected (handles null, undefined, 0)
+    const currentForYlId = selectedForYlId;
+    if (!currentForYlId || !selectedUnit || !forYlData?.length) return;
+    
+    // Filter for_yl options by the selected unit
+    const availableForYl = forYlData.filter(
+      (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnit)
+    );
+    
+    // Check if the current for_yl_id is in the available options (handle both number and string comparisons)
+    const isValidSelection = availableForYl.some((fy: any) => 
+      fy.id === currentForYlId || String(fy.id) === String(currentForYlId)
+    );
+    
+    if (!isValidSelection) {
+      console.log("[ForYlValidation] Clearing invalid for_yl_id:", currentForYlId, "for unit:", selectedUnit);
+      form.setValue("for_yl_id", null);
+      // Only update for_yl_id in context, preserving other values from form
+      updateFormData({ for_yl_id: null });
+    }
+  }, [selectedUnit, forYlData, selectedForYlId, form, updateFormData]);
 
   // Simplified state management - replace complex ref-based blocking
   const [isDialogInitializing, setIsDialogInitializing] = useState(false);
@@ -999,8 +1214,6 @@ export function CreateDocumentDialog({
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
-
-  // Removed redundant logging useEffect for recipients updates
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
@@ -1107,6 +1320,20 @@ export function CreateDocumentDialog({
     const currentRecipient = form.watch(`recipients.${index}`);
     const selectedInstallments = currentRecipient?.installments || [];
     const installmentAmounts = currentRecipient?.installmentAmounts || {};
+
+    // Use component-level state for showing/hiding quarter details
+    const showQuarterDetails = expandedQuarterDetails.has(index);
+    const toggleQuarterDetails = () => {
+      setExpandedQuarterDetails((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(index)) {
+          newSet.delete(index);
+        } else {
+          newSet.add(index);
+        }
+        return newSet;
+      });
+    };
 
     // Control function to toggle an installment selection - simplified version
     const handleInstallmentToggle = (installment: string) => {
@@ -1437,77 +1664,327 @@ export function CreateDocumentDialog({
       }
     };
 
-    return (
-      <div className="w-full">
-        <div className="mb-2">
-          <label className="text-sm font-medium mb-2 block">
-            {expenditureType === HOUSING_ALLOWANCE_TYPE
-              ? "Τρίμηνα:"
-              : "Δόσεις:"}
-          </label>
+    // Calculate total for display
+    const totalAmount = Object.values(installmentAmounts).reduce(
+      (sum: number, amount: number) => sum + (amount || 0),
+      0,
+    );
 
-          {expenditureType === HOUSING_ALLOWANCE_TYPE ? (
-            // Housing allowance quarter selection - compact design
-            <div className="space-y-3">
-              <div className="grid grid-cols-8 gap-1.5">
-                {availableInstallments.map((quarter) => {
+    // ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ - Sophisticated Range Selector Layout
+    if (expenditureType === HOUSING_ALLOWANCE_TYPE) {
+      // Extract from/to quarters from selected installments
+      const quarterNumbers = selectedInstallments
+        .map((q) => parseInt(q.replace("ΤΡΙΜΗΝΟ ", "")))
+        .filter((n) => !isNaN(n))
+        .sort((a, b) => a - b);
+      
+      const fromQuarter = quarterNumbers.length > 0 ? quarterNumbers[0] : 1;
+      const toQuarter = quarterNumbers.length > 0 ? quarterNumbers[quarterNumbers.length - 1] : 1;
+      const quarterCount = quarterNumbers.length;
+
+      // Check if any amounts differ from STANDARD_QUARTER_AMOUNT (canonical baseline)
+      const hasCustomAmounts = selectedInstallments.some(
+        (q) => (installmentAmounts[q] || STANDARD_QUARTER_AMOUNT) !== STANDARD_QUARTER_AMOUNT
+      );
+      
+      // Calculate a "representative" amount for display (first quarter or standard)
+      const displayAmount = selectedInstallments.length > 0 
+        ? (installmentAmounts[selectedInstallments[0]] || STANDARD_QUARTER_AMOUNT)
+        : STANDARD_QUARTER_AMOUNT;
+      
+      // Check if all amounts are uniform (same value, even if custom)
+      const allAmounts = selectedInstallments.map((q) => installmentAmounts[q] || STANDARD_QUARTER_AMOUNT);
+      const areAllUniform = allAmounts.length > 0 && allAmounts.every((a) => a === allAmounts[0]);
+
+      // Handler for changing the quarter range - ALWAYS use STANDARD_QUARTER_AMOUNT for new quarters
+      const handleRangeChange = (newFrom: number, newTo: number) => {
+        if (newFrom > newTo || newFrom < 1) return;
+        
+        setIsFormSyncing(true);
+        try {
+          const newInstallments: string[] = [];
+          const newAmounts: Record<string, number> = {};
+          
+          // Build new range - preserve existing amounts only for quarters in new range
+          for (let i = newFrom; i <= newTo; i++) {
+            const quarterKey = `ΤΡΙΜΗΝΟ ${i}`;
+            newInstallments.push(quarterKey);
+            // Only keep existing amount if quarter was previously selected, otherwise use standard
+            if (selectedInstallments.includes(quarterKey) && installmentAmounts[quarterKey]) {
+              newAmounts[quarterKey] = installmentAmounts[quarterKey];
+            } else {
+              newAmounts[quarterKey] = STANDARD_QUARTER_AMOUNT;
+            }
+          }
+
+          const newTotal = Object.values(newAmounts).reduce((sum, a) => sum + a, 0);
+
+          form.setValue(`recipients.${index}.installments`, newInstallments);
+          form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
+          form.setValue(`recipients.${index}.amount`, newTotal);
+
+          setTimeout(() => {
+            const updatedRecipients = JSON.parse(JSON.stringify(recipients));
+            if (updatedRecipients[index]) {
+              updatedRecipients[index] = {
+                ...updatedRecipients[index],
+                installments: newInstallments,
+                installmentAmounts: newAmounts,
+                amount: newTotal,
+              };
+              updateFormData({ recipients: updatedRecipients });
+            }
+          }, 100);
+        } finally {
+          setTimeout(() => setIsFormSyncing(false), 150);
+        }
+      };
+
+      // Handler for changing the default amount (applies uniformly to ALL current quarters)
+      const handleDefaultAmountChange = (newAmount: number) => {
+        if (selectedInstallments.length === 0) return;
+        
+        setIsFormSyncing(true);
+        try {
+          const newAmounts: Record<string, number> = {};
+          // Apply new amount to ALL selected installments
+          selectedInstallments.forEach((q) => {
+            newAmounts[q] = newAmount;
+          });
+
+          const newTotal = newAmount * selectedInstallments.length;
+
+          form.setValue(`recipients.${index}.installmentAmounts`, newAmounts);
+          form.setValue(`recipients.${index}.amount`, newTotal);
+
+          setTimeout(() => {
+            const updatedRecipients = JSON.parse(JSON.stringify(recipients));
+            if (updatedRecipients[index]) {
+              updatedRecipients[index] = {
+                ...updatedRecipients[index],
+                installmentAmounts: newAmounts,
+                amount: newTotal,
+              };
+              updateFormData({ recipients: updatedRecipients });
+            }
+          }, 100);
+        } finally {
+          setTimeout(() => setIsFormSyncing(false), 150);
+        }
+      };
+
+      // Handler for resetting all quarters to the canonical STANDARD_QUARTER_AMOUNT
+      const handleResetToUniform = () => {
+        handleDefaultAmountChange(STANDARD_QUARTER_AMOUNT);
+      };
+
+      return (
+        <div className="w-full space-y-2">
+          {/* Compact main row */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* From Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Από Τρίμηνο</label>
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (fromQuarter > 1) {
+                      handleRangeChange(fromQuarter - 1, toQuarter);
+                    }
+                  }}
+                  disabled={fromQuarter <= 1}
+                  className="h-8 w-8 p-0 rounded-r-none border-r-0"
+                >
+                  −
+                </Button>
+                <Input
+                  type="text"
+                  value={fromQuarter}
+                  onChange={(e) => {
+                    const newFrom = parseInt(e.target.value) || 1;
+                    if (newFrom >= 1) {
+                      handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
+                    }
+                  }}
+                  className="w-12 h-8 text-sm text-center px-1 rounded-none border-x-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newFrom = fromQuarter + 1;
+                    handleRangeChange(newFrom, Math.max(newFrom, toQuarter));
+                  }}
+                  className="h-8 w-8 p-0 rounded-l-none border-l-0"
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* To Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Έως Τρίμηνο</label>
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (toQuarter > fromQuarter) {
+                      handleRangeChange(fromQuarter, toQuarter - 1);
+                    }
+                  }}
+                  disabled={toQuarter <= fromQuarter}
+                  className="h-8 w-8 p-0 rounded-r-none border-r-0"
+                >
+                  −
+                </Button>
+                <Input
+                  type="text"
+                  value={toQuarter}
+                  onChange={(e) => {
+                    const newTo = parseInt(e.target.value) || fromQuarter;
+                    handleRangeChange(fromQuarter, Math.max(fromQuarter, newTo));
+                  }}
+                  className="w-12 h-8 text-sm text-center px-1 rounded-none border-x-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRangeChange(fromQuarter, toQuarter + 1)}
+                  className="h-8 w-8 p-0 rounded-l-none border-l-0"
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* Separator */}
+            <div className="h-6 w-px bg-border" />
+
+            {/* Default Amount per Quarter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Ποσό/τρίμηνο</label>
+              <div className="relative">
+                <NumberInput
+                  value={areAllUniform ? displayAmount : ""}
+                  onChange={(formatted, numeric) => handleDefaultAmountChange(numeric || 0)}
+                  className="w-24 h-8 text-sm pr-5"
+                  placeholder={areAllUniform ? "900,00" : "Διάφορα"}
+                  decimals={2}
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
+              </div>
+            </div>
+
+            {/* Summary */}
+            <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md ml-auto">
+              <span className="text-xs text-muted-foreground">{quarterCount} τρίμ.</span>
+              <span className="text-sm font-bold text-primary">
+                {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
+              </span>
+            </div>
+
+            {/* Customize button */}
+            <Button
+              type="button"
+              variant={showQuarterDetails ? "secondary" : "ghost"}
+              size="sm"
+              onClick={toggleQuarterDetails}
+              className="h-8 px-2 text-xs"
+            >
+              {showQuarterDetails ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Κλείσιμο
+                </>
+              ) : (
+                <>
+                  <Settings2 className="h-3 w-3 mr-1" />
+                  Προσαρμογή
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Expanded per-quarter details */}
+          {showQuarterDetails && (
+            <div className="border rounded-md p-3 bg-muted/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Ποσά ανά τρίμηνο</span>
+                {hasCustomAmounts && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetToUniform}
+                    className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Επαναφορά σε {STANDARD_QUARTER_AMOUNT}€
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedInstallments.map((quarter) => {
                   const quarterNum = quarter.replace("ΤΡΙΜΗΝΟ ", "");
+                  const amount = installmentAmounts[quarter] || STANDARD_QUARTER_AMOUNT;
+                  // Highlight if amount differs from STANDARD_QUARTER_AMOUNT
+                  const isCustom = amount !== STANDARD_QUARTER_AMOUNT;
+                  
                   return (
-                    <Button
+                    <div
                       key={quarter}
-                      type="button"
-                      variant={
-                        selectedInstallments.includes(quarter)
-                          ? "default"
-                          : "outline"
-                      }
-                      size="sm"
-                      onClick={() => handleInstallmentToggle(quarter)}
-                      className="h-7 px-1 text-xs font-medium"
+                      className={`flex items-center gap-1 rounded-md px-2 py-1 ${
+                        isCustom ? "bg-amber-100 dark:bg-amber-900/30 ring-1 ring-amber-300" : "bg-background"
+                      }`}
                     >
-                      {quarterNum}
-                    </Button>
+                      <span className="text-xs font-medium w-6">Τ{quarterNum}</span>
+                      <div className="relative">
+                        <NumberInput
+                          value={amount}
+                          onChange={(formatted, numeric) =>
+                            handleInstallmentAmountChange(quarter, numeric || 0)
+                          }
+                          className="w-20 h-7 text-xs pr-4"
+                          placeholder="900"
+                          decimals={2}
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground">€</span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
-
-              {selectedInstallments.length > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-blue-700 font-medium">
-                      Επιλογή:{" "}
-                      {selectedInstallments
-                        .sort((a, b) => {
-                          const aNum = parseInt(a.replace("ΤΡΙΜΗΝΟ ", ""));
-                          const bNum = parseInt(b.replace("ΤΡΙΜΗΝΟ ", ""));
-                          return aNum - bNum;
-                        })
-                        .map((q) => q.replace("ΤΡΙΜΗΝΟ ", ""))
-                        .join("-")}
-                    </span>
-                    <span className="text-blue-600">
-                      {selectedInstallments.length} τρίμηνα
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
-          ) : (
-            // Segmented control for installment selection
-            <div className="grid grid-cols-2 gap-2">
+          )}
+        </div>
+      );
+    }
+
+    // Regular Installments (ΔΚΑ, etc.) - Horizontal Layout
+    return (
+      <div className="w-full">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+          {/* Left side: Installment buttons */}
+          <div className="flex-shrink-0">
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">Δόσεις</label>
+            <div className="flex flex-wrap items-center gap-2">
               {availableInstallments
                 .filter((inst) => !inst.includes("συμπληρωματική"))
                 .map((installment) => {
-                  const isRegularSelected =
-                    selectedInstallments.includes(installment);
+                  const isRegularSelected = selectedInstallments.includes(installment);
                   const supplementaryVersion = `${installment} συμπληρωματική`;
-                  const isSupplementarySelected =
-                    selectedInstallments.includes(supplementaryVersion);
+                  const isSupplementarySelected = selectedInstallments.includes(supplementaryVersion);
                   const isDKA = DKA_TYPES.includes(expenditureType);
-                  const canHaveSupplementary =
-                    isDKA && installment !== "ΕΦΑΠΑΞ";
+                  const canHaveSupplementary = isDKA && installment !== "ΕΦΑΠΑΞ";
 
-                  // For ΕΦΑΠΑΞ or non-DKA types, show single button
                   if (!canHaveSupplementary) {
                     return (
                       <Button
@@ -1516,7 +1993,7 @@ export function CreateDocumentDialog({
                         variant={isRegularSelected ? "default" : "outline"}
                         size="sm"
                         onClick={() => handleInstallmentToggle(installment)}
-                        className="h-8 px-3"
+                        className="h-9 px-4"
                         data-testid={`installment-${installment}`}
                       >
                         {installment}
@@ -1524,113 +2001,87 @@ export function CreateDocumentDialog({
                     );
                   }
 
-                  // For DKA installments, show segmented control
                   return (
-                    <div
-                      key={installment}
-                      className="inline-flex rounded-md border border-input"
-                      role="group"
-                    >
+                    <div key={installment} className="inline-flex rounded-md border border-input overflow-hidden" role="group">
                       <Button
                         type="button"
                         variant={isRegularSelected ? "default" : "ghost"}
                         size="sm"
                         onClick={() => {
                           if (isSupplementarySelected) {
-                            // Switch from supplementary to regular
                             handleInstallmentToggle(supplementaryVersion);
                             handleInstallmentToggle(installment);
                           } else {
                             handleInstallmentToggle(installment);
                           }
                         }}
-                        className={`h-8 px-3 rounded-r-none border-r ${
-                          isRegularSelected
-                            ? ""
-                            : "border-transparent hover:bg-accent"
-                        }`}
+                        className={`h-9 px-3 rounded-none ${isRegularSelected ? "" : "hover:bg-accent"}`}
                         data-testid={`installment-regular-${installment}`}
                       >
                         {installment}
                       </Button>
+                      <div className="w-px bg-border" />
                       <Button
                         type="button"
                         variant={isSupplementarySelected ? "default" : "ghost"}
                         size="sm"
                         onClick={() => {
                           if (isRegularSelected) {
-                            // Switch from regular to supplementary
                             handleInstallmentToggle(installment);
                             handleInstallmentToggle(supplementaryVersion);
                           } else {
                             handleInstallmentToggle(supplementaryVersion);
                           }
                         }}
-                        className={`h-8 px-2 rounded-l-none text-xs ${
-                          isSupplementarySelected
-                            ? ""
-                            : "border-transparent hover:bg-accent"
-                        }`}
+                        className={`h-9 px-2 rounded-none text-xs ${isSupplementarySelected ? "" : "hover:bg-accent"}`}
                         data-testid={`installment-supplementary-${installment}`}
                       >
-                        {installment} ΣΥΜ.
+                        ΣΥΜ.
                       </Button>
                     </div>
                   );
                 })}
             </div>
-          )}
-        </div>
+          </div>
 
-        {selectedInstallments.length > 0 && (
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-1.5">
-              {selectedInstallments.map((installment) => (
-                <div key={installment} className="flex items-center gap-1.5">
-                  <div className="font-medium text-xs bg-muted px-2 py-1 rounded min-w-[60px] text-center">
-                    {expenditureType === HOUSING_ALLOWANCE_TYPE
-                      ? installment.replace("ΤΡΙΜΗΝΟ ", "Τ")
-                      : installment.includes("συμπληρωματική")
+          {/* Right side: Amount inputs */}
+          {selectedInstallments.length > 0 && (
+            <div className="flex-1 min-w-0">
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Ποσά</label>
+              <div className="flex flex-wrap items-center gap-3">
+                {selectedInstallments.map((installment) => (
+                  <div key={installment} className="flex items-center gap-1.5 bg-muted/50 rounded-md pl-2 pr-1 py-1">
+                    <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                      {installment.includes("συμπληρωματική")
                         ? installment.replace(" συμπληρωματική", " ΣΥΜ.")
                         : installment}
-                  </div>
-                  <div className="relative flex-1">
-                    <NumberInput
-                      value={installmentAmounts[installment] || ""}
-                      onChange={(formatted, numeric) =>
-                        handleInstallmentAmountChange(installment, numeric || 0)
-                      }
-                      className="pr-6 h-8 text-sm"
-                      placeholder={
-                        expenditureType === HOUSING_ALLOWANCE_TYPE
-                          ? "900,00"
-                          : "Ποσό"
-                      }
-                      decimals={2}
-                    />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">
-                      €
                     </span>
+                    <div className="relative w-24">
+                      <NumberInput
+                        value={installmentAmounts[installment] || ""}
+                        onChange={(formatted, numeric) =>
+                          handleInstallmentAmountChange(installment, numeric || 0)
+                        }
+                        className="h-8 text-sm pr-5"
+                        placeholder="0,00"
+                        decimals={2}
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">€</span>
+                    </div>
                   </div>
+                ))}
+                
+                {/* Total display inline */}
+                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-md ml-auto">
+                  <span className="text-sm text-muted-foreground">Σύνολο:</span>
+                  <span className="text-base font-bold text-primary">
+                    {totalAmount.toLocaleString("el-GR", { style: "currency", currency: "EUR" })}
+                  </span>
                 </div>
-              ))}
+              </div>
             </div>
-            <div className="text-xs font-medium flex justify-between pt-1.5 border-t">
-              <span>Συνολικό ποσό:</span>
-              <span className="text-primary">
-                {Object.values(installmentAmounts)
-                  .reduce(
-                    (sum: number, amount: number) => sum + (amount || 0),
-                    0,
-                  )
-                  .toLocaleString("el-GR", {
-                    style: "currency",
-                    currency: "EUR",
-                  })}
-              </span>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
@@ -1777,6 +2228,95 @@ export function CreateDocumentDialog({
     // This useEffect was causing infinite loops - disabled
   }, []);
   */
+
+  // DEBOUNCED BUDGET VALIDATION - validates when amounts change in Step 2
+  // This checks BOTH Πίστωση and Κατανομή έτους limits
+  useEffect(() => {
+    // Only validate when on Step 2 (recipients) and we have a project and amount
+    const projectId = selectedProjectId || formData.project_id;
+    
+    if (currentStep !== 2 || !projectId || currentAmount <= 0) {
+      // Reset validation when conditions aren't met
+      if (currentAmount === 0 && localBudgetValidation !== null) {
+        setLocalBudgetValidation(null);
+      }
+      return;
+    }
+
+    // Clear any existing timeout
+    if (validationTimeout) {
+      clearTimeout(validationTimeout);
+    }
+
+    // Debounce validation by 500ms
+    const timeout = setTimeout(async () => {
+      try {
+        console.log('[BudgetValidation] Validating amount:', currentAmount, 'for project:', projectId);
+        
+        const response = await fetch('/api/budget/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            mis: projectId,
+            amount: currentAmount,
+          })
+        });
+        
+        if (!response.ok) {
+          console.warn('[BudgetValidation] API error:', response.status);
+          return;
+        }
+        
+        const data = await response.json();
+        console.log('[BudgetValidation] Response:', data);
+        
+        // Determine which budget type is being exceeded based on the response
+        // The backend should return budget_indicators with details
+        const budgetIndicators = data.metadata?.budget_indicators || {};
+        const available = Number(budgetIndicators.available_budget) || Number(budgetData?.available_budget) || 0;
+        const katanomesEtous = Number(budgetData?.katanomes_etous) || 0;
+        const ethsiaPistosi = Number(budgetData?.ethsia_pistosi) || 0;
+        const userView = Number(budgetData?.user_view) || 0;
+        
+        // Calculate what's being exceeded
+        // Πίστωση check: if userView + currentAmount > ethsia_pistosi
+        // Κατανομή check: if userView + currentAmount > katanomes_etous
+        const willExceedPistosi = (userView + currentAmount) > ethsiaPistosi;
+        const willExceedKatanomi = (userView + currentAmount) > katanomesEtous;
+        
+        // PRIORITY: Πίστωση ALWAYS takes precedence because it's a hard limit
+        // If Πίστωση is exceeded, user CANNOT proceed - requires Ανακατανομή
+        // If only Κατανομή is exceeded, user can save but DOCX is blocked - requires Χρηματοδότηση
+        let budgetType: 'pistosi' | 'katanomi' | null = null;
+        if (willExceedPistosi) {
+          // Πίστωση exceeded = HARD BLOCK, need ανακατανομή (regardless of katanomi status)
+          budgetType = 'pistosi';
+        } else if (willExceedKatanomi) {
+          // Only Κατανομή exceeded (pistosi OK) = SOFT BLOCK, can save but no DOCX, need χρηματοδότηση
+          budgetType = 'katanomi';
+        }
+        
+        setLocalBudgetValidation({
+          status: data.status || (data.canCreate ? 'success' : 'error'),
+          canCreate: data.canCreate ?? true,
+          allowDocx: data.allowDocx ?? true,
+          message: data.message || '',
+          budgetType,
+        });
+        
+      } catch (error) {
+        console.error('[BudgetValidation] Error:', error);
+      }
+    }, 500);
+    
+    setValidationTimeout(timeout);
+    
+    // Cleanup
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [currentAmount, currentStep, selectedProjectId, formData.project_id, budgetData]);
 
   const { data: attachments = [], isLoading: attachmentsLoading } = useQuery({
     queryKey: ["attachments", form.watch("expenditure_type")],
@@ -1968,10 +2508,10 @@ export function CreateDocumentDialog({
   }, [validationResult, toast]);
 
   // Fix validation logic: Allow submission if validation is null/undefined (no validation needed)
-  // Only block if validation explicitly says error or canCreate is false
+  // Only block if Πίστωση is exceeded (pistosi type) - hard block
+  // Κατανομή exceeded (katanomi type) allows saving but blocks DOCX
   const isSubmitDisabled =
-    validationResult?.status === "error" ||
-    validationResult?.canCreate === false;
+    localBudgetValidation?.budgetType === 'pistosi'; // Only pistosi is a hard block
 
   // Debug validation issues - logging removed for cleaner console
 
@@ -1997,24 +2537,51 @@ export function CreateDocumentDialog({
         throw new Error("Απαιτείται τουλάχιστον ένας δικαιούχος");
       }
 
-      const invalidRecipients = data.recipients.some((r, index) => {
-        // For ΕΚΤΟΣ ΕΔΡΑΣ, skip installments validation since it uses employee-based payments
+      if (!validateBeneficiaryRegions()) {
+        return;
+      }
+
+      // Detailed validation for each recipient
+      for (let index = 0; index < data.recipients.length; index++) {
+        const r = data.recipients[index];
         const isEktosEdras = data.expenditure_type === EKTOS_EDRAS_TYPE;
 
-        const isInvalid =
-          !r.firstname ||
-          !r.lastname ||
-          !r.afm ||
-          typeof r.amount !== "number" ||
-          (!isEktosEdras && (!r.installments || r.installments.length === 0));
-
-        if (isInvalid) {
-          devLog("ValidationFail", `Recipient ${index} invalid fields`);
+        // Check required fields with specific error messages
+        if (!r.firstname || r.firstname.trim() === "") {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το όνομα είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`,
+          );
         }
-        return isInvalid;
-      });
-      if (invalidRecipients) {
-        throw new Error("Όλα τα πεδία δικαιούχου πρέπει να συμπληρωθούν");
+        if (!r.lastname || r.lastname.trim() === "") {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το επώνυμο είναι υποχρεωτικό. Παρακαλώ αναζητήστε και επιλέξτε δικαιούχο με βάση το ΑΦΜ.`,
+          );
+        }
+        if (!r.afm || r.afm.trim() === "") {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ΑΦΜ είναι υποχρεωτικό.`,
+          );
+        }
+        if (r.afm.trim().length !== 9) {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ΑΦΜ πρέπει να έχει ακριβώς 9 ψηφία.`,
+          );
+        }
+        if (!isRegiondetComplete(r.regiondet as RegiondetSelection)) {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Απαιτείται γεωγραφική επιλογή.`,
+          );
+        }
+        if (typeof r.amount !== "number" || r.amount <= 0) {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Το ποσό πρέπει να είναι μεγαλύτερο από 0.`,
+          );
+        }
+        if (!isEktosEdras && (!r.installments || r.installments.length === 0)) {
+          throw new Error(
+            `Δικαιούχος #${index + 1}: Πρέπει να επιλέξετε τουλάχιστον μία δόση.`,
+          );
+        }
       }
 
       // Validate that all installments are in sequence (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
@@ -2051,40 +2618,61 @@ export function CreateDocumentDialog({
       // Validate that all installments have amounts entered (skip for ΕΚΤΟΣ ΕΔΡΑΣ)
       if (data.expenditure_type !== EKTOS_EDRAS_TYPE) {
         console.log("[HandleSubmit] Checking installment amounts...");
-        const missingInstallmentAmounts = data.recipients.some(
-          (recipient, index) => {
+
+        // Find recipients with missing installment amounts
+        const recipientsWithMissingAmounts: {
+          index: number;
+          missingInstallments: string[];
+        }[] = [];
+
+        data.recipients.forEach((recipient, index) => {
+          console.log(
+            `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
+            {
+              installments: recipient.installments,
+              installmentAmounts: recipient.installmentAmounts,
+            },
+          );
+
+          const missingInstallments: string[] = [];
+          recipient.installments.forEach((installment) => {
+            const hasAmount =
+              recipient.installmentAmounts &&
+              typeof recipient.installmentAmounts[installment] === "number" &&
+              recipient.installmentAmounts[installment] > 0;
+
             console.log(
-              `[HandleSubmit] Checking installment amounts for recipient ${index}:`,
+              `[HandleSubmit] Installment ${installment} validation:`,
               {
-                installments: recipient.installments,
-                installmentAmounts: recipient.installmentAmounts,
+                hasAmounts: !!recipient.installmentAmounts,
+                value: recipient.installmentAmounts?.[installment],
+                type: typeof recipient.installmentAmounts?.[installment],
+                hasAmount: hasAmount,
               },
             );
-            return recipient.installments.some((installment) => {
-              const isInvalid =
-                !recipient.installmentAmounts ||
-                typeof recipient.installmentAmounts[installment] !== "number" ||
-                recipient.installmentAmounts[installment] <= 0;
-              console.log(
-                `[HandleSubmit] Installment ${installment} validation:`,
-                {
-                  hasAmounts: !!recipient.installmentAmounts,
-                  value: recipient.installmentAmounts?.[installment],
-                  type: typeof recipient.installmentAmounts?.[installment],
-                  isInvalid: isInvalid,
-                },
-              );
-              return isInvalid;
-            });
-          },
-        );
+
+            if (!hasAmount) {
+              missingInstallments.push(installment);
+            }
+          });
+
+          if (missingInstallments.length > 0) {
+            recipientsWithMissingAmounts.push({ index, missingInstallments });
+          }
+        });
 
         console.log(
-          "[HandleSubmit] Missing installment amounts:",
-          missingInstallmentAmounts,
+          "[HandleSubmit] Recipients with missing amounts:",
+          recipientsWithMissingAmounts,
         );
-        if (missingInstallmentAmounts) {
-          throw new Error("Κάθε δόση πρέπει να έχει ποσό μεγαλύτερο από 0");
+
+        if (recipientsWithMissingAmounts.length > 0) {
+          const firstMissing = recipientsWithMissingAmounts[0];
+          const recipientName = `${data.recipients[firstMissing.index].firstname} ${data.recipients[firstMissing.index].lastname}`;
+          const missingList = firstMissing.missingInstallments.join(", ");
+          throw new Error(
+            `Ο δικαιούχος "${recipientName}" έχει επιλεγμένες δόσεις χωρίς ποσά: ${missingList}. Παρακαλώ συμπληρώστε το ποσό για κάθε δόση.`,
+          );
         }
       }
 
@@ -2131,7 +2719,7 @@ export function CreateDocumentDialog({
           },
           credentials: "include",
           body: JSON.stringify({
-            mis: projectForSubmission.mis,
+            mis: data.project_id, // Use project_id (not MIS code) - backend expects project_id for budget lookup
             amount: totalAmount.toString(),
             sessionId:
               sessionStorage.getItem("clientSessionId") ||
@@ -2139,9 +2727,9 @@ export function CreateDocumentDialog({
           }),
         });
 
-        // Handle authorization issues gracefully
+        // Handle authorization issues gracefully - allow to continue with warning
         if (budgetValidationResponse.status === 401) {
-          // Auth warning logging removed for cleaner console
+          console.warn("[Budget] Authorization issue during validation - continuing with reservation");
           toast({
             title: "Προειδοποίηση",
             description:
@@ -2149,9 +2737,9 @@ export function CreateDocumentDialog({
             variant: "destructive",
           });
         }
-        // Handle other errors gracefully
+        // Handle other HTTP errors gracefully - allow to continue with warning
         else if (!budgetValidationResponse.ok) {
-          // Budget validation error logging removed for cleaner console
+          console.warn("[Budget] HTTP error during validation - continuing with reservation");
           toast({
             title: "Προειδοποίηση",
             description:
@@ -2159,19 +2747,33 @@ export function CreateDocumentDialog({
             variant: "destructive",
           });
         }
-        // Process successful validation
+        // Process successful validation response
         else {
           const budgetValidation = await budgetValidationResponse.json();
 
+          // If budget validation explicitly says cannot create, this is a legitimate budget issue
+          // Do NOT catch this - let it propagate to block the save
           if (!budgetValidation.canCreate) {
-            throw new Error(
-              budgetValidation.message ||
-                "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού",
-            );
+            const budgetErrorMessage = budgetValidation.message ||
+              "Δεν είναι δυνατή η δημιουργία εγγράφου λόγω περιορισμών προϋπολογισμού";
+            toast({
+              title: "Σφάλμα Προϋπολογισμού",
+              description: budgetErrorMessage,
+              variant: "destructive",
+            });
+            throw new Error(`BUDGET_BLOCK: ${budgetErrorMessage}`);
           }
+          // If validation passed, optionally show success info
+          console.log("[Budget] Validation passed - proceeding with document creation");
         }
-      } catch (validationError) {
-        // Budget validation error logging removed for cleaner console
+      } catch (validationError: any) {
+        // If this is a legitimate budget block error, re-throw it to stop the save
+        if (validationError?.message?.startsWith("BUDGET_BLOCK:")) {
+          throw validationError;
+        }
+        // For unexpected technical errors (network issues, JSON parsing, etc.), 
+        // show warning and allow to continue with reservation
+        console.warn("[Budget] Unexpected error during validation:", validationError);
         toast({
           title: "Προειδοποίηση",
           description:
@@ -2204,11 +2806,34 @@ export function CreateDocumentDialog({
         data.expenditure_type === EKTOS_EDRAS_TYPE,
       );
 
+      // Validate and get for_yl title if selected
+      // Only include for_yl if it belongs to the available options for the selected unit
+      const availableForYlForPayload = forYlData?.filter(
+        (fy: any) => fy.monada_id && String(fy.monada_id) === String(data.unit)
+      ) || [];
+      // Normalize for_yl_id to number for consistent comparison
+      // Handle both number and string types (form may return either)
+      const normalizedForYlId = data.for_yl_id != null && String(data.for_yl_id) !== "" 
+        ? Number(data.for_yl_id) 
+        : null;
+      // Find matching for_yl using normalized numeric comparison
+      const selectedForYl = normalizedForYlId != null
+        ? availableForYlForPayload.find((fy: any) => {
+            const fyId = typeof fy.id === 'string' ? Number(fy.id) : fy.id;
+            return fyId === normalizedForYlId;
+          })
+        : null;
+      // Only include for_yl if valid (belongs to available options for selected unit)
+      // If selectedForYl is null (not found in filtered options), submit null to clear stale values
+      const validForYlId = selectedForYl ? normalizedForYlId : null;
+
       const payload = {
         unit: data.unit,
         project_id: projectId, // Convert to numeric ID for v2 endpoint
         project_mis: projectForSubmission.mis,
         region: data.region,
+        for_yl_id: validForYlId,
+        for_yl_title: selectedForYl?.title || null,
         expenditure_type: data.expenditure_type,
         recipients: data.recipients.map((r) => {
           // For housing allowance, ensure proper data structure for export
@@ -2226,19 +2851,24 @@ export function CreateDocumentDialog({
             const quarterNumbers = r.installments.map((q) =>
               q.replace("ΤΡΙΜΗΝΟ ", ""),
             );
-            const quarterAmountsWithNumbers: Record<string, number> = {};
 
-            // Map quarter amounts to numeric keys
-            Object.entries(r.installmentAmounts).forEach(([key, value]) => {
-              const quarterNum = key.replace("ΤΡΙΜΗΝΟ ", "");
-              quarterAmountsWithNumbers[quarterNum] = value;
+            // Rebuild installmentAmounts from ONLY the selected installments
+            // This prevents stale data from previously selected but now unselected installments
+            const quarterAmountsWithNumbers: Record<string, number> = {};
+            r.installments.forEach((installment) => {
+              const quarterNum = installment.replace("ΤΡΙΜΗΝΟ ", "");
+              const amount = r.installmentAmounts?.[installment];
+              if (typeof amount === "number" && amount > 0) {
+                quarterAmountsWithNumbers[quarterNum] = amount;
+              }
             });
 
             // For housing allowance, use numeric quarter format for storage
+            // Validation ensures firstname, lastname, afm are present, so trim() is safe
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
-              fathername: r.fathername.trim(),
+              fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
               amount: quarterTotal,
               secondary_text: r.secondary_text?.trim() || "",
@@ -2253,10 +2883,11 @@ export function CreateDocumentDialog({
 
           // For ΕΚΤΟΣ ΕΔΡΑΣ, include employee-based payment fields
           if (data.expenditure_type === EKTOS_EDRAS_TYPE) {
+            // Validation ensures firstname, lastname, afm are present, so trim() is safe
             return {
               firstname: r.firstname.trim(),
               lastname: r.lastname.trim(),
-              fathername: r.fathername.trim(),
+              fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
               employee_id: r.employee_id,
               month: r.month,
@@ -2264,8 +2895,20 @@ export function CreateDocumentDialog({
               daily_compensation: r.daily_compensation || 0,
               accommodation_expenses: r.accommodation_expenses || 0,
               kilometers_traveled: r.kilometers_traveled || 0,
+              price_per_km:
+                r.price_per_km !== undefined && r.price_per_km !== null
+                  ? r.price_per_km
+                  : DEFAULT_PRICE_PER_KM,
               tickets_tolls_rental: r.tickets_tolls_rental || 0,
-              net_payable: r.net_payable || parseFloat(r.amount.toString()),
+              tickets_tolls_rental_entries:
+                r.tickets_tolls_rental_entries || [], // Include array of entries
+              has_2_percent_deduction: !!r.has_2_percent_deduction,
+              total_expense: r.total_expense,
+              deduction_2_percent: r.deduction_2_percent,
+              net_payable:
+                r.net_payable !== undefined && r.net_payable !== null
+                  ? r.net_payable
+                  : parseFloat(r.amount.toString()),
               amount: parseFloat(r.amount.toString()),
               secondary_text: r.secondary_text?.trim() || "",
               installment:
@@ -2273,15 +2916,23 @@ export function CreateDocumentDialog({
                 (r.installments && r.installments[0]) ||
                 "ΕΦΑΠΑΞ",
               installments: r.installments,
-              installmentAmounts: r.installmentAmounts || {},
+              // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
+              installmentAmounts: Object.fromEntries(
+                r.installments
+                  .map((inst) => [inst, r.installmentAmounts?.[inst]])
+                  .filter(
+                    ([, amount]) => typeof amount === "number" && amount > 0,
+                  ),
+              ),
             };
           }
 
           // Standard structure for other expenditure types
+          // Validation ensures firstname, lastname, afm are present, so trim() is safe
           return {
             firstname: r.firstname.trim(),
             lastname: r.lastname.trim(),
-            fathername: r.fathername.trim(),
+            fathername: r.fathername?.trim() || "",
             afm: r.afm.trim(),
             amount: parseFloat(r.amount.toString()),
             secondary_text: r.secondary_text?.trim() || "",
@@ -2290,7 +2941,14 @@ export function CreateDocumentDialog({
               (r.installments && r.installments[0]) ||
               "ΕΦΑΠΑΞ",
             installments: r.installments,
-            installmentAmounts: r.installmentAmounts || {},
+            // Rebuild installmentAmounts from ONLY selected installments to avoid stale data
+            installmentAmounts: Object.fromEntries(
+              r.installments
+                .map((inst) => [inst, r.installmentAmounts?.[inst]])
+                .filter(
+                  ([, amount]) => typeof amount === "number" && amount > 0,
+                ),
+            ),
           };
         }),
         total_amount: totalAmount,
@@ -2303,6 +2961,9 @@ export function CreateDocumentDialog({
                 (field) => field.trim() !== "",
               ),
         director_signature: data.director_signature || null,
+        // BUDGET FLAG: Set to true if document is saved while exceeding Κατανομή έτους
+        // This blocks DOCX export until χρηματοδότηση is approved
+        needs_xrimatodotisi: localBudgetValidation?.budgetType === 'katanomi' || false,
       };
 
       // Debug logging for ΕΚΤΟΣ ΕΔΡΑΣ
@@ -2339,7 +3000,7 @@ export function CreateDocumentDialog({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        })) as { id?: number; message?: string };
+        })) as { id?: number; message?: string; budget_warning?: boolean; budget_warning_message?: string; budget_type?: string };
 
         console.log("[HandleSubmit] API request completed successfully!");
 
@@ -2372,10 +3033,20 @@ export function CreateDocumentDialog({
           }),
         ]);
 
-        toast({
-          title: "Επιτυχία",
-          description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
-        });
+        // Show appropriate toast based on budget status
+        if (response.budget_warning && response.budget_type === 'katanomi') {
+          // Document saved with budget warning (κατανομή exceeded)
+          toast({
+            title: "Έγγραφο Αποθηκεύτηκε με Προειδοποίηση",
+            description: "Υπέρβαση κατανομής έτους - Απαιτείται χρηματοδότηση. Το έγγραφο αποθηκεύτηκε επιτυχώς.",
+            variant: "warning",
+          });
+        } else {
+          toast({
+            title: "Επιτυχία",
+            description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
+          });
+        }
 
         // Reset entire form after successful document creation
         // Convert user's unit ID to unit name for form default
@@ -2395,7 +3066,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
-          esdian_fields: [""],
+          esdian_fields: [],
           esdian_field1: "",
           esdian_field2: "",
         });
@@ -2409,7 +3080,7 @@ export function CreateDocumentDialog({
           recipients: [],
           status: "draft",
           selectedAttachments: [],
-          esdian_fields: [""],
+          esdian_fields: [],
           esdian_field1: "",
           esdian_field2: "",
         });
@@ -2440,16 +3111,18 @@ export function CreateDocumentDialog({
 
       // Nothing needed here as the document creation logic
       // and dialog closing are all handled in the try-catch block above
-    } catch (error) {
-      // Error logging removed for cleaner console output
-      toast({
-        title: "Σφάλμα",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Αποτυχία δημιουργίας εγγράφου",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      // Skip showing toast for BUDGET_BLOCK errors - they already showed a specific toast
+      if (!error?.message?.startsWith("BUDGET_BLOCK:")) {
+        toast({
+          title: "Σφάλμα",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Αποτυχία δημιουργίας εγγράφου",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -2507,7 +3180,9 @@ export function CreateDocumentDialog({
         kilometers_traveled: 0,
         price_per_km: DEFAULT_PRICE_PER_KM,
         tickets_tolls_rental: 0,
+        tickets_tolls_rental_entries: [0], // Initialize with one empty entry
         has_2_percent_deduction: false,
+        regiondet: null,
       },
     ]);
   };
@@ -2519,6 +3194,7 @@ export function CreateDocumentDialog({
       "recipients",
       currentRecipients.filter((_, i) => i !== index),
     );
+    setRegiondetErrors({});
   };
 
   useEffect(() => {
@@ -2589,12 +3265,11 @@ export function CreateDocumentDialog({
 
           console.log("Fetching geographic areas for project:", {
             id: selectedProjectId,
-            mis: project.mis,
           });
 
           // Fetch project complete data which includes geographic relationships
           const response = await apiRequest(
-            `/api/projects/${encodeURIComponent(project.mis || "")}/complete`,
+            `/api/projects/${encodeURIComponent(project.id || "")}/complete`,
           );
 
           if (!response || !geographicData) {
@@ -2706,34 +3381,60 @@ export function CreateDocumentDialog({
         Boolean(selectedProjectId) && projects.length > 0 && !!geographicData,
     });
 
-  // Smart cascading selection state
-  const [selectedRegionFilter, setSelectedRegionFilter] = useState<string>("");
-  const [selectedUnitFilter, setSelectedUnitFilter] = useState<string>("");
-  const [selectedMunicipalityId, setSelectedMunicipalityId] =
-    useState<string>("");
+  // Smart fallback: use project-specific geographic data when available,
+  // otherwise fall back to full geographic data to support projects without explicit mappings
+  const availableRegions = useMemo(() => {
+    const projectRegions = (projectGeographicAreas as any)?.availableRegions || [];
+    if (projectRegions.length > 0) {
+      return projectRegions;
+    }
+    // Fallback to all regions when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).regions)) {
+      return (geographicData as any).regions.map((region: any) => ({
+        id: `region-${region.code}`,
+        code: region.code,
+        name: region.name,
+        type: "region",
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
 
-  // Computed available options based on current selections
-  const availableRegions =
-    (projectGeographicAreas as any)?.availableRegions || [];
-  const availableUnits = selectedRegionFilter
-    ? ((projectGeographicAreas as any)?.availableUnits || []).filter(
-        (unit: any) => unit.region_code === selectedRegionFilter,
-      )
-    : (projectGeographicAreas as any)?.availableUnits || [];
-  const availableMunicipalities = selectedUnitFilter
-    ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
-        (municipality: any) => municipality.unit_code === selectedUnitFilter,
-      )
-    : selectedRegionFilter
-      ? ((projectGeographicAreas as any)?.availableMunicipalities || []).filter(
-          (municipality: any) => {
-            const unit = (
-              (projectGeographicAreas as any)?.availableUnits || []
-            ).find((u: any) => u.code === municipality.unit_code);
-            return unit?.region_code === selectedRegionFilter;
-          },
-        )
-      : (projectGeographicAreas as any)?.availableMunicipalities || [];
+  const availableUnits = useMemo(() => {
+    const projectUnits = (projectGeographicAreas as any)?.availableUnits || [];
+    if (projectUnits.length > 0) {
+      return projectUnits;
+    }
+    // Fallback to all regional units when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).regionalUnits)) {
+      return (geographicData as any).regionalUnits.map((unit: any) => ({
+        id: `unit-${unit.code}`,
+        code: unit.code,
+        name: unit.name,
+        type: "regional_unit",
+        region_code: unit.region_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
+
+  const availableMunicipalities = useMemo(() => {
+    const projectMunis = (projectGeographicAreas as any)?.availableMunicipalities || [];
+    if (projectMunis.length > 0) {
+      return projectMunis;
+    }
+    // Fallback to all municipalities when project has no specific mappings
+    if (geographicData && Array.isArray((geographicData as any).municipalities)) {
+      return (geographicData as any).municipalities.map((muni: any) => ({
+        id: `municipality-${muni.code}`,
+        code: muni.code,
+        name: muni.name,
+        type: "municipality",
+        unit_code: muni.unit_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
 
   // All available options for the region dropdown (flattened for backward compatibility)
   const regions = [
@@ -2741,6 +3442,133 @@ export function CreateDocumentDialog({
     ...availableUnits,
     ...availableMunicipalities,
   ];
+
+  const regiondetMutation = useMutation({
+    mutationFn: async ({
+      beneficiaryId,
+      regiondet,
+    }: {
+      beneficiaryId: number;
+      regiondet: RegiondetSelection | null;
+    }) => {
+      return apiRequest(`/api/beneficiaries/${beneficiaryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ regiondet }),
+      });
+    },
+    onSuccess: (_data, variables) => {
+      const key = String(variables.beneficiaryId);
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: { status: "saved" },
+      }));
+    },
+    onError: (error: any, variables) => {
+      const key = String(variables.beneficiaryId);
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: {
+          status: "error",
+          message:
+            (error as any)?.message ||
+            "Failed to save geographical selection",
+        },
+      }));
+    },
+  });
+
+  const scheduleRegiondetSave = (
+    beneficiaryId: number | undefined,
+    nextValue: RegiondetSelection | null,
+  ) => {
+    if (!beneficiaryId) return;
+    const key = String(beneficiaryId);
+    lastRegiondetByBeneficiary.current[key] = nextValue;
+    if (regiondetSaveTimers.current[key]) {
+      clearTimeout(regiondetSaveTimers.current[key]);
+    }
+    regiondetSaveTimers.current[key] = setTimeout(() => {
+      setRegiondetSaveState((prev) => ({
+        ...prev,
+        [key]: { status: "saving" },
+      }));
+      regiondetMutation.mutate({ beneficiaryId, regiondet: nextValue });
+    }, 400);
+  };
+
+  const retryRegiondetSave = (beneficiaryId: number) => {
+    const key = String(beneficiaryId);
+    const lastValue = lastRegiondetByBeneficiary.current[key];
+    if (!lastValue) return;
+    setRegiondetSaveState((prev) => ({
+      ...prev,
+      [key]: { status: "saving" },
+    }));
+    regiondetMutation.mutate({ beneficiaryId, regiondet: lastValue });
+  };
+
+  const validateBeneficiaryRegions = () => {
+    const recipients = form.getValues("recipients") || [];
+    const missing: Record<number, string> = {};
+
+    recipients.forEach((recipient: any, idx: number) => {
+      if (!isRegiondetComplete(recipient?.regiondet as RegiondetSelection)) {
+        missing[idx] = "Geographical selection is required";
+      }
+    });
+
+    setRegiondetErrors(missing);
+
+    if (Object.keys(missing).length > 0) {
+      toast({
+        title: "Geography required",
+        description:
+          "Select a region, unit, or municipality for every beneficiary before continuing.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleRecipientGeoChange = useCallback((
+    index: number,
+    nextValue: RegiondetSelection | null,
+  ) => {
+    setRegiondetErrors((prev) => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+
+    const recipients = form.getValues("recipients") || [];
+    const target = recipients[index] || {};
+    const nextWithPayments = mergeRegiondetPreservingPayments(
+      nextValue as RegiondetSelection,
+      target?.regiondet as RegiondetSelection,
+    );
+
+    form.setValue(`recipients.${index}.regiondet` as any, nextWithPayments, {
+      shouldDirty: true,
+      shouldValidate: false,
+    });
+
+    const beneficiaryId =
+      typeof target?.id === "number" ? (target as any).id : undefined;
+    scheduleRegiondetSave(beneficiaryId, nextWithPayments as any);
+  }, [form]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(regiondetSaveTimers.current).forEach((timer) => {
+        clearTimeout(timer);
+      });
+    };
+  }, []);
 
   const handleNext = async () => {
     try {
@@ -2789,6 +3617,31 @@ export function CreateDocumentDialog({
               variant: "destructive",
             });
             return;
+          }
+
+          if (!validateBeneficiaryRegions()) {
+            return;
+          }
+          
+          // Budget validation check - ONLY block if ΠΙΣΤΩΣΗ is exceeded (hard block)
+          // Κατανομή exceeded allows proceeding but blocks DOCX generation later
+          if (localBudgetValidation?.budgetType === 'pistosi') {
+            toast({
+              title: "Υπέρβαση Πίστωσης",
+              description: "Δεν μπορείτε να συνεχίσετε. Το ποσό υπερβαίνει την ετήσια πίστωση. Παρακαλώ αιτηθείτε ανακατανομή.",
+              variant: "destructive",
+            });
+            return;
+          }
+          
+          // Show warning for katanomi but allow proceeding
+          if (localBudgetValidation?.budgetType === 'katanomi') {
+            toast({
+              title: "Προειδοποίηση Κατανομής",
+              description: "Το ποσό υπερβαίνει την κατανομή έτους. Μπορείτε να αποθηκεύσετε αλλά δεν θα μπορέσετε να εξάγετε DOCX μέχρι να εγκριθεί η χρηματοδότηση.",
+              variant: "warning",
+            });
+            // Don't return - allow proceeding
           }
           break;
       }
@@ -2889,13 +3742,23 @@ export function CreateDocumentDialog({
                               unitInitializationRef.current.isCompleted = true;
                             }
 
+                            // CRITICAL: Also update unitAutoSelectionRef to track manual selections
+                            // This ensures the selection persists through session refresh
+                            unitAutoSelectionRef.current = {
+                              hasSelected: true,
+                              selectedUnit: value,
+                            };
+
                             // Always save the form context after unit change
                             const formValues = form.getValues();
+                            // Clear for_yl when unit changes (for_yl options are unit-specific)
+                            form.setValue("for_yl_id", null);
                             updateFormData({
                               ...formValues,
                               unit: value,
-                              // Clear project when unit changes to avoid invalid combinations
+                              // Clear project and for_yl when unit changes to avoid invalid combinations
                               project_id: "",
+                              for_yl_id: null,
                             });
 
                             // Force a refresh of projects data
@@ -2923,7 +3786,14 @@ export function CreateDocumentDialog({
                                   ? "Αυτόματη επιλογή μονάδας"
                                   : "Επιλέξτε μονάδα"
                               }
-                            />
+                            >
+                              {field.value &&
+                              Array.isArray(units) &&
+                              units.length > 0
+                                ? units.find((u: any) => u.id === field.value)
+                                    ?.name || field.value
+                                : undefined}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -3019,7 +3889,7 @@ export function CreateDocumentDialog({
                   />
 
                   {/* Subproject Selection */}
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name="subproject_id"
                     render={({ field }) => (
@@ -3047,7 +3917,7 @@ export function CreateDocumentDialog({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
 
                   {currentStep === 1 && selectedProject && (
                     <FormField
@@ -3093,305 +3963,6 @@ export function CreateDocumentDialog({
                     />
                   )}
 
-                  {/* Smart Hierarchical Geographic Selection */}
-                  {(availableRegions.length > 0 ||
-                    availableUnits.length > 0 ||
-                    availableMunicipalities.length > 0) && (
-                    <div className="space-y-2 border rounded-lg p-3 bg-gray-50">
-                      <h3 className="text-xs font-medium text-gray-700">
-                        Γεωγραφική Περιοχή Διαβιβαστίκου
-                      </h3>
-
-                      {/* Filter by Region */}
-                      {availableRegions.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
-                            Φίλτρο Περιφέρειας
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedRegionFilter}
-                              onValueChange={(value) => {
-                                const regionCode = value === "all" ? "" : value;
-                                setSelectedRegionFilter(regionCode);
-                                setSelectedUnitFilter(""); // Reset unit filter when region changes
-
-                                // Set as final selected region for document (last hierarchy choice)
-                                if (regionCode) {
-                                  const selectedRegionName =
-                                    availableRegions.find(
-                                      (r: any) => r.code === regionCode,
-                                    )?.name || "";
-                                  // Build hierarchy: Region|| (region only, no unit or municipality)
-                                  const regionHierarchy = `${selectedRegionName}||`;
-                                  form.setValue("region", regionHierarchy);
-                                  setSelectedMunicipalityId(""); // Clear municipality selection
-                                  console.log(
-                                    "[Geographic] Selected region as final choice:",
-                                    regionHierarchy,
-                                  );
-                                } else {
-                                  form.setValue("region", "");
-                                  setSelectedMunicipalityId("");
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Όλες οι περιφέρειες" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  Όλες οι περιφέρειες
-                                </SelectItem>
-                                {availableRegions.map((region: any) => (
-                                  <SelectItem
-                                    key={`region-${region.code}`}
-                                    value={region.code}
-                                  >
-                                    {region.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Filter by Regional Unit */}
-                      {availableUnits.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium text-gray-600 whitespace-nowrap min-w-[140px]">
-                            Φίλτρο Περιφερειακής Ενότητας
-                            {selectedRegionFilter && (
-                              <span className="text-gray-500">
-                                (στην{" "}
-                                {
-                                  availableRegions.find(
-                                    (r: any) => r.code === selectedRegionFilter,
-                                  )?.name
-                                }
-                                )
-                              </span>
-                            )}
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedUnitFilter}
-                              onValueChange={(value) => {
-                                const unitCode = value === "all" ? "" : value;
-                                setSelectedUnitFilter(unitCode);
-
-                                // Set as final selected region for document (last hierarchy choice)
-                                if (unitCode) {
-                                  const selectedUnit = availableUnits.find(
-                                    (u: any) => u.code === unitCode,
-                                  );
-
-                                  if (selectedUnit) {
-                                    let regionHierarchy = selectedUnit.name;
-                                    
-                                    // Auto-complete: Fill region filter
-                                    if (selectedUnit.region_code) {
-                                      setSelectedRegionFilter(
-                                        selectedUnit.region_code,
-                                      );
-                                      
-                                      // Find the region name to build hierarchy
-                                      const parentRegion = availableRegions.find(
-                                        (r: any) => r.code === selectedUnit.region_code,
-                                      );
-                                      
-                                      if (parentRegion) {
-                                        // Build hierarchy: Region|RegionalUnit|
-                                        regionHierarchy = `${parentRegion.name}|${selectedUnit.name}|`;
-                                      } else {
-                                        // Fallback: if no region found, use unit only
-                                        regionHierarchy = `|${selectedUnit.name}|`;
-                                      }
-                                    }
-
-                                    form.setValue("region", regionHierarchy);
-                                    setSelectedMunicipalityId(""); // Clear municipality selection
-                                    console.log(
-                                      "[Geographic] Selected regional unit as final choice:",
-                                      regionHierarchy,
-                                    );
-                                  }
-                                } else if (!selectedRegionFilter) {
-                                  form.setValue("region", "");
-                                  setSelectedMunicipalityId("");
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Όλες οι περιφερειακές ενότητες" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">
-                                  Όλες οι περιφερειακές ενότητες
-                                </SelectItem>
-                                {availableUnits.map((unit: any) => (
-                                  <SelectItem
-                                    key={`unit-${unit.code}`}
-                                    value={unit.code}
-                                  >
-                                    {unit.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Final Municipality Selection */}
-                      {availableMunicipalities.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          <label className="text-xs font-medium whitespace-nowrap min-w-[140px]">
-                            Τελική Επιλογή Δήμου/Κοινότητας
-                            {(selectedRegionFilter || selectedUnitFilter) && (
-                              <span className="text-xs text-gray-500 ml-2">
-                                ({availableMunicipalities.length} διαθέσιμες
-                                επιλογές)
-                              </span>
-                            )}
-                          </label>
-                          <div className="flex-1">
-                            <Select
-                              value={selectedMunicipalityId}
-                              onValueChange={(value) => {
-                                // Set as final selected region for document (last hierarchy choice - municipality)
-                                const selectedMunicipality =
-                                  availableMunicipalities.find(
-                                    (m: any) => m.id === value,
-                                  );
-                                if (selectedMunicipality) {
-                                  // Auto-complete: Find the parent unit and region
-                                  const parentUnit = (
-                                    (projectGeographicAreas as any)
-                                      ?.availableUnits || []
-                                  ).find(
-                                    (u: any) =>
-                                      u.code === selectedMunicipality.unit_code,
-                                  );
-
-                                  let regionHierarchy = selectedMunicipality.name;
-                                  
-                                  if (parentUnit) {
-                                    // Auto-fill regional unit filter
-                                    setSelectedUnitFilter(parentUnit.code);
-
-                                    // Auto-fill region filter
-                                    if (parentUnit.region_code) {
-                                      setSelectedRegionFilter(
-                                        parentUnit.region_code,
-                                      );
-                                      
-                                      // Find the region name to build full hierarchy
-                                      const parentRegion = availableRegions.find(
-                                        (r: any) => r.code === parentUnit.region_code,
-                                      );
-                                      
-                                      if (parentRegion) {
-                                        // Build hierarchy: Region|RegionalUnit|Municipality
-                                        regionHierarchy = `${parentRegion.name}|${parentUnit.name}|${selectedMunicipality.name}`;
-                                      } else {
-                                        // Fallback: if no region found, use unit and municipality
-                                        regionHierarchy = `|${parentUnit.name}|${selectedMunicipality.name}`;
-                                      }
-                                    }
-                                  }
-
-                                  form.setValue("region", regionHierarchy);
-                                  setSelectedMunicipalityId(value); // Store ID for dropdown
-                                  console.log(
-                                    "[Geographic] Selected municipality as final choice:",
-                                    regionHierarchy,
-                                  );
-                                }
-                              }}
-                              disabled={regionsLoading}
-                            >
-                              <SelectTrigger className="h-8">
-                                <SelectValue placeholder="Επιλέξτε δήμο/κοινότητα" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-60">
-                                {availableMunicipalities
-                                  .filter(
-                                    (municipality: any) =>
-                                      municipality.code && municipality.name,
-                                  )
-                                  .map((municipality: any) => (
-                                    <SelectItem
-                                      key={`municipality-${municipality.code}`}
-                                      value={municipality.id}
-                                    >
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">
-                                          {municipality.name}
-                                        </span>
-                                        <span className="text-xs text-gray-500">
-                                          Δήμος/Κοινότητα
-                                        </span>
-                                      </div>
-                                    </SelectItem>
-                                  ))}
-                                {availableMunicipalities.length === 0 && (
-                                  <SelectItem
-                                    value="no-municipalities"
-                                    disabled
-                                  >
-                                    Δεν υπάρχουν διαθέσιμοι δήμοι
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Show current selection path */}
-                      {(selectedRegionFilter ||
-                        selectedUnitFilter ||
-                        selectedMunicipalityId) && (
-                        <div className="text-xs text-gray-500 bg-blue-50 p-1.5 rounded mt-1">
-                          <span className="text-gray-600">
-                            Επιλεγμένη περιοχή:
-                          </span>
-                          {selectedRegionFilter && (
-                            <span className="ml-1 font-medium">
-                              {
-                                availableRegions.find(
-                                  (r: any) => r.code === selectedRegionFilter,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                          {selectedUnitFilter && (
-                            <span className="ml-1 font-medium">
-                              {selectedRegionFilter && " › "}
-                              {
-                                availableUnits.find(
-                                  (u: any) => u.code === selectedUnitFilter,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                          {selectedMunicipalityId && (
-                            <span className="ml-1 font-medium">
-                              {(selectedRegionFilter || selectedUnitFilter) &&
-                                " › "}
-                              {
-                                availableMunicipalities.find(
-                                  (m: any) => m.id === selectedMunicipalityId,
-                                )?.name
-                              }
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -3403,6 +3974,156 @@ export function CreateDocumentDialog({
                   budgetData={budgetData}
                   currentAmount={currentAmount}
                 />
+
+                {/* ΠΙΣΤΩΣΗ EXCEEDED - Hard block, cannot proceed, needs Ανακατανομή */}
+                {localBudgetValidation?.budgetType === 'pistosi' && currentAmount > 0 && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-red-800 font-semibold text-base">
+                          Υπέρβαση Πίστωσης - Δεν Μπορείτε να Συνεχίσετε
+                        </h4>
+                        <p className="text-red-700 text-sm mt-2">
+                          Το ποσό <strong>{currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</strong> υπερβαίνει 
+                          την ετήσια πίστωση ({Number(budgetData?.ethsia_pistosi || 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}).
+                        </p>
+                        <p className="text-red-600 text-sm mt-2 font-medium">
+                          Πρέπει να ζητήσετε ανακατανομή προϋπολογισμού για να συνεχίσετε.
+                        </p>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/notifications/request-reallocation', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    project_id: selectedProjectId,
+                                    request_type: 'ανακατανομή',
+                                    requested_amount: currentAmount,
+                                    available_budget: Number(budgetData?.available_budget) || 0,
+                                    shortage: currentAmount - (Number(budgetData?.available_budget) || 0),
+                                  })
+                                });
+                                if (response.ok) {
+                                  toast({
+                                    title: "Αίτημα Ανακατανομής Απεστάλη",
+                                    description: "Το αίτημα στάλθηκε στον διαχειριστή για έγκριση.",
+                                  });
+                                } else {
+                                  throw new Error('Failed');
+                                }
+                              } catch (error) {
+                                toast({ title: "Σφάλμα", description: "Αποτυχία αποστολής.", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Αίτημα Ανακατανομής
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ΚΑΤΑΝΟΜΗ ΕΤΟΥΣ EXCEEDED - Soft block, can save but no DOCX, needs Χρηματοδότηση */}
+                {localBudgetValidation?.budgetType === 'katanomi' && currentAmount > 0 && (
+                  <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-6 w-6 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-amber-800 font-semibold text-base">
+                          Υπέρβαση Κατανομής Έτους - Απαιτείται Χρηματοδότηση
+                        </h4>
+                        <p className="text-amber-700 text-sm mt-2">
+                          Το ποσό <strong>{currentAmount.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}</strong> υπερβαίνει 
+                          την κατανομή έτους ({Number(budgetData?.katanomes_etous || 0).toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}).
+                        </p>
+                        <p className="text-amber-600 text-sm mt-2">
+                          <strong>Μπορείτε να αποθηκεύσετε το έγγραφο</strong>, παρακαλούμε περιμένετε να εγκριθεί η χρηματοδότηση πριν την αποστολή.
+                        </p>
+                        <div className="mt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="bg-white border-amber-400 text-amber-700 hover:bg-amber-50"
+                            onClick={async () => {
+                              try {
+                                const response = await fetch('/api/notifications/request-reallocation', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  credentials: 'include',
+                                  body: JSON.stringify({
+                                    project_id: selectedProjectId,
+                                    request_type: 'χρηματοδότηση',
+                                    requested_amount: currentAmount,
+                                    available_budget: Number(budgetData?.katanomes_etous) || 0,
+                                    shortage: currentAmount - (Number(budgetData?.katanomes_etous) || 0) + (Number(budgetData?.user_view) || 0),
+                                  })
+                                });
+                                if (response.ok) {
+                                  toast({
+                                    title: "Αίτημα Χρηματοδότησης Απεστάλη",
+                                    description: "Το αίτημα στάλθηκε στον διαχειριστή για έγκριση.",
+                                  });
+                                } else {
+                                  throw new Error('Failed');
+                                }
+                              } catch (error) {
+                                toast({ title: "Σφάλμα", description: "Αποτυχία αποστολής.", variant: "destructive" });
+                              }
+                            }}
+                          >
+                            <svg className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Αίτημα Χρηματοδότησης
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Generic budget exceeded warning (fallback when budgetType not determined) */}
+                {localBudgetValidation && !localBudgetValidation.canCreate && !localBudgetValidation.budgetType && currentAmount > 0 && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-red-800 font-medium text-sm">
+                          Υπέρβαση Προϋπολογισμού
+                        </h4>
+                        <p className="text-red-700 text-sm mt-1">
+                          {localBudgetValidation.message || 'Το ποσό υπερβαίνει τον διαθέσιμο προϋπολογισμό.'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <div className="flex justify-between items-center mb-4">
@@ -3427,16 +4148,6 @@ export function CreateDocumentDialog({
                   <div className="space-y-3">
                     {recipients.map((recipient, index) => (
                       <Card key={index} className="p-4 relative">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeRecipient(index)}
-                          className="absolute top-3 right-3"
-                          aria-label="Διαγραφή παραλήπτη"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
                           <div className="md:col-span-2 md:row-span-1">
@@ -3516,7 +4227,7 @@ export function CreateDocumentDialog({
                                 // Update the AFM field in the form when user types
                                 form.setValue(`recipients.${index}.afm`, value);
                               }}
-                              onSelectPerson={(personData) => {
+                              onSelectPerson={async (personData) => {
                                 if (personData) {
                                   console.log(
                                     "[AFMAutocomplete] Selection made for index:",
@@ -3624,7 +4335,8 @@ export function CreateDocumentDialog({
                                             }
 
                                             const amount =
-                                              parseFloat(amountStr) || 0;
+                                              parseEuropeanNumber(amountStr) ||
+                                              0;
                                             const installments =
                                               firstPayment.installment || [
                                                 "ΕΦΑΠΑΞ",
@@ -3669,7 +4381,7 @@ export function CreateDocumentDialog({
                                       const installmentValue =
                                         enhancedData.installment || "";
                                       const amountValue =
-                                        parseFloat(
+                                        parseEuropeanNumber(
                                           enhancedData.amount || "0",
                                         ) || 0;
 
@@ -3687,8 +4399,15 @@ export function CreateDocumentDialog({
                                   const currentRecipients =
                                     form.getValues("recipients");
 
+                                  const initialRegiondet = normalizeRegiondetEntry(
+                                    (personData as any).regiondet ||
+                                      currentRecipients[index]?.regiondet ||
+                                      null,
+                                  );
+
                                   currentRecipients[index] = {
                                     ...currentRecipients[index],
+                                    id: (personData as any).id,
                                     firstname: personData.name || "",
                                     lastname: personData.surname || "",
                                     fathername: personData.fathername || "",
@@ -3700,10 +4419,89 @@ export function CreateDocumentDialog({
                                     amount: totalAmount,
                                     installments: installmentsList,
                                     installmentAmounts: installmentAmounts,
+                                    regiondet: initialRegiondet,
                                     ...(isEktosEdras && {
                                       employee_id: (personData as any).id,
                                     }),
                                   };
+
+                                  // Hydrate full beneficiary data (including persisted regiondet/payment_ids)
+                                  let hydratedRegiondet = initialRegiondet;
+                                  try {
+                                    if (personData.id) {
+                                      const fullBeneficiary = await apiRequest(
+                                        `/api/beneficiaries/${personData.id}`,
+                                      );
+                                      if (fullBeneficiary) {
+                                        const enrichedRegiondet =
+                                          normalizeRegiondetEntry(
+                                            (fullBeneficiary as any).regiondet,
+                                          );
+                                        hydratedRegiondet =
+                                          enrichedRegiondet ||
+                                          hydratedRegiondet ||
+                                          null;
+                                        currentRecipients[index].id =
+                                          (fullBeneficiary as any).id ||
+                                          currentRecipients[index].id;
+                                      }
+                                    }
+
+                                    // Fallback: search by AFM if no regiondet was found (newly created or cached results)
+                                    if (
+                                      !hydratedRegiondet &&
+                                      personData.afm &&
+                                      String(personData.afm).length >= 4
+                                    ) {
+                                      const searchResults: any[] =
+                                        (await apiRequest(
+                                          `/api/beneficiaries/search?afm=${encodeURIComponent(String(personData.afm))}`,
+                                        )) || [];
+                                      if (Array.isArray(searchResults)) {
+                                        const matched = searchResults.find(
+                                          (entry) =>
+                                            String(entry.afm).endsWith(
+                                              String(personData.afm),
+                                            ) ||
+                                            String(entry.afm) ===
+                                              String(personData.afm),
+                                        );
+                                          if (matched) {
+                                          hydratedRegiondet =
+                                            normalizeRegiondetEntry(
+                                              matched.regiondet,
+                                            ) ||
+                                            hydratedRegiondet ||
+                                            null;
+                                          currentRecipients[index].id =
+                                            matched.id ||
+                                            currentRecipients[index].id;
+                                        }
+                                      }
+                                    }
+                                  } catch (error) {
+                                    console.error(
+                                      "[AFMAutocomplete] Error hydrating beneficiary data:",
+                                      error,
+                                    );
+                                  }
+
+                                  currentRecipients[index].regiondet =
+                                    hydratedRegiondet;
+
+                                  if (
+                                    currentRecipients[index].id &&
+                                    isRegiondetComplete(
+                                      currentRecipients[index]
+                                        .regiondet as RegiondetSelection,
+                                    )
+                                  ) {
+                                    scheduleRegiondetSave(
+                                      Number(currentRecipients[index].id),
+                                      currentRecipients[index]
+                                        .regiondet as RegiondetSelection,
+                                    );
+                                  }
 
                                   // Use setValue and trigger validation to ensure form recognizes the changes
                                   form.setValue(
@@ -3737,33 +4535,33 @@ export function CreateDocumentDialog({
                             />
                           </div>
 
-                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific fields */}
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ Month Range - in first row next to AFM */}
+                          <div className="md:col-span-3">
+                            {form.getValues("expenditure_type") ===
+                              EKTOS_EDRAS_TYPE && (
+                              <FormField
+                                control={form.control}
+                                name={`recipients.${index}.month`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <MonthRangePicker
+                                        value={field.value || ""}
+                                        onChange={field.onChange}
+                                        testIdPrefix={`recipient-${index}-month`}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
+                          </div>
+
+                          {/* ΕΚΤΟΣ ΕΔΡΑΣ-specific expense fields */}
                           {form.getValues("expenditure_type") ===
                             EKTOS_EDRAS_TYPE && (
                             <>
-                              {/* Month Range Selector - on same row as name fields */}
-                              <div className="md:col-start-9 md:col-span-4">
-                                <FormField
-                                  control={form.control}
-                                  name={`recipients.${index}.month`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel className="text-xs font-medium">
-                                        Περίοδος (Μήνες)
-                                      </FormLabel>
-                                      <FormControl>
-                                        <MonthRangePicker
-                                          value={field.value || ""}
-                                          onChange={field.onChange}
-                                          testIdPrefix={`recipient-${index}-month`}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
-
                               {/* All Expense Fields in One Row */}
                               <div className="md:col-span-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                                 {/* Days Input */}
@@ -3817,28 +4615,27 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
                                             );
                                             const totalExpense =
-                                              numValue +
+                                              numericValue +
                                               (typeof recipient.accommodation_expenses ===
                                               "number"
                                                 ? recipient.accommodation_expenses
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.accommodation_expenses as string,
                                                   ) || 0) +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.kilometers_traveled as string,
                                                   ) || 0) *
                                                 (recipient.price_per_km ||
@@ -3846,12 +4643,15 @@ export function CreateDocumentDialog({
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const withholdingBase = isEktosEdras ? numericValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -3895,12 +4695,11 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
@@ -3909,14 +4708,14 @@ export function CreateDocumentDialog({
                                               (typeof recipient.daily_compensation ===
                                               "number"
                                                 ? recipient.daily_compensation
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
-                                              numValue +
+                                              numericValue +
                                               (typeof recipient.kilometers_traveled ===
                                               "number"
                                                 ? recipient.kilometers_traveled
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.kilometers_traveled as string,
                                                   ) || 0) *
                                                 (recipient.price_per_km ||
@@ -3924,12 +4723,18 @@ export function CreateDocumentDialog({
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -3973,12 +4778,11 @@ export function CreateDocumentDialog({
                                       <FormControl>
                                         <NumberInput
                                           {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
+                                          onChange={(
+                                            displayValue,
+                                            numericValue,
+                                          ) => {
+                                            field.onChange(numericValue);
                                             // Trigger recalculation
                                             const recipient = form.getValues(
                                               `recipients.${index}`,
@@ -3987,27 +4791,33 @@ export function CreateDocumentDialog({
                                               (typeof recipient.daily_compensation ===
                                               "number"
                                                 ? recipient.daily_compensation
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.daily_compensation as string,
                                                   ) || 0) +
                                               (typeof recipient.accommodation_expenses ===
                                               "number"
                                                 ? recipient.accommodation_expenses
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.accommodation_expenses as string,
                                                   ) || 0) +
-                                              numValue *
+                                              numericValue *
                                                 (recipient.price_per_km ||
                                                   DEFAULT_PRICE_PER_KM) +
                                               (typeof recipient.tickets_tolls_rental ===
                                               "number"
                                                 ? recipient.tickets_tolls_rental
-                                                : parseFloat(
+                                                : parseEuropeanNumber(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction =
                                               recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
+                                                ? withholdingBase * 0.02
                                                 : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -4038,83 +4848,252 @@ export function CreateDocumentDialog({
                                   )}
                                 />
 
-                                {/* Tickets/Tolls/Rental */}
-                                <FormField
-                                  control={form.control}
-                                  name={`recipients.${index}.tickets_tolls_rental`}
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel className="text-sm">
-                                        Εισιτήρια/Διόδια/Ενοικίαση
-                                      </FormLabel>
-                                      <FormControl>
-                                        <NumberInput
-                                          {...field}
-                                          onChange={(value) => {
-                                            const numValue =
-                                              typeof value === "number"
-                                                ? value
-                                                : parseFloat(value) || 0;
-                                            field.onChange(numValue);
-                                            // Trigger recalculation
-                                            const recipient = form.getValues(
-                                              `recipients.${index}`,
-                                            );
-                                            const totalExpense =
-                                              (typeof recipient.daily_compensation ===
-                                              "number"
-                                                ? recipient.daily_compensation
-                                                : parseFloat(
-                                                    recipient.daily_compensation as string,
-                                                  ) || 0) +
-                                              (typeof recipient.accommodation_expenses ===
-                                              "number"
-                                                ? recipient.accommodation_expenses
-                                                : parseFloat(
-                                                    recipient.accommodation_expenses as string,
-                                                  ) || 0) +
-                                              (typeof recipient.kilometers_traveled ===
-                                              "number"
-                                                ? recipient.kilometers_traveled
-                                                : parseFloat(
-                                                    recipient.kilometers_traveled as string,
-                                                  ) || 0) *
-                                                (recipient.price_per_km ||
-                                                  DEFAULT_PRICE_PER_KM) +
-                                              numValue;
-                                            const deduction =
-                                              recipient.has_2_percent_deduction
-                                                ? totalExpense * 0.02
-                                                : 0;
-                                            const netPayable =
-                                              totalExpense - deduction;
-                                            form.setValue(
-                                              `recipients.${index}.total_expense`,
-                                              totalExpense,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.deduction_2_percent`,
-                                              deduction,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.net_payable`,
-                                              netPayable,
-                                            );
-                                            form.setValue(
-                                              `recipients.${index}.amount`,
-                                              netPayable,
-                                            );
-                                          }}
-                                          min={0}
-                                          step={0.01}
-                                          placeholder="0.00"
-                                          data-testid={`input-recipient-${index}-tickets-tolls`}
-                                        />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
+                                {/* Tickets/Tolls/Rental - Dynamic Fields */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <FormLabel className="text-sm">
+                                      Εισιτήρια/Διόδια/Ενοικίαση
+                                    </FormLabel>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentEntries =
+                                          form.getValues(
+                                            `recipients.${index}.tickets_tolls_rental_entries`,
+                                          ) || [];
+                                        form.setValue(
+                                          `recipients.${index}.tickets_tolls_rental_entries`,
+                                          [...currentEntries, 0],
+                                        );
+                                      }}
+                                      className="h-6 w-6 p-0"
+                                      data-testid={`button-add-ticket-entry-${index}`}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  {(() => {
+                                    const entries =
+                                      form.watch(
+                                        `recipients.${index}.tickets_tolls_rental_entries`,
+                                      ) || [];
+
+                                    // If no entries exist, initialize with one empty field
+                                    if (entries.length === 0) {
+                                      form.setValue(
+                                        `recipients.${index}.tickets_tolls_rental_entries`,
+                                        [0],
+                                      );
+                                      return null;
+                                    }
+
+                                    return (
+                                      <div className="space-y-1">
+                                        {entries.map((entry, entryIndex) => (
+                                          <div
+                                            key={entryIndex}
+                                            className="flex gap-1"
+                                          >
+                                            <NumberInput
+                                              value={entry}
+                                              onChange={(
+                                                displayValue,
+                                                numericValue,
+                                              ) => {
+                                                const currentEntries =
+                                                  form.getValues(
+                                                    `recipients.${index}.tickets_tolls_rental_entries`,
+                                                  ) || [];
+                                                const newEntries = [
+                                                  ...currentEntries,
+                                                ];
+                                                newEntries[entryIndex] =
+                                                  numericValue;
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental_entries`,
+                                                  newEntries,
+                                                );
+
+                                                // Calculate sum and update tickets_tolls_rental
+                                                const sum = newEntries.reduce(
+                                                  (a, b) => a + b,
+                                                  0,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.tickets_tolls_rental`,
+                                                  sum,
+                                                );
+
+                                                // Trigger recalculation
+                                                const recipient =
+                                                  form.getValues(
+                                                    `recipients.${index}`,
+                                                  );
+                                                const totalExpense =
+                                                  (typeof recipient.daily_compensation ===
+                                                  "number"
+                                                    ? recipient.daily_compensation
+                                                    : parseEuropeanNumber(
+                                                        recipient.daily_compensation as string,
+                                                      ) || 0) +
+                                                  (typeof recipient.accommodation_expenses ===
+                                                  "number"
+                                                    ? recipient.accommodation_expenses
+                                                    : parseEuropeanNumber(
+                                                        recipient.accommodation_expenses as string,
+                                                      ) || 0) +
+                                                  (typeof recipient.kilometers_traveled ===
+                                                  "number"
+                                                    ? recipient.kilometers_traveled
+                                                    : parseEuropeanNumber(
+                                                        recipient.kilometers_traveled as string,
+                                                      ) || 0) *
+                                                    (recipient.price_per_km ||
+                                                      DEFAULT_PRICE_PER_KM) +
+                                                  sum;
+                                                // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                                const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                                const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                                  ? recipient.daily_compensation
+                                                  : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                                const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
+                                                const deduction =
+                                                  recipient.has_2_percent_deduction
+                                                    ? withholdingBase * 0.02
+                                                    : 0;
+                                                const netPayable =
+                                                  totalExpense - deduction;
+                                                form.setValue(
+                                                  `recipients.${index}.total_expense`,
+                                                  totalExpense,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.deduction_2_percent`,
+                                                  deduction,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.net_payable`,
+                                                  netPayable,
+                                                );
+                                                form.setValue(
+                                                  `recipients.${index}.amount`,
+                                                  netPayable,
+                                                );
+                                              }}
+                                              min={0}
+                                              step={0.01}
+                                              placeholder="0.00"
+                                              className="flex-1"
+                                              data-testid={`input-recipient-${index}-ticket-entry-${entryIndex}`}
+                                            />
+                                            {entries.length > 1 && (
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                  const currentEntries =
+                                                    form.getValues(
+                                                      `recipients.${index}.tickets_tolls_rental_entries`,
+                                                    ) || [];
+                                                  const newEntries =
+                                                    currentEntries.filter(
+                                                      (_, i) =>
+                                                        i !== entryIndex,
+                                                    );
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental_entries`,
+                                                    newEntries,
+                                                  );
+
+                                                  // Calculate sum and update tickets_tolls_rental
+                                                  const sum = newEntries.reduce(
+                                                    (a, b) => a + b,
+                                                    0,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.tickets_tolls_rental`,
+                                                    sum,
+                                                  );
+
+                                                  // Trigger recalculation
+                                                  const recipient =
+                                                    form.getValues(
+                                                      `recipients.${index}`,
+                                                    );
+                                                  const totalExpense =
+                                                    (typeof recipient.daily_compensation ===
+                                                    "number"
+                                                      ? recipient.daily_compensation
+                                                      : parseEuropeanNumber(
+                                                          recipient.daily_compensation as string,
+                                                        ) || 0) +
+                                                    (typeof recipient.accommodation_expenses ===
+                                                    "number"
+                                                      ? recipient.accommodation_expenses
+                                                      : parseEuropeanNumber(
+                                                          recipient.accommodation_expenses as string,
+                                                        ) || 0) +
+                                                    (typeof recipient.kilometers_traveled ===
+                                                    "number"
+                                                      ? recipient.kilometers_traveled
+                                                      : parseEuropeanNumber(
+                                                          recipient.kilometers_traveled as string,
+                                                        ) || 0) *
+                                                      (recipient.price_per_km ||
+                                                        DEFAULT_PRICE_PER_KM) +
+                                                    sum;
+                                                  // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                                  const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                                  const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                                    ? recipient.daily_compensation
+                                                    : parseEuropeanNumber(recipient.daily_compensation as string) || 0);
+                                                  const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
+                                                  const deduction =
+                                                    recipient.has_2_percent_deduction
+                                                      ? withholdingBase * 0.02
+                                                      : 0;
+                                                  const netPayable =
+                                                    totalExpense - deduction;
+                                                  form.setValue(
+                                                    `recipients.${index}.total_expense`,
+                                                    totalExpense,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.deduction_2_percent`,
+                                                    deduction,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.net_payable`,
+                                                    netPayable,
+                                                  );
+                                                  form.setValue(
+                                                    `recipients.${index}.amount`,
+                                                    netPayable,
+                                                  );
+                                                }}
+                                                className="h-8 w-8 p-0"
+                                                data-testid={`button-remove-ticket-entry-${index}-${entryIndex}`}
+                                              >
+                                                <Trash2 className="h-3 w-3 text-destructive" />
+                                              </Button>
+                                            )}
+                                          </div>
+                                        ))}
+                                        {entries.length > 1 && (
+                                          <div className="text-xs text-muted-foreground pt-1 border-t">
+                                            Σύνολο: €
+                                            {entries
+                                              .reduce((a, b) => a + b, 0)
+                                              .toFixed(2)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
                               </div>
 
                               {/* 2% Deduction Checkbox */}
@@ -4123,7 +5102,7 @@ export function CreateDocumentDialog({
                                   control={form.control}
                                   name={`recipients.${index}.has_2_percent_deduction`}
                                   render={({ field }) => (
-                                    <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                                       <FormControl>
                                         <Checkbox
                                           checked={field.value}
@@ -4160,8 +5139,14 @@ export function CreateDocumentDialog({
                                                 : parseFloat(
                                                     recipient.tickets_tolls_rental as string,
                                                   ) || 0);
+                                            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation
+                                            const isEktosEdras = form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+                                            const dailyCompValue = (typeof recipient.daily_compensation === "number"
+                                              ? recipient.daily_compensation
+                                              : parseFloat(recipient.daily_compensation as string) || 0);
+                                            const withholdingBase = isEktosEdras ? dailyCompValue : totalExpense;
                                             const deduction = checked
-                                              ? totalExpense * 0.02
+                                              ? withholdingBase * 0.02
                                               : 0;
                                             const netPayable =
                                               totalExpense - deduction;
@@ -4181,9 +5166,16 @@ export function CreateDocumentDialog({
                                           data-testid={`checkbox-recipient-${index}-2-percent-deduction`}
                                         />
                                       </FormControl>
-                                      <FormLabel className="font-normal">
-                                        Παρακράτηση 2%
-                                      </FormLabel>
+                                      <div className="space-y-1 leading-none">
+                                        <FormLabel className="font-normal">
+                                          Παρακράτηση 2% (Φόρος Προκαταβολής)
+                                        </FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                          {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE
+                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση"
+                                            : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
+                                        </p>
+                                      </div>
                                     </FormItem>
                                   )}
                                 />
@@ -4247,15 +5239,71 @@ export function CreateDocumentDialog({
                             </>
                           )}
 
-                          {/* renderRecipientInstallments(index) - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
+                          {/* Delete Button - same row as the inputs */}
+                          <div className="md:col-span-1 md:col-start-12 md:row-start-1 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeRecipient(index)}
+                              className="shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+
+                          {/* Installments Section - Full width row for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
                             EKTOS_EDRAS_TYPE && (
-                            <div className="md:col-span-3 md:row-span-2 flex items-start">
-                              <div className="flex-1">
-                                {renderRecipientInstallments(index)}
-                              </div>
+                            <div className="md:col-span-12 md:row-start-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+                              {renderRecipientInstallments(index)}
                             </div>
                           )}
+
+                          <div className="md:col-span-12 md:row-start-3">
+                            <BeneficiaryGeoSelector
+                              regions={availableRegions}
+                              regionalUnits={availableUnits}
+                              municipalities={availableMunicipalities}
+                              value={
+                                (recipient as any).regiondet as
+                                  | RegiondetSelection
+                                  | null
+                              }
+                              onChange={(next) =>
+                                handleRecipientGeoChange(index, next)
+                              }
+                              required
+                              loading={
+                                regionsLoading ||
+                                geographicDataLoading ||
+                                !selectedProjectId ||
+                                (recipient.id
+                                  ? regiondetSaveState[String(recipient.id)]
+                                      ?.status === "saving"
+                                  : false)
+                              }
+                              error={
+                                regiondetErrors[index] ||
+                                (recipient.id &&
+                                regiondetSaveState[String(recipient.id)]
+                                  ?.status === "error"
+                                  ? regiondetSaveState[String(recipient.id)]
+                                      ?.message
+                                  : undefined)
+                              }
+                              onRetry={
+                                recipient.id &&
+                                regiondetSaveState[String(recipient.id)]
+                                  ?.status === "error"
+                                  ? () =>
+                                      retryRegiondetSave(
+                                        Number(recipient.id),
+                                      )
+                                  : undefined
+                              }
+                            />
+                          </div>
 
                           {/* Ελεύθερο Κείμενο - Only show for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
                           {form.getValues("expenditure_type") !==
@@ -4264,8 +5312,8 @@ export function CreateDocumentDialog({
                               {...form.register(
                                 `recipients.${index}.secondary_text`,
                               )}
-                              placeholder="Ελεύθερο Κείμενο"
-                              className="md:col-span-8 md:row-start-2"
+                              placeholder="Ελεύθερο Κείμενο (προαιρετικό)"
+                              className="md:col-span-12 md:row-start-4"
                               autoComplete="off"
                             />
                           )}
@@ -4383,6 +5431,56 @@ export function CreateDocumentDialog({
                       )}
                     />
                   </div>
+
+                  {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
+                  {(() => {
+                    const selectedUnitValue = form.watch("unit");
+                    if (!selectedUnitValue) return null;
+                    
+                    // Filter for_yl by the selected unit's monada_id
+                    const availableForYl = forYlData?.filter(
+                      (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
+                    ) || [];
+                    
+                    // Only show dropdown if there are for_yl options for this unit
+                    if (availableForYl.length === 0) return null;
+                    
+                    return (
+                      <FormField
+                        control={form.control}
+                        name="for_yl_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
+                            <Select
+                              onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
+                              value={field.value ? String(field.value) : "none"}
+                            >
+                              <FormControl>
+                                <SelectTrigger data-testid="select-for-yl">
+                                  <SelectValue placeholder="Επιλέξτε φορέα (προαιρετικό)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">Κανένας (χρήση μονάδας)</SelectItem>
+                                {availableForYl.map((forYl: any) => (
+                                  <SelectItem
+                                    key={forYl.id}
+                                    value={String(forYl.id)}
+                                  >
+                                    {forYl.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Επιλέξτε αν ο φορέας υλοποίησης διαφέρει από τη μονάδα
+                            </p>
+                          </FormItem>
+                        )}
+                      />
+                    );
+                  })()}
                 </div>
               </>
             )}
@@ -4697,34 +5795,43 @@ export function CreateDocumentDialog({
   const unitInitializedRef = useRef(false);
 
   useEffect(() => {
+    // Wait for units to load before attempting auto-selection
+    if (unitsLoading || !units || units.length === 0) {
+      return;
+    }
+
     // Only run this once to avoid infinite loops
     if (userUnitIds.length === 1 && !unitInitializedRef.current) {
       unitInitializedRef.current = true;
 
+      // Convert numeric unit ID to string for matching
+      const userUnitIdStr = String(userUnitIds[0]);
+
       // Set the unit value immediately without delay
       // Convert user's unit ID to unit name for display
-      const userUnitData = units.find((u: any) => u.id === userUnitIds[0]);
-      const unitValue = userUnitData?.name || "";
-      form.setValue("unit", unitValue, {
-        shouldDirty: false,
-        shouldValidate: false,
-      });
+      const userUnitData = units.find((u: any) => u.id === userUnitIdStr);
+      const unitValue = userUnitData?.id || "";
 
-      // Also update form context data to ensure consistency
-      updateFormData({
-        ...formData,
-        unit: unitValue,
-      });
+      if (unitValue) {
+        form.setValue("unit", unitValue, {
+          shouldDirty: false,
+          shouldValidate: false,
+        });
 
-      // Mark unit initialization as completed to prevent overrides
-      if (unitInitializationRef.current) {
-        unitInitializationRef.current.isCompleted = true;
-        unitInitializationRef.current.defaultUnit = unitValue;
+        // Also update form context data to ensure consistency
+        updateFormData({
+          ...formData,
+          unit: unitValue,
+        });
+
+        // Mark unit initialization as completed to prevent overrides
+        if (unitInitializationRef.current) {
+          unitInitializationRef.current.isCompleted = true;
+          unitInitializationRef.current.defaultUnit = unitValue;
+        }
       }
-
-      // Auto-selected the only available unit
     }
-  }, [user?.units]); // Removed form, formData, updateFormData from dependencies
+  }, [units, unitsLoading, userUnitIds, form, formData, updateFormData]); // Wait for units to be loaded
 
   useEffect(() => {
     if (regions.length === 1) {

@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { Trash2 } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface ViewModalProps {
   isOpen: boolean;
@@ -28,6 +29,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
   const [protocolNumber, setProtocolNumber] = useState('');
   const [protocolDate, setProtocolDate] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Fetch recipients with decrypted AFM values from the API
+  const { data: decryptedRecipients = [] } = useQuery<any[]>({
+    queryKey: [`/api/documents/${document?.id}/beneficiaries`],
+    enabled: !!document?.id && isOpen,
+    staleTime: 5 * 60 * 1000,
+  });
 
   useEffect(() => {
     if (document) {
@@ -46,11 +54,11 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       setLoading(true);
 
       if (!protocolNumber.trim()) {
-        throw new Error('Απαιτείται αριθμός πρωτοκόλλου');
+        throw new Error("Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός");
       }
 
       if (!protocolDate) {
-        throw new Error('Απαιτείται ημερομηνία πρωτοκόλλου');
+        throw new Error("Η ημερομηνία πρωτοκόλλου είναι υποχρεωτική");
       }
 
       const formattedDate = new Date(protocolDate).toISOString().split('T')[0];
@@ -69,7 +77,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
       });
 
       if (!response || response.success === false) {
-        throw new Error(response?.message || 'Αποτυχία ενημέρωσης πρωτοκόλλου');
+        throw new Error(response?.message || "Αποτυχία αποθήκευσης πρωτοκόλλου");
       }
 
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
@@ -77,15 +85,26 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
 
       toast({
         title: "Επιτυχία",
-        description: response.message || "Το πρωτόκολλο ενημερώθηκε επιτυχώς",
+        description: response.message || "Αποθηκεύτηκε ο αριθμός πρωτοκόλλου",
       });
       onClose();
 
     } catch (error) {
       // Protocol saving error occurred, now display toast notification to user
+      const friendlyByCode: Record<string, string> = {
+        PROTOCOL_NUMBER_EXISTS_YEAR:
+          "Protocol number is already used for this year. Please choose a different number.",
+      };
+      const code = (error as any)?.code;
+      const friendlyMessage = code ? friendlyByCode[code] : undefined;
+
       toast({
         title: "Σφάλμα",
-        description: error instanceof Error ? error.message : "Αποτυχία ενημέρωσης πρωτοκόλλου",
+        description:
+          friendlyMessage ||
+          (error instanceof Error
+            ? error.message
+            : "Αποτυχία αποθήκευσης πρωτοκόλλου"),
         variant: "destructive",
       });
     } finally {
@@ -97,9 +116,9 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Λεπτομέρειες Εγγράφου</DialogTitle>
+          <DialogTitle>Καταχώριση Αριθμού Πρωτοκόλλου</DialogTitle>
           <DialogDescription>
-            Προβολή και επεξεργασία των στοιχείων του εγγράφου
+            Συμπλήρωσε τα στοιχεία πρωτοκόλλου για το έγγραφο.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -113,7 +132,7 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                   <Input
                     value={protocolNumber}
                     onChange={(e) => setProtocolNumber(e.target.value)}
-                    placeholder="Εισάγετε αριθμό πρωτοκόλλου"
+                    placeholder="Π.χ. 123456/2025"
                     required
                   />
                 </div>
@@ -145,13 +164,13 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
                   <p className="font-medium capitalize">{document.status === 'approved' ? 'Εγκεκριμένο' : 'Σε εκκρεμότητα'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Ημερομηνία Δημιουργίας</p>
+                  <p className="text-sm text-muted-foreground">Ημ/νία δημιουργίας</p>
                   <p className="font-medium">
                     {new Date(document.created_at).toLocaleDateString('el-GR')}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Συνολικό Ποσό</p>
+                  <p className="text-sm text-muted-foreground">Συνολικό ποσό</p>
                   <p className="font-medium">
                     {new Intl.NumberFormat('el-GR', {
                       style: 'currency',
@@ -163,33 +182,40 @@ export function ViewDocumentModal({ isOpen, onClose, document }: ViewModalProps)
             </div>
 
             {/* Recipients Section */}
-            {document.recipients && document.recipients.length > 0 && (
+            {decryptedRecipients && decryptedRecipients.length > 0 && (
               <div>
                 <h3 className="font-medium text-lg mb-2">Δικαιούχοι</h3>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {document.recipients.map((recipient: any, index: number) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-muted rounded-lg"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
+                  {decryptedRecipients.map((item: any, index: number) => {
+                    const beneficiary = item.beneficiaries
+                      ? Array.isArray(item.beneficiaries)
+                        ? item.beneficiaries[0]
+                        : item.beneficiaries
+                      : item;
+                    const firstname = beneficiary?.name || beneficiary?.firstname || "";
+                    const lastname = beneficiary?.surname || beneficiary?.lastname || "";
+                    const afm = beneficiary?.afm || item.afm || "";
+                    const amount = item.amount || 0;
+
+                    return (
+                      <div key={index} className="p-3 bg-muted rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-medium">
+                              {lastname} {firstname}
+                            </p>
+                            <p className="text-sm text-muted-foreground">ΑΦΜ: {afm}</p>
+                          </div>
                           <p className="font-medium">
-                            {recipient.lastname} {recipient.firstname}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            ΑΦΜ: {recipient.afm}
+                            {new Intl.NumberFormat("el-GR", {
+                              style: "currency",
+                              currency: "EUR",
+                            }).format(amount)}
                           </p>
                         </div>
-                        <p className="font-medium">
-                          {new Intl.NumberFormat('el-GR', {
-                            style: 'currency',
-                            currency: 'EUR'
-                          }).format(recipient.amount || 0)}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -248,7 +274,7 @@ interface Recipient {
   installmentAmounts?: Record<string, number>;
 }
 
-export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditModalProps) {
+export function EditDocumentModal({ isOpen, onClose, document, onEdit: _onEdit }: EditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [protocolNumber, setProtocolNumber] = useState('');
@@ -261,15 +287,14 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
   const processedDocumentId = useRef<string | null>(null);
 
   // Function to load enhanced project data from MIS using optimized schema
-  const loadProjectIdFromMis = async (mis: string) => {
-    if (!mis) return;
-    
+  const loadProjectIdFromMis = useCallback(async (mis: string) => {
+    if (!mis) return null;
+
+    setLoading(true); // Show loading indicator while fetching
     try {
       console.log(`[EditDocument] Fetching enhanced project data for MIS: ${mis}`);
-      setLoading(true); // Show loading indicator while fetching
-      
       const response = await fetch(`/api/projects/${mis}`);
-      
+
       if (response.ok) {
         const projectData = await response.json();
         if (projectData && projectData.na853) {
@@ -278,50 +303,54 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
             event_type: projectData.enhanced_event_type?.name,
             expenditure_type: projectData.enhanced_expenditure_type?.name,
             unit: projectData.enhanced_unit?.name,
-            region: projectData.enhanced_region?.region
+            region: projectData.enhanced_region?.region,
           });
-          
+
           setProjectId(projectData.na853);
-          
+
           // Auto-fill expenditure type if available from enhanced data
           if (projectData.enhanced_expenditure_type?.name) {
             setExpenditureType(projectData.enhanced_expenditure_type.name);
           }
-          
+
           toast({
-            title: "Επιτυχία",
-            description: `Βρέθηκε το έργο: ${projectData.na853} - ${projectData.event_description || projectData.project_title}`,
+            title: "Success",
+            description: `Found project: ${projectData.na853} - ${projectData.event_description || projectData.project_title}`,
           });
           return projectData.na853;
-        } else {
-          console.log(`[EditDocument] No project data found for MIS: ${mis}`);
-          toast({
-            title: "Προσοχή",
-            description: `Δε βρέθηκε έργο για το MIS: ${mis}`,
-            variant: "destructive",
-          });
         }
-      } else {
-        console.error(`[EditDocument] Failed to fetch project for MIS: ${mis}`);
+
+        console.log(`[EditDocument] No project data found for MIS: ${mis}`);
         toast({
-          title: "Σφάλμα",
-          description: `Αποτυχία αναζήτησης έργου για το MIS: ${mis}`,
+          title: "Warning",
+          description: `No project found for MIS: ${mis}`,
           variant: "destructive",
         });
+        return null;
       }
-    } catch (error) {
-      console.error(`[EditDocument] Error fetching project for MIS ${mis}:`, error);
+
+      console.error(`[EditDocument] Failed to fetch project for MIS: ${mis}`);
       toast({
-        title: "Σφάλμα",
-        description: `Σφάλμα κατά την αναζήτηση έργου: ${error instanceof Error ? error.message : 'Άγνωστο σφάλμα'}`,
+        title: "Error",
+        description: `Failed to fetch project for MIS: ${mis}`,
         variant: "destructive",
       });
+      return null;
+    } catch (error) {
+      console.error("[EditDocument] Error fetching project for MIS:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch project data from MIS",
+        variant: "destructive",
+      });
+      return null;
     } finally {
       setLoading(false); // Hide loading indicator
     }
-    
-    return null;
-  };
+  }, [toast]);
 
   // Use effect with a proper cleanup to prevent memory leaks and infinite loops
   useEffect(() => {
@@ -416,7 +445,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
           
           // Set consistent installment number based on installments array
           if (hasInstallments && Array.isArray(r.installments)) {
-            if (r.installments.includes('ΕΦΑΠΑΞ')) {
+            if (r.installments.includes('ΕΦΑΠΑ')) {
               recipient.installment = 1;
             } else if (r.installments.includes('Α')) {
               recipient.installment = 1;
@@ -431,261 +460,149 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         return recipient;
       });
 
-      console.log('[EditDocument] Processed recipients:', safeRecipients);
+      console.log("[EditDocument] Processed recipients:", safeRecipients);
       setRecipients(safeRecipients);
     } catch (error) {
-      console.error('[EditDocument] Error parsing recipients:', error);
-      setRecipients([]);
+      toast({
+        title: "Σφάλμα",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία επεξεργασίας δικαιούχων",
+        variant: "destructive",
+      });
     }
-    
-    // Return a cleanup function to reset state when dialog closes
-    return () => {
-      if (!isOpen) {
-        // Reset the processed document ID when the dialog closes
-        processedDocumentId.current = null;
-      }
-    };
-  }, [document, isOpen]);
+  }, [document, isOpen, loadProjectIdFromMis, toast]);
 
-  const handleRecipientChange = (index: number, field: string, value: string | number) => {
+  // Handle adding a new recipient
+  const addRecipient = () => {
+    const newRecipient: Recipient = {
+      firstname: '',
+      lastname: '',
+      fathername: '',
+      afm: '',
+      amount: 0,
+      installment: 1,
+    };
+    setRecipients([...recipients, newRecipient]);
+  };
+
+  // Handle removing a recipient by index
+  const removeRecipient = (index: number) => {
+    const updatedRecipients = recipients.filter((_, i) => i !== index);
+    setRecipients(updatedRecipients);
+  };
+
+  // Handle updating recipient field values
+  const handleRecipientChange = (
+    index: number,
+    field: keyof Recipient,
+    value: any
+  ) => {
     const updatedRecipients = [...recipients];
     updatedRecipients[index] = {
       ...updatedRecipients[index],
-      [field]: field === 'amount'
-        ? parseFloat(String(value)) || 0
-        : field === 'installment'
-        ? parseInt(String(value)) || 1
-        : String(value)
+      [field]: value,
     };
     setRecipients(updatedRecipients);
   };
 
-  const addRecipient = () => {
-    if (recipients.length >= 15) {
+  // Calculate total amount from all recipients
+  const calculateTotalAmount = () => {
+    return recipients.reduce((sum, recipient) => sum + (recipient.amount || 0), 0);
+  };
+
+  // Handle editing/saving the document
+  const handleEdit = async () => {
+    if (!document?.id) {
       toast({
         title: "Error",
-        description: "Maximum 10 recipients allowed",
+        description: "Missing document ID",
         variant: "destructive",
       });
       return;
     }
-    setRecipients([
-      ...recipients,
-      { firstname: '', lastname: '', fathername: '', afm: '', amount: 0, installment: 1 }
-    ]);
-  };
 
-  const removeRecipient = (index: number) => {
-    setRecipients(recipients.filter((_, i) => i !== index));
-  };
-
-  const calculateTotalAmount = () => {
-    return recipients.reduce((sum, r) => sum + (typeof r.amount === 'number' ? r.amount : 0), 0);
-  };
-
-  const handleEdit = async () => {
-    if (loading) return; // Prevent multiple submissions
-    
     try {
-      if (!document) {
-        throw new Error('Δεν επιλέχθηκε έγγραφο για επεξεργασία');
-      }
-      
-      console.log('[EditDocument] Starting document edit process...');
       setLoading(true);
-      
-      // Form validation - collect all errors at once
-      const errors = [];
-      if (!String(projectId).trim()) errors.push('Απαιτείται το ID έργου');
-      if (!String(expenditureType).trim()) errors.push('Απαιτείται ο τύπος δαπάνης');
-      if (!recipients.length) errors.push('Απαιτείται τουλάχιστον ένας δικαιούχος');
 
-      // Validate individual recipients
-      recipients.forEach((recipient, index) => {
-        const firstName = String(recipient.firstname || '').trim();
-        const lastName = String(recipient.lastname || '').trim();
-        const afm = String(recipient.afm || '').trim();
-        
-        if (!firstName) {
-          errors.push(`Λείπει το όνομα για τον δικαιούχο #${index + 1}`);
-        }
-        
-        if (!lastName) {
-          errors.push(`Λείπει το επώνυμο για τον δικαιούχο #${index + 1}`);
-        }
-        
-        if (!afm) {
-          errors.push(`Λείπει το ΑΦΜ για τον δικαιούχο #${index + 1}`);
-        } else if (afm.length !== 9 || !/^\d+$/.test(afm)) {
-          errors.push(`Μη έγκυρο ΑΦΜ για τον δικαιούχο #${index + 1} (πρέπει να είναι 9 ψηφία)`);
-        }
-      });
-
-      // Early validation failure
-      if (errors.length > 0) {
-        throw new Error(errors.join('<br>'));
+      // Validate required fields
+      if (!protocolNumber.trim()) {
+        throw new Error("Ο αριθμός πρωτοκόλλου είναι υποχρεωτικός");
       }
 
-      // Process all recipients in one go with a more robust approach
-      const validatedRecipients = [];
-      let preserveNewFormat = false; // Flag to check if we need to preserve the new format
-      
-      console.log(`[EditDocument] Starting validation of ${recipients.length} recipients`);
-      
-      for (let i = 0; i < recipients.length; i++) {
-        const r = recipients[i];
-        const recipientNumber = i + 1;
-        
-        // Safe conversion - avoid repetitive code
-        const safeString = (value: string | undefined | null): string => value ? String(value).trim() : '';
-        const safeNumber = (value: any, defaultValue: number): number => {
-          const num = typeof value === 'string' ? parseFloat(value) : Number(value);
-          return isNaN(num) ? defaultValue : num;
-        };
-        
-        // Specific validations
-        const amount = safeNumber(r.amount, 0);
-        const installment = safeNumber(r.installment, 1);
-        
-        if (amount <= 0) {
-          throw new Error(`Μη έγκυρο ποσό για τον δικαιούχο #${recipientNumber}`);
-        }
-        
-        if (installment < 1 || installment > 12) {
-          throw new Error(`Μη έγκυρη δόση για τον δικαιούχο #${recipientNumber} (πρέπει να είναι μεταξύ 1-12)`);
-        }
-        
-        // Check if this recipient has the new format fields - use of defensive checks
-        const hasInstallments = r.installments && Array.isArray(r.installments) && r.installments.length > 0;
-        const hasInstallmentAmounts = r.installmentAmounts && 
-                                     typeof r.installmentAmounts === 'object' && 
-                                     Object.keys(r.installmentAmounts || {}).length > 0;
-        const isNewFormat = hasInstallments && hasInstallmentAmounts;
-        
-        if (isNewFormat) {
-          preserveNewFormat = true; // We've detected new format data, so let's preserve it
-        }
-        
-        // Create validated recipient object with basic fields
-        const validatedRecipient: Record<string, any> = {
-          firstname: safeString(r.firstname),
-          lastname: safeString(r.lastname),
-          fathername: safeString(r.fathername),
-          afm: safeString(r.afm),
-          amount: amount
-        };
-        
-        // Handle the installment formats
-        if (isNewFormat) {
-          // For new format, include both the installments array and installmentAmounts object
-          console.log(`[EditDocument] Recipient #${recipientNumber} using new installment format:`, {
-            installments: r.installments,
-            installmentAmounts: r.installmentAmounts
-          });
-          
-          // Make defensive copies to avoid mutations
-          if (hasInstallments && Array.isArray(r.installments) && r.installments.length > 0) {
-            // TypeScript knows r.installments is a non-empty array here
-            validatedRecipient.installments = [...r.installments];
-          }
-          
-          if (hasInstallmentAmounts) {
-            validatedRecipient.installmentAmounts = {...r.installmentAmounts};
-          }
-          
-          // Also include the legacy installment field for backward compatibility
-          validatedRecipient.installment = installment;
-        } else {
-          // For legacy format, just include the installment number
-          console.log(`[EditDocument] Recipient #${recipientNumber} using legacy installment format: ${installment}`);
-          validatedRecipient.installment = installment;
-        }
-        
-        // Add validated recipient to array
-        validatedRecipients.push(validatedRecipient);
+      if (!projectId.trim()) {
+        throw new Error("Το ID έργου είναι υποχρεωτικό");
       }
 
-      // Build data object with proper optional fields handling
-      const formData: Record<string, any> = {
-        project_id: String(projectId).trim(),
-        expenditure_type: String(expenditureType).trim(),
-        recipients: validatedRecipients,
-        total_amount: calculateTotalAmount()
-      };
-      
-      // Only add protocol fields if they're not empty
-      const trimmedProtocolNumber = String(protocolNumber).trim();
-      if (trimmedProtocolNumber) {
-        formData.protocol_number_input = trimmedProtocolNumber;
-      }
-      
-      if (protocolDate) {
-        formData.protocol_date = protocolDate;
+      if (!expenditureType.trim()) {
+        throw new Error("Ο τύπος δαπάνης είναι υποχρεωτικός");
       }
 
-      // Send optimized API request
-      const response = await apiRequest(`/api/documents/generated/${document.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      // Check if response is valid and doesn't contain errors
-      if (!response || typeof response === 'object' && 'error' in response) {
-        const errorMessage = response && typeof response === 'object' && 'error' in response 
-          ? String(response.error) 
-          : 'Αποτυχία ενημέρωσης εγγράφου';
-        throw new Error(errorMessage);
+      if (recipients.length === 0) {
+        throw new Error("Πρέπει να προσθέσετε τουλάχιστον ένα δικαιούχο");
       }
 
-      // Invalidate cache to refresh data
+      // Validate all recipients have required fields
+      for (const recipient of recipients) {
+        if (!recipient.firstname.trim() || !recipient.lastname.trim() || !recipient.afm.trim()) {
+          throw new Error("Όλοι οι δικαιούχοι πρέπει να έχουν όνομα, επίθετο και ΑΦΜ");
+        }
+        if (!recipient.amount || recipient.amount <= 0) {
+          throw new Error("Όλοι οι δικαιούχοι πρέπει να έχουν θετικό ποσό");
+        }
+      }
+
+      const response = await apiRequest(
+        `/api/documents/generated/${document.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            protocol_number_input: protocolNumber.trim(),
+            protocol_date: protocolDate,
+            project_id: projectId.trim(),
+            expenditure_type: expenditureType.trim(),
+            recipients: recipients.map(r => ({
+              firstname: r.firstname,
+              lastname: r.lastname,
+              fathername: r.fathername || null,
+              afm: r.afm,
+              amount: r.amount,
+              installment: r.installment,
+              ...(r.installments && r.installmentAmounts ? {
+                installments: r.installments,
+                installmentAmounts: r.installmentAmounts,
+              } : {}),
+            })),
+          }),
+        }
+      ) as any;
+
+      if (!response || !(response as any)?.success) {
+        throw new Error((response as any)?.message || "Αποτυχία ενημέρωσης εγγράφου");
+      }
+
       await queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
-      
-      // Success message and cleanup
+      await queryClient.invalidateQueries({ queryKey: ['/api/documents/generated'] });
+
       toast({
         title: "Επιτυχία",
         description: "Το έγγραφο ενημερώθηκε επιτυχώς",
       });
 
-      // Call callbacks and close modal
-      onEdit(document.id.toString());
       onClose();
-
     } catch (error) {
-      console.error('[EditDocument] Error:', error);
-      
-      // Format error message for better readability in toasts
-      const errorMessage = error instanceof Error ? error.message : "Αποτυχία ενημέρωσης εγγράφου";
-      
-      // Check if error message contains HTML-like formatting (<br>)
-      if (errorMessage.includes('<br>')) {
-        const errorPoints = errorMessage.split('<br>').map(msg => msg.trim()).filter(Boolean);
-        
-        // Show a summary toast
-        toast({
-          title: "Σφάλμα επικύρωσης",
-          description: `Βρέθηκαν ${errorPoints.length} σφάλματα. Παρακαλώ διορθώστε τα πεδία με πρόβλημα.`,
-          variant: "destructive",
-        });
-        
-        // Show individual error messages
-        errorPoints.forEach((point, index) => {
-          setTimeout(() => {
-            toast({
-              title: `Σφάλμα #${index + 1}`,
-              description: point,
-              variant: "destructive",
-            });
-          }, index * 300); // Show errors with a small delay between them
-        });
-      } else {
-        // Show a single error toast for simple errors
-        toast({
-          title: "Σφάλμα",
-          description: errorMessage,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Σφάλμα",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία ενημέρωσης εγγράφου",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -696,9 +613,9 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
       <DialogContent className="max-w-[900px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-primary">Επεξεργασία Εγγράφου</DialogTitle>
-          <DialogDescription className="text-base">
+            <DialogDescription className="text-base">
             Συμπληρώστε τα πεδία παρακάτω για να τροποποιήσετε το έγγραφο. Πατήστε αποθήκευση όταν τελειώσετε.
-          </DialogDescription>
+            </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-4">
@@ -774,7 +691,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                             Αναζήτηση...
                           </>
                         ) : (
-                          <>Εύρεση ΝΑ853</>
+                          <>Έρευση ΝΑ853</>
                         )}
                       </Button>
                     </div>
@@ -830,7 +747,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                         required
                       />
 
-                      {/* Επώνυμο */}
+                      {/* Επίθετο */}
                       <Input
                         value={recipient.lastname}
                         onChange={(e) => handleRecipientChange(index, 'lastname', e.target.value)}
@@ -863,7 +780,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                       {/* Ποσό */}
                       <NumberInput
                         value={recipient.amount || ''}
-                        onChange={(formatted, numeric) => handleRecipientChange(index, 'amount', numeric)}
+                        onChange={(_formatted, numeric) => handleRecipientChange(index, 'amount', numeric)}
                         placeholder="Ποσό"
                         className="md:col-span-2 md:row-span-1"
                         decimals={2}
@@ -899,7 +816,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
                       <div className="md:col-span-8 md:row-start-2">
                         {/* For installment type info */}
                         <div className="text-xs text-muted-foreground">
-                          {recipient.installment === 1 ? 'ΕΦΑΠΑΞ / Α' : 
+                          {recipient.installment === 1 ? 'ΕΦΑΠΑ / Α' : 
                            recipient.installment === 2 ? 'Β' : 
                            recipient.installment === 3 ? 'Γ' : `Δόση #${recipient.installment}`}
                         </div>
@@ -926,7 +843,7 @@ export function EditDocumentModal({ isOpen, onClose, document, onEdit }: EditMod
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ακύρωση
+            Κλείσιμο
           </Button>
           <Button onClick={handleEdit} disabled={loading}>
             {loading ? "Αποθήκευση..." : "Αποθήκευση Αλλαγών"}
@@ -942,8 +859,17 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
+    if (!documentId) {
+      toast({
+        title: "Error",
+        description: "Missing document identifier. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
-      setLoading(true);
       await apiRequest(`/api/documents/generated/${documentId}`, {
         method: 'DELETE'
       });
@@ -956,7 +882,10 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
     } catch (error) {
       toast({
         title: "Σφάλμα",
-        description: "Αποτυχία διαγραφής εγγράφου",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Αποτυχία διαγραφής εγγράφου",
         variant: "destructive",
       });
     } finally {
@@ -975,7 +904,7 @@ export function DeleteDocumentModal({ isOpen, onClose, documentId, onDelete }: D
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ακύρωση
+            Κλείσιμο
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={loading}>
             {loading ? "Διαγραφή..." : "Διαγραφή"}
@@ -1063,7 +992,7 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
         <DialogHeader>
           <DialogTitle>Εξαγωγή Εγγράφων</DialogTitle>
           <DialogDescription>
-            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ) σε μορφή ZIP.
+            Πατήστε το κουμπί παρακάτω για να κατεβάσετε τα έγγραφα (κύριο έγγραφο και ΠΕΡΙΣΤΟΛΙΚΗΣ ΔΕΙΞΙΜΟΤΗΤΑΣ) σε μορφή ZIP.
           </DialogDescription>
         </DialogHeader>
 
@@ -1072,13 +1001,13 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
           <p>Το αρχείο ZIP περιέχει δύο έγγραφα DOCX:</p>
           <ul className="list-disc pl-5 mt-1">
             <li>Το κύριο έγγραφο με όλα τα στοιχεία</li>
-            <li>Το συμπληρωματικό έγγραφο "ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΟΡΙΖΟΝΤΙΟΣ" με τα στοιχεία παραληπτών και τύπο Πράξης</li>
+            <li>Το συμπληρωματικό έγγραφο "ΠΕΡΙΣΤΟΛΙΚΗΣ ΔΕΙΞΙΜΟΤΗΤΑΣ" με τα στοιχεία παραληπτών και τόπο Πράξης</li>
           </ul>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Ακύρωση
+            Κλείσιμο
           </Button>
           <Button
             onClick={handleExport}

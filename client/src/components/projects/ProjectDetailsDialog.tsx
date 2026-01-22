@@ -13,7 +13,6 @@ import type {
   ProjectIndex,
   EventType,
   ExpenditureType,
-  Kallikratis,
   Monada,
   ProjectDecision,
   ProjectFormulation
@@ -28,7 +27,6 @@ interface ProjectDetailsDialogProps {
 // Enhanced types for API responses with joins
 interface ProjectIndexWithJoins extends ProjectIndex {
   monada?: Monada;
-  kallikratis?: Kallikratis;
   event_types?: EventType;
   expenditure_types?: ExpenditureType;
 }
@@ -48,6 +46,13 @@ interface CompleteProjectResponse {
   index?: ProjectIndexWithJoins | ProjectIndexWithJoins[];
   decisions?: ProjectDecision | ProjectDecision[];
   formulations?: ProjectFormulation | ProjectFormulation[];
+  units?: any[];
+  expenditureTypes?: any[];
+  projectGeographicData?: {
+    regions?: any[];
+    regionalUnits?: any[];
+    municipalities?: any[];
+  };
 }
 
 export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
@@ -60,7 +65,6 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   // Extract project details safely with comprehensive error handling
   const projectData = project as any;
   const projectId = projectData?.id;
-  const projectMis = projectData?.mis;
 
   // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
   const { 
@@ -68,8 +72,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     isLoading: isCompleteDataLoading, 
     error: completeDataError 
   } = useQuery<CompleteProjectResponse>({
-    queryKey: [`/api/projects/${projectMis}/complete`],
-    enabled: !!projectMis && open,
+    queryKey: [`/api/projects/${projectId}/complete`],
+    enabled: !!projectId && open,
     retry: 1,
     staleTime: 30 * 60 * 1000, // 30 minutes cache
     gcTime: 60 * 60 * 1000, // 1 hour garbage collection
@@ -78,9 +82,10 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   });
 
   // Additional budget query for now (can be integrated into complete endpoint later)
+  // Note: Budget lookup still uses MIS as it's a different system
   const { data: budgetData, isLoading: budgetLoading, error: budgetError } = useQuery<BudgetDataWithCalculated | BudgetDataWithCalculated[] | { status: string; data: BudgetDataWithCalculated | BudgetDataWithCalculated[] }>({
-    queryKey: [`/api/budget/lookup/${projectMis}`],
-    enabled: !!projectMis && open,
+    queryKey: [`/api/budget/lookup/${projectData?.mis}`],
+    enabled: !!projectData?.mis && open,
     retry: 1,
     staleTime: 30 * 60 * 1000, // 30 minutes cache
     gcTime: 60 * 60 * 1000, // 1 hour garbage collection
@@ -141,6 +146,142 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
     if (!projectIndexData) return [];
     return (Array.isArray(projectIndexData) ? projectIndexData : [projectIndexData]) as ProjectIndexWithJoins[];
   }, [projectIndexData]);
+
+  // Helper function to format FEK data (handles JSONB object)
+  const formatFEK = React.useCallback((fekData: any): string => {
+    if (!fekData) return 'Δεν υπάρχει';
+    
+    // If it's an object with year and number properties
+    if (typeof fekData === 'object' && !Array.isArray(fekData)) {
+      const year = fekData.year || '';
+      const number = fekData.number || '';
+      if (year || number) {
+        return `${year}/${number}`.replace(/^\/|\/$/g, '').trim();
+      }
+    }
+    
+    // If it's already a string
+    if (typeof fekData === 'string') {
+      return fekData;
+    }
+    
+    // If it's an array, format first element
+    if (Array.isArray(fekData) && fekData.length > 0) {
+      return formatFEK(fekData[0]);
+    }
+    
+    return 'Δεν υπάρχει';
+  }, []);
+
+  // Extract units and expenditure types from complete project data
+  const unitsData = completeProjectData?.units || [];
+  const expenditureTypesData = completeProjectData?.expenditureTypes || [];
+
+  // Helper function to get unit name from ID
+  const getUnitName = React.useCallback((unitId: number | string): string => {
+    const unit = unitsData.find((u: any) => u.id === unitId);
+    if (unit) {
+      return unit.unit || unit.unit_name || `ID: ${unitId}`;
+    }
+    return `ID: ${unitId}`;
+  }, [unitsData]);
+
+  // Helper function to get expenditure type name from ID
+  const getExpenditureTypeName = React.useCallback((expenditureId: number | string): string => {
+    const expenditure = expenditureTypesData.find((e: any) => e.id === expenditureId);
+    if (expenditure) {
+      return expenditure.expenditure_types || `ID: ${expenditureId}`;
+    }
+    return `ID: ${expenditureId}`;
+  }, [expenditureTypesData]);
+
+  // Helper component to display region hierarchy nicely
+  const RegionHierarchyDisplay: React.FC = () => {
+    try {
+      if (!completeProjectData?.projectGeographicData) return <span>Δεν υπάρχει</span>;
+      
+      const { regions: regionData, regionalUnits, municipalities } = completeProjectData.projectGeographicData;
+      
+      if (!regionData || regionData.length === 0) return <span>Δεν υπάρχει</span>;
+      
+      // Build hierarchy structure: Region -> Units -> Municipalities
+      const hierarchy = new Map<string, { units: Set<string>; municipalities: Set<string> }>();
+      
+      // Map regions to their units and municipalities
+      regionData.forEach((item: any) => {
+        const regionName = item.regions?.name;
+        if (regionName) {
+          if (!hierarchy.has(regionName)) {
+            hierarchy.set(regionName, { units: new Set(), municipalities: new Set() });
+          }
+        }
+      });
+      
+      // Add units to their regions
+      regionalUnits?.forEach((item: any) => {
+        const unitName = item.regional_units?.name;
+        const regionCode = item.regional_units?.region_code;
+        
+        if (unitName && regionCode) {
+          // Find region with this code
+          const region = regionData.find((r: any) => r.regions?.code === regionCode);
+          if (region) {
+            const regionName = region.regions?.name;
+            if (regionName && hierarchy.has(regionName)) {
+              hierarchy.get(regionName)!.units.add(unitName);
+            }
+          }
+        }
+      });
+      
+      // Add municipalities to their units
+      municipalities?.forEach((item: any) => {
+        const muniName = item.municipalities?.name;
+        const unitCode = item.municipalities?.unit_code;
+        
+        if (muniName && unitCode) {
+          // Find unit and region for this municipality
+          const unit = regionalUnits?.find((u: any) => u.regional_units?.code === unitCode);
+          if (unit) {
+            const regionCode = unit.regional_units?.region_code;
+            const region = regionData.find((r: any) => r.regions?.code === regionCode);
+            if (region) {
+              const regionName = region.regions?.name;
+              if (regionName && hierarchy.has(regionName)) {
+                hierarchy.get(regionName)!.municipalities.add(muniName);
+              }
+            }
+          }
+        }
+      });
+      
+      // Render hierarchy
+      return (
+        <div className="space-y-2">
+          {Array.from(hierarchy.entries()).map(([region, data]) => (
+            <div key={region} className="text-sm">
+              <div className="font-semibold text-green-800">{region}</div>
+              {data.units.size > 0 && (
+                <div className="ml-4 text-green-700">
+                  <div className="text-xs font-medium">Περιφερειακές Ενότητες:</div>
+                  <div className="ml-2 text-green-600">{Array.from(data.units).join(', ')}</div>
+                </div>
+              )}
+              {data.municipalities.size > 0 && (
+                <div className="ml-4 text-green-700">
+                  <div className="text-xs font-medium">Δήμοι/Κοινότητες:</div>
+                  <div className="ml-2 text-green-600">{Array.from(data.municipalities).join(', ')}</div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    } catch (error) {
+      console.error('Error rendering region hierarchy:', error);
+      return <span>Δεν υπάρχει</span>;
+    }
+  };
 
   const decisions = React.useMemo(() => {
     if (!decisionsData) return [];
@@ -326,13 +467,11 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                             </p>
                           </div>
                           
-                          <div>
-                            <span className="font-medium text-green-700 block mb-1">Περιοχή (Περιφέρεια):</span>
-                            <p className="text-gray-900 bg-green-50 p-2 rounded text-sm">
-                              {indexEntries.length > 0 && indexEntries[0]?.kallikratis?.perifereia 
-                                ? indexEntries[0].kallikratis.perifereia 
-                                : 'Δεν υπάρχει'}
-                            </p>
+                          <div className="col-span-full">
+                            <span className="font-medium text-green-700 block mb-2">Περιοχή (Περιφέρεια):</span>
+                            <div className="text-gray-900 bg-green-50 p-3 rounded text-sm border border-green-200">
+                              <RegionHierarchyDisplay />
+                            </div>
                           </div>
                           
                           <div>
@@ -481,7 +620,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                         <div className="mt-6 flex items-center justify-between">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                              <span className="font-medium text-purple-700 block mb-2">Υπόλοιπο Κατανομών:</span>
+                              <span className="font-medium text-purple-700 block mb-2">Δαπανες {new Date().getFullYear()}:</span>
                               <p className="text-xl font-semibold text-purple-900">{formatCurrency(budgetInfo.user_view)}</p>
                             </div>
                             <div className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
@@ -558,7 +697,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                 </div>
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">ΦΕΚ:</span>
-                                  <p className="text-purple-900">{safeText(decision.fek)}</p>
+                                  <p className="text-purple-900">{formatFEK(decision.fek)}</p>
                                 </div>
                                 <div>
                                   <span className="font-medium text-purple-700 block text-sm">ΑΔΑ:</span>
@@ -570,7 +709,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <span className="font-medium text-purple-700 block text-sm">Φορέας Υλοποίησης:</span>
                                   <p className="text-purple-900">
                                     {Array.isArray(decision.implementing_agency) && decision.implementing_agency.length > 0 
-                                      ? decision.implementing_agency.map(id => `ID: ${id}`).join(', ') 
+                                      ? decision.implementing_agency.map(id => getUnitName(id)).join(', ') 
                                       : 'Δεν έχει καθοριστεί'}
                                   </p>
                                 </div>
@@ -582,7 +721,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <span className="font-medium text-purple-700 block text-sm">Δαπάνες που αφορά:</span>
                                   <p className="text-purple-900">
                                     {Array.isArray(decision.expenditure_type) && decision.expenditure_type.length > 0 
-                                      ? decision.expenditure_type.map(id => `ID: ${id}`).join(', ') 
+                                      ? decision.expenditure_type.map(id => getExpenditureTypeName(id)).join(', ') 
                                       : 'Δεν έχει καθοριστεί'}
                                   </p>
                                 </div>
@@ -665,7 +804,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                                   <p className="text-orange-900">{formatCurrency(formulation.eligible_public_expense)}</p>
                                 </div>
                                 <div>
-                                  <span className="font-medium text-orange-700 block text-sm">Έκδοση ΕΠΑ:</span>
+                                  <span className="font-medium text-orange-700 block text-sm">Προγραμματιστική Περίοδος:</span>
                                   <p className="text-orange-900">{safeText(formulation.epa_version)}</p>
                                 </div>
                               </div>

@@ -11,6 +11,7 @@ import {
   Key,
   ChevronDown,
   Home,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -63,13 +64,13 @@ const navigationItems = [
     label: "Υπάλληλοι",
     roles: ["admin", "manager"],
   },
-  { href: "/beneficiaries", icon: Users, label: "Δικαιούχοι", roles: ["user"] },
+  { href: "/beneficiaries", icon: Award, label: "Δικαιούχοι", roles: ["user", "manager"] },
   { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
   {
     href: "/notifications",
     icon: Bell,
     label: "Ειδοποιήσεις",
-    roles: ["admin", "manager"],
+    roles: ["admin"],
   },
 ];
 
@@ -123,10 +124,10 @@ export function Header() {
               <Link href="/">
                 <div className="flex items-center gap-2 hover:opacity-80 transition-opacity duration-200">
                   <div className="w-8 h-8 bg-gradient-to-br from-primary/30 to-primary/10 rounded-lg flex items-center justify-center border border-primary/20 md:hidden">
-                    <span className="text-sm font-bold text-primary">ΣΔ</span>
+                    <span className="text-sm font-bold text-primary">SU</span>
                   </div>
                   <h1 className="hidden md:block text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent tracking-tight">
-                    Σύστημα Διαχείρισης Εγγράφων
+                    SUM-e
                   </h1>
                 </div>
               </Link>

@@ -16,6 +16,8 @@ import type { User as SchemaUser } from "../shared/schema";
 import bcrypt from "bcrypt";
 import { rateLimit } from "express-rate-limit";
 import { z } from "zod";
+import geoip from "geoip-lite";
+import { getClientIp, isGreekIp } from "./middleware/geoIpMiddleware";
 
 // ============================================================================
 // Authentication Types
@@ -70,6 +72,8 @@ export const changePasswordSchema = z.object({
 // ============================================================================
 
 // Session middleware with enhanced security settings for cross-domain support
+const isProduction = process.env.NODE_ENV === "production";
+
 export const sessionMiddleware = session({
   secret: process.env.SESSION_SECRET || "document-manager-secret",
   resave: false,
@@ -77,13 +81,13 @@ export const sessionMiddleware = session({
   store: storage.sessionStore, // Using the in-memory store from storage.ts
   name: "sid", // Custom session ID name
   cookie: {
-    secure: true, // Always use secure cookies (Render provides HTTPS)
+    secure: isProduction, // In dev over HTTP, allow insecure cookies for local testing
     httpOnly: true,
     maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
-    sameSite: "lax", // Use 'lax' for same-site requests (works better with single domain)
+    sameSite: isProduction ? "none" : "lax", // Use 'none' for cross-domain in prod, lax locally
     path: "/",
     // Only set domain if it's a valid non-empty string
-    ...(process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
+    ...(isProduction && process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
       ? { domain: process.env.COOKIE_DOMAIN.trim() } 
       : {}),
   },
@@ -97,14 +101,10 @@ export const sessionMiddleware = session({
 // Rate limiting middleware for auth routes with proxy support
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Disabled rate limiting for testing critical security fixes
+  max: 10, // Allow up to 10 attempts per window
   message: { message: "Too many login attempts, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
-  // Configure rate limiter for proxy environment
-  skipFailedRequests: true,
-  // Only count failed attempts to be more lenient
-  skipSuccessfulRequests: true,
 });
 
 // ============================================================================
@@ -122,8 +122,7 @@ export const authenticateSession = async (
 ) => {
   try {
     console.log("[Auth] authenticateSession middleware called for:", req.path);
-    console.log("[Auth] Session ID:", req.sessionID);
-    console.log("[Auth] Session user exists:", !!req.session?.user);
+    console.log("[Auth] Session present:", !!req.session);
 
     // Check if the request path is in the public routes list
     const isPublicRoute = PUBLIC_ROUTES.some((route) => {
@@ -150,10 +149,6 @@ export const authenticateSession = async (
 
     if (!req.session?.user?.id) {
       console.log("[Auth] No user in session for path:", req.path);
-      console.log("[Auth] Session ID:", req.sessionID);
-      console.log("[Auth] Session exists:", !!req.session);
-      console.log("[Auth] Session user:", req.session?.user);
-      console.log("[Auth] Cookie header:", req.headers.cookie);
 
       // Create an error object with status code to be handled by our error middleware
       const authError = new Error("Authentication required");
@@ -185,12 +180,44 @@ export const authenticateSession = async (
       throw invalidSessionError;
     }
 
+    // Keep account status in sync to prevent inactive users from accessing the app
+    const { data: userStatus, error: statusError } = await supabase
+      .from("users")
+      .select("is_active")
+      .eq("id", sessionUser.id)
+      .single();
+
+    if (statusError) {
+      console.error("[Auth] Error checking user active status:", statusError);
+    }
+
+    const isActive = userStatus?.is_active ?? sessionUser.is_active ?? true;
+
+    if (!isActive) {
+      console.log("[Auth] Blocking inactive user session:", {
+        userId: sessionUser.id,
+        email: sessionUser.email,
+      });
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("[Auth] Failed to destroy session for inactive user:", err);
+        }
+      });
+      return res
+        .status(403)
+        .json({ message: "Account is inactive. Please contact an administrator." });
+    }
+
+    // Persist latest status on the session for downstream handlers
+    req.session.user.is_active = isActive;
+
     // Add user to request with all required fields
     req.user = {
       id: sessionUser.id,
       email: sessionUser.email,
       name: sessionUser.name || "",
       role: sessionUser.role,
+      is_active: isActive,
       unit_id: sessionUser.unit_id || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
@@ -204,7 +231,6 @@ export const authenticateSession = async (
       email: req.user?.email,
       role: req.user?.role,
       unit_id: req.user?.unit_id,
-      sessionID: req.sessionID,
       ip: req.ip,
     });
 
@@ -250,7 +276,6 @@ export function authenticateToken(
       isPublicRoute,
       hasSession: !!req.session,
       hasUser: !!req.session?.user,
-      sessionID: req.sessionID,
       cookies: req.headers.cookie ? "present" : "missing",
     });
 
@@ -338,7 +363,6 @@ export function authenticateToken(
       role: req.user.role,
       unit_id: req.user.unit_id,
       department: req.user.department,
-      sessionID: req.sessionID,
     });
 
     next();
@@ -353,7 +377,6 @@ export function authenticateToken(
 
 /**
  * Middleware to check if the user has admin role
- * Temporarily modified to allow quarter transition
  */
 export function requireAdmin(
   req: AuthenticatedRequest,
@@ -361,20 +384,6 @@ export function requireAdmin(
   next: NextFunction,
 ) {
   try {
-    // TEMPORARY: Allow any authenticated user to access admin endpoints
-    // specifically for quarter transition operations
-    if (req.path.includes("quarter-transition")) {
-      console.log(
-        "[Auth] TEMPORARY: Bypassing admin check for quarter transition:",
-        {
-          userRole: req.user?.role,
-          userId: req.user?.id,
-          path: req.path,
-        },
-      );
-      return next();
-    }
-
     if (!req.user?.role || req.user.role !== "admin") {
       console.log("[Auth] Admin access denied:", {
         userRole: req.user?.role,
@@ -387,6 +396,12 @@ export function requireAdmin(
     if (!req.user.id) {
       return res.status(403).json({ message: "Invalid admin user data" });
     }
+
+    console.log("[Auth] Admin access granted:", {
+      userId: req.user.id,
+      userRole: req.user.role,
+      path: req.path,
+    });
 
     next();
   } catch (error) {
@@ -589,6 +604,15 @@ export async function setupAuth(app: Express) {
         });
       }
 
+      // Deny access to inactive accounts early to prevent sign-in
+      if (userData.is_active === false) {
+        console.log("[Auth] Login blocked for inactive user:", email);
+        return res.status(403).json({
+          message: "Account is inactive. Please contact an administrator.",
+          code: "ACCOUNT_INACTIVE",
+        });
+      }
+
       // Enhanced password validation logic
       // Check if password field exists and validate
       if (!userData.password) {
@@ -613,6 +637,7 @@ export async function setupAuth(app: Express) {
         email: userData.email,
         name: userData.name,
         role: userData.role,
+        is_active: userData.is_active ?? true,
         unit_id: userData.unit_id || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
@@ -624,6 +649,44 @@ export async function setupAuth(app: Express) {
       req.session.user = sessionUser;
       req.session.createdAt = new Date();
 
+      // GEO-VERIFICATION: Check if user is logging in from Greece
+      // SECURITY: Use socket IP to determine if we should trust X-Forwarded-For
+      const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+      const isDirectPrivate = socketIp.startsWith('10.') || 
+                              socketIp.startsWith('127.') || 
+                              socketIp.startsWith('192.168.') ||
+                              socketIp.startsWith('172.') ||
+                              socketIp.startsWith('100.64.');
+      
+      const clientIp = getClientIp(req);
+      const geo = geoip.lookup(clientIp);
+      
+      // Pass isFromSocket=true only for truly internal connections
+      const isFromGreece = isGreekIp(clientIp, isDirectPrivate && clientIp === socketIp);
+      
+      if (isFromGreece) {
+        req.session.geoVerified = true;
+        req.session.geoVerifiedAt = new Date().toISOString();
+        req.session.geoVerifiedIp = clientIp;
+        req.session.geoVerifiedCountry = geo?.country || 'GR';
+        console.log("[Auth] Session geo-verified from Greece:", {
+          ip: clientIp,
+          country: geo?.country || 'whitelisted',
+          userId: sessionUser.id,
+        });
+      } else {
+        // User is not from Greece - deny login
+        console.log("[Auth] Login DENIED - not from Greece:", {
+          ip: clientIp,
+          country: geo?.country || 'unknown',
+          email: email,
+        });
+        return res.status(403).json({
+          message: "Access denied. Login is only available from Greece.",
+          code: "COUNTRY_RESTRICTED",
+        });
+      }
+
       // Save session explicitly and wait for completion
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
@@ -632,10 +695,10 @@ export async function setupAuth(app: Express) {
             reject(err);
           } else {
             console.log("[Auth] Session saved successfully:", {
-              sessionID: req.sessionID,
               userID: sessionUser.id,
               secure: req.secure,
               protocol: req.protocol,
+              geoVerified: req.session.geoVerified,
             });
             resolve();
           }
@@ -649,8 +712,8 @@ export async function setupAuth(app: Express) {
         role: sessionUser.role,
         unit_id: sessionUser.unit_id,
         department: sessionUser.department,
-        sessionID: req.sessionID,
-        ip: req.ip,
+        ip: clientIp,
+        geoVerified: req.session.geoVerified,
       });
 
       // Match the response format that the client expects
@@ -660,6 +723,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name,
         email: sessionUser.email,
         role: sessionUser.role,
+        is_active: sessionUser.is_active ?? true,
         unit_id: sessionUser.unit_id || [],
       };
 
@@ -679,7 +743,6 @@ export async function setupAuth(app: Express) {
   // Logout route optimized for faster response
   app.post("/api/auth/logout", (req, res) => {
     console.log("[Auth] Logging out user:", {
-      sessionID: req.sessionID,
       userId: req.session?.user?.id,
       ip: req.ip,
     });
@@ -795,7 +858,6 @@ export async function setupAuth(app: Express) {
         email: sessionUser.email,
         role: sessionUser.role,
         unit_id: sessionUser.unit_id,
-        sessionID: req.sessionID,
       });
 
       // Create a clean user response
@@ -804,6 +866,7 @@ export async function setupAuth(app: Express) {
         name: sessionUser.name || "",
         email: sessionUser.email,
         role: sessionUser.role,
+        is_active: sessionUser.is_active ?? true,
         unit_id: sessionUser.unit_id || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,
@@ -821,37 +884,6 @@ export async function setupAuth(app: Express) {
         authenticated: false,
         message: "Session error",
       });
-    }
-  });
-
-  // Debug endpoint to check user data in database
-  app.get("/api/debug/user/:id", async (req, res) => {
-    try {
-      const userId = req.params.id;
-      console.log(`[Debug] Checking user ${userId} in database`);
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (userError) {
-        console.error(`[Debug] Database error:`, userError);
-        return res.status(500).json({ error: userError });
-      }
-
-      console.log(`[Debug] Raw database data for user ${userId}:`, userData);
-
-      return res.json({
-        raw_data: userData,
-        unit_id_value: userData?.unit_id,
-        unit_id_type: typeof userData?.unit_id,
-        unit_id_is_array: Array.isArray(userData?.unit_id),
-      });
-    } catch (error) {
-      console.error("[Debug] Error:", error);
-      return res.status(500).json({ error: error.message });
     }
   });
 

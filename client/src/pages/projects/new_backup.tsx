@@ -326,7 +326,7 @@ export default function NewProjectPage() {
         }
         
         const createdProject = await projectResponse.json();
-        const projectMis = createdProject.mis;
+        const projectId = createdProject.id;
         console.log("✓ Project creation successful:", createdProject);
         
         // 2. Create project decisions if provided
@@ -349,7 +349,7 @@ export default function NewProjectPage() {
             comments: decision.comments || "",
           }));
           
-          await apiRequest(`/api/projects/${projectMis}/decisions`, {
+          await apiRequest(`/api/projects/${projectId}/decisions`, {
             method: "PUT",
             body: JSON.stringify({ decisions_data: transformedDecisions }),
           });
@@ -359,7 +359,7 @@ export default function NewProjectPage() {
         // 3. Create project formulations if provided
         if (data.formulation_details && data.formulation_details.length > 0 && data.formulation_details[0].protocol_number) {
           console.log("3. Creating project formulations:", data.formulation_details);
-          await apiRequest(`/api/projects/${projectMis}/formulations`, {
+          await apiRequest(`/api/projects/${projectId}/formulations`, {
             method: "PUT",
             body: JSON.stringify({ formulation_details: data.formulation_details }),
           });

@@ -46,9 +46,13 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { Download, BarChart3, TrendingUp, TrendingDown } from "lucide-react";
+import { ProjectDetailsDialog } from "@/components/projects/ProjectDetailsDialog";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
+import type { GeneratedDocument } from "@shared/schema";
+import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
 
 // Hook to fetch users from the same unit for the creator filter
-const useUnitUsers = (userUnits: string[] | undefined) => {
+const useUnitUsers = (userUnits: (string | number)[] | undefined) => {
   const { data, isLoading } = useQuery({
     queryKey: ['unitUsers', userUnits],
     queryFn: async () => {
@@ -57,8 +61,11 @@ const useUnitUsers = (userUnits: string[] | undefined) => {
         const response = await fetch('/api/users/matching-units');
         if (!response.ok) return [];
         const data = await response.json();
+        // Convert userUnits to numbers for comparison since unit_id is numeric
+        const unitIds = userUnits.map(u => Number(u)).filter(Number.isFinite);
         return data.filter((user: any) => 
-          user.unit_id && user.unit_id.some((unitId: number) => userUnits.includes(unitId.toString()))
+          user.unit_id && Array.isArray(user.unit_id) && 
+          user.unit_id.some((unitId: number) => unitIds.includes(unitId))
         );
       } catch (error) {
         console.error('Error fetching unit users:', error);
@@ -102,20 +109,65 @@ const useDocumentProtocolNumber = (documentId: number | null) => {
   };
 };
 
+// Helper function to get status label and styling
+const getDocumentStatusDetails = (status: string | undefined) => {
+  switch (status) {
+    case "draft":
+      return {
+        label: "Προσχέδιο",
+        className: "bg-gray-100 text-gray-800",
+      };
+    case "pending":
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+      };
+    case "approved":
+      return {
+        label: "Εγκεκριμένο",
+        className: "bg-green-100 text-green-800",
+      };
+    case "rejected":
+      return {
+        label: "Απορρίφθηκε",
+        className: "bg-red-100 text-red-800",
+      };
+    case "completed":
+      return {
+        label: "Ολοκληρώθηκε",
+        className: "bg-blue-100 text-blue-800",
+      };
+    // Legacy status support
+    case "ready":
+      return {
+        label: "Έτοιμο",
+        className: "bg-green-100 text-green-800",
+      };
+    case "sent":
+      return {
+        label: "Απεσταλμένο",
+        className: "bg-blue-100 text-blue-800",
+      };
+    default:
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+      };
+  }
+};
+
 // Component που εμφανίζει το document_id ή το protocol_number_input αν υπάρχει
 const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, status?: string }) => {
   const { protocolNumberInput, isLoading } = useDocumentProtocolNumber(documentId);
+  const statusDetails = getDocumentStatusDetails(status);
   
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={status === 'completed' ? "default" : "outline"}>
+          <Badge className={statusDetails.className}>
             <FileText className="h-3 w-3 mr-1" />
-            {status === 'completed' ? 'Ολοκληρωμένο' : 
-              protocolNumberInput ? `Αρ. Πρωτ.: ${protocolNumberInput}` :
-              status === 'pending' ? 'Σε εκκρεμότητα' : 
-              status || 'Σε εκκρεμότητα'}
+            {protocolNumberInput ? `Αρ. Πρωτ.: ${protocolNumberInput}` : statusDetails.label}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
@@ -139,9 +191,12 @@ const BudgetHistoryDocument = ({ documentId, status }: { documentId: number, sta
   );
 };
 
+
 interface BudgetHistoryEntry {
   id: number;
+  project_id?: number;
   mis: string;
+  na853?: string;
   previous_amount: string;
   new_amount: string;
   change_type: string;
@@ -172,13 +227,21 @@ export default function BudgetHistoryPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [changeType, setChangeType] = useState<string>('all');
-  const [misFilter, setMisFilter] = useState<string>('');
+  const [na853Filter, setNa853Filter] = useState<string>('');
+  const [expenditureTypeFilter, setExpenditureTypeFilter] = useState<string>('all');
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [creatorFilter, setCreatorFilter] = useState<string>('');
+  
+  // State for modals
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
 
   // Used to submit filters
-  const [appliedMisFilter, setAppliedMisFilter] = useState<string>('');
+  const [appliedNa853Filter, setAppliedNa853Filter] = useState<string>('');
+  const [appliedExpenditureTypeFilter, setAppliedExpenditureTypeFilter] = useState<string>('');
   const [appliedDateFilter, setAppliedDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [appliedCreatorFilter, setAppliedCreatorFilter] = useState<string>('');
 
@@ -186,18 +249,22 @@ export default function BudgetHistoryPage() {
   const isAdmin = user?.role === 'admin';
 
   // Fetch users from the same unit for the creator dropdown
-  const { unitUsers, isLoadingUsers } = useUnitUsers(user?.units);
+  const { unitUsers, isLoadingUsers } = useUnitUsers(user?.unit_id);
+  
+  // Fetch expenditure types for the filter
+  const { data: expenditureTypes } = useExpenditureTypesForFilter();
 
   // Reset to page 1 when filters change
-  const applyMisFilter = () => {
+  const applyNa853Filter = () => {
     setPage(1);
-    setAppliedMisFilter(misFilter);
+    setAppliedNa853Filter(na853Filter);
   };
 
   // Apply all filters
   const applyAllFilters = () => {
     setPage(1);
-    setAppliedMisFilter(misFilter);
+    setAppliedNa853Filter(na853Filter);
+    setAppliedExpenditureTypeFilter(expenditureTypeFilter === 'all' ? '' : expenditureTypeFilter);
     setAppliedDateFilter(dateFilter);
     setAppliedCreatorFilter(creatorFilter === 'all' ? '' : creatorFilter);
   };
@@ -205,10 +272,12 @@ export default function BudgetHistoryPage() {
   // Clear all filters
   const clearAllFilters = () => {
     setPage(1);
-    setMisFilter('');
+    setNa853Filter('');
+    setExpenditureTypeFilter('all');
     setDateFilter({ from: '', to: '' });
     setCreatorFilter('all');
-    setAppliedMisFilter('');
+    setAppliedNa853Filter('');
+    setAppliedExpenditureTypeFilter('');
     setAppliedDateFilter({ from: '', to: '' });
     setAppliedCreatorFilter('');
   };
@@ -227,7 +296,7 @@ export default function BudgetHistoryPage() {
   };
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/budget/history', page, limit, changeType, appliedMisFilter, appliedDateFilter, appliedCreatorFilter],
+    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedExpenditureTypeFilter, appliedDateFilter, appliedCreatorFilter],
     staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
@@ -238,8 +307,12 @@ export default function BudgetHistoryPage() {
         url += `&change_type=${changeType}`;
       }
       
-      if (appliedMisFilter) {
-        url += `&mis=${appliedMisFilter}`;
+      if (appliedNa853Filter) {
+        url += `&na853=${appliedNa853Filter}`;
+      }
+      
+      if (appliedExpenditureTypeFilter) {
+        url += `&expenditure_type=${appliedExpenditureTypeFilter}`;
       }
       
       if (appliedDateFilter.from) {
@@ -266,7 +339,9 @@ export default function BudgetHistoryPage() {
   const history: BudgetHistoryEntry[] = data?.data && Array.isArray(data.data) 
     ? data.data.map((entry: any) => ({
         id: entry.id,
+        project_id: entry.project_id,
         mis: entry.mis || 'Unknown',
+        na853: entry.na853,
         previous_amount: entry.previous_amount || '0',
         new_amount: entry.new_amount || '0',
         change_type: entry.change_type || '',
@@ -280,6 +355,13 @@ export default function BudgetHistoryPage() {
         metadata: entry.metadata || {}
       }))
     : [];
+  
+  // Fetch document details for selected document
+  const { data: selectedDocument } = useQuery<GeneratedDocument>({
+    queryKey: [`/api/documents/${selectedDocumentId}`],
+    enabled: !!selectedDocumentId && documentModalOpen,
+    staleTime: 5 * 60 * 1000,
+  });
     
   const pagination: PaginationData = data?.pagination || { total: 0, page: 1, limit: 10, pages: 1 };
   const statistics = data?.statistics;
@@ -288,39 +370,76 @@ export default function BudgetHistoryPage() {
     setPage(Math.max(1, Math.min(newPage, pagination.pages)));
   };
 
-  // Excel export function
+  // Excel export function with proper authentication handling
   const handleExcelExport = async () => {
     try {
       // Build export URL with current filters
-      let url = '/api/budget/history/export?';
+      const params = new URLSearchParams();
       
-      if (appliedMisFilter) {
-        url += `mis=${appliedMisFilter}&`;
+      if (appliedNa853Filter) {
+        params.append('na853', appliedNa853Filter);
+      }
+      
+      if (appliedExpenditureTypeFilter) {
+        params.append('expenditure_type', appliedExpenditureTypeFilter);
       }
       
       if (changeType !== 'all') {
-        url += `change_type=${changeType}&`;
+        params.append('change_type', changeType);
       }
       
       if (appliedDateFilter.from) {
-        url += `date_from=${appliedDateFilter.from}&`;
+        params.append('date_from', appliedDateFilter.from);
       }
       
       if (appliedDateFilter.to) {
-        url += `date_to=${appliedDateFilter.to}&`;
+        params.append('date_to', appliedDateFilter.to);
       }
       
       if (appliedCreatorFilter) {
-        url += `creator=${appliedCreatorFilter}&`;
+        params.append('creator', appliedCreatorFilter);
       }
       
-      // Create a temporary link element to trigger download
+      const url = `/api/budget/history/export?${params.toString()}`;
+      
+      // Use fetch with credentials to ensure session cookie is sent
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Export failed with status: ${response.status}`);
+      }
+      
+      // Get the blob from response
+      const blob = await response.blob();
+      
+      // Create object URL and trigger download
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `Istoriko_Proypologismou_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.href = downloadUrl;
+      
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `Istoriko-Proypologismou-${new Date().toISOString().split('T')[0]}.xlsx`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      // Clean up the object URL
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error('Error exporting Excel file:', error);
     }
@@ -349,18 +468,22 @@ export default function BudgetHistoryPage() {
   // Function to get badge styling based on change type
   const getChangeTypeBadge = (type: string) => {
     switch (type) {
+      case 'spending':
+        return <Badge variant="destructive">Δαπάνη</Badge>;
+      case 'refund':
+        return <Badge className="bg-green-100 text-green-800">Επιστροφή</Badge>;
       case 'document_created':
         return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
-      case 'document_creation':
-        return <Badge variant="destructive">Δημιουργία Εγγράφου</Badge>;
+      case 'import':
+        return <Badge>Εισαγωγή</Badge>;
+      case 'quarter_change':
+        return <Badge className="bg-blue-100 text-blue-800">Αλλαγή Τριμήνου</Badge>;
+      case 'year_end_closure':
+        return <Badge className="bg-purple-100 text-purple-800">Κλείσιμο Έτους</Badge>;
       case 'manual_adjustment':
         return <Badge variant="outline">Χειροκίνητη Προσαρμογή</Badge>;
       case 'notification_created':
         return <Badge variant="secondary">Δημιουργία Ειδοποίησης</Badge>;
-      case 'error':
-        return <Badge variant="destructive">Σφάλμα</Badge>;
-      case 'import':
-        return <Badge>Εισαγωγή</Badge>;
       default:
         return <Badge>{type.replace(/_/g, ' ')}</Badge>;
     }
@@ -786,59 +909,16 @@ export default function BudgetHistoryPage() {
 
               {/* Enhanced Filters Section for Managers */}
               {(isManager || isAdmin) && (
-                <Card className="p-4 bg-blue-50/50 border-blue-200">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Search className="h-4 w-4 text-blue-600" />
-                    <h3 className="font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">MIS Έργου</label>
-                      <Input
-                        placeholder="π.χ. 5174085"
-                        value={misFilter}
-                        onChange={(e) => setMisFilter(e.target.value)}
-                      />
+                <Card className="p-2 bg-blue-50/50 border-blue-200">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-blue-600" />
+                      <h3 className="text-sm font-medium text-blue-900">Προηγμένα Φίλτρα Αναζήτησης</h3>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Τύπος Αλλαγής</label>
-                      <Select value={changeType} onValueChange={handleChangeTypeChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Επιλέξτε τύπο" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
-                          <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
-                          <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
-                          <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
-                          <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
-                          <SelectItem value="error">Σφάλματα</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Από Ημερομηνία</label>
-                      <Input
-                        type="date"
-                        value={dateFilter.from}
-                        onChange={(e) => setDateFilter(prev => ({ ...prev, from: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Έως Ημερομηνία</label>
-                      <Input
-                        type="date"
-                        value={dateFilter.to}
-                        onChange={(e) => setDateFilter(prev => ({ ...prev, to: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Δημιουργήθηκε από</label>
+                    <div className="flex items-center gap-2">
                       <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingUsers ? "Φόρτωση χρηστών..." : "Επιλέξτε χρήστη"} />
+                        <SelectTrigger className="h-9 w-[140px] text-xs">
+                          <SelectValue placeholder="Δημιουργός" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">Όλοι οι χρήστες</SelectItem>
@@ -847,43 +927,79 @@ export default function BudgetHistoryPage() {
                               <div className="flex items-center gap-2">
                                 <UserIcon className="h-3 w-3 text-gray-500" />
                                 {user.name}
-                                {user.role === 'manager' && (
-                                  <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                                    Διαχειριστής
-                                  </span>
-                                )}
                               </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <Button onClick={applyAllFilters} size="sm" className="h-9">
+                        <Search className="h-3 w-3 mr-1" />
+                        Εφαρμογή
+                      </Button>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700">Αποτελέσματα ανά σελίδα</label>
-                      <Select
-                        value={limit.toString()}
-                        onValueChange={(value) => {
-                          setPage(1);
-                          setLimit(parseInt(value));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Κωδικό ΝΑ853</label>
+                      <Input
+                        placeholder="π.χ. 2024ΝΑ853001"
+                        value={na853Filter}
+                        onChange={(e) => setNa853Filter(e.target.value)}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Τύπος Δαπάνης</label>
+                      <Select value={expenditureTypeFilter} onValueChange={setExpenditureTypeFilter}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Όλοι" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="5">5 εγγραφές</SelectItem>
-                          <SelectItem value="10">10 εγγραφές</SelectItem>
-                          <SelectItem value="20">20 εγγραφές</SelectItem>
-                          <SelectItem value="50">50 εγγραφές</SelectItem>
-                          <SelectItem value="100">100 εγγραφές</SelectItem>
+                          <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                          {expenditureTypes?.map((type) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                              {type.expenditure_types}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="flex items-end gap-2">
-                      <Button onClick={applyAllFilters} className="flex-1">
-                        <Search className="h-4 w-4 mr-2" />
-                        Εφαρμογή Φίλτρων
-                      </Button>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Τύπος Αλλαγής</label>
+                      <Select value={changeType} onValueChange={handleChangeTypeChange}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Όλες" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                          <SelectItem value="spending">Δαπάνη</SelectItem>
+                          <SelectItem value="refund">Επιστροφή</SelectItem>
+                          <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                          <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
+                          <SelectItem value="quarter_change">Αλλαγή Τριμήνου</SelectItem>
+                          <SelectItem value="year_end_closure">Κλείσιμο Έτους</SelectItem>
+                          <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
+                          <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Από Ημερομηνία</label>
+                      <Input
+                        type="date"
+                        value={dateFilter.from}
+                        onChange={(e) => setDateFilter(prev => ({ ...prev, from: e.target.value }))}
+                        className="h-10"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700">Έως Ημερομηνία</label>
+                      <Input
+                        type="date"
+                        value={dateFilter.to}
+                        onChange={(e) => setDateFilter(prev => ({ ...prev, to: e.target.value }))}
+                        className="h-10"
+                      />
                     </div>
                   </div>
                 </Card>
@@ -894,24 +1010,42 @@ export default function BudgetHistoryPage() {
                 <div className="flex flex-wrap gap-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Φίλτρο με MIS..."
-                      value={misFilter}
-                      onChange={(e) => setMisFilter(e.target.value)}
+                      placeholder="Φίλτρο με NA853..."
+                      value={na853Filter}
+                      onChange={(e) => setNa853Filter(e.target.value)}
                       className="w-[180px]"
                     />
-                    <Button onClick={applyMisFilter} size="icon" variant="outline">
+                    <Button onClick={applyNa853Filter} size="icon" variant="outline">
                       <Search className="h-4 w-4" />
                     </Button>
                   </div>
+                  <Select value={expenditureTypeFilter} onValueChange={setExpenditureTypeFilter}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Τύπος δαπάνης" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                      {expenditureTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.expenditure_types}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Select value={changeType} onValueChange={handleChangeTypeChange}>
                     <SelectTrigger className="w-[180px]">
                       <SelectValue placeholder="Φίλτρο ανά τύπο" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Όλες οι αλλαγές</SelectItem>
+                      <SelectItem value="spending">Δαπάνη</SelectItem>
+                      <SelectItem value="refund">Επιστροφή</SelectItem>
                       <SelectItem value="document_created">Δημιουργία Εγγράφου</SelectItem>
+                      <SelectItem value="import">Εισαγωγή δεδομένων</SelectItem>
+                      <SelectItem value="quarter_change">Αλλαγή Τριμήνου</SelectItem>
+                      <SelectItem value="year_end_closure">Κλείσιμο Έτους</SelectItem>
                       <SelectItem value="manual_adjustment">Χειροκίνητη Προσαρμογή</SelectItem>
-                      <SelectItem value="import">Εισαγωγή</SelectItem>
+                      <SelectItem value="notification_created">Δημιουργία Ειδοποίησης</SelectItem>
                     </SelectContent>
                   </Select>
                   <Select
@@ -936,92 +1070,78 @@ export default function BudgetHistoryPage() {
 
               {/* Statistics Section - Στατιστικά Περιόδου */}
               {statistics && (isManager || isAdmin) && (
-                <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="h-5 w-5 text-green-600" />
-                    <h3 className="font-semibold text-green-900">Στατιστικά Περιόδου</h3>
-                    <Badge variant="outline" className="bg-white">
+                <Card className="p-3 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-4 w-4 text-green-600" />
+                    <h3 className="font-medium text-green-900">Στατιστικά Περιόδου</h3>
+                    <Badge variant="outline" className="bg-white text-xs">
                       Ενημερώνονται με τα ενεργά φίλτρα
                     </Badge>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                     {/* Total Entries */}
-                    <div className="bg-white p-4 rounded-lg border border-green-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Συνολικές Εγγραφές</p>
-                          <p className="text-2xl font-bold text-green-700">{statistics.totalEntries}</p>
-                        </div>
-                        <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-                          <FileText className="h-5 w-5 text-green-600" />
-                        </div>
+                    <div className="bg-white px-3 py-2 rounded border border-green-100 flex items-center gap-2">
+                      <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Εγγραφές</p>
+                        <p className="text-lg font-bold text-green-700">{statistics.totalEntries}</p>
                       </div>
                     </div>
 
                     {/* Total Amount Change */}
-                    <div className="bg-white p-4 rounded-lg border border-blue-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Συνολική Μεταβολή</p>
-                          <p className={`text-2xl font-bold ${statistics.totalAmountChange >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                            {formatCurrency(statistics.totalAmountChange)}
-                          </p>
-                        </div>
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
-                        }`}>
-                          {statistics.totalAmountChange >= 0 ? (
-                            <TrendingUp className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <TrendingDown className="h-5 w-5 text-red-600" />
-                          )}
-                        </div>
+                    <div className="bg-white px-3 py-2 rounded border border-blue-100 flex items-center gap-2">
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        statistics.totalAmountChange >= 0 ? 'bg-green-100' : 'bg-red-100'
+                      }`}>
+                        {statistics.totalAmountChange >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Μεταβολή</p>
+                        <p className={`text-lg font-bold ${statistics.totalAmountChange >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {formatCurrency(statistics.totalAmountChange)}
+                        </p>
                       </div>
                     </div>
 
                     {/* Period Range */}
-                    <div className="bg-white p-4 rounded-lg border border-purple-100">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Χρονική Περίοδος</p>
-                          {statistics.periodRange.start && statistics.periodRange.end ? (
-                            <div className="text-sm">
-                              <p className="font-medium text-purple-700">
-                                {format(new Date(statistics.periodRange.start), 'dd/MM/yyyy')}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                έως {format(new Date(statistics.periodRange.end), 'dd/MM/yyyy')}
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">Δεν υπάρχουν δεδομένα</p>
-                          )}
-                        </div>
-                        <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center">
-                          <Info className="h-5 w-5 text-purple-600" />
-                        </div>
+                    <div className="bg-white px-3 py-2 rounded border border-purple-100 flex items-center gap-2">
+                      <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Info className="h-4 w-4 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Περίοδος</p>
+                        {statistics.periodRange.start && statistics.periodRange.end ? (
+                          <p className="text-sm font-medium text-purple-700">
+                            {format(new Date(statistics.periodRange.start), 'dd/MM/yy')} - {format(new Date(statistics.periodRange.end), 'dd/MM/yy')}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500">N/A</p>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Change Types Distribution */}
-                  {Object.keys(statistics.changeTypes).length > 0 && (
-                    <div className="mt-4">
-                      <h4 className="font-medium text-gray-700 mb-3">Κατανομή ανά Τύπο Αλλαγής</h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {Object.entries(statistics.changeTypes).map(([type, count]) => (
-                          <div key={type} className="bg-white p-3 rounded-lg border border-gray-100">
-                            <div className="text-center">
-                              <div className="mb-2">{getChangeTypeBadge(type)}</div>
-                              <p className="text-lg font-bold text-gray-800">{count as number}</p>
-                              <p className="text-xs text-gray-500">εγγραφές</p>
+                    {/* Change Types Distribution */}
+                    {Object.keys(statistics.changeTypes).length > 0 && Object.entries(statistics.changeTypes).length > 0 && (
+                      <div className="bg-white px-3 py-2 rounded border border-gray-100">
+                        <p className="text-sm text-gray-600 mb-1">Αλλαγές ανά Τύπο</p>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(statistics.changeTypes).map(([type, count]) => (
+                            <div key={type} className="text-xs font-medium px-2 py-1 bg-gray-50 rounded flex items-center gap-1">
+                              {getChangeTypeBadge(type)}
+                              <span>{count as number}</span>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </Card>
               )}
             </div>
@@ -1041,47 +1161,13 @@ export default function BudgetHistoryPage() {
                 </div>
               ) : (
                 <>
-
-                  {/* Recent Activity Summary for Managers */}
-                  {(isManager || isAdmin) && history.length > 0 && (
-                    <Card className="mb-6 bg-yellow-50/50 border-yellow-200">
-                      <div className="p-4">
-                        <h3 className="text-lg font-semibold text-yellow-900 mb-3">Πρόσφατη Δραστηριότητα</h3>
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {history.slice(0, 5).map((entry) => {
-                            const change = parseFloat(entry.new_amount || '0') - parseFloat(entry.previous_amount || '0');
-                            return (
-                              <div key={entry.id} className="flex items-center justify-between p-2 bg-white rounded border text-sm">
-                                <div className="flex items-center gap-3">
-                                  <span className="text-gray-500">
-                                    {entry.created_at ? format(new Date(entry.created_at), 'dd/MM HH:mm') : 'N/A'}
-                                  </span>
-                                  <span className="font-medium">MIS {entry.mis}</span>
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    change > 0 ? 'bg-green-100 text-green-700' : 
-                                    change < 0 ? 'bg-red-100 text-red-700' : 
-                                    'bg-gray-100 text-gray-700'
-                                  }`}>
-                                    {change > 0 ? '+' : ''}{formatCurrency(change)}
-                                  </span>
-                                </div>
-                                <div className="text-gray-600">
-                                  {entry.created_by || 'Σύστημα'}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </Card>
-                  )}
                   <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[50px]"></TableHead>
                           <TableHead>Ημερομηνία</TableHead>
-                          <TableHead>MIS</TableHead>
+                          <TableHead>Κωδικός ΝΑ853</TableHead>
                           <TableHead>Προηγούμενο</TableHead>
                           <TableHead>Νέο</TableHead>
                           <TableHead>Αλλαγή</TableHead>
@@ -1112,7 +1198,19 @@ export default function BudgetHistoryPage() {
                                     ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
                                     : 'N/A'}
                                 </TableCell>
-                                <TableCell>{entry.mis}</TableCell>
+                                <TableCell 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (entry.project_id) {
+                                      setSelectedProject({ id: entry.project_id, mis: entry.mis, na853: entry.na853 });
+                                      setProjectDialogOpen(true);
+                                    }
+                                  }}
+                                  className={entry.project_id ? "cursor-pointer hover:underline text-blue-600" : ""}
+                                  data-testid={`link-project-${entry.id}`}
+                                >
+                                  {entry.na853 || entry.mis || 'N/A'}
+                                </TableCell>
                                 <TableCell>
                                   <div className="font-medium">{formatCurrency(previousAmount)}</div>
                                   {previousAmount > 0 && <div className="text-xs text-muted-foreground">Προηγούμενη τιμή</div>}
@@ -1181,12 +1279,19 @@ export default function BudgetHistoryPage() {
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <Badge variant={entry.document_status === 'completed' ? "default" : "outline"}>
+                                          <Badge 
+                                            className={`cursor-pointer hover:opacity-80 ${getDocumentStatusDetails(entry.document_status).className}`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedDocumentId(entry.document_id!);
+                                              setDocumentModalOpen(true);
+                                            }}
+                                            data-testid={`link-document-${entry.id}`}
+                                          >
                                             <FileText className="h-3 w-3 mr-1" />
-                                            {entry.document_status === 'completed' ? 'Ολοκληρωμένο' : 
-                                             entry.protocol_number_input ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` :
-                                             entry.document_status === 'pending' ? 'Σε εκκρεμότητα' : 
-                                             entry.document_status || 'Σε εκκρεμότητα'}
+                                            {entry.protocol_number_input 
+                                              ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` 
+                                              : getDocumentStatusDetails(entry.document_status).label}
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent>
@@ -1209,11 +1314,34 @@ export default function BudgetHistoryPage() {
                               {isExpanded && (
                                 <TableRow className="bg-muted/30">
                                   <TableCell colSpan={10} className="p-4">
-                                    {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
-                                      <div className="text-muted-foreground text-sm italic">
-                                        Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
-                                      </div>
-                                    )}
+                                    <div className="space-y-4">
+                                      {entry.document_id && (
+                                        <div className="bg-blue-50/30 border border-blue-200 rounded-lg p-4">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <FileText className="h-4 w-4 text-blue-600" />
+                                              <span className="text-sm font-medium text-blue-900">Συνδεδεμένο έγγραφο</span>
+                                            </div>
+                                            <Button 
+                                              size="sm" 
+                                              onClick={() => {
+                                                setSelectedDocumentId(entry.document_id!);
+                                                setDocumentModalOpen(true);
+                                              }}
+                                              data-testid={`button-view-document-${entry.id}`}
+                                            >
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              Προβολή Πλήρων Στοιχείων
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {entry.metadata ? renderMetadata(entry.metadata, entry.change_type) : (
+                                        <div className="text-muted-foreground text-sm italic">
+                                          Δεν υπάρχουν διαθέσιμα επιπρόσθετα μεταδεδομένα
+                                        </div>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               )}
@@ -1309,6 +1437,24 @@ export default function BudgetHistoryPage() {
           </div>
         </Card>
       </div>
+      
+      {/* Project Details Modal */}
+      {selectedProject && (
+        <ProjectDetailsDialog
+          project={selectedProject}
+          open={projectDialogOpen}
+          onOpenChange={setProjectDialogOpen}
+        />
+      )}
+      
+      {/* Document Details Modal */}
+      {selectedDocument && (
+        <DocumentDetailsModal
+          document={selectedDocument}
+          open={documentModalOpen}
+          onOpenChange={setDocumentModalOpen}
+        />
+      )}
     </div>
   );
 }

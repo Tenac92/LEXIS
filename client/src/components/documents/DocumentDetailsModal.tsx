@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { GeneratedDocument } from "@shared/schema";
 import { EditDocumentModal } from "./edit-document-modal";
+import { useQuery } from "@tanstack/react-query";
 
 interface DocumentDetailsModalProps {
   document: GeneratedDocument | null;
@@ -57,9 +58,8 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
   if (is_correction) {
     return {
       label: "Ορθή Επανάληψη",
-      variant: "secondary" as const,
+      className: "bg-purple-100 text-purple-800",
       icon: FileEdit,
-      color: "text-purple-600",
     };
   }
 
@@ -67,30 +67,51 @@ const getStatusDetails = (status: string, is_correction: boolean | null) => {
     case "draft":
       return {
         label: "Προσχέδιο",
-        variant: "secondary" as const,
+        className: "bg-gray-100 text-gray-800",
         icon: Clock,
-        color: "text-yellow-600",
       };
+    case "pending":
+      return {
+        label: "Εκκρεμεί",
+        className: "bg-yellow-100 text-yellow-800",
+        icon: Clock,
+      };
+    case "approved":
+      return {
+        label: "Εγκεκριμένο",
+        className: "bg-green-100 text-green-800",
+        icon: CheckCircle,
+      };
+    case "rejected":
+      return {
+        label: "Απορρίφθηκε",
+        className: "bg-red-100 text-red-800",
+        icon: X,
+      };
+    case "completed":
+      return {
+        label: "Ολοκληρώθηκε",
+        className: "bg-blue-100 text-blue-800",
+        icon: CheckCircle,
+      };
+    // Legacy status support
     case "ready":
       return {
         label: "Έτοιμο",
-        variant: "default" as const,
+        className: "bg-green-100 text-green-800",
         icon: CheckCircle,
-        color: "text-green-600",
       };
     case "sent":
       return {
         label: "Απεσταλμένο",
-        variant: "default" as const,
+        className: "bg-blue-100 text-blue-800",
         icon: CheckCircle,
-        color: "text-blue-600",
       };
     default:
       return {
         label: "Άγνωστη Κατάσταση",
-        variant: "destructive" as const,
+        className: "bg-red-100 text-red-800",
         icon: AlertCircle,
-        color: "text-red-600",
       };
   }
 };
@@ -102,10 +123,17 @@ export function DocumentDetailsModal({
 }: DocumentDetailsModalProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
 
+  // Fetch recipients with decrypted AFM values from the API
+  const { data: recipientsData = [], isLoading: recipientsLoading } = useQuery<any[]>({
+    queryKey: [`/api/documents/${document?.id}/beneficiaries`],
+    enabled: !!document?.id && open,
+    staleTime: 5 * 60 * 1000,
+  });
+
   if (!document) return null;
 
   const docAny = document as any; // Type assertion for accessing additional properties
-  const statusDetails = getStatusDetails(document.status || "draft", null);
+  const statusDetails = getStatusDetails(document.status || "draft", document.is_correction || null);
 
   const formatCurrency = (amount: number | null) => {
     if (!amount) return "€0,00";
@@ -117,17 +145,53 @@ export function DocumentDetailsModal({
     }).format(amount);
   };
 
-  // Parse recipients data
-  let recipients: Recipient[] = [];
-  try {
-    if (docAny.recipients && typeof docAny.recipients === "string") {
-      recipients = JSON.parse(docAny.recipients);
-    } else if (docAny.recipients && typeof docAny.recipients === "object") {
-      recipients = docAny.recipients as Recipient[];
+  // Transform recipients data from API
+  const recipients: Recipient[] = recipientsData.map((item: any) => {
+    // Handle both employee payments (ΕΚΤΟΣ ΕΔΡΑΣ) and beneficiary payments
+    if (item.employee_id !== undefined) {
+      // Employee payment format (ΕΚΤΟΣ ΕΔΡΑΣ)
+      return {
+        firstname: item.firstname || "",
+        lastname: item.lastname || "",
+        fathername: item.fathername || "",
+        afm: item.afm || "",
+        amount: Number(item.amount) || 0,
+        installment: "",
+        month: item.month,
+        days: item.days,
+        daily_compensation: item.daily_compensation,
+        accommodation_expenses: item.accommodation_expenses,
+        kilometers_traveled: item.kilometers_traveled,
+        tickets_tolls_rental: item.tickets_tolls_rental,
+        has_2_percent_deduction: item.has_2_percent_deduction,
+        total_expense: item.total_expense,
+        deduction_2_percent: item.deduction_2_percent,
+      };
+    } else if (item.beneficiaries) {
+      // Beneficiary payment format (standard)
+      const beneficiary = Array.isArray(item.beneficiaries) 
+        ? item.beneficiaries[0] 
+        : item.beneficiaries;
+      return {
+        firstname: beneficiary?.name || "",
+        lastname: beneficiary?.surname || "",
+        fathername: beneficiary?.fathername || "",
+        afm: beneficiary?.afm || "",
+        amount: Number(item.amount) || 0,
+        installment: item.installment || "",
+      };
+    } else {
+      // Fallback for unexpected format
+      return {
+        firstname: "",
+        lastname: "",
+        fathername: "",
+        afm: "",
+        amount: 0,
+        installment: "",
+      };
     }
-  } catch (error) {
-    console.error("Error parsing recipients data:", error);
-  }
+  });
 
   // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document
   const isEktosEdras = docAny.expenditure_type === "ΕΚΤΟΣ ΕΔΡΑΣ";
@@ -184,7 +248,7 @@ export function DocumentDetailsModal({
                   Κατάσταση
                 </label>
                 <div className="flex items-center">
-                  <Badge variant={statusDetails.variant} className="text-sm">
+                  <Badge className={`text-sm ${statusDetails.className}`}>
                     <statusDetails.icon className="h-3 w-3 mr-1" />
                     {statusDetails.label}
                   </Badge>
@@ -416,6 +480,42 @@ export function DocumentDetailsModal({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Payments Information */}
+          {docAny.payment_count > 0 && (
+            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Πληρωμές ({docAny.payment_count})
+              </h3>
+              {docAny.latest_payment_date && (
+                <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-blue-700">
+                        Ημερομηνία Πληρωμής (Τελευταία)
+                      </label>
+                      <p className="text-blue-900 font-semibold bg-blue-50 px-3 py-2 rounded">
+                        {new Date(docAny.latest_payment_date).toLocaleDateString(
+                          "el-GR",
+                        )}
+                      </p>
+                    </div>
+                    {docAny.latest_eps && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-blue-700">
+                          EPS (Ελεύθερο κείμενο)
+                        </label>
+                        <p className="text-blue-900 font-semibold bg-blue-50 px-3 py-2 rounded truncate">
+                          {docAny.latest_eps}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

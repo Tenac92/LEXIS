@@ -4,7 +4,9 @@ import { User } from '@shared/schema';
 import { supabase } from '../config/db';
 import { storage } from '../storage';
 import multer from 'multer';
-import * as xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
+import { readXlsxToRows } from '../utils/safeExcel';
+import { parse } from 'csv-parse/sync';
 import { BudgetService } from '../services/budgetService';
 
 // Helper function to parse numerical values with European number formatting (e.g., 22.000,00 -> 22000.00)
@@ -83,18 +85,80 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
   }
 
   try {
-    console.log('[BudgetUpload] Processing Excel file upload');
+    let rawData: any[] = [];
+    const fileName = req.file.originalname.toLowerCase();
     
-    // Process the Excel file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-    
-    // Assume the first sheet contains the data
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    
-    // Convert worksheet to JSON (array of objects)
-    const rawData = xlsx.utils.sheet_to_json(worksheet);
-    console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
+    // Check if the file is CSV or Excel based on extension
+    if (fileName.endsWith('.csv')) {
+      console.log('[BudgetUpload] Processing CSV file upload');
+      
+      // Parse CSV file
+      const csvContent = req.file.buffer.toString('utf-8');
+      const parsedData = parse(csvContent, {
+        columns: true, // Use first row as headers
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true, // Allow rows with different number of columns
+      }) as any[];
+      
+      console.log(`[BudgetUpload] Raw parsed CSV rows: ${parsedData.length}`);
+      
+      // Normalize column names by trimming whitespace from all keys
+      rawData = parsedData.map((row: any) => {
+        const normalizedRow: Record<string, any> = {};
+        for (const [key, value] of Object.entries(row)) {
+          const trimmedKey = String(key).trim();
+          normalizedRow[trimmedKey] = value;
+        }
+        console.log(`[BudgetUpload] CSV Row keys after normalization:`, Object.keys(normalizedRow));
+        return normalizedRow;
+      });
+      
+      console.log(`[BudgetUpload] Extracted ${rawData.length} rows from CSV`);
+    } else {
+      console.log('[BudgetUpload] Processing Excel file upload');
+
+      const fileNameLower = fileName.toLowerCase();
+      // Hardened: accept only modern .xlsx files (reject legacy .xls)
+      if (!fileNameLower.endsWith('.xlsx')) {
+        return res.status(400).json({
+          success: false,
+          message: 'Unsupported Excel type. Use .xlsx or CSV.'
+        });
+      }
+
+      // Read first sheet to rows with limits
+      const rows = await readXlsxToRows(req.file.buffer, {
+        maxRows: 20000, // consistent with uploads limit
+        maxCols: 200,
+        maxSheets: 3,
+      });
+
+      if (!rows || rows.length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Excel worksheet is empty or missing header row'
+        });
+      }
+
+      // Build objects using the header row for keys
+      const headerRaw = rows[0] as unknown[];
+      const headers = headerRaw.map((h) => String(h ?? '').trim());
+      const dataRows = rows.slice(1) as unknown[][];
+      const colCount = headers.length;
+
+      rawData = dataRows.map((row) => {
+        const obj: Record<string, any> = {};
+        for (let i = 0; i < colCount; i++) {
+          const key = headers[i];
+          if (!key) continue; // skip empty header cells
+          obj[key] = row[i] ?? null;
+        }
+        return obj;
+      });
+
+      console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
+    }
 
     // Validate and transform the data
     const updates = [];
@@ -161,6 +225,39 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           key.toLowerCase().includes('διαθέσιμο')
         );
 
+        // Find proip (Προϋπολογισμός) key
+        const proipKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('proip') || 
+          key.toLowerCase().includes('προϋπολογισμός') ||
+          key.toLowerCase().includes('προυπολογισμός') ||
+          key.toLowerCase().includes('προυπ')
+        );
+
+        // Find node (Ποσό ΝοΔε που βαρύνει τον ενάριθμο) key
+        const nodeKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('node') || 
+          key.toLowerCase().includes('νοδε') ||
+          key.toLowerCase().includes('ποσό νοδε') ||
+          key.toLowerCase().includes('βαρύνει τον ενάριθμο')
+        );
+
+        // Find prev_years (Πληρ.Προηγ.Ετών) key
+        const prevYearsKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('prev_years') || 
+          key.toLowerCase().includes('πληρ.προηγ.ετών') ||
+          key.toLowerCase().includes('προηγ.ετών') ||
+          key.toLowerCase().includes('πληρωμές προηγ') ||
+          key.toLowerCase().includes('προηγούμενων ετών')
+        );
+
+        // Find years_paid (Πληρωμές Έτους) key
+        const yearsPaidKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('years_paid') || 
+          key.toLowerCase().includes('πληρωμές έτους') ||
+          key.toLowerCase().includes('πληρωμές_έτους') ||
+          key.toLowerCase().includes('πληρωμεσ ετουσ')
+        );
+
         // Check if required keys exist
         if (!misKey || !na853Key) {
           throw new Error(`Missing required columns MIS or NA853 in row`);
@@ -185,7 +282,11 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             q3: q3Key ? parseEuropeanNumber(row[q3Key]) : undefined,
             q4: q4Key ? parseEuropeanNumber(row[q4Key]) : undefined,
             katanomes_etous: katanomesEtousKey ? parseEuropeanNumber(row[katanomesEtousKey]) : undefined,
-            user_view: userViewKey ? parseEuropeanNumber(row[userViewKey]) : undefined
+            user_view: userViewKey ? parseEuropeanNumber(row[userViewKey]) : undefined,
+            proip: proipKey ? parseEuropeanNumber(row[proipKey]) : undefined,
+            node: nodeKey ? parseEuropeanNumber(row[nodeKey]) : undefined,
+            prev_years: prevYearsKey ? parseEuropeanNumber(row[prevYearsKey]) : undefined,
+            years_paid: yearsPaidKey ? parseEuropeanNumber(row[yearsPaidKey]) : undefined
           }
         };
 
@@ -377,6 +478,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             q4: data.q4 || 0,
             katanomes_etous: initialKatanomesEtous,
             user_view: initialUserView,
+            proip: data.proip || 0,
+            node: data.node || null,
+            prev_years: data.prev_years || null,
+            years_paid: data.years_paid || null,
             created_at: new Date().toISOString()
           };
           
@@ -403,8 +508,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(initialKatanomesEtous),
               change_type: 'import',
               change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
-              document_id: null,
-              mis: parseInt(mis)
+              document_id: null
             });
           }
         } else {
@@ -459,6 +563,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           const newQ3 = data.q3 !== undefined ? data.q3 : existingRecord.q3;
           const newQ4 = data.q4 !== undefined ? data.q4 : existingRecord.q4;
           const newKatanomesEtous = data.katanomes_etous !== undefined ? data.katanomes_etous : existingRecord.katanomes_etous;
+          const newProip = data.proip !== undefined ? data.proip : existingRecord.proip;
+          const newNode = data.node !== undefined ? data.node : existingRecord.node;
+          const newPrevYears = data.prev_years !== undefined ? data.prev_years : existingRecord.prev_years;
+          const newYearsPaid = data.years_paid !== undefined ? data.years_paid : existingRecord.years_paid;
           
           // Special handling for user_view: DO NOT change user_view from admin uploads
           // user_view is only increased by document creation, not by admin uploads
@@ -486,6 +594,10 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               q4: newQ4,
               katanomes_etous: newKatanomesEtous,
               user_view: newUserView,
+              proip: newProip,
+              node: newNode,
+              prev_years: newPrevYears,
+              years_paid: newYearsPaid,
               // NOTE: last_quarter_check is intentionally NOT updated - preserve existing application state
               sum: budgetSumBeforeUpdate, // Store the pre-update state
               updated_at: new Date().toISOString()
@@ -512,8 +624,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(newKatanomesEtous),
               change_type: 'import',
               change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
-              document_id: null,
-              mis: parseInt(mis)
+              document_id: null
             });
           }
         }

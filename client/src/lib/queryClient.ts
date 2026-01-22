@@ -138,6 +138,10 @@ export async function apiRequest<T = unknown>(
       throw new Error("Λήφθηκε μη έγκυρο JSON από τον διακομιστή");
     }
   } catch (error) {
+    // Let aborted requests bubble up so callers can ignore cancellations cleanly
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
     // If error is already an enriched error with structured fields, preserve them
     if (error instanceof Error && (error as any).status !== undefined) {
       // Error already has structured fields, just add our debugging info

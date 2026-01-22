@@ -27,6 +27,7 @@ interface Project {
   mis?: string;
   na853?: string; // NA853 enumeration code
   name: string;
+  event_description?: string; // Preserve original event_description for other components
   expenditure_types: string[];
 }
 
@@ -76,7 +77,14 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         .replace(/[^\w\s]/gi, "");
     }, []);
 
-    const extractNA853Info = useCallback((name: string) => {
+    const extractNA853Info = useCallback((name: string | undefined | null) => {
+      if (!name) {
+        return {
+          na853: "",
+          year: "",
+          budget: "",
+        };
+      }
       const na853Match = name.match(/ΝΑ853[:\s]*([^,\s]+)/i);
       const yearMatch = name.match(/20\d{2}/);
       const budgetMatch = name.match(/([\d.,]+)\s*€?/);
@@ -141,8 +149,8 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
           }
 
           const name =
-            item.project_title ||
             item.event_description ||
+            item.project_title ||
             `Project ${item.mis}`;
 
           return {
@@ -150,6 +158,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             mis: String(item.mis),
             na853: String(item.na853 || ""), // Use NA853 code directly from database
             name,
+            event_description: item.event_description || "", // Preserve original for other components
             expenditure_types: expenditureTypes || [],
           };
         });
@@ -222,6 +231,15 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             debouncedSearchQuery,
           );
 
+          // Split query and name into words for word-based matching
+          const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+          const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 0);
+          
+          // Check if any word from query matches any word in name (word contains match)
+          const wordMatch = queryWords.some(queryWord =>
+            nameWords.some(nameWord => nameWord.includes(queryWord))
+          );
+
           const matches =
             normalizedName.includes(normalizedQuery) ||
             normalizedMis.includes(normalizedQuery) ||
@@ -229,7 +247,8 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
             normalizedNA853.includes(normalizedQuery) ||
             rawMisMatch ||
             rawIdMatch ||
-            rawNA853Match;
+            rawNA853Match ||
+            wordMatch;
 
           // Debug log for the specific project we're looking for
           if (String(project.mis) === "5222801") {
@@ -241,6 +260,7 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
               normalizedId,
               rawMisMatch,
               rawIdMatch,
+              wordMatch,
               matches,
             });
           }

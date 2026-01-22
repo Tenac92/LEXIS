@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/db";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { Project, projectHelpers } from "@shared/models/project";
 import { Router } from "express";
 import { authenticateSession } from "../authentication";
@@ -10,6 +10,7 @@ import {
   parseAndValidateBudgetAmount,
   parseEuropeanNumber,
 } from "../utils/europeanNumberParser";
+import { canAccessProject, requireProjectAccess } from "../utils/authorization";
 
 export const router = Router();
 
@@ -35,6 +36,7 @@ async function processBudgetVersions(
           project_id: projectId,
           formulation_id: formulationId,
           budget_type: "ΠΔΕ",
+          version_number: pdeVersion.version_number || "1.0",
           action_type: pdeVersion.action_type || "Έγκριση",
           boundary_budget: pdeVersion.boundary_budget
             ? parseAndValidateBudgetAmount(pdeVersion.boundary_budget)
@@ -76,6 +78,7 @@ async function processBudgetVersions(
           project_id: projectId,
           formulation_id: formulationId,
           budget_type: "ΕΠΑ",
+          version_number: epaVersion.version_number || "1.0",
           action_type: epaVersion.action_type || "Έγκριση",
           epa_version: epaVersion.epa_version || null,
           protocol_number: epaVersion.protocol_number || null,
@@ -157,27 +160,22 @@ async function processBudgetVersions(
 
 export async function listProjects(req: Request, res: Response) {
   try {
-    console.log("[Projects] Fetching all projects with optimized schema");
+    console.log("[Projects] Fetching all projects with optimized schema and pagination");
 
-    // Get projects with enhanced data using optimized schema
-    const [
-      projectsRes,
-      monadaRes,
-      eventTypesRes,
-      expenditureTypesRes,
-      kallikratisRes,
-      indexRes,
-    ] = await Promise.all([
-      supabase
-        .from("Projects")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase.from("Monada").select("*"),
-      supabase.from("event_types").select("*"),
-      supabase.from("expenditure_types").select("*"),
-      supabase.from("kallikratis").select("*"),
-      supabase.from("project_index").select("*"),
-    ]);
+    // Validate and clamp pagination parameters
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.max(1, Math.min(parseInt(req.query.pageSize as string) || 50, 500));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    console.log(`[Projects] Pagination: page=${page}, pageSize=${pageSize}, range=${from}-${to}`);
+
+    // Step 1: Get paginated projects first
+    const projectsRes = await supabase
+      .from("Projects")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (projectsRes.error) {
       console.error("Database error:", projectsRes.error);
@@ -187,16 +185,35 @@ export async function listProjects(req: Request, res: Response) {
       });
     }
 
-    if (!projectsRes.data) {
+    if (!projectsRes.data || projectsRes.data.length === 0) {
       return res.status(404).json({ message: "No projects found" });
     }
 
     const projects = projectsRes.data;
-    const monadaData = monadaRes.data || [];
-    const eventTypes = eventTypesRes.data || [];
-    const expenditureTypes = expenditureTypesRes.data || [];
-    const kallikratisData = kallikratisRes.data || [];
+    const projectIds = projects.map(p => p.id);
+
+    // Step 2: Get cached reference data and targeted project_index in parallel
+    const { getReferenceData } = await import('../utils/reference-cache');
+    const [refData, indexRes, forYlRes] = await Promise.all([
+      getReferenceData(),
+      supabase
+        .from("project_index")
+        .select("id, project_id, monada_id, event_types_id, expenditure_type_id, for_yl_id")
+        .in("project_id", projectIds),
+      supabase
+        .from("for_yl")
+        .select("id, foreis")
+    ]);
+
+    if (indexRes.error) {
+      console.error("[Projects] Error fetching project_index:", indexRes.error);
+    }
+
+    const monadaData = refData.monada;
+    const eventTypes = refData.eventTypes;
+    const expenditureTypes = refData.expenditureTypes;
     const indexData = indexRes.data || [];
+    const forYlData = forYlRes.data || [];
 
     // Enhance projects with optimized schema data
     const enhancedProjects = projects
@@ -224,12 +241,12 @@ export async function listProjects(req: Request, res: Response) {
             projectIndexItems.length > 0
               ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
               : null;
-          const kallikratisData_item =
-            projectIndexItems.length > 0
-              ? kallikratisData.find(
-                  (k) => k.id === projectIndexItems[0].kallikratis_id,
-                )
-              : null;
+          
+          // Get for_yl data if project has a for_yl_id
+          const forYlItem = projectIndexItems.length > 0 && projectIndexItems[0].for_yl_id
+            ? forYlData.find((f) => f.id === projectIndexItems[0].for_yl_id)
+            : null;
+          const forYlForeis = forYlItem?.foreis as { title?: string; monada_id?: string } | null;
 
           // Get all expenditure types for this project
           const allExpenditureTypes = projectIndexItems
@@ -269,13 +286,20 @@ export async function listProjects(req: Request, res: Response) {
                   name: monadaData_item.unit,
                 }
               : null,
-            enhanced_kallikratis: kallikratisData_item
+            enhanced_kallikratis: null,
+            // For YL (implementing agency) data
+            enhanced_for_yl: forYlItem
               ? {
-                  id: kallikratisData_item.id,
-                  name:
-                    kallikratisData_item.perifereia ||
-                    kallikratisData_item.onoma_dimou_koinotitas,
-                  level: kallikratisData_item.level || "municipality",
+                  id: forYlItem.id,
+                  title: forYlForeis?.title || "",
+                  monada_id: forYlForeis?.monada_id || ""
+                }
+              : null,
+            // Implementing agency for frontend compatibility
+            implementing_agency: forYlItem
+              ? {
+                  id: forYlItem.id,
+                  title: forYlForeis?.title || ""
                 }
               : null,
             // Add arrays for backward compatibility
@@ -291,38 +315,125 @@ export async function listProjects(req: Request, res: Response) {
       })
       .filter((project): project is Project => project !== null);
 
-    res.json(enhancedProjects);
+    const total = projectsRes.count || 0;
+    console.log(`[Projects] Returning ${enhancedProjects.length} projects (page ${page}/${Math.ceil(total / pageSize)}, total: ${total})`);
+
+    return res.json({
+      data: enhancedProjects,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("Error fetching projects:", error);
-    res.status(500).json({ message: "Failed to fetch projects" });
+    return res.status(500).json({ message: "Failed to fetch projects" });
   }
 }
 
-// Enhanced Excel export with both projects and budget data
+// Helper function to parse budget value to number
+function parseBudgetValue(value: any): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/\./g, "").replace(",", ".").trim();
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+// Helper function to format array fields
+function formatArrayField(value: any): string {
+  if (!value) return "-";
+  if (Array.isArray(value)) {
+    const filtered = value.filter(v => v && v.trim && v.trim() !== "");
+    return filtered.length > 0 ? filtered.join(", ") : "-";
+  }
+  if (typeof value === "string" && value.trim()) return value;
+  return "-";
+}
+
+// Helper function to format region data
+function formatRegionData(region: any): string {
+  if (!region) return "-";
+  if (typeof region === "string") return region || "-";
+  if (typeof region === "object") {
+    const parts: string[] = [];
+    if (region.region && Array.isArray(region.region) && region.region.length > 0) {
+      parts.push(region.region.filter((r: string) => r).join(", "));
+    }
+    if (region.regional_unit && Array.isArray(region.regional_unit) && region.regional_unit.length > 0) {
+      parts.push(region.regional_unit.filter((r: string) => r).join(", "));
+    }
+    if (region.municipality && Array.isArray(region.municipality) && region.municipality.length > 0) {
+      parts.push(region.municipality.filter((r: string) => r).join(", "));
+    }
+    return parts.length > 0 ? parts.join(" | ") : "-";
+  }
+  return "-";
+}
+
+// Enhanced Excel export with both projects and budget data using ExcelJS
 export async function exportProjectsXLSX(req: Request, res: Response) {
   try {
     console.log(
-      "[Projects] Generating Excel export with projects and budget data",
+      "[Projects] Generating professional Excel export with projects and budget data",
     );
 
-    // Fetch all projects with enhanced data using optimized schema
+    // Get filter parameters from query string
+    const na853Filter = req.query.na853 as string || "";
+    const expenditureTypeFilter = req.query.expenditureType as string || "";
+    const statusFilter = req.query.status as string || "";
+    const unitFilter = req.query.unit as string || "";
+    const searchFilter = req.query.search as string || "";
+
+    console.log(`[Export] Filters - NA853: ${na853Filter}, Expenditure: ${expenditureTypeFilter}, Status: ${statusFilter}, Unit: ${unitFilter}, Search: ${searchFilter}`);
+
+    // Build filter query for projects
+    let projectQuery = supabase
+      .from("Projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    // Apply filters
+    if (na853Filter) {
+      projectQuery = projectQuery.eq("na853", na853Filter);
+    }
+    if (statusFilter && statusFilter !== "all") {
+      projectQuery = projectQuery.eq("status", statusFilter);
+    }
+    if (searchFilter) {
+      projectQuery = projectQuery.or(`na853.ilike.%${searchFilter}%,event_description.ilike.%${searchFilter}%,project_title.ilike.%${searchFilter}%`);
+    }
+
+    const projectsRes = await projectQuery;
+
+    // Fetch all supporting data including geographic data from junction tables
     const [
-      projectsRes,
       monadaRes,
       eventTypesRes,
       expenditureTypesRes,
-      kallikratisRes,
       indexRes,
+      regionsRes,
+      regionalUnitsRes,
+      municipalitiesRes,
+      projectRegionsRes,
+      projectUnitsRes,
+      projectMunisRes,
     ] = await Promise.all([
-      supabase
-        .from("Projects")
-        .select("*")
-        .order("created_at", { ascending: false }),
       supabase.from("Monada").select("*"),
       supabase.from("event_types").select("*"),
       supabase.from("expenditure_types").select("*"),
-      supabase.from("kallikratis").select("*"),
       supabase.from("project_index").select("*"),
+      supabase.from("regions").select("*"),
+      supabase.from("regional_units").select("*"),
+      supabase.from("municipalities").select("*"),
+      supabase.from("project_index_regions").select("project_index_id, region_code"),
+      supabase.from("project_index_units").select("project_index_id, unit_code"),
+      supabase.from("project_index_munis").select("project_index_id, muni_code"),
     ]);
 
     if (projectsRes.error) {
@@ -340,14 +451,20 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
     const monadaData = monadaRes.data || [];
     const eventTypes = eventTypesRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
-    const kallikratisData = kallikratisRes.data || [];
     const indexData = indexRes.data || [];
+    const regionsData = regionsRes.data || [];
+    const regionalUnitsData = regionalUnitsRes.data || [];
+    const municipalitiesData = municipalitiesRes.data || [];
+    const projectRegionsData = projectRegionsRes.data || [];
+    const projectUnitsData = projectUnitsRes.data || [];
+    const projectMunisData = projectMunisRes.data || [];
 
-    // Enhance projects with optimized schema data
+    // Enhance projects with optimized schema data including geographic info
     const enhancedProjects = projects.map((project) => {
       const projectIndexItems = indexData.filter(
         (idx) => idx.project_id === project.id,
       );
+      const projectIndexIds = projectIndexItems.map((idx) => idx.id);
 
       // Get all expenditure types for this project
       const allExpenditureTypes = projectIndexItems
@@ -365,60 +482,51 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
         .map((et) => et.name);
       const uniqueEventTypes = Array.from(new Set(allEventTypes));
 
-      const eventType =
-        projectIndexItems.length > 0
-          ? eventTypes.find(
-              (et) => et.id === projectIndexItems[0].event_types_id,
-            )
-          : null;
-      const expenditureType =
-        projectIndexItems.length > 0
-          ? expenditureTypes.find(
-              (et) => et.id === projectIndexItems[0].expenditure_type_id,
-            )
-          : null;
-      const monadaItem =
-        projectIndexItems.length > 0
-          ? monadaData.find((m) => m.id === projectIndexItems[0].monada_id)
-          : null;
-      const kallikratisItem =
-        projectIndexItems.length > 0
-          ? kallikratisData.find(
-              (k) => k.id === projectIndexItems[0].kallikratis_id,
-            )
-          : null;
+      // Get all monada for this project
+      const allMonadas = projectIndexItems
+        .map((idx) => monadaData.find((m) => m.id === idx.monada_id))
+        .filter((m) => m !== null && m !== undefined)
+        .map((m) => m.unit);
+      const uniqueMonadas = Array.from(new Set(allMonadas));
+
+      // Get geographic data from junction tables
+      const regionCodes = projectRegionsData
+        .filter((pr) => projectIndexIds.includes(pr.project_index_id))
+        .map((pr) => pr.region_code);
+      const regionNames = regionsData
+        .filter((r) => regionCodes.includes(r.code))
+        .map((r) => r.name);
+      const uniqueRegions = Array.from(new Set(regionNames));
+
+      const unitCodes = projectUnitsData
+        .filter((pu) => projectIndexIds.includes(pu.project_index_id))
+        .map((pu) => pu.unit_code);
+      const unitNames = regionalUnitsData
+        .filter((u) => unitCodes.includes(u.code))
+        .map((u) => u.name);
+      const uniqueUnits = Array.from(new Set(unitNames));
+
+      const muniCodes = projectMunisData
+        .filter((pm) => projectIndexIds.includes(pm.project_index_id))
+        .map((pm) => pm.muni_code);
+      const muniNames = municipalitiesData
+        .filter((m) => muniCodes.includes(m.code))
+        .map((m) => m.name);
+      const uniqueMunis = Array.from(new Set(muniNames));
+
+      // Format geographic string: Περιφέρεια | Π.Ε. | Δήμος
+      const geoParts: string[] = [];
+      if (uniqueRegions.length > 0) geoParts.push(uniqueRegions.join(", "));
+      if (uniqueUnits.length > 0) geoParts.push(uniqueUnits.join(", "));
+      if (uniqueMunis.length > 0) geoParts.push(uniqueMunis.join(", "));
+      const enhancedRegion = geoParts.length > 0 ? geoParts.join(" | ") : null;
 
       return {
         ...project,
-        enhanced_event_type: eventType
-          ? {
-              id: eventType.id,
-              name: eventType.name,
-            }
-          : null,
-        enhanced_expenditure_type: expenditureType
-          ? {
-              id: expenditureType.id,
-              name: expenditureType.expenditure_types,
-            }
-          : null,
-        enhanced_unit: monadaItem
-          ? {
-              id: monadaItem.id,
-              name: monadaItem.unit,
-            }
-          : null,
-        enhanced_kallikratis: kallikratisItem
-          ? {
-              id: kallikratisItem.id,
-              name:
-                kallikratisItem.perifereia ||
-                kallikratisItem.onoma_dimou_koinotitas,
-              level: kallikratisItem.level || "municipality",
-            }
-          : null,
+        enhanced_unit: uniqueMonadas.length > 0 ? uniqueMonadas.join(", ") : null,
         expenditure_types: uniqueExpenditureTypes,
         event_types: uniqueEventTypes,
+        enhanced_region: enhancedRegion,
       };
     });
 
@@ -439,11 +547,108 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       return res.status(404).json({ message: "No projects found for export" });
     }
 
-    // Create a combined dataset for the integrated view
-    const combinedData: any[] = [];
+    // Create ExcelJS workbook
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "ΓΓΠΠ - SUM-e";
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const currentYear = new Date().getFullYear();
+
+    // Define styles
+    const headerStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, color: { argb: "FFFFFFFF" }, size: 11 },
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "thin", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      },
+    };
+
+    const dataStyle: Partial<ExcelJS.Style> = {
+      alignment: { vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: "FFD9D9D9" } },
+        left: { style: "thin", color: { argb: "FFD9D9D9" } },
+        bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+        right: { style: "thin", color: { argb: "FFD9D9D9" } },
+      },
+    };
+
+    const currencyStyle: Partial<ExcelJS.Style> = {
+      ...dataStyle,
+      alignment: { horizontal: "right", vertical: "middle" },
+      numFmt: '#,##0.00 [$€-el-GR]', // Greek locale: dots for thousands, comma for decimals
+    };
+
+    const totalRowStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, size: 11 },
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2EFDA" } },
+      alignment: { horizontal: "right", vertical: "middle" },
+      border: {
+        top: { style: "medium", color: { argb: "FF000000" } },
+        left: { style: "thin", color: { argb: "FF000000" } },
+        bottom: { style: "medium", color: { argb: "FF000000" } },
+        right: { style: "thin", color: { argb: "FF000000" } },
+      },
+    };
+
+    // ========== SHEET 1: Projects with Allocations ==========
+    const wsIntegrated = workbook.addWorksheet("Έργα με Κατανομές", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    // Define columns for integrated view
+    const integratedColumns = [
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "Τίτλος Έργου", key: "title", width: 45 },
+      { header: "Κατάσταση", key: "status", width: 14 },
+      { header: "Μονάδα", key: "unit", width: 25 },
+      { header: "Τύπος Δαπάνης", key: "expenditure_type", width: 20 },
+      { header: "Τύπος Συμβάντος", key: "event_type", width: 20 },
+      { header: "Έτος Συμβάντος", key: "event_year", width: 15 },
+      { header: "Περιφέρεια", key: "region", width: 30 },
+      { header: "Π/Υ ΝΑ853 (€)", key: "budget_na853", width: 18 },
+      { header: "Π/Υ ΝΑ271 (€)", key: "budget_na271", width: 18 },
+      { header: "Π/Υ Ε069 (€)", key: "budget_e069", width: 18 },
+      { header: "ΠΡΟΙΠ (€)", key: "proip", width: 16 },
+      { header: "Ετήσια Πίστωση (€)", key: "ethsia_pistosi", width: 18 },
+      { header: "Α΄ Τρίμηνο (€)", key: "q1", width: 16 },
+      { header: "Β΄ Τρίμηνο (€)", key: "q2", width: 16 },
+      { header: "Γ΄ Τρίμηνο (€)", key: "q3", width: 16 },
+      { header: "Δ΄ Τρίμηνο (€)", key: "q4", width: 16 },
+      { header: "Κατανομές Έτους (€)", key: "katanomes_etous", width: 18 },
+      { header: `Δαπάνες ${currentYear} (€)`, key: "user_view", width: 18 },
+      { header: "Έτος Ένταξης", key: "inc_year", width: 14 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+    ];
+
+    wsIntegrated.columns = integratedColumns;
+
+    // Apply header styles
+    wsIntegrated.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsIntegrated.getRow(1).height = 35;
+
+    // Collect data and totals
+    let totalBudgetNA853 = 0;
+    let totalBudgetNA271 = 0;
+    let totalBudgetE069 = 0;
+    let totalProip = 0;
+    let totalEthsiaPistosi = 0;
+    let totalQ1 = 0;
+    let totalQ2 = 0;
+    let totalQ3 = 0;
+    let totalQ4 = 0;
+    let totalKatanomesEtous = 0;
+    let totalUserView = 0;
 
     enhancedProjects.forEach((project) => {
-      // Find all budget splits for this project (match by MIS or NA853)
       const projectSplits =
         budgetSplits?.filter(
           (split) =>
@@ -451,189 +656,407 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
             split.na853 === project.na853,
         ) || [];
 
-      // If no budget splits found, still include the project with empty budget data
-      if (projectSplits.length === 0) {
-        combinedData.push({
-          // Project Core Data
-          ΜΙS: project.mis || "",
-          Τίτλος:
-            project.title ||
-            project.project_title ||
-            project.event_description ||
-            "",
-          Κατάσταση: project.status || "",
-          ΝΑ853: project.na853 || "",
-          ΝΑ271: project.na271 || "",
-          Ε069: project.e069 || "",
-          "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-          "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-          "Προϋπολογισμός Ε069": project.budget_e069 || "",
-          Περιφέρεια:
-            typeof project.region === "object"
-              ? JSON.stringify(project.region)
-              : project.region || "",
-          "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-            ? project.implementing_agency.join(", ")
-            : project.implementing_agency || "",
-          "Τύπος Συμβάντος": Array.isArray(project.event_type)
-            ? project.event_type.join(", ")
-            : project.event_type || "",
-          "Έτος Συμβάντος": Array.isArray(project.event_year)
-            ? project.event_year.join(", ")
-            : project.event_year || "",
-          "Ημ/νία Δημιουργίας": project.created_at
-            ? new Date(project.created_at).toLocaleDateString("el-GR")
-            : "",
+      const budgetNA853 = parseBudgetValue(project.budget_na853);
+      const budgetNA271 = parseBudgetValue(project.budget_na271);
+      const budgetE069 = parseBudgetValue(project.budget_e069);
 
-          // Empty Budget Split Data
-          "ID Κατανομής": "",
-          ΠΡΟΙΠ: "",
-          "Ετήσια Πίστωση": "",
-          "Α΄ Τρίμηνο": "",
-          "Β΄ Τρίμηνο": "",
-          "Γ΄ Τρίμηνο": "",
-          "Δ΄ Τρίμηνο": "",
-          "Κατανομές Έτους": "",
-          "Προβολή Χρήστη": "",
-          "Ημ/νία Δημ. Κατανομής": "",
-          "Ημ/νία Ενημ. Κατανομής": "",
+      if (budgetNA853) totalBudgetNA853 += budgetNA853;
+      if (budgetNA271) totalBudgetNA271 += budgetNA271;
+      if (budgetE069) totalBudgetE069 += budgetE069;
+
+      if (projectSplits.length === 0) {
+        wsIntegrated.addRow({
+          mis: project.mis || "-",
+          na853: project.na853 || "-",
+          title: project.project_title || project.event_description || "-",
+          status: project.status || "-",
+          unit: project.enhanced_unit || "-",
+          expenditure_type: formatArrayField(project.expenditure_types),
+          event_type: formatArrayField(project.event_types),
+          event_year: formatArrayField(project.event_year),
+          region: project.enhanced_region || "-",
+          budget_na853: budgetNA853,
+          budget_na271: budgetNA271,
+          budget_e069: budgetE069,
+          proip: null,
+          ethsia_pistosi: null,
+          q1: null,
+          q2: null,
+          q3: null,
+          q4: null,
+          katanomes_etous: null,
+          user_view: null,
+          inc_year: project.inc_year || "-",
+          created_at: project.created_at
+            ? new Date(project.created_at).toLocaleDateString("el-GR")
+            : "-",
         });
       } else {
-        // For projects with splits, add one row per split with both project and split data
-        projectSplits.forEach((split: any, index: number) => {
-          combinedData.push({
-            // Project Core Data (only include full project data in the first row for this project)
-            ΜΙS: project.mis || "",
-            Τίτλος:
-              project.title ||
-              project.project_title ||
-              project.event_description ||
-              "",
-            Κατάσταση: project.status || "",
-            ΝΑ853: project.na853 || "",
-            ΝΑ271: project.na271 || "",
-            Ε069: project.e069 || "",
-            "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-            "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-            "Προϋπολογισμός Ε069": project.budget_e069 || "",
-            Περιφέρεια:
-              typeof project.region === "object"
-                ? JSON.stringify(project.region)
-                : project.region || "",
-            "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-              ? project.implementing_agency.join(", ")
-              : project.implementing_agency || "",
-            "Τύπος Συμβάντος": Array.isArray(project.event_type)
-              ? project.event_type.join(", ")
-              : project.event_type || "",
-            "Έτος Συμβάντος": Array.isArray(project.event_year)
-              ? project.event_year.join(", ")
-              : project.event_year || "",
-            "Ημ/νία Δημιουργίας": project.created_at
-              ? new Date(project.created_at).toLocaleDateString("el-GR")
-              : "",
+        projectSplits.forEach((split: any) => {
+          const proip = parseBudgetValue(split.proip);
+          const ethsiaPistosi = parseBudgetValue(split.ethsia_pistosi);
+          const q1 = parseBudgetValue(split.q1);
+          const q2 = parseBudgetValue(split.q2);
+          const q3 = parseBudgetValue(split.q3);
+          const q4 = parseBudgetValue(split.q4);
+          const katanomesEtous = parseBudgetValue(split.katanomes_etous);
+          const userView = parseBudgetValue(split.user_view);
 
-            // Budget Split Data
-            "ID Κατανομής": split.id || "",
-            ΠΡΟΙΠ: split.proip || "",
-            "Ετήσια Πίστωση": split.ethsia_pistosi || "",
-            "Α΄ Τρίμηνο": split.q1 || "",
-            "Β΄ Τρίμηνο": split.q2 || "",
-            "Γ΄ Τρίμηνο": split.q3 || "",
-            "Δ΄ Τρίμηνο": split.q4 || "",
-            "Κατανομές Έτους": split.katanomes_etous || "",
-            "Προβολή Χρήστη": split.user_view || "",
-            "Ημ/νία Δημ. Κατανομής": split.created_at
-              ? new Date(split.created_at).toLocaleDateString("el-GR")
-              : "",
-            "Ημ/νία Ενημ. Κατανομής": split.updated_at
-              ? new Date(split.updated_at).toLocaleDateString("el-GR")
-              : "",
+          if (proip) totalProip += proip;
+          if (ethsiaPistosi) totalEthsiaPistosi += ethsiaPistosi;
+          if (q1) totalQ1 += q1;
+          if (q2) totalQ2 += q2;
+          if (q3) totalQ3 += q3;
+          if (q4) totalQ4 += q4;
+          if (katanomesEtous) totalKatanomesEtous += katanomesEtous;
+          if (userView) totalUserView += userView;
+
+          wsIntegrated.addRow({
+            mis: project.mis || "-",
+            na853: project.na853 || "-",
+            title: project.project_title || project.event_description || "-",
+            status: project.status || "-",
+            unit: project.enhanced_unit || "-",
+            expenditure_type: formatArrayField(project.expenditure_types),
+            event_type: formatArrayField(project.event_types),
+            event_year: formatArrayField(project.event_year),
+            region: project.enhanced_region || "-",
+            budget_na853: budgetNA853,
+            budget_na271: budgetNA271,
+            budget_e069: budgetE069,
+            proip: proip,
+            ethsia_pistosi: ethsiaPistosi,
+            q1: q1,
+            q2: q2,
+            q3: q3,
+            q4: q4,
+            katanomes_etous: katanomesEtous,
+            user_view: userView,
+            inc_year: project.inc_year || "-",
+            created_at: project.created_at
+              ? new Date(project.created_at).toLocaleDateString("el-GR")
+              : "-",
           });
         });
       }
     });
 
-    // Create a separate Budget Splits Only worksheet
-    const budgetSplitsOnly = budgetSplits
-      ? budgetSplits.map((split) => ({
-          ID: split.id || "",
-          ΜΙS: split.mis || "",
-          ΝΑ853: split.na853 || "",
-          ΠΡΟΙΠ: split.proip || "",
-          "Ετήσια Πίστωση": split.ethsia_pistosi || "",
-          "Α΄ Τρίμηνο": split.q1 || "",
-          "Β΄ Τρίμηνο": split.q2 || "",
-          "Γ΄ Τρίμηνο": split.q3 || "",
-          "Δ΄ Τρίμηνο": split.q4 || "",
-          "Κατανομές Έτους": split.katanomes_etous || "",
-          "Προβολή Χρήστη": split.user_view || "",
-          "Ημ/νία Δημιουργίας": split.created_at
+    // Apply data styles and currency format
+    const currencyColumns = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]; // Column indices for currency
+    const currencyFormat = '#,##0.00 [$€-el-GR]'; // Greek locale: dots for thousands, comma for decimals
+    const defaultBorder: Partial<ExcelJS.Borders> = {
+      top: { style: "thin", color: { argb: "FFD9D9D9" } },
+      left: { style: "thin", color: { argb: "FFD9D9D9" } },
+      bottom: { style: "thin", color: { argb: "FFD9D9D9" } },
+      right: { style: "thin", color: { argb: "FFD9D9D9" } },
+    };
+    wsIntegrated.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (currencyColumns.includes(colNumber)) {
+            cell.numFmt = currencyFormat;
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          }
+          cell.border = defaultBorder;
+        });
+        row.height = 22;
+      }
+    });
+
+    // Add totals row
+    const totalRow = wsIntegrated.addRow({
+      mis: "",
+      na853: "ΣΥΝΟΛΑ:",
+      title: "",
+      status: "",
+      unit: "",
+      expenditure_type: "",
+      event_type: "",
+      event_year: "",
+      region: "",
+      budget_na853: totalBudgetNA853,
+      budget_na271: totalBudgetNA271,
+      budget_e069: totalBudgetE069,
+      proip: totalProip,
+      ethsia_pistosi: totalEthsiaPistosi,
+      q1: totalQ1,
+      q2: totalQ2,
+      q3: totalQ3,
+      q4: totalQ4,
+      katanomes_etous: totalKatanomesEtous,
+      user_view: totalUserView,
+      inc_year: "",
+      created_at: "",
+    });
+
+    totalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (currencyColumns.includes(colNumber)) {
+        cell.numFmt = currencyFormat;
+      }
+    });
+    totalRow.height = 28;
+
+    // Add alternating row colors
+    wsIntegrated.eachRow((row, rowNumber) => {
+      if (rowNumber > 1 && rowNumber < wsIntegrated.rowCount) {
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            if (!cell.fill || (cell.fill as ExcelJS.FillPattern).fgColor?.argb !== "FFE2EFDA") {
+              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+            }
+          });
+        }
+      }
+    });
+
+    // ========== SHEET 2: Projects Only ==========
+    const wsProjects = workbook.addWorksheet("Μόνο Έργα", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    const projectColumns = [
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "ΝΑ271", key: "na271", width: 15 },
+      { header: "Ε069", key: "e069", width: 15 },
+      { header: "Τίτλος Έργου", key: "title", width: 50 },
+      { header: "Περίληψη", key: "summary", width: 40 },
+      { header: "Κατάσταση", key: "status", width: 14 },
+      { header: "Μονάδα", key: "unit", width: 25 },
+      { header: "Τύπος Δαπάνης", key: "expenditure_type", width: 20 },
+      { header: "Τύπος Συμβάντος", key: "event_type", width: 20 },
+      { header: "Έτος Συμβάντος", key: "event_year", width: 15 },
+      { header: "Έτος Ένταξης", key: "inc_year", width: 14 },
+      { header: "Περιφέρεια", key: "region", width: 30 },
+      { header: "Π/Υ ΝΑ853 (€)", key: "budget_na853", width: 18 },
+      { header: "Π/Υ ΝΑ271 (€)", key: "budget_na271", width: 18 },
+      { header: "Π/Υ Ε069 (€)", key: "budget_e069", width: 18 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+      { header: "Ημ/νία Ενημέρωσης", key: "updated_at", width: 16 },
+    ];
+
+    wsProjects.columns = projectColumns;
+
+    // Apply header styles
+    wsProjects.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsProjects.getRow(1).height = 35;
+
+    // Add project data
+    let projectTotalNA853 = 0;
+    let projectTotalNA271 = 0;
+    let projectTotalE069 = 0;
+
+    enhancedProjects.forEach((project) => {
+      const budgetNA853 = parseBudgetValue(project.budget_na853);
+      const budgetNA271 = parseBudgetValue(project.budget_na271);
+      const budgetE069 = parseBudgetValue(project.budget_e069);
+
+      if (budgetNA853) projectTotalNA853 += budgetNA853;
+      if (budgetNA271) projectTotalNA271 += budgetNA271;
+      if (budgetE069) projectTotalE069 += budgetE069;
+
+      wsProjects.addRow({
+        mis: project.mis || "-",
+        na853: project.na853 || "-",
+        na271: project.na271 || "-",
+        e069: project.e069 || "-",
+        title: project.project_title || project.event_description || "-",
+        summary: project.summary || "-",
+        status: project.status || "-",
+        unit: project.enhanced_unit || "-",
+        expenditure_type: formatArrayField(project.expenditure_types),
+        event_type: formatArrayField(project.event_types),
+        event_year: formatArrayField(project.event_year),
+        inc_year: project.inc_year || "-",
+        region: project.enhanced_region || "-",
+        budget_na853: budgetNA853,
+        budget_na271: budgetNA271,
+        budget_e069: budgetE069,
+        created_at: project.created_at
+          ? new Date(project.created_at).toLocaleDateString("el-GR")
+          : "-",
+        updated_at: project.updated_at
+          ? new Date(project.updated_at).toLocaleDateString("el-GR")
+          : "-",
+      });
+    });
+
+    // Apply styles with currency format
+    const projectCurrencyColumns = [14, 15, 16];
+    wsProjects.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (projectCurrencyColumns.includes(colNumber)) {
+            cell.numFmt = currencyFormat;
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          }
+          cell.border = defaultBorder;
+        });
+        row.height = 22;
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+          });
+        }
+      }
+    });
+
+    // Add totals row for projects
+    const projectTotalRow = wsProjects.addRow({
+      mis: "",
+      na853: "ΣΥΝΟΛΑ:",
+      na271: "",
+      e069: "",
+      title: `${enhancedProjects.length} Έργα`,
+      summary: "",
+      status: "",
+      unit: "",
+      expenditure_type: "",
+      event_type: "",
+      event_year: "",
+      inc_year: "",
+      region: "",
+      budget_na853: projectTotalNA853,
+      budget_na271: projectTotalNA271,
+      budget_e069: projectTotalE069,
+      created_at: "",
+      updated_at: "",
+    });
+
+    projectTotalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (projectCurrencyColumns.includes(colNumber)) {
+        cell.numFmt = currencyFormat;
+      }
+    });
+    projectTotalRow.height = 28;
+
+    // ========== SHEET 3: Budget Allocations Only ==========
+    const wsBudgets = workbook.addWorksheet("Μόνο Κατανομές", {
+      views: [{ state: "frozen", xSplit: 2, ySplit: 1 }],
+    });
+
+    const budgetColumns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "MIS", key: "mis", width: 12 },
+      { header: "ΝΑ853", key: "na853", width: 15 },
+      { header: "ΠΡΟΙΠ (€)", key: "proip", width: 18 },
+      { header: "Ετήσια Πίστωση (€)", key: "ethsia_pistosi", width: 18 },
+      { header: "Α΄ Τρίμηνο (€)", key: "q1", width: 16 },
+      { header: "Β΄ Τρίμηνο (€)", key: "q2", width: 16 },
+      { header: "Γ΄ Τρίμηνο (€)", key: "q3", width: 16 },
+      { header: "Δ΄ Τρίμηνο (€)", key: "q4", width: 16 },
+      { header: "Κατανομές Έτους (€)", key: "katanomes_etous", width: 18 },
+      { header: `Δαπάνες ${currentYear} (€)`, key: "user_view", width: 18 },
+      { header: "Ημ/νία Δημιουργίας", key: "created_at", width: 16 },
+    ];
+
+    wsBudgets.columns = budgetColumns;
+
+    // Apply header styles
+    wsBudgets.getRow(1).eachCell((cell) => {
+      Object.assign(cell, { style: headerStyle });
+    });
+    wsBudgets.getRow(1).height = 35;
+
+    // Add budget data with totals calculation
+    let budgetTotalProip = 0;
+    let budgetTotalEthsia = 0;
+    let budgetTotalQ1 = 0;
+    let budgetTotalQ2 = 0;
+    let budgetTotalQ3 = 0;
+    let budgetTotalQ4 = 0;
+    let budgetTotalKatanomes = 0;
+    let budgetTotalUserView = 0;
+
+    if (budgetSplits && budgetSplits.length > 0) {
+      budgetSplits.forEach((split) => {
+        const proip = parseBudgetValue(split.proip);
+        const ethsia = parseBudgetValue(split.ethsia_pistosi);
+        const q1 = parseBudgetValue(split.q1);
+        const q2 = parseBudgetValue(split.q2);
+        const q3 = parseBudgetValue(split.q3);
+        const q4 = parseBudgetValue(split.q4);
+        const katanomes = parseBudgetValue(split.katanomes_etous);
+        const userView = parseBudgetValue(split.user_view);
+
+        if (proip) budgetTotalProip += proip;
+        if (ethsia) budgetTotalEthsia += ethsia;
+        if (q1) budgetTotalQ1 += q1;
+        if (q2) budgetTotalQ2 += q2;
+        if (q3) budgetTotalQ3 += q3;
+        if (q4) budgetTotalQ4 += q4;
+        if (katanomes) budgetTotalKatanomes += katanomes;
+        if (userView) budgetTotalUserView += userView;
+
+        wsBudgets.addRow({
+          id: split.id || "-",
+          mis: split.mis || "-",
+          na853: split.na853 || "-",
+          proip: proip,
+          ethsia_pistosi: ethsia,
+          q1: q1,
+          q2: q2,
+          q3: q3,
+          q4: q4,
+          katanomes_etous: katanomes,
+          user_view: userView,
+          created_at: split.created_at
             ? new Date(split.created_at).toLocaleDateString("el-GR")
-            : "",
-          "Ημ/νία Ενημέρωσης": split.updated_at
-            ? new Date(split.updated_at).toLocaleDateString("el-GR")
-            : "",
-        }))
-      : [];
+            : "-",
+        });
+      });
+    }
 
-    // Create the main workbook
-    const wb = XLSX.utils.book_new();
+    // Apply styles with currency format
+    const budgetCurrencyColumns = [4, 5, 6, 7, 8, 9, 10, 11];
+    wsBudgets.eachRow((row, rowNumber) => {
+      if (rowNumber > 1) {
+        row.eachCell((cell, colNumber) => {
+          if (budgetCurrencyColumns.includes(colNumber)) {
+            cell.numFmt = currencyFormat;
+            cell.alignment = { horizontal: "right", vertical: "middle" };
+          }
+          cell.border = defaultBorder;
+        });
+        row.height = 22;
+        if (rowNumber % 2 === 0) {
+          row.eachCell((cell) => {
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
+          });
+        }
+      }
+    });
 
-    // Add the integrated projects and budget data worksheet
-    const wsIntegrated = XLSX.utils.json_to_sheet(combinedData);
+    // Add totals row for budgets
+    const budgetTotalRow = wsBudgets.addRow({
+      id: "",
+      mis: "ΣΥΝΟΛΑ:",
+      na853: `${budgetSplits?.length || 0} Εγγραφές`,
+      proip: budgetTotalProip,
+      ethsia_pistosi: budgetTotalEthsia,
+      q1: budgetTotalQ1,
+      q2: budgetTotalQ2,
+      q3: budgetTotalQ3,
+      q4: budgetTotalQ4,
+      katanomes_etous: budgetTotalKatanomes,
+      user_view: budgetTotalUserView,
+      created_at: "",
+    });
 
-    // Set column widths for integrated worksheet
-    const colWidthsIntegrated = Object.keys(combinedData[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsIntegrated["!cols"] = colWidthsIntegrated;
-    XLSX.utils.book_append_sheet(wb, wsIntegrated, "Έργα με Κατανομές");
-
-    // Add a worksheet with only Projects data (simplified view)
-    const projectsOnly = projects.map((project) => ({
-      ΜΙS: project.mis || "",
-      ΝΑ853: project.na853 || "",
-      Τίτλος:
-        project.title ||
-        project.project_title ||
-        project.event_description ||
-        "",
-      Κατάσταση: project.status || "",
-      "Προϋπολογισμός ΝΑ853": project.budget_na853 || "",
-      "Προϋπολογισμός ΝΑ271": project.budget_na271 || "",
-      "Προϋπολογισμός Ε069": project.budget_e069 || "",
-      "Φορέας Υλοποίησης": Array.isArray(project.implementing_agency)
-        ? project.implementing_agency.join(", ")
-        : project.implementing_agency || "",
-      "Τύπος Συμβάντος": Array.isArray(project.event_type)
-        ? project.event_type.join(", ")
-        : project.event_type || "",
-      "Έτος Συμβάντος": Array.isArray(project.event_year)
-        ? project.event_year.join(", ")
-        : project.event_year || "",
-      "Ημ/νία Δημιουργίας": project.created_at
-        ? new Date(project.created_at).toLocaleDateString("el-GR")
-        : "",
-    }));
-
-    const wsProjects = XLSX.utils.json_to_sheet(projectsOnly);
-    const colWidthsProjects = Object.keys(projectsOnly[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsProjects["!cols"] = colWidthsProjects;
-    XLSX.utils.book_append_sheet(wb, wsProjects, "Μόνο Έργα");
-
-    // Add the Budget Splits Only worksheet
-    const wsBudgets = XLSX.utils.json_to_sheet(budgetSplitsOnly);
-    const colWidthsBudgets = Object.keys(budgetSplitsOnly[0] || {}).map(() => ({
-      wch: 18,
-    }));
-    wsBudgets["!cols"] = colWidthsBudgets;
-    XLSX.utils.book_append_sheet(wb, wsBudgets, "Μόνο Κατανομές");
+    budgetTotalRow.eachCell((cell, colNumber) => {
+      Object.assign(cell, { style: totalRowStyle });
+      if (budgetCurrencyColumns.includes(colNumber)) {
+        cell.numFmt = currencyFormat;
+      }
+    });
+    budgetTotalRow.height = 28;
 
     // Generate buffer and send the response
-    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Format current date as dd-mm-yyyy
     const today = new Date();
@@ -650,10 +1073,10 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
       "Content-Disposition",
       `attachment; filename="${encodedFilename}"`,
     );
-    res.setHeader("Content-Length", buffer.length.toString());
+    res.setHeader("Content-Length", buffer.byteLength.toString());
 
-    res.end(buffer);
-    console.log(`[Projects] Excel export successful: ${encodedFilename}`);
+    res.end(Buffer.from(buffer));
+    console.log(`[Projects] Professional Excel export successful: ${encodedFilename} (${enhancedProjects.length} projects, ${budgetSplits?.length || 0} budget entries)`);
   } catch (error) {
     console.error("Error generating Excel export:", error);
     res.status(500).json({
@@ -664,13 +1087,17 @@ export async function exportProjectsXLSX(req: Request, res: Response) {
 }
 
 // Get projects by unit
-router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
+router.get("/by-unit/:unitName", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     let { unitName } = req.params;
 
     if (!unitName) {
       return res.status(400).json({ message: "Unit name is required" });
     }
+
+    // Validate and clamp pagination parameters
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.max(1, Math.min(parseInt(req.query.pageSize as string) || 50, 500));
 
     // Decode URL-encoded Greek characters
     try {
@@ -681,10 +1108,41 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
       );
     }
 
-    console.log(`[Projects] Fetching projects for unit: ${unitName}`);
+    console.log(`[Projects] Fetching projects for unit: ${unitName} (page ${page}, pageSize ${pageSize})`);
     console.log(
       `[Projects] Unit name after decoding: "${unitName}" (length: ${unitName.length})`,
     );
+
+    // SECURITY: Verify user has access to this unit
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    // Get the unit ID from the unit name
+    const { data: unitData, error: unitError } = await supabase
+      .from("Monada")
+      .select("id, unit")
+      .eq("unit", unitName)
+      .single();
+
+    if (unitError || !unitData) {
+      console.log(`[Projects] Unit not found: ${unitName}`);
+      return res.status(404).json({ message: "Unit not found" });
+    }
+
+    // Check if user has access to this unit (unless admin)
+    if (req.user.role !== "admin") {
+      const userUnits = Array.isArray(req.user.unit_id) ? req.user.unit_id : req.user.unit_id ? [req.user.unit_id] : [];
+      
+      if (!userUnits.includes(unitData.id)) {
+        console.log(`[Projects] User ${req.user.id} denied access to unit ${unitName} (ID: ${unitData.id})`);
+        return res.status(403).json({ 
+          message: "You do not have access to this unit's projects" 
+        });
+      }
+    }
+
+    console.log(`[Projects] User authorized to access unit: ${unitName}`);
 
     // Use the storage method which correctly handles filtering by implementing_agency
     const projects = await storage.getProjectsByUnit(unitName);
@@ -692,13 +1150,28 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
       `[Projects] Storage returned ${projects?.length || 0} projects`,
     );
 
+    const total = projects?.length || 0;
+
     if (!projects || projects.length === 0) {
       console.log(`[Projects] No projects found for unit: ${unitName}`);
-      return res.json([]);
+      return res.json({
+        data: [],
+        pagination: {
+          page,
+          pageSize,
+          total: 0,
+          totalPages: 0,
+        },
+      });
     }
 
+    // Apply pagination
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize;
+    const paginatedProjects = projects.slice(from, to);
+
     // Return projects with proper formatting (manually constructed to avoid type errors)
-    const formattedProjects = projects.map((project) => {
+    const formattedProjects = paginatedProjects.map((project) => {
       return {
         id: project.id,
         mis: project.mis?.toString() || "",
@@ -722,9 +1195,18 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
     });
 
     console.log(
-      `[Projects] Found ${formattedProjects.length} projects for unit: ${unitName}`,
+      `[Projects] Returning ${formattedProjects.length} of ${total} projects for unit: ${unitName} (page ${page}/${Math.ceil(total / pageSize)})`,
     );
-    res.json(formattedProjects);
+
+    return res.json({
+      data: formattedProjects,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    });
   } catch (error) {
     console.error("[Projects] Error fetching projects by unit:", error);
     res.status(500).json({
@@ -738,78 +1220,43 @@ router.get("/by-unit/:unitName", async (req: Request, res: Response) => {
 // This endpoint was removed to prevent database column errors
 
 // Get complete project data in one call (optimized for performance)
-// This endpoint is public as it's used for read-only viewing
-router.get("/:mis/complete", async (req: Request, res: Response) => {
+router.get("/:id/complete", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis } = req.params;
+    const { id } = req.params;
+    const projectId = parseInt(id);
 
-    if (!mis) {
-      return res.status(400).json({ message: "MIS parameter is required" });
+    if (isNaN(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID" });
     }
 
     console.log(
-      `[ProjectComplete] Fetching complete data for project MIS: ${mis}`,
+      `[ProjectComplete] Fetching complete data for project ID: ${projectId}`,
     );
 
-    // First get the project to extract the ID for related tables
-    // Optimization: Use project_id if available, otherwise look up by MIS
-    let projectId: number;
-    let projectData: any;
+    const authResult = await canAccessProject(req.user, projectId);
+    if (!authResult.authorized) {
+      return res.status(authResult.statusCode || 403).json({
+        message: authResult.error || "Access denied",
+      });
+    }
 
-    // Check if mis is actually a numeric ID
-    const numericMis = parseInt(mis);
-    if (!isNaN(numericMis) && numericMis.toString() === mis) {
-      // Try to fetch by ID first for better performance
-      const { data: projectById, error: idError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("id", numericMis)
-        .single();
+    console.log(`[ProjectComplete] User authorized, fetching project data for ID: ${projectId}`);
 
-      if (!idError && projectById) {
-        projectData = projectById;
-        projectId = projectById.id;
-        console.log(`[ProjectComplete] Found project by ID: ${projectId}`);
-      } else {
-        // Fallback to MIS lookup
-        const { data: projectByMis, error: misError } = await supabase
-          .from("Projects")
-          .select("*")
-          .eq("mis", mis)
-          .single();
+    // Fetch full project data from Projects table
+    const { data: projectData, error: projectError } = await supabase
+      .from("Projects")
+      .select("*")
+      .eq("id", projectId)
+      .single();
 
-        if (misError || !projectByMis) {
-          console.error("Error fetching project by MIS:", misError);
-          return res
-            .status(404)
-            .json({ message: "Project not found", error: misError?.message });
-        }
-
-        projectData = projectByMis;
-        projectId = projectByMis.id;
-      }
-    } else {
-      // Non-numeric MIS, use standard lookup
-      const { data: projectByMis, error: misError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("mis", mis)
-        .single();
-
-      if (misError || !projectByMis) {
-        console.error("Error fetching project by MIS:", misError);
-        return res
-          .status(404)
-          .json({ message: "Project not found", error: misError?.message });
-      }
-
-      projectData = projectByMis;
-      projectId = projectByMis.id;
+    if (projectError || !projectData) {
+      console.error(`[ProjectComplete] Error fetching full project data:`, projectError);
+      return res.status(404).json({ message: "Project data not found" });
     }
 
     // PERFORMANCE OPTIMIZATION: Fetch only essential project-specific data first
     // Reference data will be cached and loaded separately
-    const [decisionsRes, formulationsRes, indexRes] = await Promise.all([
+    const [decisionsRes, formulationsRes, indexRes, budgetVersionsRes] = await Promise.all([
       supabase
         .from("project_decisions")
         .select("*")
@@ -821,16 +1268,32 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
         .eq("project_id", projectId)
         .order("created_at"),
       supabase.from("project_index").select("*").eq("project_id", projectId),
+      supabase
+        .from("project_budget_versions")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("formulation_id")
+        .order("budget_type")
+        .order("version_number"),
     ]);
+    
+    // Check for errors in budget versions fetch
+    if (budgetVersionsRes.error) {
+      console.error(
+        "[ProjectComplete] Error fetching budget versions:",
+        budgetVersionsRes.error,
+      );
+    }
 
     // Fetch reference data with optimized queries and smaller limits for initial load
-    const [eventTypesRes, unitsRes, expenditureTypesRes] = await Promise.all([
+    const [eventTypesRes, unitsRes, expenditureTypesRes, forYlRes] = await Promise.all([
       supabase.from("event_types").select("id, name").limit(50), // Only essential fields
       supabase.from("Monada").select("id, unit, unit_name").limit(30), // Only essential fields
       supabase
         .from("expenditure_types")
         .select("id, expenditure_types")
         .limit(30), // Only essential fields
+      supabase.from("for_yl").select("id, foreis"), // For YL (implementing agencies)
     ]);
 
     // Check for errors in reference data queries
@@ -854,43 +1317,19 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
     const eventTypes = eventTypesRes.data || [];
     const units = unitsRes.data || [];
     const expenditureTypes = expenditureTypesRes.data || [];
+    const forYlData = forYlRes.data || [];
 
     console.log(
       `[ProjectComplete] Before kallikratis loading - got ${eventTypes.length} eventTypes, ${units.length} units, ${expenditureTypes.length} expenditureTypes`,
     );
 
-    // Load both old kallikratis data (for fallback) and new normalized geographic data
-    let kallikratis: any[] = [];
+    // Load normalized geographic data (new system replaces old kallikratis table)
+    let kallikratis: any[] = []; // Empty - table no longer exists
     let regions: any[] = [];
     let regionalUnits: any[] = [];
     let municipalities: any[] = [];
 
-    try {
-      console.log("[ProjectComplete] Attempting to load kallikratis data...");
-      const kallikratisResponse = await supabase
-        .from("kallikratis")
-        .select(
-          "id, perifereia, perifereiaki_enotita, onoma_neou_ota, kodikos_neou_ota, kodikos_perifereiakis_enotitas, kodikos_perifereias, eidos_neou_ota",
-        )
-        .limit(1000); // Reduced from 2000 for faster initial load
-
-      if (kallikratisResponse.error) {
-        console.error(
-          "[ProjectComplete] Kallikratis query error:",
-          kallikratisResponse.error,
-        );
-      } else {
-        kallikratis = kallikratisResponse.data || [];
-        console.log(
-          `[ProjectComplete] Successfully loaded ${kallikratis.length} kallikratis entries for complete data`,
-        );
-      }
-    } catch (kallikratisError) {
-      console.warn(
-        "[ProjectComplete] Kallikratis data load failed, continuing without:",
-        kallikratisError,
-      );
-    }
+    console.log("[ProjectComplete] Skipping old kallikratis table (no longer in use), loading normalized geographic data instead...");
 
     // Load normalized geographic data
     try {
@@ -937,12 +1376,14 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
         const projectIndexIds = projectIndex.map((idx) => idx.id);
 
         // Fetch geographic relationships from junction tables
+        // IMPORTANT: Include project_index_id so frontend can map areas to specific agencies
         const [regionsJunctionRes, unitsJunctionRes, munisJunctionRes] =
           await Promise.all([
             supabase
               .from("project_index_regions")
               .select(
                 `
+              project_index_id,
               region_code,
               regions (
                 code,
@@ -955,6 +1396,7 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
               .from("project_index_units")
               .select(
                 `
+              project_index_id,
               unit_code,
               regional_units (
                 code,
@@ -968,6 +1410,7 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
               .from("project_index_munis")
               .select(
                 `
+              project_index_id,
               muni_code,
               municipalities (
                 code,
@@ -1007,16 +1450,19 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
       projectIndex.length > 0
         ? units.find((u) => u.id === projectIndex[0].monada_id)
         : null;
-    const mostCommonKallikratis =
-      projectIndex.length > 0
-        ? kallikratis.find((k) => k.id === projectIndex[0].kallikratis_id)
-        : null;
     const mostCommonExpenditure =
       projectIndex.length > 0
         ? expenditureTypes.find(
             (et) => et.id === projectIndex[0].expenditure_type_id,
           )
         : null;
+    
+    // Find for_yl if project has one
+    const projectForYlId = projectIndex.length > 0 ? projectIndex[0].for_yl_id : null;
+    const forYlItem = projectForYlId
+      ? forYlData.find((f) => f.id === projectForYlId)
+      : null;
+    const forYlForeis = forYlItem?.foreis as { title?: string; monada_id?: string } | null;
 
     // Find event type from direct field
     const eventType = eventTypes.find(
@@ -1044,26 +1490,93 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
             name: mostCommonUnit.unit || mostCommonUnit.unit_name,
           }
         : null,
-      enhanced_kallikratis: mostCommonKallikratis
+      enhanced_for_yl: forYlItem
         ? {
-            id: mostCommonKallikratis.id,
-            name:
-              mostCommonKallikratis.perifereia ||
-              mostCommonKallikratis.onoma_dimou_koinotitas,
-            level: mostCommonKallikratis.level || "municipality",
+            id: forYlItem.id,
+            title: forYlForeis?.title || "",
+            monada_id: forYlForeis?.monada_id || ""
           }
         : null,
     };
 
+    // Process budget versions and group them by formulation_id
+    const budgetVersions = budgetVersionsRes.data || [];
+    const budgetVersionsByFormulation = new Map<number, { pde: any[], epa: any[] }>();
+    
+    budgetVersions.forEach((version) => {
+      if (!budgetVersionsByFormulation.has(version.formulation_id)) {
+        budgetVersionsByFormulation.set(version.formulation_id, { pde: [], epa: [] });
+      }
+      const formVersions = budgetVersionsByFormulation.get(version.formulation_id)!;
+      // Handle both Greek (ΠΔΕ/ΕΠΑ) and English (pde/epa) budget types
+      const budgetTypeNormalized = version.budget_type?.toUpperCase();
+      if (budgetTypeNormalized === 'ΠΔΕ' || budgetTypeNormalized === 'PDE') {
+        formVersions.pde.push(version);
+      } else if (budgetTypeNormalized === 'ΕΠΑ' || budgetTypeNormalized === 'EPA') {
+        formVersions.epa.push(version);
+      }
+    });
+    
+    console.log(`[ProjectComplete] Processed ${budgetVersions.length} budget versions for ${budgetVersionsByFormulation.size} formulations`);
+    
+    // Fetch EPA financials for all EPA versions
+    const epaVersionIds = budgetVersions
+      .filter(v => {
+        const typeNormalized = v.budget_type?.toUpperCase();
+        return typeNormalized === 'ΕΠΑ' || typeNormalized === 'EPA';
+      })
+      .map(v => v.id);
+    
+    let epaFinancialsByVersion = new Map<number, any[]>();
+    if (epaVersionIds.length > 0) {
+      console.log(`[ProjectComplete] Fetching financials for ${epaVersionIds.length} EPA versions`);
+      const { data: epaFinancialsData, error: epaFinancialsError } = await supabase
+        .from('epa_financials')
+        .select('*')
+        .in('epa_version_id', epaVersionIds)
+        .order('year');
+      
+      if (epaFinancialsError) {
+        console.error('[ProjectComplete] Error fetching EPA financials:', epaFinancialsError);
+      } else {
+        // Group financials by epa_version_id
+        (epaFinancialsData || []).forEach(financial => {
+          if (!epaFinancialsByVersion.has(financial.epa_version_id)) {
+            epaFinancialsByVersion.set(financial.epa_version_id, []);
+          }
+          epaFinancialsByVersion.get(financial.epa_version_id)!.push(financial);
+        });
+        console.log(`[ProjectComplete] Loaded ${epaFinancialsData?.length || 0} EPA financial records`);
+      }
+    }
+    
+    // Attach financials to EPA budget versions
+    budgetVersionsByFormulation.forEach((versions, formulationId) => {
+      versions.epa = versions.epa.map(epaVersion => ({
+        ...epaVersion,
+        financials: epaFinancialsByVersion.get(epaVersion.id) || []
+      }));
+    });
+    
+    // Attach budget versions to formulations
+    const formulationsWithBudgetVersions = (formulationsRes.data || []).map((formulation) => {
+      const versions = budgetVersionsByFormulation.get(formulation.id) || { pde: [], epa: [] };
+      return {
+        ...formulation,
+        budget_versions: versions
+      };
+    });
+
     const completeData = {
       project: enhancedProject,
       decisions: decisionsRes.data || [],
-      formulations: formulationsRes.data || [],
+      formulations: formulationsWithBudgetVersions,
       index: indexRes.data || [],
       eventTypes: eventTypes,
       units: units,
       kallikratis: kallikratis,
       expenditureTypes: expenditureTypes,
+      forYl: forYlData, // For YL (implementing agencies)
       // New normalized geographic data
       regions: regions,
       regionalUnits: regionalUnits,
@@ -1097,12 +1610,12 @@ router.get("/:mis/complete", async (req: Request, res: Response) => {
 });
 
 // Separate endpoint for reference data that can be heavily cached
-router.get("/reference-data", async (req: Request, res: Response) => {
+router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
     console.log("[ProjectReference] Fetching reference data");
 
     // Fetch all reference data in parallel with optimized queries
-    const [eventTypesRes, unitsRes, expenditureTypesRes, projectIndexRes] =
+    const [eventTypesRes, unitsRes, expenditureTypesRes, projectIndexRes, forYlRes] =
       await Promise.all([
         supabase.from("event_types").select("id, name").limit(100),
         supabase.from("Monada").select("id, unit, unit_name").limit(50),
@@ -1111,62 +1624,38 @@ router.get("/reference-data", async (req: Request, res: Response) => {
           .select("id, expenditure_types")
           .limit(50),
         supabase.from("project_index").select("kallikratis_id").limit(5000),
+        supabase.from("for_yl").select("id, foreis"), // For YL (implementing agencies)
       ]);
 
-    // Extract unique kallikratis_ids from project_index
-    const indexData = projectIndexRes.data || [];
-    const kallikratisIdList = indexData
-      .map((item: any) => item.kallikratis_id)
-      .filter((id: any) => id !== null && id !== undefined);
-
-    const uniqueKallikratisIds = Array.from(new Set(kallikratisIdList));
-
-    // Fetch actual kallikratis data for these IDs
+    // Kallikratis table no longer exists - using normalized geographic data instead
     let kallikratisFromIndex: any[] = [];
-    if (uniqueKallikratisIds.length > 0) {
-      const kallikratisRes = await supabase
-        .from("kallikratis")
-        .select(
-          "id, perifereia, perifereiaki_enotita, onoma_neou_ota, kodikos_neou_ota, kodikos_perifereiakis_enotitas, kodikos_perifereias, eidos_neou_ota",
-        )
-        .in("id", uniqueKallikratisIds);
-
-      if (kallikratisRes.data && kallikratisRes.data.length > 0) {
-        kallikratisFromIndex = kallikratisRes.data.sort((a: any, b: any) => {
-          const levelOrder: { [key: string]: number } = {
-            region: 1,
-            prefecture: 2,
-            municipality: 3,
-            municipal_unit: 4,
-          };
-          if (levelOrder[a.level] !== levelOrder[b.level]) {
-            return levelOrder[a.level] - levelOrder[b.level];
-          }
-          const nameA =
-            a.perifereia || a.perifereiaki_enotita || a.onoma_neou_ota || "";
-          const nameB =
-            b.perifereia || b.perifereiaki_enotita || b.onoma_neou_ota || "";
-          return nameA.localeCompare(nameB, "el", { sensitivity: "base" });
-        });
-      }
-    } else {
-      console.log(
-        "[ProjectReference] No kallikratis IDs found in project_index",
-      );
-    }
+    console.log(
+      "[ProjectReference] Using normalized geographic tables instead of old kallikratis table",
+    );
 
     // Set reasonable caching headers
     res.set("Cache-Control", "public, max-age=300"); // 5 minutes cache
+
+    // Format for_yl data for easy consumption
+    const formattedForYl = (forYlRes.data || []).map(item => {
+      const foreis = item.foreis as { title?: string; monada_id?: string } | null;
+      return {
+        id: item.id,
+        title: foreis?.title || "",
+        monada_id: foreis?.monada_id || ""
+      };
+    });
 
     const referenceData = {
       eventTypes: eventTypesRes.data || [],
       units: unitsRes.data || [],
       kallikratis: kallikratisFromIndex,
       expenditureTypes: expenditureTypesRes.data || [],
+      forYl: formattedForYl, // For YL (implementing agencies)
     };
 
     console.log(
-      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, kallikratis=${referenceData.kallikratis.length}, expenditureTypes=${referenceData.expenditureTypes.length}`,
+      `[ProjectReference] Reference data counts: eventTypes=${referenceData.eventTypes.length}, units=${referenceData.units.length}, expenditureTypes=${referenceData.expenditureTypes.length}, forYl=${referenceData.forYl.length}`,
     );
 
     res.json(referenceData);
@@ -1181,25 +1670,22 @@ router.get("/reference-data", async (req: Request, res: Response) => {
 
 // Project Decisions CRUD endpoints
 router.get(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
-      console.log(`[ProjectDecisions] Fetching decisions for MIS: ${mis}`);
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      console.log(`[ProjectDecisions] Fetching decisions for project ID: ${projectId}`);
+
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
       }
 
       // Fetch all decisions for this project
@@ -1235,33 +1721,26 @@ router.get(
 );
 
 router.post(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const decisionData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectDecisions] Creating decision for MIS: ${mis}`,
+        `[ProjectDecisions] Creating decision for project ID: ${projectId}`,
         decisionData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
       }
 
       // Get the next sequence number
@@ -1284,6 +1763,7 @@ router.post(
         fek: decisionData.fek || null,
         ada: decisionData.ada || null,
         implementing_agency: decisionData.implementing_agency || [],
+        implementing_agency_for_yl: decisionData.implementing_agency_for_yl || {},
         decision_budget: decisionData.decision_budget
           ? parseFloat(
               decisionData.decision_budget.toString().replace(/[.,]/g, ""),
@@ -1294,8 +1774,8 @@ router.post(
           decisionData.decision_date || new Date().toISOString().split("T")[0],
         included: decisionData.included ?? true,
         comments: decisionData.comments || null,
-        created_by: req.user.id,
-        updated_by: req.user.id,
+        created_by: req.user!.id,
+        updated_by: req.user!.id,
       };
 
       const { data: createdDecision, error: createError } = await supabase
@@ -1330,27 +1810,34 @@ router.post(
 );
 
 router.patch(
-  "/:mis/decisions/:decisionId",
+  "/:id/decisions/:decisionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, decisionId } = req.params;
+      const { id, decisionId } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectDecisions] Updating decision ${decisionId} for MIS: ${mis}`,
+        `[ProjectDecisions] Updating decision ${decisionId} for project ID: ${projectId}`,
         updateData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
       }
 
-      // Verify the decision exists and belongs to the project
+      // Verify the decision exists and belongs to this project
       const { data: existingDecision, error: findError } = await supabase
         .from("project_decisions")
-        .select("*, Projects!inner(mis)")
+        .select("*")
         .eq("id", decisionId)
-        .eq("Projects.mis", mis)
+        .eq("project_id", project.id)
         .single();
 
       if (findError || !existingDecision) {
@@ -1362,7 +1849,7 @@ router.patch(
 
       // Prepare update data
       const fieldsToUpdate: any = {
-        updated_by: req.user.id,
+        updated_by: req.user!.id,
         updated_at: new Date().toISOString(),
       };
 
@@ -1374,6 +1861,8 @@ router.patch(
       if (updateData.ada !== undefined) fieldsToUpdate.ada = updateData.ada;
       if (updateData.implementing_agency !== undefined)
         fieldsToUpdate.implementing_agency = updateData.implementing_agency;
+      if (updateData.implementing_agency_for_yl !== undefined)
+        fieldsToUpdate.implementing_agency_for_yl = updateData.implementing_agency_for_yl;
       if (updateData.expenditure_type !== undefined)
         fieldsToUpdate.expenditure_type = updateData.expenditure_type;
       if (updateData.decision_date !== undefined)
@@ -1424,25 +1913,32 @@ router.patch(
 );
 
 router.delete(
-  "/:mis/decisions/:decisionId",
+  "/:id/decisions/:decisionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, decisionId } = req.params;
-      console.log(
-        `[ProjectDecisions] Deleting decision ${decisionId} for MIS: ${mis}`,
-      );
+      const { id, decisionId } = req.params;
+      const projectId = parseInt(id);
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
       }
 
-      // Verify the decision exists and belongs to the project
+      console.log(
+        `[ProjectDecisions] Deleting decision ${decisionId} for project ID: ${projectId}`,
+      );
+
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
+      }
+
+      // Verify the decision exists and belongs to this project
       const { data: existingDecision, error: findError } = await supabase
         .from("project_decisions")
-        .select("*, Projects!inner(mis)")
+        .select("*")
         .eq("id", decisionId)
-        .eq("Projects.mis", mis)
+        .eq("project_id", project.id)
         .single();
 
       if (findError || !existingDecision) {
@@ -1484,27 +1980,24 @@ router.delete(
 
 // Project Formulations CRUD endpoints
 router.get(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Fetching formulations for MIS: ${mis}`,
+        `[ProjectFormulations] Fetching formulations for project ID: ${projectId}`,
       );
 
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
       }
 
       // Fetch all formulations for this project
@@ -1543,33 +2036,26 @@ router.get(
 );
 
 router.post(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const formulationData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Creating formulation for MIS: ${mis}`,
+        `[ProjectFormulations] Creating formulation for project ID: ${projectId}`,
         formulationData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, projectId);
+      if (!project) {
+        return;
       }
 
       // Get the next sequence number
@@ -1610,8 +2096,8 @@ router.post(
         change_type: formulationData.change_type || "Έγκριση",
         connected_decision_ids: formulationData.connected_decisions || [],
         comments: formulationData.comments || null,
-        created_by: req.user.id,
-        updated_by: req.user.id,
+        created_by: req.user!.id,
+        updated_by: req.user!.id,
       };
 
       const { data: createdFormulation, error: createError } = await supabase
@@ -1694,14 +2180,20 @@ router.post(
 );
 
 router.patch(
-  "/:mis/formulations/:formulationId",
+  "/:id/formulations/:formulationId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, formulationId } = req.params;
+      const { id, formulationId } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Updating formulation ${formulationId} for MIS: ${mis}`,
+        `[ProjectFormulations] Updating formulation ${formulationId} for project ID: ${projectId}`,
         updateData,
       );
 
@@ -1712,9 +2204,9 @@ router.patch(
       // Verify the formulation exists and belongs to the project
       const { data: existingFormulation, error: findError } = await supabase
         .from("project_formulations")
-        .select("*, Projects!inner(mis)")
+        .select("*, Projects!inner(id)")
         .eq("id", formulationId)
-        .eq("Projects.mis", mis)
+        .eq("Projects.id", projectId)
         .single();
 
       if (findError || !existingFormulation) {
@@ -1868,13 +2360,19 @@ router.patch(
 );
 
 router.delete(
-  "/:mis/formulations/:formulationId",
+  "/:id/formulations/:formulationId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, formulationId } = req.params;
+      const { id, formulationId } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectFormulations] Deleting formulation ${formulationId} for MIS: ${mis}`,
+        `[ProjectFormulations] Deleting formulation ${formulationId} for project ID: ${projectId}`,
       );
 
       if (!req.user) {
@@ -1884,9 +2382,9 @@ router.delete(
       // Verify the formulation exists and belongs to the project
       const { data: existingFormulation, error: findError } = await supabase
         .from("project_formulations")
-        .select("*, Projects!inner(mis)")
+        .select("*, Projects!inner(id)")
         .eq("id", formulationId)
-        .eq("Projects.mis", mis)
+        .eq("Projects.id", projectId)
         .single();
 
       if (findError || !existingFormulation) {
@@ -1928,18 +2426,24 @@ router.delete(
 
 // Project History/Changes endpoints
 router.get(
-  "/:mis/history",
+  "/:id/history",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
-      console.log(`[ProjectHistory] Fetching history for MIS: ${mis}`);
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      // First get the project ID from MIS
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log(`[ProjectHistory] Fetching history for project ID: ${projectId}`);
+
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
@@ -1979,14 +2483,20 @@ router.get(
 );
 
 router.post(
-  "/:mis/changes",
+  "/:id/changes",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const changeData = req.body;
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
       console.log(
-        `[ProjectChanges] Recording change for MIS: ${mis}`,
+        `[ProjectChanges] Recording change for project ID: ${projectId}`,
         changeData,
       );
 
@@ -1994,11 +2504,11 @@ router.post(
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project ID from MIS
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("*")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
@@ -2313,43 +2823,29 @@ async function insertGeographicRelationships(
 }
 
 // Mount routes
-router.get("/", listProjects);
-router.get("/export", exportProjectsXLSX);
-router.get("/export/xlsx", exportProjectsXLSX);
+router.get("/", authenticateSession, listProjects);
+router.get("/export", authenticateSession, exportProjectsXLSX);
+router.get("/export/xlsx", authenticateSession, exportProjectsXLSX);
 
-// Update a project by MIS
+// Update a project by ID
 router.patch(
-  "/:mis",
+  "/:id",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
       const updateData = req.body;
 
-      console.log(`[Projects] Updating project with MIS: ${mis}`, updateData);
-
-      if (!req.user) {
-        console.error(
-          `[Projects] No authenticated user found when updating MIS: ${mis}`,
-        );
-        return res.status(401).json({
-          message: "Authentication required",
-        });
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
       }
 
-      // First check if the project exists
-      const { data: existingProject, error: findError } = await supabase
-        .from("Projects")
-        .select("*")
-        .eq("mis", mis)
-        .single();
+      console.log(`[Projects] Updating project with ID: ${projectId}`, updateData);
 
-      if (findError || !existingProject) {
-        console.error(`[Projects] Project not found for MIS ${mis}`);
-        return res.status(404).json({
-          message: "Project not found",
-          error: findError?.message || "Not found",
-        });
+      const existingProject = await requireProjectAccess(req, res, projectId);
+      if (!existingProject) {
+        return;
       }
 
       // Conservative update - only use fields we know exist based on actual database structure
@@ -2360,6 +2856,8 @@ router.patch(
         fieldsToUpdate.project_title = updateData.project_title;
       if (updateData.event_description)
         fieldsToUpdate.event_description = updateData.event_description;
+      if (updateData.summary !== undefined)
+        fieldsToUpdate.summary = updateData.summary;
 
       // Handle event_type field - can be ID or text
       if (
@@ -2442,7 +2940,7 @@ router.patch(
       );
 
       console.log(
-        `[Projects] Fields to update for MIS ${mis}:`,
+        `[Projects] Fields to update for project ID ${projectId}:`,
         fieldsToUpdate,
       );
 
@@ -2520,13 +3018,13 @@ router.patch(
       const { data: updatedProject, error: updateError } = await supabase
         .from("Projects")
         .update(fieldsToUpdate)
-        .eq("mis", mis)
+        .eq("id", projectId)
         .select()
         .single();
 
       if (updateError) {
         console.error(
-          `[Projects] Error updating project for MIS ${mis}:`,
+          `[Projects] Error updating project ID ${projectId}:`,
           updateError,
         );
         return res.status(500).json({
@@ -2536,446 +3034,228 @@ router.patch(
       }
 
       // Handle project_index table updates for proper foreign key relationships
-      if (updateData.project_lines && Array.isArray(updateData.project_lines)) {
+      // Combine location_details and project_lines into a single array to process
+      const projectLinesToProcess = [
+        ...(updateData.location_details || []),
+        ...(updateData.project_lines || [])
+      ];
+
+      if (projectLinesToProcess && Array.isArray(projectLinesToProcess) && projectLinesToProcess.length > 0) {
         console.log(
           `[Projects] Starting project_index update for project ID: ${updatedProject.id}`,
         );
         console.log(
-          `[Projects] Number of project_lines to process: ${updateData.project_lines.length}`,
+          `[Projects] Number of project_lines to process: ${projectLinesToProcess.length}`,
         );
         console.log(
           `[Projects] Project lines data:`,
-          JSON.stringify(updateData.project_lines, null, 2),
+          JSON.stringify(projectLinesToProcess, null, 2),
         );
 
-        // First, delete existing project_index entries for this project
-        const { error: deleteError } = await supabase
-          .from("project_index")
-          .delete()
-          .eq("project_id", updatedProject.id);
+        // Get reference data for ID lookups
+        const [
+          eventTypesRes,
+          expenditureTypesRes,
+          monadaRes,
+          existingIndexRes,
+        ] = await Promise.all([
+          supabase.from("event_types").select("*"),
+          supabase.from("expenditure_types").select("*"),
+          supabase.from("Monada").select("*"),
+          supabase.from("project_index").select("id, monada_id, event_types_id, expenditure_type_id").eq("project_id", updatedProject.id),
+        ]);
 
-        if (deleteError) {
-          console.error(
-            `[Projects] Error deleting existing project_index entries:`,
-            deleteError,
-          );
-        } else {
-          console.log(
-            `[Projects] Successfully deleted existing project_index entries for project ${updatedProject.id}`,
-          );
+        const eventTypes = eventTypesRes.data || [];
+        const expenditureTypes = expenditureTypesRes.data || [];
+        const monadaData = monadaRes.data || [];
+        const existingIndexEntries = existingIndexRes.data || [];
+
+        // Build a map of existing project_index entries for quick lookup
+        const existingIndexMap = new Map<string, number>();
+        for (const entry of existingIndexEntries) {
+          const key = `${entry.monada_id}-${entry.event_types_id}-${entry.expenditure_type_id}`;
+          existingIndexMap.set(key, entry.id);
+        }
+        console.log(`[Projects] Found ${existingIndexEntries.length} existing project_index entries`);
+
+        // Delete ALL existing geographic relationships for this project's index entries
+        // This allows us to re-insert them fresh without constraint issues
+        const existingIndexIds = existingIndexEntries.map(e => e.id);
+        if (existingIndexIds.length > 0) {
+          console.log(`[Projects] Deleting geographic relationships for ${existingIndexIds.length} project_index entries`);
+          
+          const [regionsDelRes, unitsDelRes, munisDelRes] = await Promise.all([
+            supabase.from("project_index_regions").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_units").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_munis").delete().in("project_index_id", existingIndexIds),
+          ]);
+          
+          console.log(`[Projects] Deleted geographic relationships: regions=${!regionsDelRes.error}, units=${!unitsDelRes.error}, munis=${!munisDelRes.error}`);
         }
 
-        // Insert new project_index entries from project_lines
-        for (const line of updateData.project_lines) {
-          try {
-            // Find foreign key IDs from the provided data
-            let eventTypeId = null;
-            let expenditureTypeId = null;
-            let monadaId = null;
-            let kallikratisId = null;
+        // STEP 1: Group project_lines by unique key (monada_id, event_types_id, expenditure_type_id)
+        // and collect all geographic regions for each unique combination
+        const groupedLines = new Map<string, { 
+          monadaId: number, 
+          eventTypeId: number, 
+          expenditureTypeId: number, 
+          forYlId: number | null,
+          regions: any[] 
+        }>();
 
-            // Get reference data if not already available
-            const [
-              eventTypesRes,
-              expenditureTypesRes,
-              monadaRes,
-              kallikratisRes,
-            ] = await Promise.all([
-              supabase.from("event_types").select("*"),
-              supabase.from("expenditure_types").select("*"),
-              supabase.from("Monada").select("*"),
-              supabase.from("kallikratis").select("*"),
-            ]);
-
-            const eventTypes = eventTypesRes.data || [];
-            const expenditureTypes = expenditureTypesRes.data || [];
-            const monadaData = monadaRes.data || [];
-            const kallikratisData = kallikratisRes.data || [];
-
-            // Find event type ID
-            if (line.event_type) {
-              const eventType = eventTypes.find(
-                (et) =>
-                  et.id === line.event_type || et.name === line.event_type,
-              );
-              eventTypeId = eventType?.id || null;
-            }
-
-            // Find implementing agency (Monada) ID - ensure it's integer
-            if (line.implementing_agency_id) {
-              // Use the provided ID directly
-              monadaId = parseInt(line.implementing_agency_id);
-              console.log(
-                `[Projects] Using provided implementing_agency_id: ${monadaId}`,
-              );
-            } else if (line.implementing_agency) {
-              console.log(
-                `[Projects] DEBUG: Looking for agency: "${line.implementing_agency}"`,
-              );
-              console.log(
-                `[Projects] DEBUG: Available agencies:`,
-                monadaData.map((m) => ({
-                  id: m.id,
-                  unit: m.unit,
-                  unit_name: m.unit_name,
-                })),
-              );
-
-              const monada = monadaData.find((m) => {
-                // Handle the case where unit_name might be an object with name property
-                const unitName =
-                  typeof m.unit_name === "object" && m.unit_name.name
-                    ? m.unit_name.name
-                    : m.unit_name;
-
-                return (
-                  m.id == line.implementing_agency ||
-                  m.unit === line.implementing_agency ||
-                  unitName === line.implementing_agency ||
-                  // Try partial matching for long agency names
-                  (unitName && line.implementing_agency.includes(unitName)) ||
-                  (unitName && unitName.includes(line.implementing_agency)) ||
-                  (m.unit && line.implementing_agency.includes(m.unit)) ||
-                  (m.unit && m.unit.includes(line.implementing_agency))
-                );
-              });
-              monadaId = monada ? parseInt(monada.id) : null;
-              console.log(
-                `[Projects] Found monada_id: ${monadaId} for agency: ${line.implementing_agency}`,
-              );
-              if (!monada) {
-                console.log(
-                  `[Projects] WARNING: No matching agency found for: "${line.implementing_agency}"`,
-                );
-              }
-            }
-
-            // Find kallikratis ID from region hierarchy
-            if (line.region) {
-              console.log(
-                `[Projects] DEBUG: Looking for kallikratis with region:`,
-                line.region,
-              );
-
-              if (line.region.kallikratis_id) {
-                // Use provided kallikratis_id
-                kallikratisId = line.region.kallikratis_id;
-                console.log(
-                  `[Projects] Using provided kallikratis_id: ${kallikratisId}`,
-                );
-              } else {
-                // Try to find kallikratis entry by matching region hierarchy
-                console.log(
-                  `[Projects] DEBUG: Searching kallikratis with criteria:`,
-                  {
-                    perifereia: line.region.perifereia,
-                    perifereiaki_enotita: line.region.perifereiaki_enotita,
-                    onoma_neou_ota: line.region.dimos,
-                    onoma_dimotikis_enotitas: line.region.dimotiki_enotita,
-                  },
-                );
-
-                // First try exact match
-                let kallikratis = kallikratisData.find(
-                  (k) =>
-                    k.perifereia === line.region.perifereia &&
-                    k.perifereiaki_enotita ===
-                      line.region.perifereiaki_enotita &&
-                    k.onoma_neou_ota === line.region.dimos &&
-                    k.onoma_dimotikis_enotitas === line.region.dimotiki_enotita,
-                );
-
-                // If no exact match and no municipal community specified, try matching without it
-                if (!kallikratis && !line.region.dimotiki_enotita) {
-                  kallikratis = kallikratisData.find(
-                    (k) =>
-                      k.perifereia === line.region.perifereia &&
-                      k.perifereiaki_enotita ===
-                        line.region.perifereiaki_enotita &&
-                      k.onoma_neou_ota === line.region.dimos,
-                  );
-                  console.log(
-                    `[Projects] DEBUG: Trying municipal match without dimotiki_enotita`,
-                  );
-                }
-
-                // If still no match, try regional unit level
-                if (!kallikratis) {
-                  kallikratis = kallikratisData.find(
-                    (k) =>
-                      k.perifereia === line.region.perifereia &&
-                      k.perifereiaki_enotita ===
-                        line.region.perifereiaki_enotita,
-                  );
-                  console.log(
-                    `[Projects] DEBUG: Trying regional unit level match`,
-                  );
-                }
-
-                kallikratisId = kallikratis?.id || null;
-                console.log(
-                  `[Projects] Lookup found kallikratis_id: ${kallikratisId}`,
-                );
-                if (kallikratis) {
-                  console.log(
-                    `[Projects] DEBUG: Matched kallikratis:`,
-                    kallikratis,
-                  );
-                } else {
-                  console.log(`[Projects] WARNING: No kallikratis match found`);
-                }
-              }
-            }
-
-            console.log(
-              `[Projects] Processing line ${updateData.project_lines.indexOf(line) + 1}:`,
+        for (const line of projectLinesToProcess) {
+          // Find event type ID
+          let eventTypeId = null;
+          if (line.event_type) {
+            const eventType = eventTypes.find(
+              (et) => et.id === line.event_type || et.name === line.event_type,
             );
-            console.log(`[Projects] - Event Type ID: ${eventTypeId}`);
-            console.log(`[Projects] - Monada ID: ${monadaId}`);
-            console.log(`[Projects] - Kallikratis ID: ${kallikratisId}`);
+            eventTypeId = eventType?.id || null;
+          }
+          if (!eventTypeId && eventTypes.length > 0) {
+            eventTypeId = eventTypes[0].id;
+          }
 
-            // Create project_index entries if we have essential values (very relaxed requirement)
-            // Use default event type if none provided to ensure location data is saved
-            if (!eventTypeId) {
-              // Use first available event type as fallback
-              if (eventTypes && eventTypes.length > 0) {
-                eventTypeId = eventTypes[0].id;
-                console.log(
-                  `[Projects] No event type provided, using fallback event type ID: ${eventTypeId}`,
-                );
+          // Find implementing agency (Monada) ID
+          let monadaId = null;
+          if (line.implementing_agency_id) {
+            monadaId = parseInt(line.implementing_agency_id);
+          } else if (line.implementing_agency) {
+            const monada = monadaData.find((m) => {
+              const unitName = typeof m.unit_name === "object" && m.unit_name.name
+                ? m.unit_name.name : m.unit_name;
+              return m.id == line.implementing_agency ||
+                m.unit === line.implementing_agency ||
+                unitName === line.implementing_agency ||
+                (unitName && line.implementing_agency.includes(unitName)) ||
+                (unitName && unitName.includes(line.implementing_agency));
+            });
+            monadaId = monada ? parseInt(monada.id) : null;
+          }
+
+          if (!monadaId || !eventTypeId) {
+            console.warn(`[Projects] Skipping line - missing monadaId (${monadaId}) or eventTypeId (${eventTypeId})`);
+            continue;
+          }
+
+          // Get for_yl_id from the line (delegated implementing agency)
+          // Note: null means explicitly cleared, undefined means not provided
+          const forYlId = line.for_yl_id !== undefined 
+            ? (line.for_yl_id ? parseInt(line.for_yl_id) : null)
+            : undefined;
+
+          // Process each expenditure type
+          const expTypes = line.expenditure_types && Array.isArray(line.expenditure_types) && line.expenditure_types.length > 0
+            ? line.expenditure_types
+            : ['ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ']; // default
+
+          for (const expType of expTypes) {
+            const expenditureType = expenditureTypes.find(
+              (et) => et.id == expType || et.expenditure_types === expType || et.id === parseInt(expType),
+            );
+            const expenditureTypeId = expenditureType?.id || null;
+
+            if (!expenditureTypeId) {
+              console.warn(`[Projects] Could not find expenditure type ID for: ${expType}`);
+              continue;
+            }
+
+            // Create unique key for this combination
+            const key = `${monadaId}-${eventTypeId}-${expenditureTypeId}`;
+
+            if (!groupedLines.has(key)) {
+              groupedLines.set(key, {
+                monadaId,
+                eventTypeId,
+                expenditureTypeId,
+                forYlId: forYlId !== undefined ? forYlId : null,
+                regions: [],
+              });
+            } else if (forYlId !== undefined) {
+              // Update for_yl_id if this line has an explicit value (including null for clearing)
+              // and either the existing entry is undefined or this is a more explicit value
+              const existing = groupedLines.get(key)!;
+              if (forYlId !== null || existing.forYlId === null) {
+                // Set if new value is a number, or if both are null (keep null)
+                existing.forYlId = forYlId;
               }
             }
 
-            if (eventTypeId) {
-              console.log(
-                `[Projects] Creating project_index entries - event_type_id is valid: ${eventTypeId}`,
-              );
-              console.log(
-                `[Projects] Creating project_index entry with eventTypeId: ${eventTypeId}, monadaId: ${monadaId}, kallikratisId: ${kallikratisId}`,
-              );
-              if (!monadaId) {
-                console.log(
-                  `[Projects] WARNING: Proceeding without monada_id - may need manual correction`,
-                );
-              }
-              if (!kallikratisId) {
-                console.log(
-                  `[Projects] WARNING: Proceeding without kallikratis_id - may need manual geographic assignment`,
-                );
-              }
-              // Find expenditure type IDs (multiple values)
-              if (
-                line.expenditure_types &&
-                Array.isArray(line.expenditure_types) &&
-                line.expenditure_types.length > 0
-              ) {
-                console.log(
-                  `[Projects] DEBUG: Processing expenditure types:`,
-                  line.expenditure_types,
-                );
-                console.log(
-                  `[Projects] DEBUG: Available expenditure types:`,
-                  expenditureTypes.map((et) => ({
-                    id: et.id,
-                    name: et.expenditure_types,
-                  })),
-                );
+            // Add this line's region to the group (if it has one)
+            if (line.region) {
+              groupedLines.get(key)!.regions.push(line.region);
+            }
+          }
+        }
 
-                for (const expType of line.expenditure_types) {
-                  const expenditureType = expenditureTypes.find(
-                    (et) =>
-                      et.id == expType ||
-                      et.expenditure_types === expType ||
-                      et.id === parseInt(expType),
-                  );
-                  expenditureTypeId = expenditureType?.id || null;
+        console.log(`[Projects] Grouped ${projectLinesToProcess.length} lines into ${groupedLines.size} unique index entries`);
 
-                  console.log(
-                    `[Projects] DEBUG: Expenditure type "${expType}" -> ID: ${expenditureTypeId}`,
-                  );
+        // STEP 2: For each unique combination, get existing or create new project_index entry
+        // and insert ALL geographic relationships from all lines in that group
+        for (const [key, group] of Array.from(groupedLines.entries())) {
+          try {
+            let projectIndexId: number;
 
-                  // Create project_index entry for each expenditure type
-                  if (expenditureTypeId) {
-                    // Use geographic code from frontend if provided, otherwise calculate it
-                    let geographicCode = line.region?.geographic_code || null;
-
-                    if (!geographicCode && kallikratisData && kallikratisId) {
-                      // Fallback: calculate geographic code if not provided
-                      const kallikratisEntry = kallikratisData.find(
-                        (k) => k.id === kallikratisId,
-                      );
-                      if (kallikratisEntry && line.region) {
-                        // Determine geographic level automatically and get appropriate code
-                        if (line.region.dimos && line.region.dimotiki_enotita) {
-                          // Municipal Community level - use kodikos_dimotikis_enotitas
-                          geographicCode =
-                            kallikratisEntry.kodikos_dimotikis_enotitas;
-                          console.log(
-                            `[Projects] Municipal Community level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.dimos) {
-                          // Municipality level - use kodikos_neou_ota
-                          geographicCode = kallikratisEntry.kodikos_neou_ota;
-                          console.log(
-                            `[Projects] Municipality level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.perifereiaki_enotita) {
-                          // Regional unit level - use kodikos_perifereiakis_enotitas
-                          geographicCode =
-                            kallikratisEntry.kodikos_perifereiakis_enotitas;
-                          console.log(
-                            `[Projects] Regional unit level, Code: ${geographicCode}`,
-                          );
-                        } else if (line.region.perifereia) {
-                          // Regional level - use kodikos_perifereias
-                          geographicCode = kallikratisEntry.kodikos_perifereias;
-                          console.log(
-                            `[Projects] Regional level, Code: ${geographicCode}`,
-                          );
-                        }
-                      }
-                    } else if (geographicCode) {
-                      console.log(
-                        `[Projects] Using geographic_code from frontend: ${geographicCode}`,
-                      );
-                    }
-
-                    // Create project_index entry - must have all required fields per database schema
-                    if (monadaId && eventTypeId && expenditureTypeId) {
-                      const indexEntry = {
-                        project_id: updatedProject.id,
-                        monada_id: monadaId, // REQUIRED per database schema
-                        event_types_id: eventTypeId, // REQUIRED per database schema
-                        expenditure_type_id: expenditureTypeId, // REQUIRED per database schema
-                        // NOTE: kallikratis_id and geographic_code don't exist in actual database
-                      };
-
-                      console.log(
-                        `[Projects] Inserting project_index entry:`,
-                        indexEntry,
-                      );
-                      // First check if entry already exists
-                      const { data: existingEntry } = await supabase
-                        .from("project_index")
-                        .select("id")
-                        .eq("project_id", indexEntry.project_id)
-                        .eq("monada_id", indexEntry.monada_id)
-                        .eq("event_types_id", indexEntry.event_types_id)
-                        .eq(
-                          "expenditure_type_id",
-                          indexEntry.expenditure_type_id,
-                        )
-                        .single();
-
-                      let insertedEntry;
-                      let insertError;
-
-                      if (existingEntry) {
-                        // Entry exists, use existing ID
-                        insertedEntry = existingEntry;
-                        console.log(
-                          `[Projects] Using existing project_index entry ID: ${existingEntry.id}`,
-                        );
-                      } else {
-                        // Entry doesn't exist, insert new one
-                        const result = await supabase
-                          .from("project_index")
-                          .insert(indexEntry)
-                          .select("id")
-                          .single();
-                        insertedEntry = result.data;
-                        insertError = result.error;
-                      }
-
-                      if (insertError) {
-                        console.error(
-                          `[Projects] Error inserting project_index entry:`,
-                          insertError,
-                        );
-                      } else if (insertedEntry && insertedEntry.id) {
-                        console.log(
-                          `[Projects] Successfully created project_index entry for expenditure type: ${expType}, ID: ${insertedEntry.id}`,
-                        );
-
-                        // Insert geographic relationships if we have region data
-                        if (line.region) {
-                          await insertGeographicRelationships(
-                            insertedEntry.id,
-                            line.region,
-                          );
-                        }
-                      }
-                    } else {
-                      console.warn(
-                        `[Projects] Cannot create project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, expenditure_type_id=${expenditureTypeId}`,
-                      );
-                    }
-                  } else {
-                    console.warn(
-                      `[Projects] Could not find expenditure type ID for: ${expType}`,
-                    );
-                  }
-                }
-              } else {
-                // Use default expenditure type if none specified - must have all required fields
-                const defaultExpenditureType =
-                  expenditureTypes.find(
-                    (et) => et.expenditure_types === "ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ",
-                  ) || expenditureTypes[0];
-                if (defaultExpenditureType && monadaId && eventTypeId) {
-                  const indexEntry = {
-                    project_id: updatedProject.id,
-                    monada_id: monadaId, // REQUIRED per database schema
-                    event_types_id: eventTypeId, // REQUIRED per database schema
-                    expenditure_type_id: defaultExpenditureType.id, // REQUIRED per database schema
-                    // NOTE: kallikratis_id and geographic_code don't exist in actual database
-                  };
-
-                  console.log(
-                    `[Projects] Inserting default project_index entry:`,
-                    indexEntry,
-                  );
-                  const { data: insertedEntry, error: insertError } =
-                    await supabase
-                      .from("project_index")
-                      .insert(indexEntry)
-                      .select("id")
-                      .single();
-
-                  if (insertError) {
-                    console.error(
-                      `[Projects] Error inserting default project_index entry:`,
-                      insertError,
-                    );
-                  } else if (insertedEntry && insertedEntry.id) {
-                    console.log(
-                      `[Projects] Successfully created default project_index entry, ID: ${insertedEntry.id}`,
-                    );
-
-                    // Insert geographic relationships if we have region data
-                    if (line.region) {
-                      await insertGeographicRelationships(
-                        insertedEntry.id,
-                        line.region,
-                      );
-                    }
-                  }
+            // Check if entry already exists
+            if (existingIndexMap.has(key)) {
+              projectIndexId = existingIndexMap.get(key)!;
+              console.log(`[Projects] Reusing existing project_index entry for key ${key}, ID: ${projectIndexId}`);
+              
+              // Update for_yl_id on existing entry if explicitly provided
+              // A non-null value means set the for_yl, null means clear it
+              if (group.forYlId !== undefined) {
+                const updateResult = await supabase
+                  .from("project_index")
+                  .update({ for_yl_id: group.forYlId })
+                  .eq("id", projectIndexId);
+                
+                if (updateResult.error) {
+                  console.warn(`[Projects] Failed to update for_yl_id on project_index ${projectIndexId}:`, updateResult.error);
                 } else {
-                  console.warn(
-                    `[Projects] Cannot create default project_index entry - missing required fields: monada_id=${monadaId}, event_types_id=${eventTypeId}, defaultExpenditureType=${defaultExpenditureType?.id}`,
-                  );
+                  console.log(`[Projects] Updated for_yl_id to ${group.forYlId} on project_index ${projectIndexId}`);
                 }
               }
             } else {
-              console.warn(
-                `[Projects] Missing required values for project_index - eventTypeId: ${eventTypeId}, monadaId: ${monadaId} (all fields required per database schema)`,
-              );
+              // Create new entry
+              const indexEntry = {
+                project_id: updatedProject.id,
+                monada_id: group.monadaId,
+                event_types_id: group.eventTypeId,
+                expenditure_type_id: group.expenditureTypeId,
+                for_yl_id: group.forYlId,
+              };
+
+              console.log(`[Projects] Creating new project_index entry for key ${key}:`, indexEntry);
+
+              const result = await supabase
+                .from("project_index")
+                .insert(indexEntry)
+                .select("id")
+                .single();
+
+              if (result.error) {
+                console.error(`[Projects] Error inserting project_index entry:`, result.error);
+                continue;
+              }
+
+              projectIndexId = result.data?.id;
+              if (!projectIndexId) {
+                console.error(`[Projects] No ID returned for project_index entry`);
+                continue;
+              }
+              
+              console.log(`[Projects] Created new project_index entry, ID: ${projectIndexId}`);
             }
+
+            // Insert ALL geographic relationships from ALL lines with this key
+            console.log(`[Projects] Inserting ${group.regions.length} geographic relationships for project_index ID: ${projectIndexId}`);
+            for (const region of group.regions) {
+              await insertGeographicRelationships(projectIndexId, region);
+            }
+
+            console.log(`[Projects] Completed inserting geographic relationships for project_index ID: ${projectIndexId}`);
           } catch (lineError) {
-            console.error(
-              `[Projects] Error processing project line:`,
-              lineError,
-            );
+            console.error(`[Projects] Error processing grouped line ${key}:`, lineError);
           }
         }
       }
@@ -2985,20 +3265,17 @@ router.patch(
         eventTypesRes,
         expenditureTypesRes,
         monadaRes,
-        kallikratisRes,
         indexRes,
       ] = await Promise.all([
         supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
         supabase.from("Monada").select("*"),
-        supabase.from("kallikratis").select("*"),
         supabase.from("project_index").select("*"),
       ]);
 
       const eventTypes = eventTypesRes.data || [];
       const expenditureTypes = expenditureTypesRes.data || [];
       const monadaData = monadaRes.data || [];
-      const kallikratisData = kallikratisRes.data || [];
       const indexData = indexRes.data || [];
 
       // Find enhanced data for this project
@@ -3013,9 +3290,6 @@ router.patch(
         : null;
       const monada = indexItem
         ? monadaData.find((m) => m.id === indexItem.monada_id)
-        : null;
-      const kallikratis = indexItem
-        ? kallikratisData.find((k) => k.id === indexItem.kallikratis_id)
         : null;
 
       // Return the updated project with enhanced data
@@ -3039,17 +3313,9 @@ router.patch(
               name: monada.unit,
             }
           : null,
-        enhanced_kallikratis: kallikratis
-          ? {
-              id: kallikratis.id,
-              name:
-                kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
-              level: kallikratis.level || "municipality",
-            }
-          : null,
       };
 
-      console.log(`[Projects] Successfully updated project with MIS: ${mis}`);
+      console.log(`[Projects] Successfully updated project with ID: ${projectId}`);
 
       // Return enhanced project with update summary
       res.json({
@@ -3072,7 +3338,7 @@ router.patch(
   },
 );
 
-// Combined reference data endpoint for faster loading - must be before /:mis route
+// Combined reference data endpoint for faster loading - must be before /:id route
 router.get(
   "/reference-data",
   authenticateSession,
@@ -3083,24 +3349,21 @@ router.get(
       const [
         eventTypesResult,
         unitsResult,
-        kallikratisResult,
         expenditureTypesResult,
       ] = await Promise.all([
         supabase.from("event_types").select("*").order("id"),
         supabase.from("Monada").select("*").order("id"),
-        supabase.from("kallikratis").select("*").order("id"),
         supabase.from("expenditure_types").select("*").order("id"),
       ]);
 
       const referenceData = {
         event_types: eventTypesResult.data || [],
         units: unitsResult.data || [],
-        kallikratis: kallikratisResult.data || [],
         expenditure_types: expenditureTypesResult.data || [],
       };
 
       console.log(
-        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.kallikratis.length} kallikratis entries, ${referenceData.expenditure_types.length} expenditure types`,
+        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.expenditure_types.length} expenditure types`,
       );
 
       res.json(referenceData);
@@ -3114,19 +3377,24 @@ router.get(
   },
 );
 
-// Get single project by MIS with enhanced data
+// Get single project by ID with enhanced data
 router.get(
-  "/:mis",
+  "/:id",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
 
-      console.log(`[Projects] Fetching project with MIS: ${mis}`);
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
+
+      console.log(`[Projects] Fetching project with ID: ${projectId}`);
 
       if (!req.user) {
         console.error(
-          `[Projects] No authenticated user found when fetching MIS: ${mis}`,
+          `[Projects] No authenticated user found when fetching project ID: ${projectId}`,
         );
         return res.status(401).json({
           message: "Authentication required",
@@ -3139,14 +3407,12 @@ router.get(
         eventTypesRes,
         expenditureTypesRes,
         monadaRes,
-        kallikratisRes,
         indexRes,
       ] = await Promise.all([
-        supabase.from("Projects").select("*").eq("mis", mis).single(),
+        supabase.from("Projects").select("*").eq("id", projectId).single(),
         supabase.from("event_types").select("*"),
         supabase.from("expenditure_types").select("*"),
         supabase.from("Monada").select("*"),
-        supabase.from("kallikratis").select("*"),
         supabase.from("project_index").select("*"),
       ]);
 
@@ -3162,7 +3428,7 @@ router.get(
       }
 
       if (projectRes.error || !projectRes.data) {
-        console.error(`[Projects] Project not found for MIS ${mis}`);
+        console.error(`[Projects] Project not found for ID ${projectId}`);
         return res.status(404).json({
           message: "Project not found",
           error: projectRes.error?.message || "Not found",
@@ -3173,7 +3439,6 @@ router.get(
       const eventTypes = eventTypesRes.data || [];
       const expenditureTypes = expenditureTypesRes.data || [];
       const monadaData = monadaRes.data || [];
-      const kallikratisData = kallikratisRes.data || [];
       const indexData = indexRes.data || [];
 
       // Find enhanced data for this project
@@ -3186,9 +3451,6 @@ router.get(
         : null;
       const monada = indexItem
         ? monadaData.find((m) => m.id === indexItem.monada_id)
-        : null;
-      const kallikratis = indexItem
-        ? kallikratisData.find((k) => k.id === indexItem.kallikratis_id)
         : null;
 
       // Get decision data from project_history instead of duplicated columns
@@ -3233,14 +3495,6 @@ router.get(
               name: monada.unit,
             }
           : null,
-        enhanced_kallikratis: kallikratis
-          ? {
-              id: kallikratis.id,
-              name:
-                kallikratis.perifereia || kallikratis.onoma_dimou_koinotitas,
-              level: kallikratis.level || "municipality",
-            }
-          : null,
 
         // Decision data from project_history (replacing duplicated columns)
         decisions: historyData?.decisions || [],
@@ -3266,7 +3520,7 @@ router.get(
         ada: decisionData.ada || project.ada,
       };
 
-      console.log(`[Projects] Found project with MIS: ${mis}`);
+      console.log(`[Projects] Found project with ID: ${projectId}`);
       res.json(enhancedProject);
     } catch (error) {
       console.error(`[Projects] Error fetching project:`, error);
@@ -3278,32 +3532,37 @@ router.get(
   },
 );
 
-// Get project decisions from normalized table
+// Get project decisions from normalized table (DUPLICATE - already defined above)
 router.get(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
       console.log(
-        `[ProjectDecisions] Fetching decisions for project MIS: ${mis}`,
+        `[ProjectDecisions] Fetching decisions for project ID: ${projectId}`,
       );
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project to get the project_id
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectDecisions] Project not found for MIS: ${mis}`,
+          `[ProjectDecisions] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3325,7 +3584,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ${mis}`,
+        `[ProjectDecisions] Found ${decisions?.length || 0} decisions for project ID: ${projectId}`,
       );
       res.json(decisions || []);
     } catch (error) {
@@ -3338,32 +3597,37 @@ router.get(
   },
 );
 
-// Get project formulations from normalized table
+// Get project formulations from normalized table (DUPLICATE - already defined above)
 router.get(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id } = req.params;
+      const projectId = parseInt(id);
+
+      if (isNaN(projectId)) {
+        return res.status(400).json({ message: "Invalid project ID" });
+      }
 
       console.log(
-        `[ProjectFormulations] Fetching formulations for project MIS: ${mis}`,
+        `[ProjectFormulations] Fetching formulations for project ID: ${projectId}`,
       );
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      // First get the project to get the project_id
+      // Get the project
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectFormulations] Project not found for MIS: ${mis}`,
+          `[ProjectFormulations] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3398,7 +3662,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ${mis}`,
+        `[ProjectFormulations] Found ${formulations?.length || 0} formulations for project ID ${projectId}`,
       );
       res.json(formulations || []);
     } catch (error) {
@@ -3413,13 +3677,13 @@ router.get(
 
 // Get project index data with all relationships
 router.get(
-  "/:mis/index",
+  "/:id/index",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
 
-      console.log(`[ProjectIndex] Fetching project index data for MIS: ${mis}`);
+      console.log(`[ProjectIndex] Fetching project index data for project ID: ${projectId}`);
 
       if (!req.user) {
         return res.status(401).json({ message: "Authentication required" });
@@ -3429,12 +3693,12 @@ router.get(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectIndex] Project not found for MIS: ${mis}`,
+          `[ProjectIndex] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3485,7 +3749,7 @@ router.get(
       }
 
       console.log(
-        `[ProjectIndex] Found ${indexData?.length || 0} index entries for project ${mis}`,
+        `[ProjectIndex] Found ${indexData?.length || 0} index entries for project ${project.mis}`,
       );
       res.json(indexData || []);
     } catch (error) {
@@ -3500,15 +3764,15 @@ router.get(
 
 // Update project decisions (normalized table)
 router.put(
-  "/:mis/decisions",
+  "/:id/decisions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const { decisions_data } = req.body;
 
       console.log(
-        `[ProjectDecisions] Updating decisions for project MIS: ${mis}`,
+        `[ProjectDecisions] Updating decisions for project ID: ${projectId}`,
         decisions_data,
       );
 
@@ -3520,12 +3784,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectDecisions] Project not found for MIS: ${mis}`,
+          `[ProjectDecisions] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3626,6 +3890,7 @@ router.put(
               fek: decision.fek || null,
               ada: decision.ada || null,
               implementing_agency: decision.implementing_agency || [],
+              implementing_agency_for_yl: decision.implementing_agency_for_yl || {},
               decision_budget: parseEuropeanBudget(decision.decision_budget),
               expenditure_type: decision.expenditure_type || [],
               decision_date: new Date().toISOString().split("T")[0], // Today's date as default
@@ -3654,7 +3919,7 @@ router.put(
         }
 
         console.log(
-          `[ProjectDecisions] Successfully inserted ${decisionsToInsert.length} decisions for project ${mis}`,
+          `[ProjectDecisions] Successfully inserted ${decisionsToInsert.length} decisions for project ${project.mis}`,
         );
       }
 
@@ -3674,16 +3939,16 @@ router.put(
 
 // Update project formulations (normalized table)
 router.put(
-  "/:mis/formulations",
+  "/:id/formulations",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const { formulation_details, budget_versions, location_details } =
         req.body;
 
       console.log(
-        `[ProjectFormulations] Updating formulations with budget versions for project MIS: ${mis}`,
+        `[ProjectFormulations] Updating formulations with budget versions for project ID: ${projectId}`,
         { formulation_details, budget_versions },
       );
 
@@ -3695,12 +3960,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ProjectFormulations] Project not found for MIS: ${mis}`,
+          `[ProjectFormulations] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -3837,7 +4102,7 @@ router.put(
         }
 
         console.log(
-          `[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${mis}`,
+          `[ProjectFormulations] Successfully inserted ${insertedFormulations.length} formulations for project ${project.mis}`,
         );
 
         // Now insert budget versions if provided
@@ -4172,7 +4437,7 @@ router.put(
         });
       } else {
         console.log(
-          `[ProjectFormulations] No formulations to insert for project ${mis}`,
+          `[ProjectFormulations] No formulations to insert for project ${project.mis}`,
         );
         res.json({
           message: "No formulations to update",
@@ -4195,15 +4460,15 @@ router.put(
 
 // Comprehensive project update - handles all form data at once
 router.put(
-  "/:mis/comprehensive",
+  "/:id/comprehensive",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const formData = req.body;
 
       console.log(
-        `[ComprehensiveUpdate] ========== STARTING UPDATE FOR MIS: ${mis} ==========`,
+        `[ComprehensiveUpdate] ========== STARTING UPDATE FOR PROJECT ID: ${projectId} ==========`,
       );
       console.log(
         `[ComprehensiveUpdate] Request body keys:`,
@@ -4260,12 +4525,12 @@ router.put(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id, mis")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (projectError || !project) {
         console.error(
-          `[ComprehensiveUpdate] Project not found for MIS: ${mis}`,
+          `[ComprehensiveUpdate] Project not found for ID: ${projectId}`,
           projectError,
         );
         return res.status(404).json({ message: "Project not found" });
@@ -4452,6 +4717,7 @@ router.put(
       }
 
       // NEW: Process location_details with geographic areas
+      // Uses UPSERT pattern to avoid FK constraint violations from generated_documents
       if (
         formData.location_details &&
         Array.isArray(formData.location_details)
@@ -4460,75 +4726,53 @@ router.put(
           `[ComprehensiveUpdate] Processing ${formData.location_details.length} location details`,
         );
 
-        // First, delete existing project_index entries for this project
-        const { error: deleteIndexError } = await supabase
-          .from("project_index")
-          .delete()
-          .eq("project_id", project.id);
-
-        if (deleteIndexError) {
-          console.error(
-            `[ComprehensiveUpdate] Error deleting existing project_index:`,
-            deleteIndexError,
-          );
-        } else {
-          console.log(
-            `[ComprehensiveUpdate] Deleted existing project_index entries`,
-          );
-        }
-
-        // Also delete existing geographic relationships
-        const projectIndexIdsToDelete = await supabase
-          .from("project_index")
-          .select("id")
-          .eq("project_id", project.id);
-
-        if (
-          projectIndexIdsToDelete.data &&
-          projectIndexIdsToDelete.data.length > 0
-        ) {
-          const indexIds = projectIndexIdsToDelete.data.map((idx) => idx.id);
-          await Promise.all([
-            supabase
-              .from("project_index_regions")
-              .delete()
-              .in("project_index_id", indexIds),
-            supabase
-              .from("project_index_units")
-              .delete()
-              .in("project_index_id", indexIds),
-            supabase
-              .from("project_index_munis")
-              .delete()
-              .in("project_index_id", indexIds),
-          ]);
-          console.log(
-            `[ComprehensiveUpdate] Deleted existing geographic relationships`,
-          );
-        }
-
-        // Get reference data for lookups
-        const [eventTypesRes, expenditureTypesRes, monadaRes] =
+        // Get reference data and existing project_index entries in parallel
+        const [eventTypesRes, expenditureTypesRes, monadaRes, existingIndexRes] =
           await Promise.all([
             supabase.from("event_types").select("*"),
             supabase.from("expenditure_types").select("*"),
             supabase.from("Monada").select("*"),
+            supabase.from("project_index").select("id, monada_id, event_types_id, expenditure_type_id").eq("project_id", project.id),
           ]);
 
         const eventTypes = eventTypesRes.data || [];
         const expenditureTypes = expenditureTypesRes.data || [];
         const monadaData = monadaRes.data || [];
+        const existingIndexEntries = existingIndexRes.data || [];
 
-        // Process each location detail
+        // Build a map of existing project_index entries for quick lookup
+        const existingIndexMap = new Map<string, number>();
+        for (const entry of existingIndexEntries) {
+          const key = `${entry.monada_id}-${entry.event_types_id}-${entry.expenditure_type_id}`;
+          existingIndexMap.set(key, entry.id);
+        }
+        console.log(`[ComprehensiveUpdate] Found ${existingIndexEntries.length} existing project_index entries`);
+
+        // Delete ONLY geographic relationships (not project_index rows to preserve FK references)
+        const existingIndexIds = existingIndexEntries.map(e => e.id);
+        if (existingIndexIds.length > 0) {
+          console.log(`[ComprehensiveUpdate] Deleting geographic relationships for ${existingIndexIds.length} project_index entries`);
+          
+          const [regionsDelRes, unitsDelRes, munisDelRes] = await Promise.all([
+            supabase.from("project_index_regions").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_units").delete().in("project_index_id", existingIndexIds),
+            supabase.from("project_index_munis").delete().in("project_index_id", existingIndexIds),
+          ]);
+          
+          console.log(`[ComprehensiveUpdate] Deleted geographic relationships: regions=${!regionsDelRes.error}, units=${!unitsDelRes.error}, munis=${!munisDelRes.error}`);
+        }
+
+        // STEP 1: Group location_details by unique key (monada_id, event_types_id, expenditure_type_id)
+        // and collect ALL geographic areas for each unique combination
+        const groupedLines = new Map<string, { 
+          monadaId: number, 
+          eventTypeId: number, 
+          expenditureTypeId: number, 
+          regions: any[] 
+        }>();
+
         for (const locationDetail of formData.location_details) {
           try {
-            console.log(`[ComprehensiveUpdate] Processing location detail:`, {
-              implementing_agency: locationDetail.implementing_agency,
-              event_type: locationDetail.event_type,
-              expenditure_types: locationDetail.expenditure_types?.length || 0,
-              geographic_areas: locationDetail.geographic_areas?.length || 0,
-            });
-
             // Find event type ID
             let eventTypeId = null;
             if (locationDetail.event_type) {
@@ -4536,9 +4780,6 @@ router.put(
                 (et) => et.name === locationDetail.event_type,
               );
               eventTypeId = eventType?.id || null;
-              console.log(
-                `[ComprehensiveUpdate] Event type "${locationDetail.event_type}" -> ID: ${eventTypeId}`,
-              );
             }
 
             // Find implementing agency ID
@@ -4555,16 +4796,16 @@ router.put(
                 );
               });
               monadaId = monada?.id || null;
-              console.log(
-                `[ComprehensiveUpdate] Agency "${locationDetail.implementing_agency}" -> ID: ${monadaId}`,
-              );
+            }
+
+            if (!monadaId || !eventTypeId) {
+              console.warn(`[ComprehensiveUpdate] Skipping location - missing monadaId (${monadaId}) or eventTypeId (${eventTypeId})`);
+              continue;
             }
 
             // Process each expenditure type
-            const expenditureTypesToProcess =
-              locationDetail.expenditure_types || [];
+            const expenditureTypesToProcess = locationDetail.expenditure_types || [];
             if (expenditureTypesToProcess.length === 0) {
-              // Use default expenditure type if none specified
               expenditureTypesToProcess.push("ΔΚΑ ΑΥΤΟΣΤΕΓΑΣΗ");
             }
 
@@ -4574,74 +4815,92 @@ router.put(
               );
               const expenditureTypeId = expenditureType?.id || null;
 
-              if (expenditureTypeId && eventTypeId && monadaId) {
-                // Process each geographic area
-                const geographicAreas = locationDetail.geographic_areas || [];
+              if (!expenditureTypeId) {
+                console.warn(`[ComprehensiveUpdate] Could not find expenditure type ID for: ${expType}`);
+                continue;
+              }
 
-                for (const geographicArea of geographicAreas) {
-                  // Parse geographic area string: "REGION|REGIONAL_UNIT|MUNICIPALITY"
-                  const parts = geographicArea.split("|");
-                  const regionName = parts[0] || "";
-                  const regionalUnitName = parts[1] || "";
-                  const municipalityName = parts[2] || "";
+              // Create unique key for this combination
+              const key = `${monadaId}-${eventTypeId}-${expenditureTypeId}`;
 
-                  console.log(
-                    `[ComprehensiveUpdate] Processing geographic area:`,
-                    {
-                      region: regionName,
-                      regionalUnit: regionalUnitName,
-                      municipality: municipalityName,
-                    },
-                  );
+              if (!groupedLines.has(key)) {
+                groupedLines.set(key, {
+                  monadaId,
+                  eventTypeId,
+                  expenditureTypeId,
+                  regions: [],
+                });
+              }
 
-                  // Create project_index entry
-                  const { data: insertedEntry, error: insertError } =
-                    await supabase
-                      .from("project_index")
-                      .insert({
-                        project_id: project.id,
-                        monada_id: monadaId,
-                        event_types_id: eventTypeId,
-                        expenditure_type_id: expenditureTypeId,
-                      })
-                      .select("id")
-                      .single();
-
-                  if (insertError) {
-                    console.error(
-                      `[ComprehensiveUpdate] Error inserting project_index:`,
-                      insertError,
-                    );
-                  } else {
-                    console.log(
-                      `[ComprehensiveUpdate] Created project_index entry ID: ${insertedEntry.id}`,
-                    );
-
-                    // Create region object for geographic relationships
-                    const regionObject = {
-                      perifereia: regionName,
-                      perifereiaki_enotita: regionalUnitName,
-                      dimos: municipalityName || null, // Municipality can be empty for regional unit level
-                    };
-
-                    // Insert geographic relationships
-                    await insertGeographicRelationships(
-                      insertedEntry.id,
-                      regionObject,
-                    );
-                  }
-                }
-              } else {
-                console.warn(
-                  `[ComprehensiveUpdate] Missing required IDs: expenditure=${expenditureTypeId}, event=${eventTypeId}, monada=${monadaId}`,
-                );
+              // Add ALL geographic areas from this location to the group
+              const geographicAreas = locationDetail.geographic_areas || [];
+              for (const geographicArea of geographicAreas) {
+                const parts = geographicArea.split("|");
+                const regionObj = {
+                  perifereia: parts[0] || null,
+                  perifereiaki_enotita: parts[1] || null,
+                  dimos: parts[2] || null,
+                };
+                groupedLines.get(key)!.regions.push(regionObj);
               }
             }
           } catch (locationError) {
-            console.error(
-              `[ComprehensiveUpdate] Error processing location detail:`,
-              locationError,
-            );
+            console.error(`[ComprehensiveUpdate] Error processing location detail:`, locationError);
+          }
+        }
+
+        console.log(`[ComprehensiveUpdate] Grouped into ${groupedLines.size} unique index entries`);
+
+        // STEP 2: For each unique combination, get existing or create new project_index entry
+        // and insert ALL geographic relationships
+        for (const [key, group] of Array.from(groupedLines.entries())) {
+          try {
+            let projectIndexId: number;
+
+            // Check if entry already exists
+            if (existingIndexMap.has(key)) {
+              projectIndexId = existingIndexMap.get(key)!;
+              console.log(`[ComprehensiveUpdate] Reusing existing project_index entry for key ${key}, ID: ${projectIndexId}`);
+            } else {
+              // Create new entry
+              const indexEntry = {
+                project_id: project.id,
+                monada_id: group.monadaId,
+                event_types_id: group.eventTypeId,
+                expenditure_type_id: group.expenditureTypeId,
+              };
+
+              console.log(`[ComprehensiveUpdate] Creating new project_index entry for key ${key}:`, indexEntry);
+
+              const result = await supabase
+                .from("project_index")
+                .insert(indexEntry)
+                .select("id")
+                .single();
+
+              if (result.error) {
+                console.error(`[ComprehensiveUpdate] Error inserting project_index entry:`, result.error);
+                continue;
+              }
+
+              projectIndexId = result.data?.id;
+              if (!projectIndexId) {
+                console.error(`[ComprehensiveUpdate] No ID returned for project_index entry`);
+                continue;
+              }
+              
+              console.log(`[ComprehensiveUpdate] Created new project_index entry, ID: ${projectIndexId}`);
+            }
+
+            // Insert ALL geographic relationships for this group
+            console.log(`[ComprehensiveUpdate] Inserting ${group.regions.length} geographic relationships for project_index ID: ${projectIndexId}`);
+            for (const region of group.regions) {
+              await insertGeographicRelationships(projectIndexId, region);
+            }
+
+            console.log(`[ComprehensiveUpdate] Completed inserting geographic relationships for key ${key}`);
+          } catch (lineError) {
+            console.error(`[ComprehensiveUpdate] Error processing grouped line ${key}:`, lineError);
           }
         }
 
@@ -4677,26 +4936,18 @@ router.put(
 // ================================================================
 
 // Get budget versions for a project
-router.get("/:mis/budget-versions", async (req: Request, res: Response) => {
+router.get("/:id/budget-versions", authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { mis } = req.params;
+    const { id: projectId } = req.params;
     const { formulation_id } = req.query;
+    const projectIdNumber = parseInt(projectId);
     console.log(
-      `[ProjectBudgetVersions] Fetching budget versions for MIS: ${mis}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
+      `[ProjectBudgetVersions] Fetching budget versions for project ID: ${projectId}${formulation_id ? `, formulation: ${formulation_id}` : ""}`,
     );
 
-    // First get the project ID from MIS
-    const { data: project, error: projectError } = await supabase
-      .from("Projects")
-      .select("id")
-      .eq("mis", mis)
-      .single();
-
-    if (projectError || !project) {
-      return res.status(404).json({
-        message: "Project not found",
-        error: projectError?.message || "Not found",
-      });
+    const project = await requireProjectAccess(req, res, projectIdNumber);
+    if (!project) {
+      return;
     }
 
     // Get budget versions using storage method
@@ -4723,33 +4974,21 @@ router.get("/:mis/budget-versions", async (req: Request, res: Response) => {
 
 // Create budget version for a project
 router.post(
-  "/:mis/budget-versions",
+  "/:id/budget-versions",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis } = req.params;
+      const { id: projectId } = req.params;
       const budgetVersionData = req.body;
+      const projectIdNumber = parseInt(projectId);
       console.log(
-        `[ProjectBudgetVersions] Creating budget version for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Creating budget version for project ID: ${projectId}`,
         budgetVersionData,
       );
 
-      if (!req.user) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      // First get the project ID from MIS
-      const { data: project, error: projectError } = await supabase
-        .from("Projects")
-        .select("id")
-        .eq("mis", mis)
-        .single();
-
-      if (projectError || !project) {
-        return res.status(404).json({
-          message: "Project not found",
-          error: projectError?.message || "Not found",
-        });
+      const project = await requireProjectAccess(req, res, projectIdNumber);
+      if (!project) {
+        return;
       }
 
       // Prepare budget version data
@@ -4765,7 +5004,7 @@ router.post(
         decision_date: budgetVersionData.decision_date || null,
         action_type: budgetVersionData.action_type || "Έγκριση",
         comments: budgetVersionData.comments || null,
-        created_by: req.user.id,
+        created_by: req.user!.id,
       };
 
       // Create budget version using storage method
@@ -4792,14 +5031,14 @@ router.post(
 
 // Update budget version
 router.patch(
-  "/:mis/budget-versions/:versionId",
+  "/:id/budget-versions/:versionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       const updateData = req.body;
       console.log(
-        `[ProjectBudgetVersions] Updating budget version ${versionId} for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Updating budget version ${versionId} for project ID: ${projectId}`,
         updateData,
       );
 
@@ -4819,7 +5058,7 @@ router.patch(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -4864,13 +5103,13 @@ router.patch(
 
 // Delete budget version
 router.delete(
-  "/:mis/budget-versions/:versionId",
+  "/:id/budget-versions/:versionId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       console.log(
-        `[ProjectBudgetVersions] Deleting budget version ${versionId} for MIS: ${mis}`,
+        `[ProjectBudgetVersions] Deleting budget version ${versionId} for project ID: ${projectId}`,
       );
 
       if (!req.user) {
@@ -4889,7 +5128,7 @@ router.delete(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -4929,12 +5168,13 @@ router.delete(
 
 // Get EPA financials for a budget version
 router.get(
-  "/:mis/budget-versions/:versionId/epa-financials",
-  async (req: Request, res: Response) => {
+  "/:id/budget-versions/:versionId/epa-financials",
+  authenticateSession,
+  async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       console.log(
-        `[EPAFinancials] Fetching EPA financials for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Fetching EPA financials for project ID: ${projectId}, version: ${versionId}`,
       );
 
       // Verify the budget version exists and belongs to the project
@@ -4949,7 +5189,7 @@ router.get(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -4981,14 +5221,14 @@ router.get(
 
 // Create EPA financial record
 router.post(
-  "/:mis/budget-versions/:versionId/epa-financials",
+  "/:id/budget-versions/:versionId/epa-financials",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId } = req.params;
+      const { id: projectId, versionId } = req.params;
       const financialData = req.body;
       console.log(
-        `[EPAFinancials] Creating EPA financial for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Creating EPA financial for project ID: ${projectId}, version: ${versionId}`,
         financialData,
       );
 
@@ -5008,7 +5248,7 @@ router.post(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5056,14 +5296,14 @@ router.post(
 
 // Update EPA financial record
 router.patch(
-  "/:mis/budget-versions/:versionId/epa-financials/:financialId",
+  "/:id/budget-versions/:versionId/epa-financials/:financialId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId, financialId } = req.params;
+      const { id: projectId, versionId, financialId } = req.params;
       const updateData = req.body;
       console.log(
-        `[EPAFinancials] Updating EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Updating EPA financial ${financialId} for project ID: ${projectId}, version: ${versionId}`,
         updateData,
       );
 
@@ -5083,7 +5323,7 @@ router.patch(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (
@@ -5119,13 +5359,13 @@ router.patch(
 
 // Delete EPA financial record
 router.delete(
-  "/:mis/budget-versions/:versionId/epa-financials/:financialId",
+  "/:id/budget-versions/:versionId/epa-financials/:financialId",
   authenticateSession,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { mis, versionId, financialId } = req.params;
+      const { id: projectId, versionId, financialId } = req.params;
       console.log(
-        `[EPAFinancials] Deleting EPA financial ${financialId} for MIS: ${mis}, version: ${versionId}`,
+        `[EPAFinancials] Deleting EPA financial ${financialId} for project ID: ${projectId}, version: ${versionId}`,
       );
 
       if (!req.user) {
@@ -5144,7 +5384,7 @@ router.delete(
       const { data: project, error: projectError } = await supabase
         .from("Projects")
         .select("id")
-        .eq("mis", mis)
+        .eq("id", projectId)
         .single();
 
       if (

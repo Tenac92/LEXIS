@@ -6,17 +6,31 @@
 import { Router, Request, Response } from 'express';
 import { storage } from '../storage';
 import { insertEmployeeSchema, type Employee, type InsertEmployee } from '@shared/schema';
-import { AuthenticatedRequest } from '../authentication';
+import { AuthenticatedRequest, authenticateSession } from '../authentication';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('EmployeesController');
 const router = Router();
 
+// All employee operations require an authenticated session
+router.use(authenticateSession);
+
+function requireAdmin(req: AuthenticatedRequest, res: Response): boolean {
+  if (req.user?.role !== 'admin') {
+    res.status(403).json({
+      success: false,
+      message: 'Admin access required for this operation',
+    });
+    return false;
+  }
+  return true;
+}
+
 /**
  * GET /api/employees
  * Get all employees or filter by unit
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { unit } = req.query;
     
@@ -46,10 +60,37 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/employees/engineers
+ * Get only engineers (employees with attribute = "Μηχανικός")
+ * Optimized endpoint for faster loading in dropdowns
+ */
+router.get('/engineers', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    logger.info('Fetching engineers only (attribute = Μηχανικός)');
+    const engineers = await storage.getEngineers();
+    
+    logger.info(`Found ${engineers.length} engineers`);
+    
+    res.json({
+      success: true,
+      data: engineers,
+      count: engineers.length
+    });
+  } catch (error) {
+    logger.error('Error fetching engineers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την ανάκτηση των μηχανικών',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
  * GET /api/employees/search
  * Search employees by AFM
  */
-router.get('/search', async (req: Request, res: Response) => {
+router.get('/search', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { afm } = req.query;
     
@@ -83,6 +124,7 @@ router.get('/search', async (req: Request, res: Response) => {
  * Create a new employee
  */
 router.post('/', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
   try {
     // Validate the request body
     const validationResult = insertEmployeeSchema.safeParse(req.body);
@@ -120,6 +162,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
  * Update an existing employee
  */
 router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
   try {
     const employeeId = parseInt(req.params.id);
     
@@ -166,6 +209,7 @@ router.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
  * Delete an employee
  */
 router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
   try {
     const employeeId = parseInt(req.params.id);
     
@@ -188,6 +232,67 @@ router.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Σφάλμα κατά τη διαγραφή του υπαλλήλου',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/employees/import
+ * Bulk import employees from file
+ */
+router.post('/import', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    const { employees } = req.body;
+    
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Παρακαλώ δώστε έναν πίνακα με υπαλλήλους'
+      });
+    }
+    
+    logger.info(`Starting bulk import of ${employees.length} employees`);
+    
+    const result = await storage.bulkImportEmployees(employees);
+    
+    res.json({
+      success: result.failed === 0,
+      message: `Εισαγωγή ολοκληρώθηκε: ${result.success} επιτυχή, ${result.failed} αποτυχημένα`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error importing employees:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την εισαγωγή των υπαλλήλων',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/employees/cleanup-duplicates
+ * Remove duplicate employees, keeping original records
+ */
+router.post('/cleanup-duplicates', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+  try {
+    logger.info('Starting cleanup of duplicate employees');
+    
+    const result = await storage.cleanupDuplicateEmployees();
+    
+    res.json({
+      success: result.errors.length === 0,
+      message: `Καθαρισμός ολοκληρώθηκε: ${result.deleted} διπλότυπα διαγράφηκαν, ${result.kept} υπάλληλοι διατηρήθηκαν`,
+      data: result
+    });
+  } catch (error) {
+    logger.error('Error cleaning up duplicates:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά την αφαίρεση διπλοτύπων',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

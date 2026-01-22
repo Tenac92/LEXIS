@@ -9,6 +9,7 @@ import { log } from '../vite';
 export interface BudgetNotification {
   id?: number;
   mis: number;
+  na853?: string;
   type: string;
   amount: number;
   current_budget: number;
@@ -116,11 +117,23 @@ export async function validateBudgetAllocation(
 
     log(`[Budget] Budget analysis: Available: ${availableBudget}, Yearly: ${yearlyAvailable}, Quarter: ${quarterAvailable}, Requested: ${requestedAmount}`, 'debug');
 
-    // Check if requested amount exceeds ethsia_pistosi (funding required)
+    // Get NA853 code for display
+    let na853Code = '';
+    if (projectId) {
+      const { data: projectData } = await supabase
+        .from('Projects')
+        .select('na853')
+        .eq('id', projectId)
+        .single();
+      na853Code = projectData?.na853 || '';
+    }
+
+    // Check if requested amount exceeds ethsia_pistosi (funding required - xrimatodotisi_request)
     if (requestedAmount > ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
-        type: 'funding',
+        na853: na853Code,
+        type: 'xrimatodotisi_request',
         amount: requestedAmount,
         current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
@@ -131,19 +144,20 @@ export async function validateBudgetAllocation(
       return {
         isValid: false,
         requiresNotification: true,
-        notificationType: 'funding',
+        notificationType: 'xrimatodotisi_request',
         message: 'Απαιτείται χρηματοδότηση - το ποσό υπερβαίνει την ετήσια πίστωση',
         currentBudget: availableBudget,
         ethsiaPistosi
       };
     }
 
-    // Check if requested amount exceeds 20% of annual allocation (reallocation required)
+    // Check if requested amount exceeds 20% of annual allocation (reallocation required - anakatanom_request)
     const reallocationThreshold = katanomesEtous * 0.2;
     if (requestedAmount > reallocationThreshold && requestedAmount <= ethsiaPistosi) {
       await createBudgetNotification({
         mis: budgetData.mis || 0,
-        type: 'reallocation',
+        na853: na853Code,
+        type: 'anakatanom_request',
         amount: requestedAmount,
         current_budget: availableBudget,
         ethsia_pistosi: ethsiaPistosi,
@@ -154,31 +168,9 @@ export async function validateBudgetAllocation(
       return {
         isValid: true,
         requiresNotification: true,
-        notificationType: 'reallocation',
+        notificationType: 'anakatanom_request',
         message: 'Απαιτείται ανακατανομή - το ποσό υπερβαίνει το 20% της ετήσιας κατανομής',
         currentBudget: availableBudget,
-        ethsiaPistosi
-      };
-    }
-
-    // Check if requested amount exceeds quarter available
-    if (quarterAvailable > 0 && requestedAmount > quarterAvailable) {
-      await createBudgetNotification({
-        mis: budgetData.mis || 0,
-        type: 'quarter_exceeded',
-        amount: requestedAmount,
-        current_budget: quarterAvailable,
-        ethsia_pistosi: ethsiaPistosi,
-        reason: `Το ποσό ${requestedAmount.toFixed(2)}€ υπερβαίνει το διαθέσιμο ποσό τριμήνου ${quarterAvailable.toFixed(2)}€`,
-        user_id: userId
-      });
-
-      return {
-        isValid: false,
-        requiresNotification: true,
-        notificationType: 'quarter_exceeded',
-        message: 'Το ποσό υπερβαίνει το διαθέσιμο ποσό τριμήνου',
-        currentBudget: quarterAvailable,
         ethsiaPistosi
       };
     }
@@ -208,13 +200,45 @@ export async function validateBudgetAllocation(
  */
 export async function createBudgetNotification(notification: Omit<BudgetNotification, 'id' | 'created_at' | 'updated_at'>): Promise<BudgetNotification | null> {
   try {
-    log(`[Budget] Creating notification for MIS: ${notification.mis}, Type: ${notification.type}`, 'info');
+    log(`[Budget] Creating notification for project identifier: ${notification.mis}, Type: ${notification.type}`, 'info');
+
+    // Determine project_id: notification.mis can be either a project_id or a MIS code
+    // First try to find the project by id (since frontend usually passes project_id)
+    // Then fall back to looking up by MIS if that fails
+    let projectId = 0;
+    if (notification.mis) {
+      // First, try to find by project id directly (most common case from frontend)
+      const { data: projectById, error: idError } = await supabase
+        .from('Projects')
+        .select('id, mis')
+        .eq('id', notification.mis)
+        .single();
+      
+      if (!idError && projectById?.id) {
+        projectId = projectById.id;
+        log(`[Budget] Found project by id: ${projectId}`, 'debug');
+      } else {
+        // Fall back to MIS lookup (for legacy cases)
+        const { data: projectByMis, error: misError } = await supabase
+          .from('Projects')
+          .select('id')
+          .eq('mis', notification.mis)
+          .single();
+        
+        if (!misError && projectByMis?.id) {
+          projectId = projectByMis.id;
+          log(`[Budget] Found project by MIS: ${projectId}`, 'debug');
+        } else {
+          log(`[Budget] Could not find project for identifier: ${notification.mis}`, 'warn');
+        }
+      }
+    }
 
     // Check if a similar notification already exists to avoid duplicates
     const { data: existingNotifications, error: checkError } = await supabase
       .from('budget_notifications')
       .select('id')
-      .eq('mis', notification.mis)
+      .eq('project_id', projectId)
       .eq('type', notification.type)
       .eq('status', 'pending')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()); // Within last 24 hours
@@ -231,6 +255,7 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
       const { data: updatedData, error: updateError } = await supabase
         .from('budget_notifications')
         .update({
+          type: notification.type,
           amount: notification.amount,
           current_budget: notification.current_budget,
           ethsia_pistosi: notification.ethsia_pistosi,
@@ -254,7 +279,7 @@ export async function createBudgetNotification(notification: Omit<BudgetNotifica
     const { data, error } = await supabase
       .from('budget_notifications')
       .insert({
-        mis: notification.mis,
+        project_id: projectId,
         type: notification.type,
         amount: notification.amount,
         current_budget: notification.current_budget,
@@ -387,7 +412,7 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
       .from('budget_notifications')
       .select(`
         id,
-        mis,
+        project_id,
         type,
         amount,
         current_budget,
@@ -407,7 +432,33 @@ export async function getAllNotifications(): Promise<BudgetNotification[]> {
     }
 
     log(`[Budget] Successfully fetched ${data?.length || 0} notifications`, 'info');
-    return data || [];
+    
+    // Debug: Log each notification's type
+    (data || []).forEach((notif, i) => {
+      log(`[Budget] Notification ${i}: id=${notif.id}, type="${notif.type}", status="${notif.status}"`, 'debug');
+    });
+    
+    // Fetch project details and map project_id to mis and NA853 for backwards compatibility
+    const mappedData = await Promise.all(
+      (data || []).map(async (notif) => {
+        let na853 = '';
+        if (notif.project_id) {
+          const { data: projectData } = await supabase
+            .from('Projects')
+            .select('na853')
+            .eq('id', notif.project_id)
+            .single();
+          na853 = projectData?.na853 || '';
+        }
+        return {
+          ...notif,
+          mis: notif.project_id,
+          na853
+        };
+      })
+    );
+
+    return mappedData;
 
   } catch (error) {
     log(`[Budget] Error getting all notifications: ${error}`, 'error');
@@ -422,6 +473,17 @@ export async function createTestReallocationNotifications(): Promise<void> {
   try {
     log('[Budget] Creating test reallocation notifications...', 'info');
 
+    // Get first 3 projects to use as test projects
+    const { data: projects, error: projError } = await supabase
+      .from('Projects')
+      .select('id, mis')
+      .limit(3);
+
+    if (projError || !projects || projects.length < 3) {
+      log('[Budget] Could not find enough projects for test notifications', 'warn');
+      return;
+    }
+
     // Clear existing test notifications first
     await supabase
       .from('budget_notifications')
@@ -430,8 +492,8 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample reallocation notification
     const reallocationNotification = await createBudgetNotification({
-      mis: 5174692,
-      type: 'reallocation',
+      mis: projects[0].mis,
+      type: 'anakatanom_request',
       amount: 1500,
       current_budget: 4489,
       ethsia_pistosi: 5000,
@@ -442,8 +504,8 @@ export async function createTestReallocationNotifications(): Promise<void> {
 
     // Create sample funding notification
     const fundingNotification = await createBudgetNotification({
-      mis: 5174693,
-      type: 'funding',
+      mis: projects[1].mis,
+      type: 'xrimatodotisi_request',
       amount: 12000,
       current_budget: 8000,
       ethsia_pistosi: 10000,
@@ -452,20 +514,8 @@ export async function createTestReallocationNotifications(): Promise<void> {
       user_id: 49
     });
 
-    // Create sample quarter exceeded notification
-    const quarterNotification = await createBudgetNotification({
-      mis: 5174694,
-      type: 'quarter_exceeded',
-      amount: 3000,
-      current_budget: 2500,
-      ethsia_pistosi: 8000,
-      reason: 'Το ποσό 3,000€ υπερβαίνει το διαθέσιμο ποσό τριμήνου 2,500€',
-      status: 'pending',
-      user_id: 49
-    });
-
-    if (reallocationNotification && fundingNotification && quarterNotification) {
-      log('[Budget] Successfully created 3 test notifications', 'info');
+    if (reallocationNotification && fundingNotification) {
+      log('[Budget] Successfully created test notifications', 'info');
     } else {
       log('[Budget] Some test notifications may have failed to create', 'warn');
     }

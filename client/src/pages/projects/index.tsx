@@ -65,7 +65,19 @@ export default function ProjectsPage() {
         description: "Please wait while your file is being prepared...",
       });
 
-      const response = await fetch("/api/projects/export/xlsx", {
+      // Build query parameters from current filters
+      const params = new URLSearchParams();
+      if (status && status !== "all") {
+        params.append("status", status);
+      }
+      if (debouncedSearch) {
+        params.append("search", debouncedSearch);
+      }
+
+      const queryString = params.toString();
+      const url = `/api/projects/export/xlsx${queryString ? `?${queryString}` : ""}`;
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -77,14 +89,14 @@ export default function ProjectsPage() {
       }
 
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = downloadUrl;
       a.download = `projects-${new Date().toISOString().split("T")[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
 
       toast({
         title: "Export Successful",

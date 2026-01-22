@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Plus,
   Edit,
@@ -20,6 +21,7 @@ import {
   CheckCircle2,
   AlertCircle,
   CreditCard,
+  Hash,
   X,
   MapPin,
   Building2,
@@ -27,6 +29,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
+import { CreateDocumentDialog } from "@/components/documents/create-document-dialog";
 import {
   Card,
   CardContent,
@@ -40,6 +43,7 @@ import { Label } from "@/components/ui/label";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
+import { parseEuropeanNumber } from "@/lib/number-format";
 import {
   Dialog,
   DialogContent,
@@ -68,20 +72,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
-import { resolveRegionName } from "@shared/utils/geographic-utils";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
   afm: string;
+  afm_hash: string;
   surname: string;
   name: string;
   fathername: string | null;
-  region: string | null;
   adeia: number | null;
-  cengsur1: string | null;
-  cengname1: string | null;
-  cengsur2: string | null;
-  cengname2: string | null;
+  ceng1: number | null;
+  ceng2: number | null;
+  regiondet: Record<string, unknown> | null;
   onlinefoldernumber: string | null;
   freetext: string | null;
   date: string | null;
@@ -121,18 +123,15 @@ const beneficiaryFormSchema = z.object({
   // Project & Location Information
   project: z.string().optional(),
   expenditure_type: z.string().optional(),
-  region: z.string().optional(),
   monada: z.string().optional(),
 
   // License Information
   adeia: z.string().optional(),
   onlinefoldernumber: z.string().optional(),
 
-  // Engineer Information
-  cengsur1: z.string().optional(),
-  cengname1: z.string().optional(),
-  cengsur2: z.string().optional(),
-  cengname2: z.string().optional(),
+  // Engineer Information (foreign keys to Employees table)
+  ceng1: z.number().nullable().optional(),
+  ceng2: z.number().nullable().optional(),
 
   // Financial Information - Multiple payment entries with complex structure
   selectedUnit: z.string().optional(),
@@ -170,6 +169,7 @@ export default function BeneficiariesPage() {
   const [detailsBeneficiary, setDetailsBeneficiary] =
     useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [detailsInitialEditMode, setDetailsInitialEditMode] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [currentPage, setCurrentPage] = useState(1);
@@ -178,8 +178,30 @@ export default function BeneficiariesPage() {
     useState(false);
   const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
     useState<Beneficiary | null>(null);
+  // State for create document dialog with prefilled beneficiary
+  const [createDocumentOpen, setCreateDocumentOpen] = useState(false);
+  const [initialBeneficiaryForDocument, setInitialBeneficiaryForDocument] = useState<{
+    firstname: string;
+    lastname: string;
+    fathername: string;
+    afm: string;
+  } | undefined>(undefined);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Prefetch engineers data in the background for modal use
+  // This ensures engineers are cached before any modal opens
+  useEffect(() => {
+    queryClient.prefetchQuery({
+      queryKey: ["/api/employees/engineers"],
+      queryFn: async () => {
+        const response = await fetch('/api/employees/engineers', { credentials: 'include' });
+        if (!response.ok) throw new Error('Failed to fetch engineers');
+        return response.json();
+      },
+      staleTime: 30 * 60 * 1000, // 30 minutes cache
+    });
+  }, [queryClient]);
 
   // Fetch beneficiaries with caching
   const {
@@ -210,138 +232,32 @@ export default function BeneficiariesPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch beneficiary payments for enhanced display with caching
-  const { data: beneficiaryPayments = [] } = useQuery({
-    queryKey: ["/api/beneficiary-payments"],
-    staleTime: 3 * 60 * 1000, // 3 minutes cache
-    gcTime: 10 * 60 * 1000, // 10 minutes cache retention
-    refetchOnWindowFocus: false,
-    enabled: beneficiaries.length > 0,
-  });
-
-  // Fetch kallikratis data for region name mapping with aggressive caching
-  const { data: kallikratisData = [] } = useQuery({
-    queryKey: ["/api/projects/cards"],
-    select: (data: any) => {
-      // Extract unique regions from enhanced project data
-      if (data && Array.isArray(data)) {
-        const regions = new Map();
-        data.forEach((project: any) => {
-          if (project.region && project.region.id && project.region.name) {
-            const regionId = project.region.id.toString();
-            if (!regions.has(regionId)) {
-              regions.set(regionId, project.region.name);
-            }
-          }
-        });
-        return Array.from(regions.entries()).map(([id, name]) => ({
-          id,
-          name,
-        }));
-      }
-      return [];
-    },
-    staleTime: 60 * 60 * 1000, // 1 hour cache - region data rarely changes
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours cache retention
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-
-  // PERFORMANCE OPTIMIZATION: Memoized payment data to avoid recalculation on every render
-  const beneficiaryPaymentData = useMemo(() => {
-    if (!Array.isArray(beneficiaryPayments)) return new Map();
-
-    const paymentMap = new Map();
-
-    // Group payments by beneficiary ID for O(1) lookup
-    beneficiaryPayments.forEach((payment: any) => {
-      const id = payment.beneficiary_id;
-      if (!paymentMap.has(id)) {
-        paymentMap.set(id, {
-          payments: [],
-          totalAmount: 0,
-          expenditureTypes: new Set(),
-        });
-      }
-
-      const data = paymentMap.get(id);
-      data.payments.push(payment);
-      data.totalAmount += parseFloat(payment.amount) || 0;
-      if (payment.expenditure_type) {
-        data.expenditureTypes.add(payment.expenditure_type);
-      }
-    });
-
-    return paymentMap;
-  }, [beneficiaryPayments]);
-
-  // REGION MAPPING: Helper function to get region name from region ID
-  const getRegionName = useCallback(
-    (regionId: string | null) => {
-      if (!regionId) return regionId;
-
-      if (kallikratisData.length === 0) {
-        console.log("[RegionMapping] No kallikratis data available");
-        return regionId;
-      }
-
-      console.log(
-        "[RegionMapping] Looking for region ID:",
-        regionId,
-        "in",
-        kallikratisData.length,
-        "regions",
-      );
-      console.log(
-        "[RegionMapping] Sample regions:",
-        kallikratisData.slice(0, 3),
-      );
-
-      const regionMapping = kallikratisData.find(
-        (region) => region.id === regionId.toString(),
-      );
-
-      if (regionMapping) {
-        console.log(
-          "[RegionMapping] Found mapping:",
-          regionId,
-          "->",
-          regionMapping.name,
-        );
-        return regionMapping.name;
-      } else {
-        console.log(
-          "[RegionMapping] No mapping found for region ID:",
-          regionId,
-        );
-        return regionId;
-      }
-    },
-    [kallikratisData],
-  );
-
-  // Optimized helper functions using memoized data
-  const getPaymentsForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
-  };
-
-  const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
-  };
-
-  const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
-    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
-    return types ? Array.from(types) : [];
-  };
+  // Helper function to format regiondet JSONB data for display
+  const formatRegiondet = useCallback((regiondet: Record<string, unknown> | null): string[] => {
+    if (!regiondet || typeof regiondet !== 'object') return [];
+    
+    const regionNames: string[] = [];
+    
+    // regiondet structure: { regions: [...], regional_units: [...], municipalities: [...] }
+    // Extract region names
+    if (regiondet.regions && Array.isArray(regiondet.regions)) {
+      regiondet.regions.forEach((region: any) => {
+        if (region.name) {
+          regionNames.push(region.name);
+        }
+      });
+    }
+    
+    return regionNames;
+  }, []);
 
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: BeneficiaryFormData) =>
-      fetch("/api/beneficiaries", {
+      apiRequest("/api/beneficiaries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then((res) => res.json()),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       setDialogOpen(false);
@@ -363,11 +279,10 @@ export default function BeneficiariesPage() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: BeneficiaryFormData }) =>
-      fetch(`/api/beneficiaries/${id}`, {
+      apiRequest(`/api/beneficiaries/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-      }).then((res) => res.json()),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       setDialogOpen(false);
@@ -389,7 +304,7 @@ export default function BeneficiariesPage() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      fetch(`/api/beneficiaries/${id}`, { method: "DELETE" }),
+      apiRequest(`/api/beneficiaries/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
       toast({
@@ -407,8 +322,10 @@ export default function BeneficiariesPage() {
   });
 
   const handleEdit = (beneficiary: Beneficiary) => {
-    setSelectedBeneficiary(beneficiary);
-    setDialogOpen(true);
+    // Open Details Modal with edit mode active
+    setDetailsBeneficiary(beneficiary);
+    setDetailsInitialEditMode(true);
+    setDetailsModalOpen(true);
   };
 
   const handleDelete = (beneficiary: Beneficiary) => {
@@ -421,6 +338,13 @@ export default function BeneficiariesPage() {
 
   const handleShowDetails = (beneficiary: Beneficiary) => {
     setDetailsBeneficiary(beneficiary);
+    setDetailsInitialEditMode(false);  // Open in view mode
+    setDetailsModalOpen(true);
+  };
+
+  const handleCreateNewBeneficiary = () => {
+    setDetailsBeneficiary(null);  // No beneficiary = create mode
+    setDetailsInitialEditMode(true);  // Start in edit mode for new entry
     setDetailsModalOpen(true);
   };
 
@@ -436,20 +360,44 @@ export default function BeneficiariesPage() {
     });
   };
 
+  // Server-side AFM search query - only triggers when AFM is 9 digits
+  const { data: afmSearchResults } = useQuery<Beneficiary[]>({
+    queryKey: ['/api/beneficiaries/search', searchTerm],
+    queryFn: async () => {
+      const response = await apiRequest<{ success: boolean; data: Beneficiary[]; count: number }>(`/api/beneficiaries/search?afm=${searchTerm}`);
+      return response.data; // Extract the data array from the response object
+    },
+    enabled: searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
+    staleTime: 30 * 1000, // Cache for 30 seconds
+  });
+
   // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
   const filteredBeneficiaries = useMemo(() => {
-    if (!searchTerm.trim()) return beneficiaries;
+    // If AFM search results are available (9-digit AFM), use them
+    if (afmSearchResults) {
+      console.log(`[Beneficiaries] Using server-side AFM search results: ${afmSearchResults.length} beneficiaries`);
+      return afmSearchResults;
+    }
 
-    const searchLower = searchTerm.toLowerCase();
-    return beneficiaries.filter((beneficiary) => {
-      return (
-        beneficiary.surname?.toLowerCase().includes(searchLower) ||
-        beneficiary.name?.toLowerCase().includes(searchLower) ||
-        beneficiary.afm?.toString().includes(searchLower) ||
-        beneficiary.region?.toLowerCase().includes(searchLower)
-      );
+    // Otherwise, do client-side filtering (for non-AFM searches)
+    const baseList = !searchTerm.trim()
+      ? beneficiaries
+      : beneficiaries.filter((beneficiary) => {
+          const searchLower = searchTerm.toLowerCase();
+          return (
+            beneficiary.surname?.toLowerCase().includes(searchLower) ||
+            beneficiary.name?.toLowerCase().includes(searchLower)
+          );
+        });
+
+    // Deduplicate by beneficiary ID to avoid duplicate keys in the list/grid
+    const seen = new Set<number>();
+    return baseList.filter((beneficiary) => {
+      if (seen.has(beneficiary.id)) return false;
+      seen.add(beneficiary.id);
+      return true;
     });
-  }, [beneficiaries, searchTerm]);
+  }, [beneficiaries, searchTerm, afmSearchResults]);
 
   // PERFORMANCE OPTIMIZATION: Memoized pagination
   const paginationData = useMemo(() => {
@@ -464,6 +412,84 @@ export default function BeneficiariesPage() {
   }, [filteredBeneficiaries, currentPage, itemsPerPage]);
 
   const { totalPages, paginatedBeneficiaries } = paginationData;
+
+  // IDs of beneficiaries currently visible (limit server fetch scope)
+  const visibleBeneficiaryIds = useMemo(
+    () => paginatedBeneficiaries.map((b) => b.id),
+    [paginatedBeneficiaries],
+  );
+
+  // Fetch payments only for visible beneficiaries instead of the entire table
+  const { data: beneficiaryPayments = [], isFetching: paymentsLoading } = useQuery({
+    queryKey: ["/api/beneficiary-payments", { ids: visibleBeneficiaryIds }],
+    queryFn: async () => {
+      if (visibleBeneficiaryIds.length === 0) return [];
+      const idParam = visibleBeneficiaryIds.join(",");
+      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
+    },
+    enabled: visibleBeneficiaryIds.length > 0,
+    staleTime: 2 * 60 * 1000, // keep short; list view refreshes when pages change
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // PERFORMANCE: Memoized payment data for O(1) lookups in list rendering
+  const beneficiaryPaymentData = useMemo(() => {
+    if (!Array.isArray(beneficiaryPayments)) return new Map();
+
+    const paymentMap = new Map();
+
+    beneficiaryPayments.forEach((payment: any) => {
+      const id = payment.beneficiary_id;
+      if (!paymentMap.has(id)) {
+        paymentMap.set(id, {
+          payments: [],
+          totalAmount: 0,
+          expenditureTypes: new Set(),
+        });
+      }
+
+      const data = paymentMap.get(id);
+      data.payments.push(payment);
+      data.totalAmount += parseEuropeanNumber(payment.amount) || 0;
+      if (payment.expenditure_type) {
+        data.expenditureTypes.add(payment.expenditure_type);
+      }
+    });
+
+    return paymentMap;
+  }, [beneficiaryPayments]);
+
+  // Optimized helper functions using memoized data
+  const getPaymentsForBeneficiary = (beneficiaryId: number) => {
+    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
+  };
+
+  const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
+    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
+  };
+
+  const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
+    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
+    return types ? Array.from(types) : [];
+  };
+
+  // Get latest payment (by payment_date desc, then created_at desc)
+  const getLatestPaymentForBeneficiary = (beneficiaryId: number) => {
+    const payments = getPaymentsForBeneficiary(beneficiaryId);
+    if (!payments || payments.length === 0) return null;
+
+    const sorted = [...payments].sort((a: any, b: any) => {
+      const dateA = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+      const dateB = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+
+      const createdA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const createdB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return createdB - createdA;
+    });
+
+    return sorted[0];
+  };
 
   // Handle loading state
   if (isLoading) {
@@ -541,19 +567,10 @@ export default function BeneficiariesPage() {
                     </>
                   )}
                 </Button>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      onClick={() => {
-                        setSelectedBeneficiary(undefined);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Νέος Δικαιούχος
-                    </Button>
-                  </DialogTrigger>
-                </Dialog>
+                <Button onClick={handleCreateNewBeneficiary}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Νέος Δικαιούχος
+                </Button>
               </div>
             </div>
 
@@ -603,14 +620,6 @@ export default function BeneficiariesPage() {
                                     <User className="w-4 h-4" />
                                     <span>ΑΦΜ: {beneficiary.afm}</span>
                                   </div>
-                                  {beneficiary.region && (
-                                    <div className="flex items-center gap-2 text-muted-foreground">
-                                      <Building className="w-4 h-4" />
-                                      <span>
-                                        {getRegionName(beneficiary.region)}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                                 <div className="space-y-1">
                                   {getExpenditureTypesForBeneficiary(
@@ -633,6 +642,42 @@ export default function BeneficiariesPage() {
                                           beneficiary.id,
                                         ).length > 2 &&
                                           ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {(() => {
+                                    const latest = getLatestPaymentForBeneficiary(beneficiary.id);
+                                    return (
+                                      <div className="space-y-1 text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                                          <span>
+                                            Πληρωμή: {latest?.payment_date
+                                              ? new Date(latest.payment_date).toLocaleDateString("el-GR")
+                                              : "—"}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Hash className="w-4 h-4 flex-shrink-0" />
+                                          <span className="truncate" title={latest?.freetext || "—"}>
+                                            EPS: {latest?.freetext || "—"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                  {formatRegiondet(beneficiary.regiondet).length > 0 && (
+                                    <div className="flex items-center gap-2 text-muted-foreground">
+                                      <MapPin className="w-4 h-4 flex-shrink-0 text-blue-600" />
+                                      <span
+                                        className="truncate text-blue-700"
+                                        title={formatRegiondet(beneficiary.regiondet).join(", ")}
+                                      >
+                                        {formatRegiondet(beneficiary.regiondet)
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {formatRegiondet(beneficiary.regiondet).length > 2 &&
+                                          ` +${formatRegiondet(beneficiary.regiondet).length - 2} άλλες`}
                                       </span>
                                     </div>
                                   )}
@@ -832,20 +877,6 @@ export default function BeneficiariesPage() {
 
                               {/* Location and Project Info */}
                               <div className="grid grid-cols-1 gap-2">
-                                {beneficiary.region && (
-                                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                    <div>
-                                      <span className="text-xs text-blue-600 font-medium">
-                                        Περιοχή
-                                      </span>
-                                      <p className="text-sm text-blue-900 font-medium">
-                                        {getRegionName(beneficiary.region)}
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
-
                                 {getExpenditureTypesForBeneficiary(
                                   beneficiary.id,
                                 ).length > 0 && (
@@ -865,6 +896,48 @@ export default function BeneficiariesPage() {
                                           beneficiary.id,
                                         ).length > 2 &&
                                           ` +${getExpenditureTypesForBeneficiary(beneficiary.id).length - 2} άλλοι`}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Latest payment info */}
+                                {(() => {
+                                  const latest = getLatestPaymentForBeneficiary(beneficiary.id);
+                                  return (
+                                    <div className="flex items-start gap-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                      <Calendar className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="text-xs text-purple-600 font-medium">
+                                          Πληρωμή & EPS
+                                        </span>
+                                        <p className="text-sm text-purple-900 font-medium leading-tight">
+                                          Πληρωμή: {latest?.payment_date
+                                            ? new Date(latest.payment_date).toLocaleDateString("el-GR")
+                                            : "—"}
+                                        </p>
+                                        <p className="text-xs text-purple-800 truncate" title={latest?.freetext || "—"}>
+                                          EPS: {latest?.freetext || "—"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Region Info from regiondet */}
+                                {formatRegiondet(beneficiary.regiondet).length > 0 && (
+                                  <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <MapPin className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                      <span className="text-xs text-blue-600 font-medium">
+                                        Περιφέρειες
+                                      </span>
+                                      <p className="text-sm text-blue-900 font-medium leading-tight">
+                                        {formatRegiondet(beneficiary.regiondet)
+                                          .slice(0, 2)
+                                          .join(", ")}
+                                        {formatRegiondet(beneficiary.regiondet).length > 2 &&
+                                          ` +${formatRegiondet(beneficiary.regiondet).length - 2} άλλες`}
                                       </p>
                                     </div>
                                   </div>
@@ -1074,8 +1147,8 @@ export default function BeneficiariesPage() {
                               )}
 
                               {/* Engineering Information */}
-                              {(beneficiary.cengsur1 ||
-                                beneficiary.cengsur2) && (
+                              {(beneficiary.ceng1 ||
+                                beneficiary.ceng2) && (
                                 <div className="bg-orange-100 border border-orange-300 rounded-lg p-4">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Building2 className="w-5 h-5 text-orange-600" />
@@ -1084,25 +1157,23 @@ export default function BeneficiariesPage() {
                                     </span>
                                   </div>
                                   <div className="space-y-2">
-                                    {beneficiary.cengsur1 && (
+                                    {beneficiary.ceng1 && (
                                       <div className="bg-white/70 p-3 rounded border">
                                         <div className="text-xs text-orange-600 font-medium">
                                           Μηχανικός 1
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur1}{" "}
-                                          {beneficiary.cengname1}
+                                          ID: {beneficiary.ceng1}
                                         </div>
                                       </div>
                                     )}
-                                    {beneficiary.cengsur2 && (
+                                    {beneficiary.ceng2 && (
                                       <div className="bg-white/70 p-3 rounded border">
                                         <div className="text-xs text-orange-600 font-medium">
                                           Μηχανικός 2
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          {beneficiary.cengsur2}{" "}
-                                          {beneficiary.cengname2}
+                                          ID: {beneficiary.ceng2}
                                         </div>
                                       </div>
                                     )}
@@ -1203,7 +1274,7 @@ export default function BeneficiariesPage() {
         </Card>
       </div>
 
-      {/* Details Modal */}
+      {/* Details Modal - also handles create and edit */}
       <BeneficiaryDetailsModal
         beneficiary={
           detailsBeneficiary
@@ -1215,48 +1286,32 @@ export default function BeneficiariesPage() {
         }
         open={detailsModalOpen}
         onOpenChange={setDetailsModalOpen}
+        initialEditMode={detailsInitialEditMode}
+        onCreateBeneficiary={(data) => {
+          createMutation.mutate(data);
+          setDetailsModalOpen(false);
+        }}
+        onCreatePaymentDocument={(beneficiaryData) => {
+          setInitialBeneficiaryForDocument(beneficiaryData);
+          setCreateDocumentOpen(true);
+        }}
       />
 
-      {/* Create/Edit Modal */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              {selectedBeneficiary ? (
-                <>
-                  <Edit className="w-5 h-5 text-blue-600" />
-                  Επεξεργασία Δικαιούχου
-                </>
-              ) : (
-                <>
-                  <Plus className="w-5 h-5 text-green-600" />
-                  Νέος Δικαιούχος
-                </>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedBeneficiary
-                ? "Επεξεργαστείτε τα στοιχεία του δικαιούχου και πατήστε αποθήκευση"
-                : "Συμπληρώστε τα στοιχεία για τον νέο δικαιούχο"}
-            </DialogDescription>
-          </DialogHeader>
-          <BeneficiaryForm
-            beneficiary={selectedBeneficiary}
-            dialogOpen={dialogOpen}
-            onSubmit={(data) => {
-              if (selectedBeneficiary) {
-                updateMutation.mutate({ id: selectedBeneficiary.id, data });
-              } else {
-                createMutation.mutate(data);
-              }
-            }}
-            onCancel={() => {
-              setDialogOpen(false);
-              setSelectedBeneficiary(undefined);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Create Document Dialog with prefilled beneficiary */}
+      <CreateDocumentDialog
+        open={createDocumentOpen}
+        onOpenChange={(open) => {
+          setCreateDocumentOpen(open);
+          if (!open) {
+            setInitialBeneficiaryForDocument(undefined);
+          }
+        }}
+        onClose={() => {
+          setCreateDocumentOpen(false);
+          setInitialBeneficiaryForDocument(undefined);
+        }}
+        initialBeneficiary={initialBeneficiaryForDocument}
+      />
 
       {/* Existing Payments Modal */}
       <Dialog
@@ -1322,7 +1377,7 @@ function ExistingPaymentsDisplay({
   }
 
   const totalAmount = payments.reduce(
-    (sum: number, payment: any) => sum + (parseFloat(payment.amount) || 0),
+    (sum: number, payment: any) => sum + (parseEuropeanNumber(payment.amount) || 0),
     0,
   );
 
@@ -1346,12 +1401,6 @@ function ExistingPaymentsDisplay({
         <div>
           <span className="text-sm font-medium text-muted-foreground">ΑΦΜ</span>
           <p className="text-lg font-mono">{beneficiary.afm}</p>
-        </div>
-        <div>
-          <span className="text-sm font-medium text-muted-foreground">
-            Περιοχή
-          </span>
-          <p className="text-lg">{beneficiary.region || "—"}</p>
         </div>
       </div>
 
@@ -1394,7 +1443,7 @@ function ExistingPaymentsDisplay({
                     Ποσό (€)
                   </span>
                   <span className="font-semibold text-green-700 text-sm">
-                    {parseFloat(payment.amount).toLocaleString("el-GR")} €
+                    {parseEuropeanNumber(payment.amount).toLocaleString("el-GR")} €
                   </span>
                 </div>
                 <div>
@@ -1490,14 +1539,10 @@ function BeneficiaryForm({
       afm: beneficiary?.afm?.toString() || "",
       project: "",
       expenditure_type: "",
-      region: beneficiary?.region || "",
       monada: "",
       adeia: beneficiary?.adeia?.toString() || "",
-      // onlinefoldernumber: removed due to database schema issues
-      cengsur1: beneficiary?.cengsur1 || "",
-      cengname1: beneficiary?.cengname1 || "",
-      cengsur2: beneficiary?.cengsur2 || "",
-      cengname2: beneficiary?.cengname2 || "",
+      ceng1: beneficiary?.ceng1 ?? null,
+      ceng2: beneficiary?.ceng2 ?? null,
       selectedUnit: "",
       selectedNA853: "",
       amount: "",
@@ -1572,14 +1617,10 @@ function BeneficiaryForm({
       afm: "",
       project: "",
       expenditure_type: "",
-      region: "",
       monada: "",
       adeia: "",
-      // onlinefoldernumber: removed due to database schema issues
-      cengsur1: "",
-      cengname1: "",
-      cengsur2: "",
-      cengname2: "",
+      ceng1: null,
+      ceng2: null,
       selectedUnit: userUnits.length === 1 ? userUnits[0].id : "",
       selectedNA853: "",
       amount: "",
@@ -1833,54 +1874,6 @@ function BeneficiaryForm({
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="region"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="flex items-center gap-2">
-                  <Building className="w-4 h-4 text-purple-600" />
-                  Περιοχή
-                </FormLabel>
-                <FormControl>
-                  <Select
-                    value={field.value || "none"}
-                    onValueChange={(value) =>
-                      field.onChange(value === "none" ? "" : value)
-                    }
-                    disabled={!(geographicData as any)?.regions?.length}
-                  >
-                    <SelectTrigger data-testid="select-beneficiary-region">
-                      <SelectValue
-                        placeholder={
-                          (geographicData as any)?.regions?.length
-                            ? "Επιλέξτε περιφέρεια..."
-                            : "Φόρτωση γεωγραφικών δεδομένων..."
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Καμία επιλογή</SelectItem>
-                      {((geographicData as any)?.regions || [])
-                        .map((r: any) => ({
-                          code: String(r.code),
-                          name: r.name,
-                        }))
-                        .sort((a: any, b: any) =>
-                          a.name.localeCompare(b.name, "el"),
-                        )
-                        .map((region: any) => (
-                          <SelectItem key={region.code} value={region.code}>
-                            {region.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
 
         {/* License Information */}
@@ -1901,18 +1894,26 @@ function BeneficiaryForm({
           {/* Note: onlinefoldernumber field removed due to database schema compatibility issues */}
         </div>
 
-        {/* Engineer Information */}
+        {/* Engineer Information - Now uses employee foreign keys */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Στοιχεία Μηχανικών</h3>
+          <p className="text-sm text-muted-foreground">
+            Οι μηχανικοί συνδέονται μέσω του πίνακα υπαλλήλων.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
-              name="cengsur1"
+              name="ceng1"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Επώνυμο Μηχανικού 1</FormLabel>
+                  <FormLabel>ID Μηχανικού 1</FormLabel>
                   <FormControl>
-                    <Input placeholder="Επώνυμο μηχανικού" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="ID μηχανικού" 
+                      value={field.value ?? ""} 
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -1920,40 +1921,17 @@ function BeneficiaryForm({
             />
             <FormField
               control={form.control}
-              name="cengname1"
+              name="ceng2"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Όνομα Μηχανικού 1</FormLabel>
+                  <FormLabel>ID Μηχανικού 2</FormLabel>
                   <FormControl>
-                    <Input placeholder="Όνομα μηχανικού" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="cengsur2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Επώνυμο Μηχανικού 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Επώνυμο μηχανικού" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="cengname2"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Όνομα Μηχανικού 2</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Όνομα μηχανικού" {...field} />
+                    <Input 
+                      type="number" 
+                      placeholder="ID μηχανικού" 
+                      value={field.value ?? ""} 
+                      onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

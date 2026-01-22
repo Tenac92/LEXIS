@@ -6,8 +6,8 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { requireAdmin, AuthenticatedRequest } from '../authentication';
-import { manualQuarterTransitionCheck, processQuarterTransition } from '../services/schedulerService';
+import { requireAdmin, authenticateSession, AuthenticatedRequest } from '../authentication';
+import { manualQuarterTransitionCheck, processQuarterTransition, manualYearEndClosure } from '../services/schedulerService';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('AdminRoutes');
@@ -15,6 +15,7 @@ const logger = createLogger('AdminRoutes');
 export function registerAdminRoutes(router: Router, wss: any) {
   // Admin route group with admin authentication requirement
   const adminRouter = Router();
+  adminRouter.use(authenticateSession);
   adminRouter.use(requireAdmin);
   
   /**
@@ -110,6 +111,63 @@ export function registerAdminRoutes(router: Router, wss: any) {
       return res.status(500).json({
         success: false,
         message: 'Error getting quarter transition status',
+        error: errorMessage
+      });
+    }
+  });
+  
+  /**
+   * Trigger a manual year-end closure
+   * POST /api/admin/year-end-closure/run
+   */
+  adminRouter.post('/year-end-closure/run', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      logger.info('[Admin API] Manual year-end closure requested by admin', { 
+        userId: req.user?.id
+      });
+      
+      const result = await manualYearEndClosure(wss);
+      
+      return res.status(200).json({
+        success: result.success,
+        message: result.message || 'Year-end closure completed',
+        stats: result.stats,
+        error: result.error
+      });
+    } catch (error) {
+      logger.error('[Admin API] Error in manual year-end closure', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing year-end closure',
+        error: errorMessage
+      });
+    }
+  });
+  
+  /**
+   * Get year-end closure status
+   * GET /api/admin/year-end-closure/status
+   */
+  adminRouter.get('/year-end-closure/status', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const nextYearEnd = new Date(currentYear, 11, 31, 23, 59, 59); // Dec 31 23:59:59
+      
+      return res.status(200).json({
+        success: true,
+        current_year: currentYear,
+        current_date: currentDate.toISOString(),
+        next_scheduled_closure: nextYearEnd.toISOString(),
+        days_until_closure: Math.ceil((nextYearEnd.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+      });
+    } catch (error) {
+      logger.error('[Admin API] Error getting year-end closure status', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return res.status(500).json({
+        success: false,
+        message: 'Error getting year-end closure status',
         error: errorMessage
       });
     }

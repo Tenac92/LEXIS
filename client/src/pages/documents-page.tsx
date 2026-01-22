@@ -50,6 +50,7 @@ interface Filters {
   afm: string;
   expenditureType: string;
   na853: string;
+  protocolNumber: string;
 }
 
 interface User {
@@ -60,8 +61,8 @@ interface User {
 }
 
 interface Unit {
-  id: string;
-  unit: number;
+  id: number;
+  unit: string;
   unit_name: any;
   name: string;
 }
@@ -88,21 +89,41 @@ export default function DocumentsPage() {
     delete: false,
   });
 
-  // Check if URL is /documents/new and open create dialog
+  // Check if URL is /documents/new and open create dialog, or handle highlight parameter
   useEffect(() => {
     if (location === "/documents/new") {
       setShowCreateDialog(true);
       // Change URL to /documents without triggering a reload
       setLocation("/documents", { replace: true });
     }
+    
+    // Check for highlight parameter to show specific document
+    // Use window.location.search instead of wouter location (which doesn't include query params)
+    const params = new URLSearchParams(window.location.search);
+    const highlightId = params.get('highlight');
+    if (highlightId) {
+      console.log("[DocumentsPage] Highlight ID detected:", highlightId);
+      // Clear default filters to show the document
+      setFilters({
+        unit: "",
+        status: "",
+        user: "",
+        dateFrom: "",
+        dateTo: "",
+        amountFrom: "",
+        amountTo: "",
+        recipient: "",
+        afm: "",
+        expenditureType: "",
+        na853: "",
+        protocolNumber: "",
+      });
+      setPage(0);
+    }
   }, [location, setLocation]);
 
   // Fetch units data for dropdown with aggressive caching
-  const {
-    data: allUnits = [],
-    isLoading: unitsLoading,
-    error: unitsError,
-  } = useQuery<Unit[]>({
+  const { data: allUnits = [] } = useQuery<Unit[]>({
     queryKey: ["/api/public/units"],
     staleTime: 30 * 60 * 1000, // 30 minutes cache - units rarely change
     gcTime: 60 * 60 * 1000, // 1 hour cache retention (v5 renamed from cacheTime)
@@ -118,15 +139,16 @@ export default function DocumentsPage() {
   });
 
   // PERFORMANCE OPTIMIZATION: Memoize user's accessible units to prevent filtering on every render
+  // Filter by unit.id which matches the values in user.unit_id
   const userUnits = useMemo(() => {
     if (!user?.unit_id || !allUnits.length) return [];
-    return allUnits.filter((unit) => user.unit_id?.includes(unit.unit));
+    return allUnits.filter((unit) => user.unit_id?.includes(unit.id));
   }, [allUnits, user?.unit_id]);
 
   // Initialize both main filters and advanced filters states
   const [filters, setFilters] = useState<Filters>({
     unit: "",
-    status: "pending",
+    status: "all",
     user: "current",
     dateFrom: "",
     dateTo: "",
@@ -136,6 +158,7 @@ export default function DocumentsPage() {
     afm: "",
     expenditureType: "",
     na853: "",
+    protocolNumber: "",
   });
 
   // Fetch expenditure types for dropdown
@@ -148,10 +171,10 @@ export default function DocumentsPage() {
       const defaultUnit = userUnits[0];
       setFilters((prev) => ({
         ...prev,
-        unit: defaultUnit.unit.toString(), // Use unit ID as filter value
+        unit: defaultUnit.id.toString(), // Use unit.id as filter value
       }));
     }
-  }, [user?.unit_id, filters.unit, userUnits.length]);
+  }, [filters.unit, user?.unit_id, userUnits]);
 
   // For advanced filters, we'll keep a separate state that doesn't trigger refresh
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -163,13 +186,8 @@ export default function DocumentsPage() {
     afm: "",
     expenditureType: "",
     na853: "",
+    protocolNumber: "",
   });
-
-  // For main category filters (unit, status, user) - apply immediately
-  const setMainFilters = (newFilters: Partial<Filters>) => {
-    const updatedFilters = { ...filters, ...newFilters };
-    setFilters(updatedFilters);
-  };
 
   // For advanced filters - only store the values, don't refresh
   const setAdvancedFilterValues = (
@@ -178,14 +196,9 @@ export default function DocumentsPage() {
     setAdvancedFilters((prev) => ({ ...prev, ...newValues }));
   };
 
-  // Apply advanced filters only when button is clicked
-  const applyAdvancedFilters = () => {
-    // Update the main filters with advanced filter values
-    setFilters((prev) => ({
-      ...prev,
-      ...advancedFilters,
-    }));
-  };
+  // Pagination state
+  const PAGE_SIZE = 30;
+  const [page, setPage] = useState(0);
 
   // PERFORMANCE OPTIMIZATION: Enhanced users query with aggressive caching
   const { data: matchingUsers = [] } = useQuery({
@@ -201,103 +214,83 @@ export default function DocumentsPage() {
     enabled: !!user?.unit_id,
   });
 
-  // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
-  const {
-    data: documents = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<GeneratedDocument[]>({
-    queryKey: ["/api/documents", filters],
-    staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
-    gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
-    refetchOnMount: false, // Use cached data when available
-    refetchOnWindowFocus: false, // Prevent unnecessary refetching
-    queryFn: async () => {
+  const fetchDocuments = useCallback(
+    async ({ queryKey, signal }: { queryKey: [string, Filters, number, number]; signal?: AbortSignal }) => {
+      const [, currentFilters, currentPage, pageSize] = queryKey;
       try {
-        // Fetching documents with current filters
-        console.log(
-          "[DocumentsPage] Fetching documents with filters:",
-          JSON.stringify(filters),
-        );
+        if (currentFilters.afm && currentFilters.afm.length === 9) {
+          const data = await apiRequest<GeneratedDocument[]>(
+            `/api/documents/search?afm=${currentFilters.afm}`,
+            { signal },
+          );
+          return Array.isArray(data) ? data : [];
+        }
 
-        // Build query parameters for the API request
         const queryParams = new URLSearchParams();
 
-        // Always enforce unit filter - users can only see their assigned units
-        if (filters.unit) {
-          // Verify the selected unit is in user's authorized units
-          if (user?.unit_id?.includes(parseInt(filters.unit))) {
-            queryParams.append("unit", filters.unit);
-          } else {
-            // If unauthorized unit, default to first authorized unit
-            if (user?.unit_id?.[0]) {
-              queryParams.append("unit", user.unit_id[0].toString());
-            }
-          }
-        } else {
-          // If no unit selected, default to first authorized unit
-          if (user?.unit_id?.[0]) {
+        if (currentFilters.unit) {
+          if (user?.unit_id?.includes(parseInt(currentFilters.unit))) {
+            queryParams.append("unit", currentFilters.unit);
+          } else if (user?.unit_id?.[0]) {
             queryParams.append("unit", user.unit_id[0].toString());
           }
+        } else if (user?.unit_id?.[0]) {
+          queryParams.append("unit", user.unit_id[0].toString());
         }
 
-        if (filters.status !== "all") {
-          queryParams.append("status", filters.status);
+        if (currentFilters.status !== "all") {
+          queryParams.append("status", currentFilters.status);
         }
 
-        if (filters.user === "current" && user?.id) {
+        if (currentFilters.user === "current" && user?.id) {
           queryParams.append("generated_by", user.id.toString());
-        } else if (filters.user !== "all") {
-          queryParams.append("generated_by", filters.user);
+        } else if (currentFilters.user !== "all") {
+          queryParams.append("generated_by", currentFilters.user);
         }
 
-        if (filters.dateFrom) {
-          queryParams.append("dateFrom", filters.dateFrom);
+        if (currentFilters.dateFrom) {
+          queryParams.append("dateFrom", currentFilters.dateFrom);
         }
 
-        if (filters.dateTo) {
-          queryParams.append("dateTo", filters.dateTo);
+        if (currentFilters.dateTo) {
+          queryParams.append("dateTo", currentFilters.dateTo);
         }
 
-        if (filters.amountFrom) {
-          queryParams.append("amountFrom", filters.amountFrom);
+        if (currentFilters.amountFrom) {
+          queryParams.append("amountFrom", currentFilters.amountFrom);
         }
 
-        if (filters.amountTo) {
-          queryParams.append("amountTo", filters.amountTo);
+        if (currentFilters.amountTo) {
+          queryParams.append("amountTo", currentFilters.amountTo);
         }
 
-        if (filters.recipient) {
-          queryParams.append("recipient", filters.recipient);
+        if (currentFilters.recipient) {
+          queryParams.append("recipient", currentFilters.recipient);
         }
 
-        if (filters.afm) {
-          queryParams.append("afm", filters.afm);
+        if (currentFilters.expenditureType) {
+          queryParams.append("expenditureType", currentFilters.expenditureType);
         }
 
-        if (filters.expenditureType) {
-          queryParams.append("expenditureType", filters.expenditureType);
+        if (currentFilters.na853) {
+          queryParams.append("na853", currentFilters.na853);
         }
 
-        if (filters.na853) {
-          queryParams.append("na853", filters.na853);
+        if (currentFilters.protocolNumber) {
+          queryParams.append("protocolNumber", currentFilters.protocolNumber);
         }
+
+        queryParams.append("limit", pageSize.toString());
+        queryParams.append("offset", (currentPage * pageSize).toString());
 
         const url = `/api/documents?${queryParams.toString()}`;
-        console.log("[DocumentsPage] Requesting documents from:", url);
-
-        const data = await apiRequest<GeneratedDocument[]>(url);
-
-        // Ensure we always return an array, even if API returns null or undefined
-        const documentsArray = Array.isArray(data) ? data : [];
-        console.log(
-          `[DocumentsPage] Received ${documentsArray.length} documents`,
-        );
-
-        return documentsArray;
+        const data = await apiRequest<GeneratedDocument[]>(url, { signal });
+        return Array.isArray(data) ? data : [];
       } catch (error) {
-        // Log error and notify user about document fetch failure
+        // Abort signals are expected when filters change rapidly
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return [];
+        }
         console.error("[DocumentsPage] Error fetching documents:", error);
         toast({
           title: "Error",
@@ -307,11 +300,31 @@ export default function DocumentsPage() {
               : "Failed to fetch documents",
           variant: "destructive",
         });
-        // Return empty array in case of error
         return [];
       }
     },
+    [toast, user?.id, user?.unit_id],
+  );
+
+  // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<GeneratedDocument[]>({
+    queryKey: ["/api/documents", filters, page, PAGE_SIZE],
+    staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
+    gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
+    refetchOnMount: false, // Use cached data when available
+    refetchOnWindowFocus: false, // Prevent unnecessary refetching
+    keepPreviousData: true, // Avoid UI flicker on filter changes
+    enabled: Boolean(user?.id),
+    queryFn: fetchDocuments,
   });
+
+  const canGoPrev = page > 0;
+  const canGoNext = documents.length === PAGE_SIZE;
 
   // PERFORMANCE OPTIMIZATION: Memoized refresh handler and optimized filter functions
   const handleRefresh = useCallback(() => {
@@ -319,23 +332,31 @@ export default function DocumentsPage() {
     refetch();
   }, [refetch]);
 
-  // PERFORMANCE OPTIMIZATION: Memoized filter functions after refetch is available
-  const optimizedSetMainFilters = useCallback(
-    (newFilters: Partial<Filters>) => {
-      const updatedFilters = { ...filters, ...newFilters };
-      setFilters(updatedFilters);
-      refetch();
-    },
-    [filters, refetch],
-  );
+  const handleNextPage = useCallback(() => {
+    if (canGoNext) {
+      setPage((prev) => prev + 1);
+    }
+  }, [canGoNext]);
+
+  const handlePrevPage = useCallback(() => {
+    if (canGoPrev) {
+      setPage((prev) => Math.max(prev - 1, 0));
+    }
+  }, [canGoPrev]);
+
+  // PERFORMANCE OPTIMIZATION: Memoized filter functions without duplicate refetches
+  const optimizedSetMainFilters = useCallback((newFilters: Partial<Filters>) => {
+    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setPage(0);
+  }, []);
 
   const optimizedApplyAdvancedFilters = useCallback(() => {
     setFilters((prev) => ({
       ...prev,
       ...advancedFilters,
     }));
-    refetch();
-  }, [advancedFilters, refetch]);
+    setPage(0);
+  }, [advancedFilters]);
 
   if (isLoading) {
     return (
@@ -407,11 +428,13 @@ export default function DocumentsPage() {
                     <SelectValue placeholder="Επιλέξτε μονάδα" />
                   </SelectTrigger>
                   <SelectContent>
-                    {userUnits.map((unit) => (
-                      <SelectItem key={unit.unit} value={unit.unit.toString()}>
-                        {unit.name}
-                      </SelectItem>
-                    ))}
+                    {allUnits
+                      .filter((unit) => user?.unit_id?.includes(unit.id))
+                      .map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id.toString()}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -505,7 +528,8 @@ export default function DocumentsPage() {
                     advancedFilters.recipient ||
                     advancedFilters.afm ||
                     advancedFilters.expenditureType ||
-                    advancedFilters.na853) && (
+                    advancedFilters.na853 ||
+                    advancedFilters.protocolNumber) && (
                     <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                       Ενεργά
                     </span>
@@ -561,7 +585,7 @@ export default function DocumentsPage() {
                         <NumberInput
                           placeholder="Ελάχιστο ποσό"
                           value={advancedFilters.amountFrom}
-                          onChange={(formatted, numeric) =>
+                          onChange={(formatted, _numeric) =>
                             setAdvancedFilterValues({ amountFrom: formatted })
                           }
                         />
@@ -573,7 +597,7 @@ export default function DocumentsPage() {
                         <NumberInput
                           placeholder="Μέγιστο ποσό"
                           value={advancedFilters.amountTo}
-                          onChange={(formatted, numeric) =>
+                          onChange={(formatted, _numeric) =>
                             setAdvancedFilterValues({ amountTo: formatted })
                           }
                         />
@@ -646,6 +670,17 @@ export default function DocumentsPage() {
                       }
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Αριθμός Πρωτοκόλλου</label>
+                    <Input
+                      placeholder="Αναζήτηση με αριθμό πρωτοκόλλου"
+                      value={advancedFilters.protocolNumber}
+                      onChange={(e) =>
+                        setAdvancedFilterValues({ protocolNumber: e.target.value })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button
@@ -661,6 +696,7 @@ export default function DocumentsPage() {
                         afm: "",
                         expenditureType: "",
                         na853: "",
+                        protocolNumber: "",
                       });
                     }}
                   >
@@ -747,6 +783,30 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
+          </div>
+          <div className="flex flex-col gap-3 px-6 pb-6">
+            <div className="text-sm text-muted-foreground">
+              Page {page + 1} • Showing {documents.length} documents
+              {documents.length < PAGE_SIZE && " (last page)"}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={!canGoPrev || isLoading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!canGoNext || isLoading}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

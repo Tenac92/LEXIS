@@ -5,19 +5,6 @@
 
 import { supabase } from '../data';
 
-interface BudgetRecord {
-  id: number;
-  mis: number;
-  na853: string;
-  project_id?: number;
-}
-
-interface ProjectRecord {
-  id: number;
-  mis: number;
-  na853: string;
-}
-
 export class BudgetMigration {
   /**
    * Add project_id column to budget table if it doesn't exist
@@ -34,7 +21,7 @@ export class BudgetMigration {
       }
 
       return true;
-    } catch (error) {
+    } catch {
       console.log('[BudgetMigration] Using fallback approach for column management');
       return true; // Continue anyway
     }

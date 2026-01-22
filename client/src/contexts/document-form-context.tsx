@@ -2,6 +2,15 @@ import React, { createContext, useContext, useState } from 'react';
 import { z } from 'zod';
 
 // Schemas aligned with create-document-dialog.tsx
+const regiondetSchema = z.object({
+  region_code: z.number().optional(),
+  region_name: z.string().optional(),
+  unit_code: z.number().optional(),
+  unit_name: z.string().optional(),
+  municipality_code: z.number().optional(),
+  municipality_name: z.string().optional(),
+}).optional().nullable();
+
 const recipientSchema = z.object({
   firstname: z.string().optional().default(""),
   lastname: z.string().optional().default(""),
@@ -12,6 +21,23 @@ const recipientSchema = z.object({
   installment: z.string().optional().default("ΕΦΑΠΑΞ"),
   installments: z.array(z.string()).optional().default(["ΕΦΑΠΑΞ"]),
   installmentAmounts: z.record(z.string(), z.number()).optional().default({}),
+  regiondet: regiondetSchema,
+  id: z.number().optional(),
+  employee_id: z.number().optional(),
+  beneficiary_id: z.number().optional(),
+  status: z.string().optional(),
+  month: z.string().optional(),
+  days: z.number().optional(),
+  daily_compensation: z.number().optional(),
+  accommodation_expenses: z.number().optional(),
+  kilometers_traveled: z.number().optional(),
+  price_per_km: z.number().optional(),
+  tickets_tolls_rental: z.number().optional(),
+  tickets_tolls_rental_entries: z.array(z.number()).optional().default([]),
+  has_2_percent_deduction: z.boolean().optional(),
+  total_expense: z.number().optional(),
+  deduction_2_percent: z.number().optional(),
+  net_payable: z.number().optional(),
 });
 
 const signatureSchema = z.object({
@@ -27,11 +53,12 @@ export const documentFormSchema = z.object({
   project_id: z.string().optional().default(""),
   subproject_id: z.string().optional().default(""),
   region: z.string().optional().default(""),
+  for_yl_id: z.number().optional().nullable().default(null),
   expenditure_type: z.string().optional().default(""),
   recipients: z.array(recipientSchema).optional().default([]),
   status: z.string().optional().default("draft"),
   selectedAttachments: z.array(z.string()).optional().default([]),
-  esdian_fields: z.array(z.string()).optional().default([""]),
+  esdian_fields: z.array(z.string().optional()).optional().default([]),
   // Keep old fields for backward compatibility during transition
   esdian_field1: z.string().optional().default(""),
   esdian_field2: z.string().optional().default(""),
@@ -54,11 +81,12 @@ const defaultFormData: DocumentFormData = {
   project_id: "",
   subproject_id: "",
   region: "",
+  for_yl_id: null,
   expenditure_type: "",
   recipients: [],
   status: "draft",
   selectedAttachments: [],
-  esdian_fields: [""],
+  esdian_fields: [],
   esdian_field1: "",
   esdian_field2: "",
   director_signature: undefined,

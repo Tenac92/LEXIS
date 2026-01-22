@@ -152,4 +152,70 @@ router.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
+/**
+ * Request budget reallocation or funding from admin
+ * POST /api/notifications/request-reallocation
+ * 
+ * request_type: 'ανακατανομή' (for Πίστωση exceeded - hard block)
+ *               'χρηματοδότηση' (for Κατανομή exceeded - soft block)
+ */
+router.post('/request-reallocation', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { project_id, request_type, requested_amount, available_budget, shortage } = req.body;
+    
+    if (!project_id || !requested_amount) {
+      return res.status(400).json({ 
+        message: 'Απαιτούνται τα πεδία project_id και requested_amount' 
+      });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Μη εξουσιοδοτημένη πρόσβαση' });
+    }
+
+    // Validate request_type - only accept 'ανακατανομή' or 'χρηματοδότηση'
+    // Default to 'ανακατανομή' (hard block) as the safer option if missing/invalid
+    const validRequestTypes = ['ανακατανομή', 'χρηματοδότηση'];
+    const safeRequestType = validRequestTypes.includes(request_type) ? request_type : 'ανακατανομή';
+    
+    // Determine notification type based on request_type from frontend
+    // 'ανακατανομή' = Πίστωση exceeded (hard block) - DEFAULT for safety
+    // 'χρηματοδότηση' = Κατανομή exceeded (soft block)
+    const isAnakatanom = safeRequestType === 'ανακατανομή';
+    const notificationType = isAnakatanom ? 'anakatanom_request' : 'xrimatodotisi_request';
+    const reasonPrefix = isAnakatanom ? 'Αίτημα ανακατανομής' : 'Αίτημα χρηματοδότησης';
+    const successMessage = isAnakatanom 
+      ? 'Το αίτημα ανακατανομής υποβλήθηκε επιτυχώς' 
+      : 'Το αίτημα χρηματοδότησης υποβλήθηκε επιτυχώς';
+
+    // Create a notification for the admin about the budget request
+    const notification = await createBudgetNotification({
+      mis: parseInt(project_id.toString()),
+      type: notificationType,
+      amount: parseFloat(requested_amount.toString()),
+      current_budget: parseFloat(available_budget?.toString() || '0'),
+      ethsia_pistosi: parseFloat(shortage?.toString() || '0'),
+      reason: `${reasonPrefix}: Ζητούμενο ποσό €${parseFloat(requested_amount.toString()).toLocaleString('el-GR')}, Διαθέσιμο €${parseFloat(available_budget?.toString() || '0').toLocaleString('el-GR')}, Έλλειμμα €${parseFloat(shortage?.toString() || '0').toLocaleString('el-GR')}`,
+      user_id: req.user.id ? parseInt(req.user.id.toString()) : undefined
+    });
+
+    if (!notification) {
+      return res.status(500).json({ message: 'Αποτυχία δημιουργίας αιτήματος' });
+    }
+
+    log(`[Notifications] Created ${notificationType} for project ${project_id} by user ${req.user.id}`, 'info');
+    
+    return res.status(201).json({
+      message: successMessage,
+      notification
+    });
+
+  } catch (error) {
+    log(`[Notifications] Error creating budget request: ${error}`, 'error');
+    return res.status(500).json({ 
+      message: 'Σφάλμα κατά την υποβολή του αιτήματος' 
+    });
+  }
+});
+
 export default router;

@@ -4,6 +4,101 @@ import { supabase } from "../config/db";
 
 export const router = Router();
 
+/**
+ * Get for_yl (implementing agencies) filtered by monada_id
+ * Used when selecting a monada to show available for_yl options
+ */
+router.get("/for-yl", authenticateSession, async (req: any, res) => {
+  try {
+    const { monada_id } = req.query;
+    console.log("[ForYl] Fetching for_yl data, monada_id:", monada_id);
+    
+    // Query the for_yl table
+    const { data: forYlData, error, count } = await supabase
+      .from("for_yl")
+      .select("id, foreis", { count: 'exact' });
+
+    console.log("[ForYl] Raw database response: count=", count, "data length=", forYlData?.length, "error=", error);
+    console.log("[ForYl] Raw data sample:", JSON.stringify(forYlData?.slice(0, 3)));
+
+    if (error) {
+      console.error("[ForYl] Database error:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch for_yl from database",
+        error: error.message
+      });
+    }
+
+    // Filter by monada_id if provided
+    let filteredData = forYlData || [];
+    if (monada_id) {
+      filteredData = filteredData.filter(item => {
+        const foreis = item.foreis as { title?: string; monada_id?: string } | null;
+        return foreis?.monada_id === String(monada_id);
+      });
+    }
+
+    // Map to a more usable format
+    const formattedForYl = filteredData.map(item => {
+      const foreis = item.foreis as { title?: string; monada_id?: string } | null;
+      return {
+        id: item.id,
+        title: foreis?.title || "",
+        monada_id: foreis?.monada_id || ""
+      };
+    });
+
+    console.log("[ForYl] Found for_yl entries:", formattedForYl.length, "formatted:", JSON.stringify(formattedForYl.slice(0, 3)));
+    res.json(formattedForYl);
+  } catch (error) {
+    console.error("[ForYl] Error fetching for_yl:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch for_yl",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * Get a single for_yl by ID with full details
+ */
+router.get("/for-yl/:id", authenticateSession, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    console.log("[ForYl] Fetching for_yl by ID:", id);
+    
+    const { data: forYlData, error } = await supabase
+      .from("for_yl")
+      .select("id, foreis")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("[ForYl] Database error:", error);
+      return res.status(404).json({ 
+        message: "For YL not found",
+        error: error.message
+      });
+    }
+
+    const foreis = forYlData.foreis as { title?: string; monada_id?: string } | null;
+    const result = {
+      id: forYlData.id,
+      title: foreis?.title || "",
+      monada_id: foreis?.monada_id || ""
+    };
+
+    console.log("[ForYl] Found for_yl:", result);
+    res.json(result);
+  } catch (error) {
+    console.error("[ForYl] Error fetching for_yl:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch for_yl",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 router.get("/", authenticateSession, async (req: any, res) => {
   try {
     console.log("[Units] Fetching units from Monada table");

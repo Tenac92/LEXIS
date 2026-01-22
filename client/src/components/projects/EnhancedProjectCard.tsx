@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { formatNumberEuropean } from '@/lib/number-format';
 import DataValidation from '@/components/common/DataValidation';
-import { useProjectBudget } from '@/hooks/use-project-budget';
 import useExpenditureTypes from '@/hooks/useExpenditureTypes';
 
 interface Project {
@@ -58,11 +57,9 @@ const EnhancedProjectCard: React.FC<EnhancedProjectCardProps> = ({
   project,
   onEdit,
   onView,
-  onDelete,
   isLoading,
   className = ''
 }) => {
-  const { data: budgetData, isLoading: budgetLoading } = useProjectBudget(project.mis || project.id);
   const { data: expenditureTypes, isLoading: expenditureTypesLoading } = useExpenditureTypes();
 
   const getStatusColor = (status: string = 'unknown') => {

@@ -23,6 +23,11 @@ interface AuthenticatedRequest extends Request {
   user?: User;
 }
 
+// Helper to detect when the database does not yet have the is_active column
+const isMissingIsActiveColumn = (error: any) =>
+  error?.code === '42703' ||
+  (typeof error?.message === 'string' && error.message.toLowerCase().includes('is_active'));
+
 export const router = Router();
 
 // Get all units
@@ -192,8 +197,29 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     console.log('[Users] Fetching users list');
     const { data: users, error } = await supabase
       .from('users')
-      .select('id, email, name, role, unit_id, telephone, department, details')
+      .select('id, email, name, role, is_active, unit_id, telephone, department, details')
       .order('id');
+
+    // Fallback for environments where the is_active column is not yet present
+    if (error && isMissingIsActiveColumn(error)) {
+      console.warn('[Users] is_active column missing; falling back to legacy select');
+      const { data: legacyUsers, error: legacyError } = await supabase
+        .from('users')
+        .select('id, email, name, role, unit_id, telephone, department, details')
+        .order('id');
+
+      if (legacyError) {
+        console.error('[Users] Supabase legacy query error:', legacyError);
+        throw legacyError;
+      }
+
+      return res.json(
+        (legacyUsers || []).map((u: any) => ({
+          ...u,
+          is_active: true,
+        })),
+      );
+    }
 
     if (error) {
       console.error('[Users] Supabase query error:', error);
@@ -218,7 +244,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       return res.status(403).json({ message: 'Admin access required' });
     }
 
-    const { email, name, password, role, unit_id, units, department, telephone, details } = req.body;
+    const { email, name, password, role, unit_id, units, department, telephone, details, is_active } = req.body;
 
     // Support both field names for compatibility - prefer unit_id from frontend
     const unitsToValidate = unit_id || units;
@@ -326,7 +352,8 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       role,
       password: hashedPassword,
       unit_id: unitIds, // Store numeric IDs
-      telephone: telephone || null
+      telephone: telephone || null,
+      is_active: typeof is_active === 'boolean' ? is_active : true
     };
     
     // Only add department if it's provided
@@ -340,11 +367,30 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     }
     
     // Use supabaseAdmin with service role key to bypass RLS policies
-    const { data: newUser, error } = await supabaseAdmin
+    const baseSelect = 'id, email, name, role, unit_id, department, telephone';
+    const fullSelect = `${baseSelect}, is_active`;
+
+    let { data: newUser, error } = await supabaseAdmin
       .from('users')
       .insert([userData])
-      .select('id, email, name, role, unit_id, department, telephone')
+      .select(fullSelect)
       .single();
+
+    // Graceful fallback if is_active column is missing in the database
+    if (error && isMissingIsActiveColumn(error)) {
+      console.warn('[Users] is_active column missing; retrying user create without it');
+      const fallbackUserData = { ...userData };
+      delete fallbackUserData.is_active;
+
+      const fallback = await supabaseAdmin
+        .from('users')
+        .insert([fallbackUserData])
+        .select(baseSelect)
+        .single();
+
+      newUser = fallback.data ? { ...fallback.data, is_active: true } : null;
+      error = fallback.error ?? null;
+    }
 
     if (error) {
       console.error('[Users] User creation error:', error);
@@ -381,7 +427,7 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
     // Check if user exists before update
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
-      .select('id, email')
+      .select('id, email, is_active')
       .eq('id', userId)
       .single();
       
@@ -395,9 +441,10 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       name: req.body.name?.trim() || null,
       email: req.body.email?.trim() || null,
       role: req.body.role?.trim() || null,
-      unit_id: Array.isArray(req.body.unit_id) ? req.body.unit_id : [],
+      unit_id: Array.isArray(req.body.unit_id) ? req.body.unit_id : undefined,
       telephone: req.body.telephone || null,
-      department: req.body.department?.trim() || null
+      department: req.body.department?.trim() || null,
+      is_active: typeof req.body.is_active === 'boolean' ? req.body.is_active : undefined
     };
 
     // Add details if provided
@@ -433,6 +480,13 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
       .update(updateData)
       .eq('id', userId);
 
+    if (error && isMissingIsActiveColumn(error)) {
+      console.warn('[Users] is_active column missing during update; inform admin to run migration');
+      return res.status(400).json({
+        message: 'The is_active column is missing in the database. Please add it to enable activation toggles.',
+      });
+    }
+
     if (error) {
       console.error('[Users] Supabase update error:', error);
       throw error;
@@ -445,7 +499,8 @@ router.patch('/:id', authenticateSession, async (req: AuthenticatedRequest, res:
         id: userId,
         email: req.body.email,
         name: req.body.name,
-        role: req.body.role
+        role: req.body.role,
+        is_active: typeof req.body.is_active === 'boolean' ? req.body.is_active : existingUser.is_active
       }
     });
   } catch (error) {
@@ -523,15 +578,35 @@ router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequ
 
     console.log('[Users] Fetching users with matching units for units:', req.user.unit_id);
     // Get all users except the current user
-    const { data: users, error } = await supabase
+    let users;
+    const baseQuery = supabase
       .from('users')
-      .select('id, email, name, unit_id, role')
-      .neq('id', req.user.id)  
+      .select('id, email, name, unit_id, role, is_active')
+      .eq('is_active', true)
+      .neq('id', req.user.id)
       .order('name');
 
-    if (error) {
+    const { data, error } = await baseQuery;
+
+    if (error && isMissingIsActiveColumn(error)) {
+      console.warn('[Users] is_active column missing; fetching matching users without status filter');
+      const fallback = await supabase
+        .from('users')
+        .select('id, email, name, unit_id, role')
+        .neq('id', req.user.id)
+        .order('name');
+
+      if (fallback.error) {
+        console.error('[Users] Supabase fallback query error:', fallback.error);
+        throw fallback.error;
+      }
+
+      users = (fallback.data || []).map((u: any) => ({ ...u, is_active: true }));
+    } else if (error) {
       console.error('[Users] Supabase query error:', error);
       throw error;
+    } else {
+      users = data;
     }
 
     // Filter users to only include those that have at least one matching unit

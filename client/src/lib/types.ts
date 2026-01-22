@@ -1,6 +1,7 @@
 export interface BudgetData {
   current_budget: string | number;
   total_budget?: string | number;
+  proip?: string | number; // Προϋπολογισμός - from budget upload
   annual_budget?: string | number;
   katanomes_etous?: string | number;
   ethsia_pistosi: string | number;
@@ -8,6 +9,7 @@ export interface BudgetData {
   quarter_view?: string | number;
   current_quarter?: string;
   last_quarter_check?: string;
+  current_quarter_spent?: string | number; // Amount spent in the current quarter
   q1: string | number;
   q2: string | number;
   q3: string | number;
@@ -15,7 +17,7 @@ export interface BudgetData {
   total_spent?: string | number;
   // Budget indicators
   available_budget?: string | number;  // Διαθέσιμη Κατανομή = katanomes_etous - user_view
-  quarter_available?: string | number; // Υπόλοιπο Τριμήνου = current_q - user_view
+  quarter_available?: string | number; // Υπόλοιπο Τριμήνου = (current_q + carried_forward) - current_quarter_spent
   yearly_available?: string | number;  // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
   // Sum field from the API response
   sum?: {
@@ -27,6 +29,7 @@ export interface BudgetData {
     available_budget: number;
     yearly_available: number;
     quarter_available: number;
+    carried_forward?: number; // Accumulated unspent budget from previous quarters
     [key: string]: any;
   };
 }
@@ -102,6 +105,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  is_active?: boolean;
   unit_id?: number[];
   units?: string[];
 }

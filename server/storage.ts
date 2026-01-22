@@ -3,6 +3,12 @@ import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
 import session from 'express-session';
 import MemoryStore from 'memorystore';
+import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
+import { mergeRegiondetWithPayments } from './utils/regiondet-merge';
+
+type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute'>;
+
+const ENGINEERS_CACHE_TTL = 5 * 60 * 1000;
 
 export interface IStorage {
   sessionStore: session.Store;
@@ -19,8 +25,19 @@ export interface IStorage {
     newAmount: number,
     userId?: number
   ): Promise<void>;
+  checkBudgetAvailability(projectId: number, amount: number): Promise<{ 
+    isAvailable: boolean; 
+    message: string; 
+    availableBudget?: number;
+    hardBlock?: boolean;
+    budgetType?: 'pistosi' | 'katanomi' | null;
+    katanomesEtous?: number;
+    ethsiaPistosi?: number;
+    yearlyAvailable?: number;
+  }>;
+  syncProjectBudgetIds(): Promise<{ synced: number; errors: number }>;
   getBudgetHistory(
-    mis?: string, 
+    na853?: string, 
     page?: number, 
     limit?: number, 
     changeType?: string,
@@ -42,14 +59,18 @@ export interface IStorage {
       changeTypes: Record<string, number>,
       periodRange: { start: string, end: string }
     }
-  }>;
+  }>; 
   
   // Employee management operations - SECURITY: Unit-based access only
+  getAllEmployees(): Promise<Employee[]>;
+  getEngineers(): Promise<EngineerSummary[]>;
   getEmployeesByUnit(unit: string): Promise<Employee[]>;
   searchEmployeesByAFM(afm: string): Promise<Employee[]>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;
   updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee>;
   deleteEmployee(id: number): Promise<void>;
+  bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }>;
+  cleanupDuplicateEmployees(): Promise<{ deleted: number; kept: number; errors: string[] }>;
 
   // Beneficiary management operations - SECURITY: Unit-based access only
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
@@ -57,7 +78,11 @@ export interface IStorage {
   getBeneficiaryById(id: number): Promise<Beneficiary | null>;
   createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
+  appendPaymentIdToRegiondet(beneficiaryId: number, paymentId: number | string): Promise<void>;
   deleteBeneficiary(id: number): Promise<void>;
+  
+  // Document search operations - SECURITY: Searches encrypted AFM via hash
+  searchDocumentsByAFM(afm: string, userUnits: number[]): Promise<GeneratedDocument[]>;
   
   // Beneficiary Payment operations - for normalized structure
   getBeneficiaryPayments(beneficiaryId: number): Promise<BeneficiaryPayment[]>;
@@ -83,10 +108,15 @@ export interface IStorage {
   createEPAFinancials(financial: InsertEpaFinancials): Promise<EpaFinancials>;
   updateEPAFinancials(id: number, financial: Partial<InsertEpaFinancials>): Promise<EpaFinancials>;
   deleteEPAFinancials(id: number): Promise<void>;
+  
+  // Region data operations
+  updateBeneficiaryRegiondet(beneficiaryId: number, projectIndexId: number): Promise<void>;
+  backfillBeneficiaryRegiondet(): Promise<{ processed: number; updated: number; errors: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  private engineersCache: { data: EngineerSummary[]; expiresAt: number } | null = null;
   
   constructor() {
     // Create an in-memory session store with proper configuration
@@ -270,7 +300,7 @@ export class DatabaseStorage implements IStorage {
       // First, get the project details to find the associated budget record
       const { data: project, error: projectError } = await supabase
         .from('Projects')
-        .select('mis, na853')
+        .select('id, mis, na853')
         .eq('id', projectId)
         .single();
         
@@ -298,6 +328,15 @@ export class DatabaseStorage implements IStorage {
           
         budgetData = fallbackData;
         budgetError = fallbackError;
+        
+        // SYNC FIX: If we found budget by MIS but project_id is missing, update it
+        if (!fallbackError && fallbackData && !fallbackData.project_id) {
+          console.log(`[Storage] SYNC: Updating project_id in project_budget for MIS ${project.mis}`);
+          await supabase
+            .from('project_budget')
+            .update({ project_id: projectId })
+            .eq('id', fallbackData.id);
+        }
       }
       
       if (budgetError || !budgetData) {
@@ -307,17 +346,48 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`[Storage] Found budget record - current user_view: ${budgetData.user_view}`);
       
-      // Calculate new spending amount
+      // Calculate budget values
       const currentSpending = parseFloat(String(budgetData.user_view || 0));
+      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
+      const ethsiaPistosi = parseFloat(String(budgetData.ethsia_pistosi || 0));
+      const availableBudget = katanomesEtous - currentSpending;
+      const yearlyAvailable = ethsiaPistosi - currentSpending;
+      
+      // TWO-TIER VALIDATION: Only check for spending (positive amounts), not refunds
+      // PRIORITY ORDER: Check πίστωση first (HARD BLOCK), then κατανομή (SOFT WARNING)
+      if (amount > 0) {
+        // HARD BLOCK: Check if this spending would exceed the annual credit (ethsia_pistosi)
+        // This is the absolute limit - cannot proceed
+        if (amount > yearlyAvailable) {
+          const errorMsg = `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`;
+          console.error(`[Storage] BUDGET HARD BLOCK (πίστωση exceeded): ${errorMsg}`);
+          throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
+        }
+        
+        // SOFT WARNING: Check if this spending would exceed the allocation (katanomes_etous)
+        // Allow proceeding but log warning - document can still be saved
+        if (amount > availableBudget) {
+          console.warn(`[Storage] BUDGET SOFT WARNING (κατανομή exceeded): Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμη Κατανομή: €${availableBudget.toFixed(2)} - Επιτρέπεται η αποθήκευση με προειδοποίηση`);
+          // Don't throw - allow the spending to proceed
+        } else {
+          console.log(`[Storage] Budget validation passed: amount ${amount} <= available ${availableBudget}`);
+        }
+      }
+      
+      // Calculate new spending amount for both year and current quarter
       const newSpending = currentSpending + amount;
       
-      console.log(`[Storage] Budget calculation: ${currentSpending} + ${amount} = ${newSpending}`);
+      const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
+      const newQuarterSpent = currentQuarterSpent + amount;
       
-      // Update the budget record with new spending
+      console.log(`[Storage] Budget calculation: user_view ${currentSpending} + ${amount} = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
+      
+      // Update the budget record with new spending (both year total and current quarter)
       const { error: updateError } = await supabase
         .from('project_budget')
         .update({ 
           user_view: newSpending,
+          current_quarter_spent: newQuarterSpent,
           updated_at: new Date().toISOString()
         })
         .eq('id', budgetData.id);
@@ -329,16 +399,21 @@ export class DatabaseStorage implements IStorage {
       
       // Create budget history entry showing the decrease in available budget (katanomes_etous)
       // When spending increases, available budget decreases
-      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
       const previousAvailableBudget = katanomesEtous - currentSpending;
       const newAvailableBudget = katanomesEtous - newSpending;
+      
+      // Determine if this is spending (positive amount) or a refund (negative amount)
+      const isSpending = amount > 0;
+      const absoluteAmount = Math.abs(amount);
       
       await this.createBudgetHistoryEntry({
         project_id: projectId,
         previous_amount: String(previousAvailableBudget),
         new_amount: String(newAvailableBudget),
-        change_type: 'spending',
-        change_reason: `Document-related spending: €${amount}`,
+        change_type: isSpending ? 'spending' : 'refund',
+        change_reason: isSpending 
+          ? `Δαπάνη εγγράφου: €${absoluteAmount.toFixed(2)}`
+          : `Επιστροφή λόγω επεξεργασίας ή διαγραφής εγγράφου: €${absoluteAmount.toFixed(2)}`,
         document_id: documentId,
         created_by: userId
       });
@@ -371,11 +446,23 @@ export class DatabaseStorage implements IStorage {
       if (oldProjectId && newProjectId && oldProjectId !== newProjectId) {
         console.log(`[Storage] Project changed from ${oldProjectId} to ${newProjectId}`);
         
+        // PRE-VALIDATION: Check if the new project has sufficient budget BEFORE making any changes
+        // This prevents partial state where we removed from old project but can't add to new project
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
+        const newBudgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
+        if (newBudgetCheck.hardBlock) {
+          throw new Error(`BUDGET_EXCEEDED: Δεν είναι δυνατή η μεταφορά στο νέο έργο. ${newBudgetCheck.message}`);
+        }
+        // Log soft warning but allow proceeding
+        if (newBudgetCheck.budgetType === 'katanomi') {
+          console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${newBudgetCheck.message}`);
+        }
+        
         try {
-          // Remove old amount from old project
+          // Remove old amount from old project (refund - always succeeds)
           await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
           
-          // Add new amount to new project (if this fails, restore the old project)
+          // Add new amount to new project (already validated above)
           try {
             await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
           } catch (newProjectError) {
@@ -385,6 +472,8 @@ export class DatabaseStorage implements IStorage {
               await this.updateProjectBudgetSpending(oldProjectId, oldAmount, documentId, userId);
             } catch (restoreError) {
               console.error(`[Storage] CRITICAL: Failed to restore old project budget:`, restoreError);
+              // Log critical inconsistency for manual resolution
+              await this.logBudgetInconsistency(documentId, oldProjectId, newProjectId, oldAmount, newAmount, 'restore_failed');
             }
             throw newProjectError;
           }
@@ -399,12 +488,37 @@ export class DatabaseStorage implements IStorage {
         console.log(`[Storage] Amount changed from ${oldAmount} to ${newAmount} for project ${oldProjectId}`);
         
         const amountDifference = newAmount - oldAmount;
+        
+        // PRE-VALIDATION: Only validate if amount is increasing (more spending)
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
+        if (amountDifference > 0) {
+          const budgetCheck = await this.checkBudgetAvailability(oldProjectId, amountDifference);
+          if (budgetCheck.hardBlock) {
+            throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+          }
+          // Log soft warning but allow proceeding
+          if (budgetCheck.budgetType === 'katanomi') {
+            console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${budgetCheck.message}`);
+          }
+        }
+        
         await this.updateProjectBudgetSpending(oldProjectId, amountDifference, documentId, userId);
         
       }
       // Case 3: Project added (document didn't have a project before)
       else if (!oldProjectId && newProjectId) {
         console.log(`[Storage] Project added: ${newProjectId}`);
+        
+        // PRE-VALIDATION: Check budget availability for new spending
+        // Only HARD BLOCK (πίστωση exceeded) - κατανομή exceeded allows saving
+        const budgetCheck = await this.checkBudgetAvailability(newProjectId, newAmount);
+        if (budgetCheck.hardBlock) {
+          throw new Error(`BUDGET_EXCEEDED: ${budgetCheck.message}`);
+        }
+        // Log soft warning but allow proceeding
+        if (budgetCheck.budgetType === 'katanomi') {
+          console.log(`[Storage] Budget soft warning (κατανομή exceeded): ${budgetCheck.message}`);
+        }
         
         await this.updateProjectBudgetSpending(newProjectId, newAmount, documentId, userId);
         
@@ -413,6 +527,7 @@ export class DatabaseStorage implements IStorage {
       else if (oldProjectId && !newProjectId) {
         console.log(`[Storage] Project removed: ${oldProjectId}`);
         
+        // Refunds always succeed (no validation needed)
         await this.updateProjectBudgetSpending(oldProjectId, -oldAmount, documentId, userId);
       }
       
@@ -424,9 +539,233 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getBudgetHistory(mis?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
+  async checkBudgetAvailability(projectId: number, amount: number): Promise<{ 
+    isAvailable: boolean; 
+    message: string; 
+    availableBudget?: number;
+    hardBlock?: boolean;
+    budgetType?: 'pistosi' | 'katanomi' | null;
+    katanomesEtous?: number;
+    ethsiaPistosi?: number;
+    yearlyAvailable?: number;
+  }> {
     try {
-      console.log(`[Storage] Fetching budget history${mis ? ` for MIS: ${mis}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}`);
+      // Get budget data for the project
+      let { data: budgetData, error: budgetError } = await supabase
+        .from('project_budget')
+        .select('*')
+        .eq('project_id', projectId)
+        .single();
+
+      // Fallback to MIS lookup if project_id not found
+      if (budgetError) {
+        const { data: project } = await supabase
+          .from('Projects')
+          .select('mis')
+          .eq('id', projectId)
+          .single();
+
+        if (project?.mis) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('project_budget')
+            .select('*')
+            .eq('mis', project.mis)
+            .single();
+          
+          if (!fallbackError) {
+            budgetData = fallbackData;
+            budgetError = null;
+          }
+        }
+      }
+
+      if (budgetError || !budgetData) {
+        return {
+          isAvailable: false,
+          hardBlock: true,
+          message: `Δεν βρέθηκε εγγραφή προϋπολογισμού για το έργο ${projectId}`
+        };
+      }
+
+      const currentSpending = parseFloat(String(budgetData.user_view || 0));
+      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
+      const ethsiaPistosi = parseFloat(String(budgetData.ethsia_pistosi || 0));
+      const availableBudget = katanomesEtous - currentSpending;
+      const yearlyAvailable = ethsiaPistosi - currentSpending;
+
+      // PRIORITY: Check ετήσια πίστωση first - this is a HARD BLOCK (cannot proceed)
+      if (amount > yearlyAvailable) {
+        return {
+          isAvailable: false,
+          hardBlock: true,
+          budgetType: 'pistosi',
+          message: `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`,
+          availableBudget,
+          katanomesEtous,
+          ethsiaPistosi,
+          yearlyAvailable
+        };
+      }
+
+      // Check κατανομή έτους - this is a SOFT BLOCK (can save, but with warning)
+      if (amount > availableBudget) {
+        return {
+          isAvailable: true,
+          hardBlock: false,
+          budgetType: 'katanomi',
+          message: `Υπέρβαση κατανομής έτους. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμη Κατανομή: €${availableBudget.toFixed(2)}. Το έγγραφο θα αποθηκευτεί με προειδοποίηση.`,
+          availableBudget,
+          katanomesEtous,
+          ethsiaPistosi,
+          yearlyAvailable
+        };
+      }
+
+      return {
+        isAvailable: true,
+        hardBlock: false,
+        budgetType: null,
+        message: 'Επαρκές διαθέσιμο υπόλοιπο',
+        availableBudget,
+        katanomesEtous,
+        ethsiaPistosi,
+        yearlyAvailable
+      };
+    } catch (error) {
+      console.error('[Storage] Error checking budget availability:', error);
+      return {
+        isAvailable: false,
+        hardBlock: true,
+        message: 'Σφάλμα κατά τον έλεγχο διαθεσιμότητας προϋπολογισμού'
+      };
+    }
+  }
+
+  async logBudgetInconsistency(
+    documentId: number,
+    oldProjectId: number,
+    newProjectId: number,
+    oldAmount: number,
+    newAmount: number,
+    errorType: string
+  ): Promise<void> {
+    try {
+      console.error(`[Storage] CRITICAL BUDGET INCONSISTENCY LOGGED:`, {
+        documentId,
+        oldProjectId,
+        newProjectId,
+        oldAmount,
+        newAmount,
+        errorType,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Create a special budget history entry to flag this issue
+      await supabase
+        .from('budget_history')
+        .insert({
+          project_id: oldProjectId,
+          previous_amount: String(oldAmount),
+          new_amount: String(newAmount),
+          change_type: 'inconsistency_error',
+          change_reason: `CRITICAL: Budget reconciliation failed for document ${documentId}. Error: ${errorType}. Manual resolution required.`,
+          document_id: documentId,
+          created_at: new Date().toISOString()
+        });
+    } catch (logError) {
+      console.error('[Storage] Failed to log budget inconsistency:', logError);
+    }
+  }
+
+  async syncProjectBudgetIds(): Promise<{ synced: number; errors: number }> {
+    let synced = 0;
+    let errors = 0;
+    
+    try {
+      console.log('[Storage] Starting project_budget project_id synchronization...');
+      
+      // Find all budget records where project_id is NULL but MIS exists
+      const { data: budgetsWithoutProjectId, error: fetchError } = await supabase
+        .from('project_budget')
+        .select('id, mis, na853')
+        .is('project_id', null);
+      
+      if (fetchError) {
+        console.error('[Storage] Error fetching budgets without project_id:', fetchError);
+        return { synced: 0, errors: 1 };
+      }
+      
+      if (!budgetsWithoutProjectId || budgetsWithoutProjectId.length === 0) {
+        console.log('[Storage] No budget records need project_id synchronization');
+        return { synced: 0, errors: 0 };
+      }
+      
+      console.log(`[Storage] Found ${budgetsWithoutProjectId.length} budget records needing sync`);
+      
+      for (const budget of budgetsWithoutProjectId) {
+        try {
+          // Try to find the project by MIS first, then by NA853
+          let projectId: number | null = null;
+          
+          if (budget.mis) {
+            const { data: projectByMis } = await supabase
+              .from('Projects')
+              .select('id')
+              .eq('mis', budget.mis)
+              .single();
+            
+            if (projectByMis) {
+              projectId = projectByMis.id;
+            }
+          }
+          
+          if (!projectId && budget.na853) {
+            const { data: projectByNa853 } = await supabase
+              .from('Projects')
+              .select('id')
+              .eq('na853', budget.na853)
+              .single();
+            
+            if (projectByNa853) {
+              projectId = projectByNa853.id;
+            }
+          }
+          
+          if (projectId) {
+            const { error: updateError } = await supabase
+              .from('project_budget')
+              .update({ project_id: projectId })
+              .eq('id', budget.id);
+            
+            if (updateError) {
+              console.error(`[Storage] Error updating budget ${budget.id}:`, updateError);
+              errors++;
+            } else {
+              console.log(`[Storage] Synced budget ${budget.id} to project ${projectId}`);
+              synced++;
+            }
+          } else {
+            console.warn(`[Storage] No project found for budget ${budget.id} (MIS: ${budget.mis}, NA853: ${budget.na853})`);
+            errors++;
+          }
+        } catch (budgetError) {
+          console.error(`[Storage] Error processing budget ${budget.id}:`, budgetError);
+          errors++;
+        }
+      }
+      
+      console.log(`[Storage] Project_budget sync complete: ${synced} synced, ${errors} errors`);
+      return { synced, errors };
+      
+    } catch (error) {
+      console.error('[Storage] Error in syncProjectBudgetIds:', error);
+      return { synced, errors: errors + 1 };
+    }
+  }
+
+  async getBudgetHistory(na853?: string, page: number = 1, limit: number = 10, changeType?: string, userUnits?: number[], dateFrom?: string, dateTo?: string, creator?: string, expenditureType?: string): Promise<{data: any[], pagination: {total: number, page: number, limit: number, pages: number}, statistics?: {totalEntries: number, totalAmountChange: number, changeTypes: Record<string, number>, periodRange: { start: string, end: string }}}> {
+    try {
+      console.log(`[Storage] Fetching budget history${na853 ? ` for NA853: ${na853}` : ' for all projects'}, page ${page}, limit ${limit}, changeType: ${changeType || 'all'}, userUnits: ${userUnits?.join(',') || 'all'}, expenditureType: ${expenditureType || 'all'}`);
       
       const offset = (page - 1) * limit;
       
@@ -471,7 +810,9 @@ export class DatabaseStorage implements IStorage {
           created_at,
           updated_at,
           Projects!budget_history_project_id_fkey (
+            id,
             mis,
+            na853,
             project_title
           ),
           generated_documents!budget_history_document_id_fkey (
@@ -524,18 +865,18 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Apply filters
-      if (mis && mis !== 'all') {
-        // Need to get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Need to get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {
           query = query.eq('project_id', projectData.id);
         } else {
-          // MIS not found - return empty result
+          // NA853 not found - return empty result
           return {
             data: [],
             pagination: { total: 0, page, limit, pages: 0 },
@@ -573,6 +914,39 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           query = query.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter if specified
+      // Uses correct relationship chain: budget_history -> generated_documents -> project_index -> expenditure_types
+      // Preserves entries without documents (null document_id) for system operations
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        // Step 1: Get project_index IDs that match the expenditure type
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
+          
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          // Step 2: Get document IDs that reference those project_index IDs
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Step 3: Filter to include rows with matching document IDs OR null document_id (system operations)
+            query = query.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            // No documents found - only show system operations (null document_id)
+            query = query.is('document_id', null);
+          }
+        } else {
+          // No project_index entries match - only show system operations (null document_id)
+          query = query.is('document_id', null);
         }
       }
       
@@ -625,12 +999,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      if (mis && mis !== 'all') {
-        // Get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {
@@ -673,6 +1047,33 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           statsQuery = statsQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter to stats query
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
+          
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Filter to include rows with matching document IDs OR null document_id
+            statsQuery = statsQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            statsQuery = statsQuery.is('document_id', null);
+          }
+        } else {
+          statsQuery = statsQuery.is('document_id', null);
         }
       }
       
@@ -745,12 +1146,12 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      if (mis && mis !== 'all') {
-        // Get project_id for the MIS filter
+      if (na853 && na853 !== 'all') {
+        // Get project_id for the NA853 filter
         const { data: projectData, error: projectError } = await supabase
           .from('Projects')
           .select('id')
-          .eq('mis', mis)
+          .eq('na853', na853)
           .single();
           
         if (!projectError && projectData) {
@@ -779,6 +1180,33 @@ export class DatabaseStorage implements IStorage {
           
         if (!creatorError && creatorData) {
           countQuery = countQuery.eq('created_by', creatorData.id);
+        }
+      }
+      
+      // Apply expenditure type filter to count query
+      if (expenditureType && expenditureType !== 'all' && expenditureType !== '') {
+        const { data: projectIndexData, error: projectIndexError } = await supabase
+          .from('project_index')
+          .select('id')
+          .eq('expenditure_type_id', parseInt(expenditureType));
+          
+        if (!projectIndexError && projectIndexData && projectIndexData.length > 0) {
+          const projectIndexIds = projectIndexData.map(pi => pi.id);
+          
+          const { data: documentsData, error: documentsError } = await supabase
+            .from('generated_documents')
+            .select('id')
+            .in('project_index_id', projectIndexIds);
+          
+          if (!documentsError && documentsData && documentsData.length > 0) {
+            const documentIds = documentsData.map(d => d.id);
+            // Filter to include rows with matching document IDs OR null document_id
+            countQuery = countQuery.or(`document_id.in.(${documentIds.join(',')}),document_id.is.null`);
+          } else {
+            countQuery = countQuery.is('document_id', null);
+          }
+        } else {
+          countQuery = countQuery.is('document_id', null);
         }
       }
       
@@ -874,22 +1302,33 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Extract document information from the join
-        const documentData = entry.generated_documents?.[0] || null;
+        // Supabase returns a single object for foreign key joins, not an array
+        const documentData: any = Array.isArray(entry.generated_documents) 
+          ? entry.generated_documents[0] 
+          : entry.generated_documents || null;
         const documentStatus = documentData?.status || null;
         const protocolNumberInput = documentData?.protocol_number_input || null;
         
         console.log(`[Storage] Document data for entry ${entry.id}:`, documentData);
         
-        // Extract MIS from the joined Projects table
+        // Extract project data from the joined Projects table
         const projectData = entry.Projects || {};
         const projectMis = Array.isArray(projectData) 
           ? (projectData[0] as any)?.mis || 'Unknown' 
           : (projectData as any).mis || 'Unknown';
+        const projectNa853 = Array.isArray(projectData) 
+          ? (projectData[0] as any)?.na853 || null 
+          : (projectData as any).na853 || null;
+        const projectId = Array.isArray(projectData) 
+          ? (projectData[0] as any)?.id || null 
+          : (projectData as any).id || null;
         
         // The columns already match what the frontend expects, so we can use them directly
         return {
           id: entry.id,
+          project_id: projectId,
           mis: projectMis,
+          na853: projectNa853,
           previous_amount: entry.previous_amount || '0',
           new_amount: entry.new_amount || '0',
           change_type: entry.change_type || '',
@@ -946,6 +1385,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Employee management methods
+  private clearEngineersCache(): void {
+    this.engineersCache = null;
+  }
+
   async getAllEmployees(): Promise<Employee[]> {
     try {
       console.log('[Storage] Fetching all employees');
@@ -960,10 +1403,48 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees`);
-      return data || [];
+      const decryptedEmployees = (data || []).map(e => ({
+        ...e,
+        afm: decryptAFM(e.afm)
+      }));
+      
+      console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees`);
+      return decryptedEmployees;
     } catch (error) {
       console.error('[Storage] Error in getAllEmployees:', error);
+      throw error;
+    }
+  }
+
+  async getEngineers(): Promise<EngineerSummary[]> {
+    try {
+      const now = Date.now();
+      if (this.engineersCache && this.engineersCache.expiresAt > now) {
+        console.log(`[Storage] Returning ${this.engineersCache.data.length} engineers from cache`);
+        return this.engineersCache.data;
+      }
+
+      console.log('[Storage] Fetching engineers with DB-side filter');
+
+      const { data, error } = await supabase
+        .from('Employees')
+        .select('id, name, surname, attribute')
+        .eq('attribute', 'Μηχανικός')
+        .order('surname', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('[Storage] Error fetching engineers:', error);
+        throw error;
+      }
+
+      const engineers = data || [];
+      this.engineersCache = { data: engineers, expiresAt: now + ENGINEERS_CACHE_TTL };
+      console.log(`[Storage] Cached ${engineers.length} engineers for ${ENGINEERS_CACHE_TTL / 1000}s`);
+
+      return engineers;
+    } catch (error) {
+      console.error('[Storage] Error in getEngineers:', error);
       throw error;
     }
   }
@@ -983,8 +1464,13 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} employees for unit: ${unit}`);
-      return data || [];
+      const decryptedEmployees = (data || []).map(e => ({
+        ...e,
+        afm: decryptAFM(e.afm)
+      }));
+      
+      console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees for unit: ${unit}`);
+      return decryptedEmployees;
     } catch (error) {
       console.error('[Storage] Error in getEmployeesByUnit:', error);
       throw error;
@@ -995,73 +1481,70 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
       
-      // Validate that AFM contains only digits
       if (!/^\d+$/.test(afm)) {
         console.log(`[Storage] Invalid AFM format (contains non-digits): ${afm}`);
         return [];
       }
       
-      const minDigits = 9; // Greek AFM is always 9 digits
+      const minDigits = 9;
       const currentDigits = afm.length;
       
       if (currentDigits >= minDigits) {
-        // Exact match for full AFM - search both as string and number to handle leading zeros
-        console.log(`[Storage] Exact AFM search for: ${afm}`);
+        console.log(`[Storage] Exact AFM search using hash for: ${afm}`);
         
-        // Try searching as string first (preserves leading zeros)
-        let { data, error } = await supabase
-          .from('Employees')
-          .select('*')
-          .eq('afm', afm)
-          .order('surname', { ascending: true })
-          .limit(20);
-          
-        if (error) {
-          console.error('[Storage] Error searching employees by exact AFM (string):', error);
-          throw error;
-        }
+        const afmHash = hashAFM(afm);
         
-        // If no results with string search and AFM has leading zeros, try numeric search
-        if ((!data || data.length === 0) && afm.startsWith('0')) {
-          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
-          const searchNum = parseInt(afm);
-          
-          const numericResult = await supabase
-            .from('Employees')
-            .select('*')
-            .eq('afm', searchNum)
-            .order('surname', { ascending: true })
-            .limit(20);
-            
-          if (numericResult.error) {
-            console.error('[Storage] Error searching employees by exact AFM (numeric):', numericResult.error);
-            throw numericResult.error;
-          }
-          
-          data = numericResult.data;
-        }
-        
-        console.log(`[Storage] Found ${data?.length || 0} employees with exact AFM: ${afm}`);
-        return data || [];
-      } else {
-        // Prefix matching using text-based pattern matching for partial AFM
-        console.log(`[Storage] Text-based prefix search for AFM: ${afm}`);
-        
-        // Use text pattern matching to handle leading zeros properly
+        // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('Employees')
-          .select('*')
-          .or(`afm.like.${afm}%,afm::text.like.${afm}%`)
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
+          .eq('afm_hash', afmHash)
           .order('surname', { ascending: true })
           .limit(20);
           
         if (error) {
-          console.error('[Storage] Error searching employees by AFM prefix:', error);
+          console.error('[Storage] Error searching employees by AFM hash:', error);
           throw error;
         }
         
-        console.log(`[Storage] Found ${data?.length || 0} employees matching AFM prefix: ${afm}`);
-        return data || [];
+        const decryptedEmployees = (data || []).map(e => ({
+          ...e,
+          afm: decryptAFM(e.afm)
+        }));
+        
+        console.log(`[Storage] Found ${decryptedEmployees.length} employees with exact AFM: ${afm}`);
+        return decryptedEmployees;
+      } else {
+        console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
+        
+        // Optimized: select only essential columns and reduced batch size
+        const { data, error } = await supabase
+          .from('Employees')
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
+          .order('surname', { ascending: true })
+          .limit(200);
+          
+        if (error) {
+          console.error('[Storage] Error fetching employees for prefix search:', error);
+          throw error;
+        }
+        
+        // Optimized: early exit after finding 20 matches to avoid unnecessary decryption
+        const results: any[] = [];
+        for (const e of (data || [])) {
+          if (results.length >= 20) break;
+          
+          const decryptedAFM = decryptAFM(e.afm);
+          if (decryptedAFM && decryptedAFM.startsWith(afm)) {
+            results.push({
+              ...e,
+              afm: decryptedAFM
+            });
+          }
+        }
+        
+        console.log(`[Storage] Found ${results.length} employees matching AFM prefix: ${afm}`);
+        return results;
       }
     } catch (error) {
       console.error('[Storage] Error in searchEmployeesByAFM:', error);
@@ -1073,9 +1556,16 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new employee:', employee);
       
+      const afmString = employee.afm ? String(employee.afm) : '';
+      const employeeToInsert = {
+        ...employee,
+        afm: afmString ? encryptAFM(afmString) : '',
+        afm_hash: afmString ? hashAFM(afmString) : ''
+      };
+      
       const { data, error } = await supabase
         .from('Employees')
-        .insert(employee)
+        .insert(employeeToInsert)
         .select()
         .single();
         
@@ -1085,7 +1575,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created employee:', data);
-      return data;
+      this.clearEngineersCache();
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in createEmployee:', error);
       throw error;
@@ -1096,9 +1591,16 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating employee ${id}:`, employee);
       
+      const afmString = employee.afm ? String(employee.afm) : '';
+      const employeeToUpdate = {
+        ...employee,
+        afm: afmString ? encryptAFM(afmString) : undefined,
+        afm_hash: afmString ? hashAFM(afmString) : undefined
+      };
+      
       const { data, error } = await supabase
         .from('Employees')
-        .update(employee)
+        .update(employeeToUpdate)
         .eq('id', id)
         .select()
         .single();
@@ -1109,10 +1611,80 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated employee:', data);
-      return data;
+      this.clearEngineersCache();
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in updateEmployee:', error);
       throw error;
+    }
+  }
+
+  async bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }> {
+    try {
+      console.log(`[Storage] Bulk importing ${employees.length} employees`);
+      
+      // Deduplicate by AFM - keep only the last occurrence of each AFM
+      const afmMap = new Map<string, InsertEmployee>();
+      for (const emp of employees) {
+        const afmString = emp.afm ? String(emp.afm) : '';
+        if (afmString) {
+          afmMap.set(afmString, emp);
+        } else if (!afmMap.has('')) {
+          afmMap.set('', emp);
+        }
+      }
+      
+      const deduplicatedEmployees = Array.from(afmMap.values());
+      console.log(`[Storage] Deduplicated from ${employees.length} to ${deduplicatedEmployees.length} employees`);
+      
+      // Get the max ID from existing employees to generate sequential IDs
+      const { data: maxIdData, error: maxIdError } = await supabase
+        .from('Employees')
+        .select('id')
+        .order('id', { ascending: false })
+        .limit(1);
+        
+      let nextId = 1;
+      if (!maxIdError && maxIdData && maxIdData.length > 0) {
+        nextId = (maxIdData[0].id as number) + 1;
+      }
+      
+      console.log(`[Storage] Starting bulk import from ID: ${nextId}`);
+      
+      const employeesToInsert = deduplicatedEmployees.map((emp, idx) => {
+        const afmString = emp.afm ? String(emp.afm) : '';
+        const encryptedAfm = afmString ? encryptAFM(afmString) : '';
+        return {
+          ...emp,
+          id: nextId + idx,
+          afm: encryptedAfm,
+          afm_hash: afmString ? hashAFM(afmString) : ''
+        };
+      });
+      
+      // Use upsert to update existing employees (by AFM hash) or insert new ones
+      // Use afm_hash instead of afm because AFM encryption is randomized each time
+      const { data, error } = await supabase
+        .from('Employees')
+        .upsert(employeesToInsert, { onConflict: 'afm_hash' })
+        .select();
+        
+      if (error) {
+        console.error('[Storage] Error in bulk import:', error);
+        return { success: 0, failed: deduplicatedEmployees.length, errors: [error.message] };
+      }
+      
+      console.log(`[Storage] Successfully imported/updated ${data?.length || 0} employees`);
+      this.clearEngineersCache();
+      return { success: data?.length || 0, failed: 0, errors: [] };
+    } catch (error) {
+      console.error('[Storage] Error in bulkImportEmployees:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      return { success: 0, failed: employees.length, errors: [errorMsg] };
     }
   }
 
@@ -1131,9 +1703,84 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully deleted employee ${id}`);
+      this.clearEngineersCache();
     } catch (error) {
       console.error('[Storage] Error in deleteEmployee:', error);
       throw error;
+    }
+  }
+
+  async cleanupDuplicateEmployees(): Promise<{ deleted: number; kept: number; errors: string[] }> {
+    try {
+      console.log('[Storage] Starting duplicate employee cleanup...');
+      
+      // Get all employees grouped by afm_hash to find duplicates
+      const { data: allEmployees, error: fetchError } = await supabase
+        .from('Employees')
+        .select('id, afm_hash');
+        
+      if (fetchError || !allEmployees) {
+        console.error('[Storage] Error fetching employees for cleanup:', fetchError);
+        return { deleted: 0, kept: 0, errors: [fetchError?.message || 'Failed to fetch employees'] };
+      }
+      
+      // Group by afm_hash to find duplicates
+      const groupsByHash = new Map<string, number[]>();
+      for (const emp of allEmployees) {
+        const hash = emp.afm_hash || '';
+        if (!groupsByHash.has(hash)) {
+          groupsByHash.set(hash, []);
+        }
+        groupsByHash.get(hash)!.push(emp.id);
+      }
+      
+      // Find duplicates and collect IDs to delete (keep lowest ID for each hash)
+      const idsToDelete: number[] = [];
+      for (const [hash, ids] of Array.from(groupsByHash.entries())) {
+        if (ids.length > 1 && hash !== '') {
+          // Sort IDs, keep the lowest (original), delete the rest
+          ids.sort((a: number, b: number) => a - b);
+          const kept = ids[0];
+          const toDelete = ids.slice(1);
+          console.log(`[Storage] Duplicate hash ${hash}: keeping ID ${kept}, deleting ${toDelete.length} copies`);
+          idsToDelete.push(...toDelete);
+        }
+      }
+      
+      console.log(`[Storage] Total duplicates to delete: ${idsToDelete.length}`);
+      
+      if (idsToDelete.length === 0) {
+        console.log('[Storage] No duplicates found');
+        return { deleted: 0, kept: allEmployees.length, errors: [] };
+      }
+      
+      // Delete duplicates in batches
+      let deletedCount = 0;
+      const batchSize = 100;
+      for (let i = 0; i < idsToDelete.length; i += batchSize) {
+        const batch = idsToDelete.slice(i, i + batchSize);
+        const { error: deleteError } = await supabase
+          .from('Employees')
+          .delete()
+          .in('id', batch);
+          
+        if (deleteError) {
+          console.error('[Storage] Error deleting batch:', deleteError);
+          return { deleted: deletedCount, kept: allEmployees.length - idsToDelete.length, errors: [deleteError.message] };
+        }
+        deletedCount += batch.length;
+        console.log(`[Storage] Deleted batch of ${batch.length}, total: ${deletedCount}`);
+      }
+      
+      console.log(`[Storage] Successfully cleaned up duplicates. Deleted: ${deletedCount}`);
+      if (deletedCount > 0) {
+        this.clearEngineersCache();
+      }
+      return { deleted: deletedCount, kept: allEmployees.length - idsToDelete.length, errors: [] };
+    } catch (error) {
+      console.error('[Storage] Error in cleanupDuplicateEmployees:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      return { deleted: 0, kept: 0, errors: [errorMsg] };
     }
   }
 
@@ -1152,7 +1799,6 @@ export class DatabaseStorage implements IStorage {
       while (hasMore) {
         console.log(`[Storage] Fetching batch ${Math.floor(fromIndex / batchSize) + 1}, starting from index ${fromIndex}`);
         
-        // Use the legacy Beneficiary table since it has the expected structure with monada column
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
@@ -1163,16 +1809,18 @@ export class DatabaseStorage implements IStorage {
           throw error;
         }
         
-        const batchData = data || [];
+        const batchData = (data || []).map(b => ({
+          ...b,
+          afm: decryptAFM(b.afm)
+        }));
+        
         allBeneficiaries.push(...batchData);
         
         console.log(`[Storage] Fetched ${batchData.length} beneficiaries in this batch. Total so far: ${allBeneficiaries.length}`);
         
-        // If we got less than the batch size, we've reached the end
         hasMore = batchData.length === batchSize;
         fromIndex += batchSize;
         
-        // Safety break to prevent infinite loops
         if (fromIndex > 50000) {
           console.warn('[Storage] Safety break activated - stopping at 50,000 records');
           break;
@@ -1187,77 +1835,345 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async getBeneficiariesByUnitOptimized(unit: string): Promise<any[]> {
+    try {
+      console.log(`[Storage] Fetching beneficiaries for unit: ${unit} (OPTIMIZED - no AFM decryption, with unit filtering)`);
+      
+      // SECURITY: First, get the unit_id from the monada table
+      const { data: monadaData, error: monadaError } = await supabase
+        .from('Monada')
+        .select('id')
+        .eq('unit', unit)
+        .single();
+        
+      if (monadaError || !monadaData) {
+        console.error(`[Storage] Could not find unit ID for unit code: ${unit}`, monadaError);
+        return [];
+      }
+      
+      const unitId = monadaData.id;
+      console.log(`[Storage] Mapped unit "${unit}" to unit_id: ${unitId}`);
+      
+      // STEP 1: Get beneficiary IDs that have payments for this unit
+      const { data: paymentsBeneficiaryIds, error: paymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id')
+        .eq('unit_id', unitId);
+        
+      if (paymentsError) {
+        console.error('[Storage] Error fetching beneficiary IDs from payments:', paymentsError);
+        throw paymentsError;
+      }
+      
+      // Extract unique beneficiary IDs from payments
+      const beneficiaryIdsWithPayments = new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+      console.log(`[Storage] Found ${beneficiaryIdsWithPayments.size} beneficiaries with payments for unit ${unit}`);
+      
+      // STEP 2: Get ALL beneficiary IDs that have ANY payment (to exclude from "new" beneficiaries)
+      const { data: allPaymentsBeneficiaryIds, error: allPaymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id');
+        
+      if (allPaymentsError) {
+        console.error('[Storage] Error fetching all beneficiary IDs from payments:', allPaymentsError);
+        throw allPaymentsError;
+      }
+      
+      const allBeneficiaryIdsWithPayments = new Set(allPaymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
+      console.log(`[Storage] Total beneficiaries with any payments: ${allBeneficiaryIdsWithPayments.size}`);
+      
+      // STEP 3: Get beneficiaries that have NO payments yet (new beneficiaries visible to all units)
+      // These are beneficiaries that exist but haven't been assigned to any unit through payments
+      const { data: allBeneficiaryIds, error: allBeneficiariesError } = await supabase
+        .from('beneficiaries')
+        .select('id');
+        
+      if (allBeneficiariesError) {
+        console.error('[Storage] Error fetching all beneficiary IDs:', allBeneficiariesError);
+        throw allBeneficiariesError;
+      }
+      
+      // Find beneficiaries with NO payments (new/unassigned)
+      const beneficiaryIdsWithoutPayments = (allBeneficiaryIds || [])
+        .filter(b => !allBeneficiaryIdsWithPayments.has(b.id))
+        .map(b => b.id);
+      console.log(`[Storage] Found ${beneficiaryIdsWithoutPayments.length} beneficiaries without any payments (new/unassigned)`);
+      
+      // STEP 4: Combine: beneficiaries with payments for this unit + new beneficiaries without any payments
+      const uniqueBeneficiaryIds = Array.from(new Set([
+        ...Array.from(beneficiaryIdsWithPayments),
+        ...beneficiaryIdsWithoutPayments
+      ]));
+      console.log(`[Storage] Total beneficiaries to fetch: ${uniqueBeneficiaryIds.length} (${beneficiaryIdsWithPayments.size} with payments + ${beneficiaryIdsWithoutPayments.length} new)`);
+      
+      if (uniqueBeneficiaryIds.length === 0) {
+        return [];
+      }
+      
+      // Fetch beneficiaries in batches using .in() for the filtered IDs
+      let allBeneficiaries: any[] = [];
+      const batchSize = 1000;
+      
+      for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {
+        const idBatch = uniqueBeneficiaryIds.slice(i, i + batchSize);
+        console.log(`[Storage] Fetching batch ${Math.floor(i / batchSize) + 1} of beneficiaries (${idBatch.length} IDs)`);
+        
+        // Select only needed fields, exclude encrypted AFM field
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('id, surname, name, fathername, ceng1, ceng2, regiondet, freetext, date, created_at, updated_at, afm_hash, adeia, onlinefoldernumber')
+          .in('id', idBatch);
+          
+        if (error) {
+          console.error('[Storage] Error fetching beneficiaries batch:', error);
+          throw error;
+        }
+        
+        // Return data without decrypting AFM - masked for security and performance
+        const batchData = (data || []).map(b => ({
+          ...b,
+          afm: '***MASKED***', // Masked AFM for list view
+          monada: unit // Add unit for compatibility
+        }));
+        
+        allBeneficiaries.push(...batchData);
+      }
+      
+      console.log(`[Storage] FINAL: Successfully fetched ${allBeneficiaries.length} beneficiaries (optimized, unit-filtered + new) for unit: ${unit}`);
+      return allBeneficiaries;
+    } catch (error) {
+      console.error('[Storage] Error in getBeneficiariesByUnitOptimized:', error);
+      throw error;
+    }
+  }
+
   async searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]> {
     try {
       console.log(`[Storage] Searching beneficiaries by AFM: ${afm}`);
       
-      // Validate that AFM contains only digits
       if (!/^\d+$/.test(afm)) {
         console.log(`[Storage] Invalid AFM format (contains non-digits): ${afm}`);
         return [];
       }
       
-      const minDigits = 9; // Greek AFM is always 9 digits
+      const minDigits = 9;
       const currentDigits = afm.length;
       
       if (currentDigits >= minDigits) {
-        // Exact match for full AFM - search both as string and number to handle leading zeros
-        console.log(`[Storage] Exact AFM search for: ${afm}`);
+        console.log(`[Storage] Exact AFM search using hash for: ${afm}`);
         
-        // Try searching as string first (preserves leading zeros)
-        let { data, error } = await supabase
-          .from('beneficiaries')
-          .select('*')
-          .eq('afm', afm)
-          .order('id', { ascending: false });
-          
-        if (error) {
-          console.error('[Storage] Error searching beneficiaries by exact AFM (string):', error);
-          throw error;
-        }
+        const afmHash = hashAFM(afm);
         
-        // If no results with string search and AFM has leading zeros, try numeric search
-        if ((!data || data.length === 0) && afm.startsWith('0')) {
-          console.log(`[Storage] No results with string search, trying numeric search for AFM: ${afm}`);
-          const searchNum = parseInt(afm);
-          
-          const numericResult = await supabase
-            .from('beneficiaries')
-            .select('*')
-            .eq('afm', searchNum)
-            .order('id', { ascending: false });
-            
-          if (numericResult.error) {
-            console.error('[Storage] Error searching beneficiaries by exact AFM (numeric):', numericResult.error);
-            throw numericResult.error;
-          }
-          
-          data = numericResult.data;
-        }
-        
-        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with exact AFM: ${afm}`);
-        return data || [];
-      } else {
-        // Prefix matching using text-based pattern matching for partial AFM
-        console.log(`[Storage] Text-based prefix search for AFM: ${afm}`);
-        
-        // Use ilike for case-insensitive prefix matching (handles both text and numeric AFM storage)
+        // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('beneficiaries')
           .select('*')
-          .ilike('afm', `${afm}%`)
-          .order('id', { ascending: false });
+          .eq('afm_hash', afmHash)
+          .order('id', { ascending: false})
+          .limit(100);
           
         if (error) {
-          console.error('[Storage] Error searching beneficiaries by AFM prefix:', error);
+          console.error('[Storage] Error searching beneficiaries by AFM hash:', error);
           throw error;
         }
         
-        console.log(`[Storage] Found ${data?.length || 0} beneficiaries with AFM prefix: ${afm}`);
-        return data || [];
+        const decryptedBeneficiaries = (data || []).map(b => ({
+          ...b,
+          afm: decryptAFM(b.afm)
+        }));
+        
+        console.log(`[Storage] Found ${decryptedBeneficiaries.length} beneficiaries with exact AFM: ${afm}`);
+        return decryptedBeneficiaries;
+      } else {
+        console.log(`[Storage] Prefix search for AFM: ${afm} - fetching records to decrypt and filter`);
+        
+        // Optimized: select only essential columns and reduced batch size
+        const { data, error } = await supabase
+          .from('beneficiaries')
+          .select('*')
+          .order('id', { ascending: false })
+          .limit(300);
+          
+        if (error) {
+          console.error('[Storage] Error fetching beneficiaries for prefix search:', error);
+          throw error;
+        }
+        
+        // Optimized: early exit after finding 100 matches to avoid unnecessary decryption
+        const results: any[] = [];
+        for (const b of (data || [])) {
+          if (results.length >= 100) break;
+          
+          const decryptedAFM = decryptAFM(b.afm);
+          if (decryptedAFM && decryptedAFM.startsWith(afm)) {
+            results.push({
+              ...b,
+              afm: decryptedAFM
+            });
+          }
+        }
+        
+        console.log(`[Storage] Found ${results.length} beneficiaries matching AFM prefix: ${afm}`);
+        return results;
       }
     } catch (error) {
       console.error('[Storage] Error in searchBeneficiariesByAFM:', error);
+      throw error;
+    }
+  }
+
+  async searchDocumentsByAFM(afm: string, userUnits: number[]): Promise<GeneratedDocument[]> {
+    try {
+      console.log(`[Storage] Searching documents by AFM: ${afm} for units:`, userUnits);
+      
+      if (!/^\d{9}$/.test(afm)) {
+        console.log(`[Storage] Invalid AFM format - must be exactly 9 digits: ${afm}`);
+        return [];
+      }
+      
+      // SECURITY: Verify user has at least one authorized unit
+      if (!userUnits || userUnits.length === 0) {
+        console.log(`[Storage] SECURITY: No authorized units provided`);
+        return [];
+      }
+      
+      const afmHash = hashAFM(afm);
+      // Use Set that accepts both number and string to safely handle Supabase BigInt IDs
+      const documentIds = new Set<number | string>();
+      
+      // PART 1: Search beneficiary payments with SECURITY unit filtering
+      console.log(`[Storage] Searching beneficiary payments with AFM hash for units:`, userUnits);
+      const { data: beneficiaryPayments, error: benError} = await supabase
+        .from('beneficiary_payments')
+        .select(`
+          document_id,
+          beneficiaries!inner (
+            afm_hash
+          ),
+          generated_documents!inner (
+            unit_id
+          )
+        `)
+        .eq('beneficiaries.afm_hash', afmHash)
+        .in('generated_documents.unit_id', userUnits);
+      
+      if (benError) {
+        console.error('[Storage] Error searching beneficiary payments:', benError);
+      } else {
+        (beneficiaryPayments || []).forEach(payment => {
+          if (payment.document_id != null) {
+            const docId = payment.document_id;
+            // Keep ID as-is (whatever type Supabase returns) - validate it's not NaN/invalid
+            // For numbers: check it's a valid positive integer
+            // For strings: check it's a numeric string  
+            const isValidNumber = typeof docId === 'number' && Number.isFinite(docId) && docId > 0 && Number.isInteger(docId);
+            const isValidString = typeof docId === 'string' && /^\d+$/.test(docId) && docId.length > 0;
+            
+            if (isValidNumber || isValidString) {
+              documentIds.add(docId);
+            } else {
+              console.warn(`[Storage] Skipping invalid document_id from beneficiary payment:`, docId, typeof docId);
+            }
+          }
+        });
+        console.log(`[Storage] Found ${documentIds.size} documents from beneficiary payments (unit-filtered)`);
+      }
+      
+      // PART 2: Search employee payments with SECURITY unit filtering
+      console.log(`[Storage] Searching employee payments with AFM hash for units:`, userUnits);
+      const { data: employeePayments, error: empError } = await supabase
+        .from('EmployeePayments')
+        .select(`
+          id,
+          Employees!inner (
+            afm_hash
+          )
+        `)
+        .eq('Employees.afm_hash', afmHash);
+      
+      if (empError) {
+        console.error('[Storage] Error searching employee payments:', empError);
+      } else if (employeePayments && employeePayments.length > 0) {
+        // Get employee payment IDs
+        const employeePaymentIds = employeePayments.map(ep => ep.id);
+        console.log(`[Storage] Found ${employeePaymentIds.length} employee payment IDs`);
+        
+        // SECURITY: Find documents that contain these employee payment IDs AND belong to user's units
+        const { data: empDocuments, error: empDocError } = await supabase
+          .from('generated_documents')
+          .select('id, employee_payments_id, unit_id')
+          .not('employee_payments_id', 'is', null)
+          .in('unit_id', userUnits);
+        
+        if (empDocError) {
+          console.error('[Storage] Error searching documents with employee payments:', empDocError);
+        } else {
+          (empDocuments || []).forEach(doc => {
+            const empPaymentIds = doc.employee_payments_id || [];
+            if (Array.isArray(empPaymentIds) && empPaymentIds.some((id: number) => employeePaymentIds.includes(id))) {
+              if (doc.id != null) {
+                const docId = doc.id;
+                // Keep ID as-is (whatever type Supabase returns) - validate it's not NaN/invalid
+                // For numbers: check it's a valid positive integer
+                // For strings: check it's a numeric string
+                const isValidNumber = typeof docId === 'number' && Number.isFinite(docId) && docId > 0 && Number.isInteger(docId);
+                const isValidString = typeof docId === 'string' && /^\d+$/.test(docId) && docId.length > 0;
+                
+                if (isValidNumber || isValidString) {
+                  documentIds.add(docId);
+                } else {
+                  console.warn(`[Storage] Skipping invalid document id from employee search:`, docId, typeof docId);
+                }
+              }
+            }
+          });
+          console.log(`[Storage] Total documents found after employee search (unit-filtered): ${documentIds.size}`);
+        }
+      }
+      
+      // PART 3: Fetch final documents (already filtered by unit)
+      if (documentIds.size === 0) {
+        console.log(`[Storage] No documents found matching AFM: ${afm} for authorized units`);
+        return [];
+      }
+      
+      // DEFENSIVE: Filter out any invalid IDs before querying (belt and suspenders approach)
+      // The Set should already contain only valid IDs, but this ensures database safety
+      // Keep IDs as-is (don't convert) to preserve BigInt precision
+      const validDocumentIds = Array.from(documentIds).filter(id => {
+        if (typeof id === 'number') {
+          return Number.isFinite(id) && Number.isInteger(id) && id > 0;
+        } else if (typeof id === 'string') {
+          return /^\d+$/.test(id) && id.length > 0;
+        }
+        return false;
+      });
+      
+      if (validDocumentIds.length === 0) {
+        console.warn(`[Storage] All document IDs were invalid after filtering`);
+        return [];
+      }
+      
+      if (validDocumentIds.length !== documentIds.size) {
+        console.warn(`[Storage] Filtered out ${documentIds.size - validDocumentIds.length} invalid document IDs`);
+      }
+      
+      console.log(`[Storage] Fetching ${validDocumentIds.length} documents (all pre-filtered by user units)...`);
+      const { data: documents, error: docError } = await supabase
+        .from('generated_documents')
+        .select('*')
+        .in('id', validDocumentIds)
+        .order('created_at', { ascending: false });
+      
+      if (docError) {
+        console.error('[Storage] Error fetching documents:', docError);
+        throw docError;
+      }
+      
+      console.log(`[Storage] SECURITY: Returning ${documents?.length || 0} documents (all verified to belong to user units)`);
+      return documents || [];
+    } catch (error) {
+      console.error('[Storage] Error in searchDocumentsByAFM:', error);
       throw error;
     }
   }
@@ -1282,7 +2198,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log(`[Storage] Successfully fetched beneficiary:`, data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in getBeneficiaryById:', error);
       throw error;
@@ -1293,14 +2213,17 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('[Storage] Creating new beneficiary:', beneficiary);
       
-      // Let the database handle ID generation with its sequence
+      const beneficiaryToInsert = {
+        ...beneficiary,
+        afm: encryptAFM(beneficiary.afm),
+        afm_hash: hashAFM(beneficiary.afm),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
       const { data, error } = await supabase
         .from('beneficiaries')
-        .insert({
-          ...beneficiary,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(beneficiaryToInsert)
         .select()
         .single();
         
@@ -1310,7 +2233,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created beneficiary with ID:', data.id);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in createBeneficiary:', error);
       throw error;
@@ -1321,12 +2248,40 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating beneficiary ${id}:`, beneficiary);
       
+      let mergedRegiondet = beneficiary.regiondet;
+
+      // Merge payment_ids to preserve existing entries when regiondet is provided
+      if (Object.prototype.hasOwnProperty.call(beneficiary, 'regiondet')) {
+        const { data: existing, error: existingError } = await supabase
+          .from('beneficiaries')
+          .select('regiondet')
+          .eq('id', id)
+          .single();
+
+        if (existingError) {
+          console.error('[Storage] Error fetching existing regiondet for merge:', existingError);
+        }
+
+        mergedRegiondet = mergeRegiondetWithPayments(
+          existing?.regiondet,
+          beneficiary.regiondet,
+        );
+      }
+
+      const beneficiaryToUpdate: any = {
+        ...beneficiary,
+        afm: beneficiary.afm ? encryptAFM(beneficiary.afm) : undefined,
+        afm_hash: beneficiary.afm ? hashAFM(beneficiary.afm) : undefined,
+        updated_at: new Date().toISOString()
+      };
+
+      if (Object.prototype.hasOwnProperty.call(beneficiary, 'regiondet')) {
+        beneficiaryToUpdate.regiondet = mergedRegiondet;
+      }
+      
       const { data, error } = await supabase
         .from('beneficiaries')
-        .update({
-          ...beneficiary,
-          updated_at: new Date().toISOString()
-        })
+        .update(beneficiaryToUpdate)
         .eq('id', id)
         .select()
         .single();
@@ -1337,7 +2292,11 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated beneficiary:', data);
-      return data;
+      
+      return {
+        ...data,
+        afm: decryptAFM(data.afm)
+      };
     } catch (error) {
       console.error('[Storage] Error in updateBeneficiary:', error);
       throw error;
@@ -1369,11 +2328,12 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Updating beneficiary installment status for AFM: ${afm}, Type: ${paymentType}, Installment: ${installment}, Status: ${status}`);
       
-      // First, get the beneficiary by AFM
+      const encryptedAfm = encryptAFM(afm);
+      
       const { data: beneficiary, error: fetchError } = await supabase
         .from('beneficiaries')
         .select('id')
-        .eq('afm', afm)
+        .eq('afm', encryptedAfm)
         .single();
         
       if (fetchError || !beneficiary) {
@@ -1381,12 +2341,8 @@ export class DatabaseStorage implements IStorage {
         throw new Error(`Beneficiary with AFM ${afm} not found`);
       }
       
-      // Using normalized beneficiary_payments table approach
       console.log(`[Storage] Updating payment record for beneficiary ${beneficiary.id}`);
       
-      // The update will happen to the beneficiary_payments table directly
-      
-      // Update the beneficiary record
       const { error: updateError } = await supabase
         .from('beneficiary_payments')
         .update({
@@ -1448,8 +2404,13 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
 
-      console.log(`[Storage] Successfully fetched ${data?.length || 0} staff members for unit: ${unit}`);
-      return data || [];
+      const decryptedStaff = (data || []).map(e => ({
+        ...e,
+        afm: decryptAFM(e.afm)
+      }));
+
+      console.log(`[Storage] Successfully fetched ${decryptedStaff.length} staff members for unit: ${unit}`);
+      return decryptedStaff;
     } catch (error) {
       console.error('[Storage] Error in getStaffByUnit:', error);
       throw error;
@@ -1575,6 +2536,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created beneficiary payment with ID:', data.id);
+      
+      // Update beneficiary's regiondet with accumulated unique regions
+      if (payment.beneficiary_id && payment.project_index_id) {
+        await this.updateBeneficiaryRegiondet(payment.beneficiary_id, payment.project_index_id);
+      }
+      
       return data;
     } catch (error) {
       console.error('[Storage] Error in createBeneficiaryPayment:', error);
@@ -1602,6 +2569,12 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully updated beneficiary payment:', data);
+      
+      // Update beneficiary's regiondet if project_index_id was changed
+      if (data.beneficiary_id && payment.project_index_id) {
+        await this.updateBeneficiaryRegiondet(data.beneficiary_id, payment.project_index_id);
+      }
+      
       return data;
     } catch (error) {
       console.error('[Storage] Error in updateBeneficiaryPayment:', error);
@@ -1626,6 +2599,236 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully deleted beneficiary payment ${id}`);
     } catch (error) {
       console.error('[Storage] Error in deleteBeneficiaryPayment:', error);
+      throw error;
+    }
+  }
+
+  async appendPaymentIdToRegiondet(beneficiaryId: number, paymentId: number | string): Promise<void> {
+    try {
+      const { data: existing, error: existingError } = await supabase
+        .from('beneficiaries')
+        .select('regiondet')
+        .eq('id', beneficiaryId)
+        .single();
+
+      if (existingError) {
+        console.error('[Storage] Error fetching regiondet for payment append:', existingError);
+        return;
+      }
+
+      const merged = mergeRegiondetWithPayments(existing?.regiondet, {
+        payment_ids: [paymentId],
+      });
+
+      const { error: updateError } = await supabase
+        .from('beneficiaries')
+        .update({
+          regiondet: merged,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', beneficiaryId);
+
+      if (updateError) {
+        console.error('[Storage] Error appending payment id to regiondet:', updateError);
+      }
+    } catch (error) {
+      console.error('[Storage] Error in appendPaymentIdToRegiondet:', error);
+    }
+  }
+
+  /**
+   * Updates beneficiary's regiondet field with accumulated unique regions from project_index
+   * Fetches region data from project_index junction tables and merges with existing regiondet
+   */
+  async updateBeneficiaryRegiondet(beneficiaryId: number, projectIndexId: number): Promise<void> {
+    try {
+      console.log(`[Storage] Updating regiondet for beneficiary ${beneficiaryId} with project_index ${projectIndexId}`);
+      
+      // Fetch region data from project_index junction tables with names
+      const { data: regionData, error: regionError } = await supabase
+        .from('project_index_regions')
+        .select(`
+          region_code,
+          regions!inner(code, name)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      const { data: unitData, error: unitError } = await supabase
+        .from('project_index_units')
+        .select(`
+          unit_code,
+          regional_units!inner(code, name, region_code)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      const { data: muniData, error: muniError } = await supabase
+        .from('project_index_munis')
+        .select(`
+          muni_code,
+          municipalities!inner(code, name, unit_code)
+        `)
+        .eq('project_index_id', projectIndexId);
+      
+      if (regionError || unitError || muniError) {
+        console.error('[Storage] Error fetching geographic data:', { regionError, unitError, muniError });
+        return; // Don't fail the payment creation, just log and continue
+      }
+      
+      // Build region entry object from the fetched data
+      const newRegionEntry: Record<string, unknown> = {
+        project_index_id: projectIndexId,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Add regions if available
+      if (regionData && regionData.length > 0) {
+        newRegionEntry.regions = regionData.map((r: any) => ({
+          code: r.region_code,
+          name: r.regions?.name || 'Unknown'
+        }));
+      }
+      
+      // Add regional units if available
+      if (unitData && unitData.length > 0) {
+        newRegionEntry.regional_units = unitData.map((u: any) => ({
+          code: u.unit_code,
+          name: u.regional_units?.name || 'Unknown',
+          region_code: u.regional_units?.region_code
+        }));
+      }
+      
+      // Add municipalities if available
+      if (muniData && muniData.length > 0) {
+        newRegionEntry.municipalities = muniData.map((m: any) => ({
+          code: m.muni_code,
+          name: m.municipalities?.name || 'Unknown',
+          unit_code: m.municipalities?.unit_code
+        }));
+      }
+      
+      // Skip if no geographic data found
+      if (!newRegionEntry.regions && !newRegionEntry.regional_units && !newRegionEntry.municipalities) {
+        console.log(`[Storage] No geographic data found for project_index ${projectIndexId}, skipping regiondet update`);
+        return;
+      }
+      
+      // Get current beneficiary regiondet
+      const { data: beneficiary, error: fetchError } = await supabase
+        .from('beneficiaries')
+        .select('regiondet')
+        .eq('id', beneficiaryId)
+        .single();
+      
+      if (fetchError) {
+        console.error('[Storage] Error fetching beneficiary for regiondet update:', fetchError);
+        return;
+      }
+      
+      // Parse existing regiondet or initialize as empty array
+      let existingRegiondet: Record<string, unknown>[] = [];
+      if (beneficiary?.regiondet) {
+        if (Array.isArray(beneficiary.regiondet)) {
+          existingRegiondet = beneficiary.regiondet as Record<string, unknown>[];
+        } else {
+          // If it was a single object, convert to array
+          existingRegiondet = [beneficiary.regiondet as Record<string, unknown>];
+        }
+      }
+      
+      // Check if this project_index_id already exists in regiondet
+      const existingIndex = existingRegiondet.findIndex(
+        (entry) => entry.project_index_id === projectIndexId
+      );
+      
+      if (existingIndex >= 0) {
+        // Update existing entry
+        existingRegiondet[existingIndex] = newRegionEntry;
+        console.log(`[Storage] Updated existing region entry for project_index ${projectIndexId}`);
+      } else {
+        // Add new entry
+        existingRegiondet.push(newRegionEntry);
+        console.log(`[Storage] Added new region entry for project_index ${projectIndexId}`);
+      }
+      
+      // Update beneficiary with new regiondet
+      const { error: updateError } = await supabase
+        .from('beneficiaries')
+        .update({ 
+          regiondet: existingRegiondet,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', beneficiaryId);
+      
+      if (updateError) {
+        console.error('[Storage] Error updating beneficiary regiondet:', updateError);
+        return;
+      }
+      
+      console.log(`[Storage] Successfully updated regiondet for beneficiary ${beneficiaryId} with ${existingRegiondet.length} region entries`);
+    } catch (error) {
+      console.error('[Storage] Error in updateBeneficiaryRegiondet:', error);
+      // Don't throw - this is a non-critical update
+    }
+  }
+
+  /**
+   * Backfill regiondet for all beneficiaries based on their existing payment data
+   * This is a one-time migration helper
+   */
+  async backfillBeneficiaryRegiondet(): Promise<{ processed: number; updated: number; errors: number }> {
+    try {
+      console.log('[Storage] Starting regiondet backfill for all beneficiaries...');
+      
+      // Get all beneficiary payments with project_index_id
+      const { data: payments, error: paymentsError } = await supabase
+        .from('beneficiary_payments')
+        .select('beneficiary_id, project_index_id')
+        .not('project_index_id', 'is', null);
+      
+      if (paymentsError) {
+        console.error('[Storage] Error fetching payments for backfill:', paymentsError);
+        throw paymentsError;
+      }
+      
+      if (!payments || payments.length === 0) {
+        console.log('[Storage] No payments with project_index_id found');
+        return { processed: 0, updated: 0, errors: 0 };
+      }
+      
+      // Group by beneficiary_id to process each beneficiary once per project_index
+      const beneficiaryPayments = new Map<number, Set<number>>();
+      for (const payment of payments) {
+        if (payment.beneficiary_id && payment.project_index_id) {
+          if (!beneficiaryPayments.has(payment.beneficiary_id)) {
+            beneficiaryPayments.set(payment.beneficiary_id, new Set());
+          }
+          beneficiaryPayments.get(payment.beneficiary_id)!.add(payment.project_index_id);
+        }
+      }
+      
+      let processed = 0;
+      let updated = 0;
+      let errors = 0;
+      
+      const beneficiaryEntries = Array.from(beneficiaryPayments.entries());
+      for (const [beneficiaryId, projectIndexIds] of beneficiaryEntries) {
+        const projectIndexArray = Array.from(projectIndexIds);
+        for (const projectIndexId of projectIndexArray) {
+          processed++;
+          try {
+            await this.updateBeneficiaryRegiondet(beneficiaryId, projectIndexId);
+            updated++;
+          } catch (err) {
+            console.error(`[Storage] Error updating regiondet for beneficiary ${beneficiaryId}:`, err);
+            errors++;
+          }
+        }
+      }
+      
+      console.log(`[Storage] Regiondet backfill complete: processed=${processed}, updated=${updated}, errors=${errors}`);
+      return { processed, updated, errors };
+    } catch (error) {
+      console.error('[Storage] Error in backfillBeneficiaryRegiondet:', error);
       throw error;
     }
   }
