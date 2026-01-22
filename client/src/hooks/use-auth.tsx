@@ -81,7 +81,7 @@ function useLoginMutation() {
         throw new Error("Login failed: Unknown error");
       }
     },
-    onSuccess: (user) => {
+    onSuccess: async (user) => {
       // Security: No sensitive logging in production
       // Ensure the user object has all required fields for display
       const processedUser = {

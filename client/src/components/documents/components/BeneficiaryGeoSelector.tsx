@@ -84,7 +84,13 @@ export function BeneficiaryGeoSelector({
     setRegionCode(code);
     setUnitCode("");
     setMunicipalityCode("");
-    onChange(buildRegiondetSelection({ region: selectedRegion, regionalUnit: null, municipality: null }));
+    onChange(
+      buildRegiondetSelection({
+        region: selectedRegion,
+        regionalUnit: null,
+        municipality: null,
+      }),
+    );
   };
 
   const handleUnitChange = (code: string) => {
@@ -116,8 +122,9 @@ export function BeneficiaryGeoSelector({
         ) || null
       : null;
     const parentRegion = parentUnit
-      ? regions.find((r) => String(r.code) === String(parentUnit.region_code)) ||
-        null
+      ? regions.find(
+          (r) => String(r.code) === String(parentUnit.region_code),
+        ) || null
       : null;
 
     setRegionCode(parentRegion?.code ? String(parentRegion.code) : "");
@@ -147,7 +154,10 @@ export function BeneficiaryGeoSelector({
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
           <MapPin className="h-3.5 w-3.5" />
-          <span>Geographical selection {required && <span className="text-destructive">*</span>}</span>
+          <span>
+            Γεωγραφική επιλογή{" "}
+            {required && <span className="text-destructive">*</span>}
+          </span>
         </div>
 
         <div className="min-w-[180px] flex-1">
@@ -157,7 +167,7 @@ export function BeneficiaryGeoSelector({
             disabled={loading}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Region" />
+              <SelectValue placeholder="Περιφέρεια" />
             </SelectTrigger>
             <SelectContent>
               {regions.map((region) => (
@@ -179,7 +189,7 @@ export function BeneficiaryGeoSelector({
             disabled={loading || filteredUnits.length === 0}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Regional unit" />
+              <SelectValue placeholder="Περιφερειακή ενότητα" />
             </SelectTrigger>
             <SelectContent>
               {filteredUnits.map((unit) => (
@@ -192,7 +202,7 @@ export function BeneficiaryGeoSelector({
               ))}
               {filteredUnits.length === 0 && (
                 <SelectItem value="no-units" disabled>
-                  No units available
+                  Δεν υπάρχουν διαθέσιμες ενότητες
                 </SelectItem>
               )}
             </SelectContent>
@@ -206,7 +216,7 @@ export function BeneficiaryGeoSelector({
             disabled={loading || filteredMunicipalities.length === 0}
           >
             <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Municipality" />
+              <SelectValue placeholder="Δήμος" />
             </SelectTrigger>
             <SelectContent className="max-h-64">
               {filteredMunicipalities.map((municipality) => (
@@ -219,7 +229,7 @@ export function BeneficiaryGeoSelector({
               ))}
               {filteredMunicipalities.length === 0 && (
                 <SelectItem value="no-municipalities" disabled>
-                  No municipalities available
+                  Δεν υπάρχουν διαθέσιμοι δήμοι
                 </SelectItem>
               )}
             </SelectContent>
@@ -235,14 +245,14 @@ export function BeneficiaryGeoSelector({
           className="h-9"
         >
           <X className="h-4 w-4 mr-1" />
-          Clear
+          Καθαρισμός
         </Button>
       </div>
 
       {!isValid && required && (
         <div className="text-xs text-destructive flex items-center gap-1">
           <AlertCircle className="h-3.5 w-3.5" />
-          <span>Select a region, unit, or municipality</span>
+          <span>Επιλέξτε περιφέρεια, ενότητα ή δήμο</span>
         </div>
       )}
 
@@ -259,7 +269,7 @@ export function BeneficiaryGeoSelector({
               className="h-7 px-2"
             >
               <RefreshCcw className="h-3 w-3 mr-1" />
-              Retry
+              Προσπάθεια ξανά
             </Button>
           )}
         </div>
