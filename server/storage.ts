@@ -358,7 +358,9 @@ export class DatabaseStorage implements IStorage {
       if (amount > 0) {
         // HARD BLOCK: Check if this spending would exceed the annual credit (ethsia_pistosi)
         // This is the absolute limit - cannot proceed
-        if (amount > yearlyAvailable) {
+        // NOTE: Starting 2026, government no longer uses ethsia_pistosi - field will be 0
+        // Only enforce constraint if ethsia_pistosi is configured (> 0)
+        if (ethsiaPistosi > 0 && amount > yearlyAvailable) {
           const errorMsg = `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`;
           console.error(`[Storage] BUDGET HARD BLOCK (πίστωση exceeded): ${errorMsg}`);
           throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
@@ -374,13 +376,30 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
-      // Calculate new spending amount for both year and current quarter
-      const newSpending = currentSpending + amount;
+      // 2026 POLICY: Recalculate user_view from 2026+ documents only
+      // Instead of incrementing, we query the actual sum to ensure accuracy
+      const { data: documentSum, error: sumError } = await supabase
+        .from('generated_documents')
+        .select('total_amount')
+        .eq('project_index_id', projectId)
+        .in('status', ['approved', 'pending', 'processed'])
+        .gte('created_at', '2026-01-01T00:00:00Z');  // Only 2026+ documents
       
+      if (sumError) {
+        console.error('[Storage] Error calculating document sum:', sumError);
+        throw sumError;
+      }
+      
+      // Calculate new user_view from actual document totals (2026+ only)
+      const newSpending = (documentSum || []).reduce((sum, doc) => {
+        return sum + parseFloat(String(doc.total_amount || 0));
+      }, 0);
+      
+      // For current_quarter_spent, we still increment/decrement
       const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
       const newQuarterSpent = currentQuarterSpent + amount;
       
-      console.log(`[Storage] Budget calculation: user_view ${currentSpending} + ${amount} = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
+      console.log(`[Storage] Budget calculation (2026+ docs only): recalculated user_view = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
       
       // Update the budget record with new spending (both year total and current quarter)
       const { error: updateError } = await supabase
@@ -418,7 +437,7 @@ export class DatabaseStorage implements IStorage {
         created_by: userId
       });
       
-      console.log(`[Storage] Successfully updated project budget spending: ${currentSpending} → ${newSpending}`);
+      console.log(`[Storage] Successfully updated project budget spending: ${currentSpending} → ${newSpending} (2026+ documents only)`);
       
     } catch (error) {
       console.error('[Storage] Error in updateProjectBudgetSpending:', error);
@@ -472,8 +491,16 @@ export class DatabaseStorage implements IStorage {
               await this.updateProjectBudgetSpending(oldProjectId, oldAmount, documentId, userId);
             } catch (restoreError) {
               console.error(`[Storage] CRITICAL: Failed to restore old project budget:`, restoreError);
+              
               // Log critical inconsistency for manual resolution
-              await this.logBudgetInconsistency(documentId, oldProjectId, newProjectId, oldAmount, newAmount, 'restore_failed');
+              try {
+                await this.logBudgetInconsistency(documentId, oldProjectId, newProjectId, oldAmount, newAmount, 'restore_failed');
+              } catch (loggingError) {
+                // Last resort: ensure error is at least in console logs
+                console.error('[Storage] CATASTROPHIC: Could not log budget inconsistency:', loggingError);
+                console.error('[Storage] CATASTROPHIC: Original restore error:', restoreError);
+                console.error('[Storage] CATASTROPHIC: Document details:', { documentId, oldProjectId, newProjectId, oldAmount, newAmount });
+              }
             }
             throw newProjectError;
           }
@@ -594,7 +621,9 @@ export class DatabaseStorage implements IStorage {
       const yearlyAvailable = ethsiaPistosi - currentSpending;
 
       // PRIORITY: Check ετήσια πίστωση first - this is a HARD BLOCK (cannot proceed)
-      if (amount > yearlyAvailable) {
+      // NOTE: Starting 2026, government no longer uses ethsia_pistosi - field will be 0
+      // Only enforce constraint if ethsia_pistosi is configured (> 0)
+      if (ethsiaPistosi > 0 && amount > yearlyAvailable) {
         return {
           isAvailable: false,
           hardBlock: true,

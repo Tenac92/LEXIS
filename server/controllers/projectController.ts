@@ -2730,10 +2730,13 @@ async function insertGeographicRelationships(
 
     // Insert region relationship
     if (region.perifereia && regions.length > 0) {
-      const regionEntry = regions.find((r) => r.name === region.perifereia);
+      // Try to match by code first, then fall back to name
+      const regionEntry = regions.find((r) => 
+        r.code === region.perifereia || r.name === region.perifereia
+      );
       if (regionEntry) {
         console.log(
-          `[Geographic] Inserting region relationship: ${regionEntry.code}`,
+          `[Geographic] Inserting region relationship: ${regionEntry.code} (${regionEntry.name})`,
         );
         const { error: regionError } = await supabase
           .from("project_index_regions")
@@ -2751,18 +2754,19 @@ async function insertGeographicRelationships(
           console.log(`[Geographic] Successfully inserted region relationship`);
         }
       } else {
-        console.log(`[Geographic] No region found for: ${region.perifereia}`);
+        console.warn(`[Geographic] No region found for: ${region.perifereia} (check if using code or name)`);
       }
     }
 
     // Insert regional unit relationship
     if (region.perifereiaki_enotita && units.length > 0) {
+      // Try to match by code first, then fall back to name
       const unitEntry = units.find(
-        (u) => u.name === region.perifereiaki_enotita,
+        (u) => u.code === region.perifereiaki_enotita || u.name === region.perifereiaki_enotita,
       );
       if (unitEntry) {
         console.log(
-          `[Geographic] Inserting regional unit relationship: ${unitEntry.code}`,
+          `[Geographic] Inserting regional unit relationship: ${unitEntry.code} (${unitEntry.name})`,
         );
         const { error: unitError } = await supabase
           .from("project_index_units")
@@ -2780,18 +2784,19 @@ async function insertGeographicRelationships(
           console.log(`[Geographic] Successfully inserted unit relationship`);
         }
       } else {
-        console.log(
-          `[Geographic] No regional unit found for: ${region.perifereiaki_enotita}`,
+        console.warn(
+          `[Geographic] No regional unit found for: ${region.perifereiaki_enotita} (check if using code or name)`,
         );
       }
     }
 
     // Insert municipality relationship
     if (region.dimos && munis.length > 0) {
-      const muniEntry = munis.find((m) => m.name === region.dimos);
+      // Try to match by code first, then fall back to name
+      const muniEntry = munis.find((m) => m.code === region.dimos || m.name === region.dimos);
       if (muniEntry) {
         console.log(
-          `[Geographic] Inserting municipality relationship: ${muniEntry.code}`,
+          `[Geographic] Inserting municipality relationship: ${muniEntry.code} (${muniEntry.name})`,
         );
         const { error: muniError } = await supabase
           .from("project_index_munis")
@@ -2811,7 +2816,7 @@ async function insertGeographicRelationships(
           );
         }
       } else {
-        console.log(`[Geographic] No municipality found for: ${region.dimos}`);
+        console.warn(`[Geographic] No municipality found for: ${region.dimos} (check if using code or name)`);
       }
     }
   } catch (error) {

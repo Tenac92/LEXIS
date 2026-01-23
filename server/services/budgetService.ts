@@ -1248,6 +1248,16 @@ export class BudgetService {
       const currentUserView = updateBudgetData.user_view || 0;
       const newUserView = currentUserView + amount;
       
+      // VALIDATION: user_view should never go negative (refunds can't exceed spending)
+      if (newUserView < 0) {
+        console.error(`[BudgetService] Update - Invalid transaction: would result in negative user_view (${newUserView})`);
+        return {
+          status: 'error',
+          message: 'Η επιστροφή υπερβαίνει το συνολικό ποσό δαπανών',
+          details: `Current spending: €${currentUserView.toFixed(2)}, Transaction: €${amount.toFixed(2)}, Result would be: €${newUserView.toFixed(2)}`
+        };
+      }
+      
       // Update the budget
       const { error: updateError } = await supabase
         .from('project_budget')

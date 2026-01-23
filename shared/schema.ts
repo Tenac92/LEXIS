@@ -75,7 +75,7 @@ export const projectCatalog = pgTable("project_catalog", {
   expenditure_type: text("expenditure_type").array().default([]),
   status: text("status").notNull().default("active"),
   implementing_agency: text("implementing_agency").array().default([]),
-  region: jsonb("region").default({}),
+  // region field removed - use project_index_regions junction table instead
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at"),
 });

@@ -35,11 +35,37 @@ export async function createWorkbookFromData(
       sheet.addRow(values);
     }
 
-    // Apply column widths
+    // Calculate optimal column widths based on header and content
+    const calculateColumnWidth = (header: string, columnData: any[]): number => {
+      const headerWidth = header.length + 2;
+      const maxDataWidth = Math.max(
+        ...columnData.slice(0, 100).map(value => { // Sample first 100 rows for performance
+          if (typeof value === 'number') {
+            return value < 1000000 ? 15 : 18; // Wider for large numbers
+          }
+          if (typeof value === 'string') {
+            return Math.min(value.length + 2, 50); // Cap at 50
+          }
+          if (value instanceof Date) {
+            return 12;
+          }
+          return 10;
+        })
+      );
+      return Math.max(12, Math.min(Math.max(headerWidth, maxDataWidth), 50));
+    };
+
+    // Apply calculated column widths and format header row
     sheet.columns = headers.map((h) => ({
       key: h,
-      width: h.length < 12 ? 15 : h.length + 5,
+      width: calculateColumnWidth(h, data.map(row => row[h])),
     }));
+
+    // Format header row: bold text, blue background, white text, centered
+    const headerRow = sheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF366092' } };
+    headerRow.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
 
     // Apply currency formatting to specified columns
     if (currencyColumns.length > 0) {
@@ -52,7 +78,7 @@ export async function createWorkbookFromData(
         currencyColIndices.forEach((colIndex) => {
           const cell = row.getCell(colIndex);
           if (typeof cell.value === 'number') {
-            cell.numFmt = '#,##0.00';
+            cell.numFmt = '#,##0.00"€"';
           }
         });
       });
@@ -61,9 +87,15 @@ export async function createWorkbookFromData(
 
   // If no sheets added, add a fallback empty sheet
   if (workbook.worksheets.length === 0) {
-    const sheet = workbook.addWorksheet('Κενό');
-    sheet.addRow(['Μήνυμα']);
-    sheet.addRow(['Δεν βρέθηκαν δεδομένα με τα επιλεγμένα κριτήρια αναζήτησης']);
+    const sheet = workbook.addWorksheet('Πληροφορίες');
+    sheet.addRow(['Αποτέλεσμα Αναζήτησης']);
+    sheet.addRow(['Δεν βρέθηκαν δεδομένα']);
+    sheet.addRow(['']);
+    sheet.addRow(['Δεν υπάρχουν δεδομένα που να ταιριάζουν με τα κριτήρια αναζήτησής σας.']);
+    sheet.addRow(['Παρακαλώ:']);
+    sheet.addRow(['• Ελέγξτε τα φίλτρα που εφαρμόσατε']);
+    sheet.addRow(['• Δοκιμάστε με ευρύτερο εύρος ημερομηνιών']);
+    sheet.addRow(['• Δοκιμάστε χωρίς κάποια από τα φίλτρα']);
     sheet.getColumn(1).width = 60;
   }
 

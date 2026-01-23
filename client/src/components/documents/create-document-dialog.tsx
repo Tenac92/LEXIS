@@ -2281,8 +2281,10 @@ export function CreateDocumentDialog({
         
         // Calculate what's being exceeded
         // Πίστωση check: if userView + currentAmount > ethsia_pistosi
+        // NOTE: Starting 2026, government no longer uses ethsia_pistosi - field will be 0
+        // Only enforce constraint if ethsia_pistosi is configured (> 0)
         // Κατανομή check: if userView + currentAmount > katanomes_etous
-        const willExceedPistosi = (userView + currentAmount) > ethsiaPistosi;
+        const willExceedPistosi = ethsiaPistosi > 0 && (userView + currentAmount) > ethsiaPistosi;
         const willExceedKatanomi = (userView + currentAmount) > katanomesEtous;
         
         // PRIORITY: Πίστωση ALWAYS takes precedence because it's a hard limit

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+﻿import { Router, Request, Response } from "express";
 import { authenticateSession } from "../authentication";
 import { BudgetService } from "../services/budgetService";
 import { storage } from "../storage";
@@ -1079,6 +1079,15 @@ router.get(
         query = query.eq("change_type", changeType);
       }
 
+      // Validate date range
+      if (dateFrom && dateTo && dateFrom > dateTo) {
+        return res.status(400).json({
+          status: "error",
+          message: "Σφάλμα: Η ημερομηνία 'από' δεν μπορεί να είναι μετά την ημερομηνία 'έως'",
+          details: `Ημερομηνία από: ${dateFrom}, Ημερομηνία έως: ${dateTo}`
+        });
+      }
+
       if (dateFrom) {
         query = query.gte("created_at", dateFrom);
       }
@@ -1304,7 +1313,9 @@ router.get(
 
       // Fetch Monada (unit) data for unit names
       // Create budget map for quick lookups
-      const budgetMap = new Map((budgetData || []).map((b) => [b.mis, b]));
+      const budgetMap = new Map(
+        (budgetData && Array.isArray(budgetData) ? budgetData : []).map((b) => [b.mis, b])
+      );
 
       // Build geo map from beneficiary payments per document (uses regiondet stored per payment)
       const documentIds = Array.from(
@@ -1420,6 +1431,13 @@ router.get(
         
         if (piExpError) {
           console.error(`[Budget Export] Error fetching project_index batch at offset ${offset}:`, piExpError);
+          if (offset === 0) {
+            // First batch failed - this is critical
+            throw new Error(`Failed to fetch expenditure type data: ${piExpError.message}`);
+          }
+          // Warn but continue for subsequent batches
+          console.warn(`[Budget Export] Incomplete expenditure type mapping - some data may be mislabeled`);
+          hasMore = false;
           break;
         }
         
@@ -1452,40 +1470,37 @@ router.get(
           const projectIndexId = genDocs.project_index_id;
           const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
           if (expenditureTypeId) {
-            return expenditureTypeNameMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
+        return expenditureTypeNameMap.get(expenditureTypeId) || `⚠️ ID: ${expenditureTypeId} (Άγνωστο)`;
+      }
+      return `❌ Δείκτης Έργου: ${projectIndexId} (Μη βρέθηκε)`;
+    }
+    
+    // Handle array case (if relationship returns array)
+    if (genDocs && Array.isArray(genDocs) && genDocs.length > 0) {
+      for (const doc of genDocs) {
+        if (doc?.project_index_id) {
+          const projectIndexId = doc.project_index_id;
+          const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
+          if (expenditureTypeId) {
+            return expenditureTypeNameMap.get(expenditureTypeId) || `⚠️ ID: ${expenditureTypeId} (Άγνωστο)`;
           }
+          return `❌ Δείκτης Έργου: ${projectIndexId} (Μη βρέθηκε)`;
         }
-        
-        // Handle array case (if relationship returns array)
-        if (genDocs && Array.isArray(genDocs) && genDocs.length > 0) {
-          for (const doc of genDocs) {
-            if (doc?.project_index_id) {
-              const projectIndexId = doc.project_index_id;
-              const expenditureTypeId = projectIndexExpenditureMap.get(projectIndexId);
-              if (expenditureTypeId) {
-                return expenditureTypeNameMap.get(expenditureTypeId) || "Άγνωστος Τύπος";
-              }
-            }
-          }
-        }
-        
-        return "Χωρίς Τύπο Δαπάνης";
+      }
+    }
+    
+    return "⚠️ Χωρίς Δείκτη Έργου";
       };
 
-      // ============================================
-      // WORKSHEET 1: Detailed Budget History
-      // ============================================
-      const detailedHistory = (historyData || []).map((entry: any) => {
-        const project = entry.Projects || {};
-        const projectId = project.id;
-        const docGeo = docGeoMap.get(entry.document_id);
-        const geo = docGeo || projectGeoMap.get(projectId) || {
+      // Map budget history entries to export format
+      const budgetHistoryForExport = historyData!.map((entry) => {
+        const documentGeo = docGeoMap.get(entry.document_id) || projectGeoMap.get(entry.project_id) || {
           regions: [],
           units: [],
           municipalities: [],
         };
-        const genDocs = entry.generated_documents;
-        const document = Array.isArray(genDocs) && genDocs.length > 0 ? genDocs[0] : genDocs;
+        const document = Array.isArray(entry.generated_documents) && entry.generated_documents.length > 0 ? entry.generated_documents[0] : entry.generated_documents;
+        const project = entry.Projects;
 
         const prevAmount = parseFloat(entry.previous_amount) || 0;
         const newAmount = parseFloat(entry.new_amount) || 0;
@@ -1511,13 +1526,13 @@ router.get(
           Ώρα: entry.created_at
             ? new Date(entry.created_at).toLocaleTimeString("el-GR")
             : "",
-          MIS: project.mis || "",
-          ΝΑ853: project.na853 || "",
-          "Τίτλος Έργου": project.project_title || "",
-          "Κατάσταση Έργου": project.status || "",
-          Περιφέρεια: geo.regions.join(", ") || "",
-          "Περιφερειακή Ενότητα": geo.units.join(", ") || "",
-          Δήμος: geo.municipalities.join(", ") || "",
+          MIS: project?.mis || "",
+          ΝΑ853: project?.na853 || "",
+          "Τίτλος Έργου": project?.project_title || "",
+          "Κατάσταση Έργου": project?.status || "",
+          Περιφέρεια: documentGeo.regions.join(", ") || "",
+          "Περιφερειακή Ενότητα": documentGeo.units.join(", ") || "",
+          Δήμος: documentGeo.municipalities.join(", ") || "",
           "Τύπος Δαπάνης": getExpenditureTypeName(entry),
           "Τύπος Αλλαγής":
             changeTypeLabels[entry.change_type] || entry.change_type || "",
@@ -1717,13 +1732,13 @@ router.get(
         const change = newAmount - prevAmount;
 
         const regions =
-          geo.regions.length > 0 ? geo.regions : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+          geo.regions.length > 0 ? geo.regions : ["Χωρίς Περιφέρεια"];
         const units =
-          geo.units.length > 0 ? geo.units : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+          geo.units.length > 0 ? geo.units : ["Χωρίς Περιφερειακή Ενότητα"];
         const municipalities =
           geo.municipalities.length > 0
             ? geo.municipalities
-            : ["ΝΝ?Ο?ΝьΟ?Ν?Ο?Ν?ΝьΝё Ν?Ν?Ν?Ο?Ν?Ν?"];
+            : ["Χωρίς Δήμο"];
 
         municipalities.forEach((muni) => {
           const key = `${regions[0]}|${units[0]}|${muni}`;
@@ -1746,11 +1761,11 @@ router.get(
       const municipalitySummary = Array.from(municipalitySummaryMap.values())
         .sort((a, b) => a.region.localeCompare(b.region))
         .map((m) => ({
-          Region: m.region,
-          "Regional Unit": m.unit,
-          Municipality: m.municipality,
-          Changes: m.changeCount,
-          "Net Change": m.netChange,
+          Περιφέρεια: m.region,
+          "Περιφερειακή Ενότητα": m.unit,
+          Δήμος: m.municipality,
+          "Πλήθος Αλλαγών": m.changeCount,
+          "Καθαρή Μεταβολή": m.netChange,
         }));
 
       // ============================================
@@ -1952,10 +1967,10 @@ router.get(
 
       // Create and add worksheets
       // 1. Detailed History
-      if (detailedHistory.length > 0) {
+      if (budgetHistoryForExport.length > 0) {
         sheets.push({
           name: 'Αναλυτικό Ιστορικό',
-          data: detailedHistory,
+          data: budgetHistoryForExport,
           currencyColumns: ['Προηγούμενο Ποσό', 'Νέο Ποσό', 'Μεταβολή']
         });
       }
@@ -2011,6 +2026,367 @@ router.get(
           name: 'Δραστηριότητα Χρηστών',
           data: userActivity,
           currencyColumns: ['Συνολικό Ποσό']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 7: Budget Utilization Dashboard
+      // ============================================
+      const budgetUtilization = Array.from(projectSummaryMap.values())
+        .sort((a, b) => (b.totalSpent / b.totalAllocated || 0) - (a.totalSpent / a.totalAllocated || 0))
+        .map((p) => {
+          const utilization = p.totalAllocated > 0 ? (p.totalSpent / p.totalAllocated) * 100 : 0;
+          const status = utilization > 100 ? 'Υπέρβαση' : utilization > 80 ? 'Κρίσιμη' : utilization > 50 ? 'Καλή' : 'Ασφαλής';
+          return {
+            MIS: p.mis,
+            ΝΑ853: p.na853,
+            'Τίτλος Έργου': p.title,
+            'Κατάσταση': p.status,
+            'Κατανομές Έτους': p.totalAllocated,
+            'Συνολικές Δαπάνες': p.totalSpent,
+            'Διαθέσιμο': p.available,
+            '% Απορρόφησης': Math.round(utilization * 100) / 100,
+            'Κατάσταση Προϋπολογισμού': status
+          };
+        });
+
+      if (budgetUtilization.length > 0) {
+        sheets.push({
+          name: 'Επισκόπηση Προϋπολογισμού',
+          data: budgetUtilization,
+          currencyColumns: ['Κατανομές Έτους', 'Συνολικές Δαπάνες', 'Διαθέσιμο']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 8: Spending vs Refunds Analysis
+      // ============================================
+      const spendingAnalysisMap = new Map<string, {
+        period: string;
+        totalSpending: number;
+        totalRefunds: number;
+        netAmount: number;
+        spendingCount: number;
+        refundCount: number;
+      }>();
+
+      (historyData || []).forEach((entry: any) => {
+        if (!entry.created_at) return;
+        
+        const date = new Date(entry.created_at);
+        const period = `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
+        
+        if (!spendingAnalysisMap.has(period)) {
+          spendingAnalysisMap.set(period, {
+            period,
+            totalSpending: 0,
+            totalRefunds: 0,
+            netAmount: 0,
+            spendingCount: 0,
+            refundCount: 0
+          });
+        }
+        
+        const summary = spendingAnalysisMap.get(period)!;
+        const amount = Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0));
+        
+        if (entry.change_type === 'spending' || entry.change_type === 'document_created') {
+          summary.totalSpending += amount;
+          summary.spendingCount++;
+        } else if (entry.change_type === 'refund') {
+          summary.totalRefunds += amount;
+          summary.refundCount++;
+        }
+        
+        summary.netAmount = summary.totalSpending - summary.totalRefunds;
+      });
+
+      const spendingAnalysis = Array.from(spendingAnalysisMap.values())
+        .sort((a, b) => a.period.localeCompare(b.period))
+        .map((s) => ({
+          'Περίοδος': s.period,
+          'Σύνολο Δαπανών': s.totalSpending,
+          'Πλήθος Δαπανών': s.spendingCount,
+          'Μέση Δαπάνη': s.spendingCount > 0 ? Math.round((s.totalSpending / s.spendingCount) * 100) / 100 : 0,
+          'Σύνολο Επιστροφών': s.totalRefunds,
+          'Πλήθος Επιστροφών': s.refundCount,
+          'Μέση Επιστροφή': s.refundCount > 0 ? Math.round((s.totalRefunds / s.refundCount) * 100) / 100 : 0,
+          'Καθαρή Μεταβολή': s.netAmount,
+          'Αναλογία Δαπάνων/Επιστροφών': s.totalRefunds > 0 ? Math.round((s.totalSpending / s.totalRefunds) * 100) / 100 : (s.totalSpending > 0 ? '∞' : '0')
+        }));
+
+      if (spendingAnalysis.length > 0) {
+        sheets.push({
+          name: 'Δαπάνες έναντι Επιστροφών',
+          data: spendingAnalysis,
+          currencyColumns: ['Σύνολο Δαπανών', 'Μέση Δαπάνη', 'Σύνολο Επιστροφών', 'Μέση Επιστροφή', 'Καθαρή Μεταβολή']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 9: Top Projects by Activity
+      // ============================================
+      const projectActivityMap = new Map<string, {
+        mis: string;
+        title: string;
+        changeCount: number;
+        totalAmount: number;
+        avgAmount: number;
+        lastActivity: string;
+      }>();
+
+      (historyData || []).forEach((entry: any) => {
+        const key = entry.Projects?.mis || 'Unknown';
+        if (!projectActivityMap.has(key)) {
+          projectActivityMap.set(key, {
+            mis: entry.Projects?.mis?.toString() || '',
+            title: entry.Projects?.project_title || '',
+            changeCount: 0,
+            totalAmount: 0,
+            avgAmount: 0,
+            lastActivity: ''
+          });
+        }
+
+        const proj = projectActivityMap.get(key)!;
+        proj.changeCount++;
+        proj.totalAmount += Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0));
+        if (!proj.lastActivity || (entry.created_at && entry.created_at > proj.lastActivity)) {
+          proj.lastActivity = entry.created_at;
+        }
+      });
+
+      const topProjects = Array.from(projectActivityMap.values())
+        .sort((a, b) => b.changeCount - a.changeCount)
+        .slice(0, 50)
+        .map((p) => ({
+          MIS: p.mis,
+          'Τίτλος Έργου': p.title.substring(0, 80),
+          'Πλήθος Αλλαγών': p.changeCount,
+          'Συνολικό Ποσό Αλλαγών': p.totalAmount,
+          'Μέση Αλλαγή': Math.round((p.totalAmount / p.changeCount) * 100) / 100,
+          'Τελευταία Δραστηριότητα': p.lastActivity ? new Date(p.lastActivity).toLocaleDateString('el-GR') : ''
+        }));
+
+      if (topProjects.length > 0) {
+        sheets.push({
+          name: 'Κορυφαία 50 Έργα',
+          data: topProjects,
+          currencyColumns: ['Συνολικό Ποσό Αλλαγών', 'Μέση Αλλαγή']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 10: Document Status Summary
+      // ============================================
+      const docStatusMap = new Map<string, {
+        status: string;
+        count: number;
+        totalAmount: number;
+        avgAmount: number;
+        projectCount: number;
+      }>();
+
+      (historyData || []).forEach((entry: any) => {
+        const status = entry.generated_documents?.status || 'No Document';
+        if (!docStatusMap.has(status)) {
+          docStatusMap.set(status, {
+            status,
+            count: 0,
+            totalAmount: 0,
+            avgAmount: 0,
+            projectCount: 0
+          });
+        }
+
+        const summary = docStatusMap.get(status)!;
+        summary.count++;
+        summary.totalAmount += Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0));
+      });
+
+      const docStatus = Array.from(docStatusMap.values())
+        .sort((a, b) => b.count - a.count)
+        .map((d) => ({
+          'Κατάσταση Εγγράφου': d.status === 'pending' ? 'Σε αναμονή' : d.status === 'completed' ? 'Ολοκληρωμένο' : d.status,
+          'Πλήθος Εγγράφων': d.count,
+          'Σύνολο Ποσού': d.totalAmount,
+          'Μέσο Ποσό': Math.round((d.totalAmount / d.count) * 100) / 100,
+          '% Συνόλου': Math.round(((d.count / (historyData?.length || 1)) * 100) * 100) / 100
+        }));
+
+      if (docStatus.length > 0) {
+        sheets.push({
+          name: 'Κατάσταση Εγγράφων',
+          data: docStatus,
+          currencyColumns: ['Σύνολο Ποσού', 'Μέσο Ποσό']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 11: Performance Metrics
+      // ============================================
+      const metricsData = [{
+        'Μετρική': 'Συνολικές Αλλαγές',
+        'Τιμή': historyData?.length || 0,
+        'Περιγραφή': 'Σύνολο καταχωρημένων αλλαγών προϋπολογισμού'
+      }, {
+        'Μετρική': 'Συνολικά Έργα',
+        'Τιμή': projectActivityMap.size,
+        'Περιγραφή': 'Έργα με δραστηριότητα προϋπολογισμού'
+      }, {
+        'Μετρική': 'Μέση Αλλαγή ανά Έργο',
+        'Τιμή': projectActivityMap.size > 0 ? Math.round(((historyData?.length || 0) / projectActivityMap.size) * 100) / 100 : 0,
+        'Περιγραφή': 'Μέσο πλήθος αλλαγών ανά έργο'
+      }, {
+        'Μετρική': 'Συνολικοί Χρήστες',
+        'Τιμή': userActivityMap.size,
+        'Περιγραφή': 'Χρήστες με δραστηριότητα'
+      }, {
+        'Μετρική': 'Αριθμός Περιφερειών',
+        'Τιμή': regionSummaryMap?.size || 0,
+        'Περιγραφή': 'Περιφέρειες με δραστηριότητα'
+      }, {
+        'Μετρική': 'Εκκρεμείς Έγγραφοι',
+        'Τιμή': (historyData || []).filter((e: any) => e.generated_documents?.status === 'pending').length,
+        'Περιγραφή': 'Έγγραφα που περιμένουν ολοκλήρωση'
+      }];
+
+      if (metricsData.length > 0) {
+        sheets.push({
+          name: 'Μετρήσεις Απόδοσης',
+          data: metricsData
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 12: Unit/Department Breakdown
+      // ============================================
+      const unitActivityMap = new Map<string, {
+        unit: string;
+        changeCount: number;
+        totalAmount: number;
+        projectCount: number;
+        userCount: number;
+      }>();
+
+      // Group by units if project_index_units data is available
+      (historyData || []).forEach((entry: any) => {
+        // Try to extract unit info from document geo or project info
+        const unitName = 'Κεντρική Μονάδα'; // Default or extract from data structure
+        
+        if (!unitActivityMap.has(unitName)) {
+          unitActivityMap.set(unitName, {
+            unit: unitName,
+            changeCount: 0,
+            totalAmount: 0,
+            projectCount: 0,
+            userCount: 0
+          });
+        }
+
+        const unit = unitActivityMap.get(unitName)!;
+        unit.changeCount++;
+        unit.totalAmount += Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0));
+      });
+
+      const unitBreakdown = Array.from(unitActivityMap.values())
+        .sort((a, b) => b.changeCount - a.changeCount)
+        .map((u) => ({
+          'Μονάδα/Τμήμα': u.unit,
+          'Πλήθος Αλλαγών': u.changeCount,
+          'Συνολικό Ποσό': u.totalAmount,
+          'Μέση Αλλαγή': Math.round((u.totalAmount / u.changeCount) * 100) / 100,
+          '% Συνόλου Αλλαγών': Math.round(((u.changeCount / (historyData?.length || 1)) * 100) * 100) / 100
+        }));
+
+      if (unitBreakdown.length > 0) {
+        sheets.push({
+          name: 'Ανάλυση ανά Μονάδα',
+          data: unitBreakdown,
+          currencyColumns: ['Συνολικό Ποσό', 'Μέση Αλλαγή']
+        });
+      }
+
+      // ============================================
+      // WORKSHEET 13: Data Quality & Alerts
+      // ============================================
+      const qualityIssues = [];
+
+      // Check for missing documents
+      const missingDocs = (historyData || []).filter((e: any) => !e.document_id).length;
+      if (missingDocs > 0) {
+        qualityIssues.push({
+          'Τύπος Προβλήματος': 'Λείπουν Έγγραφα',
+          'Πλήθος': missingDocs,
+          'Σοβαρότητα': 'Μεσαία',
+          'Περιγραφή': 'Καταχωρήσεις χωρίς σχετικό έγγραφο'
+        });
+      }
+
+      // Check for pending documents
+      const pendingDocs = (historyData || []).filter((e: any) => e.generated_documents?.status === 'pending').length;
+      if (pendingDocs > 0) {
+        qualityIssues.push({
+          'Τύπος Προβλήματος': 'Εκκρεμείς Έγγραφοι',
+          'Πλήθος': pendingDocs,
+          'Σοβαρότητα': 'Χαμηλή',
+          'Περιγραφή': 'Έγγραφα που δεν έχουν ολοκληρωθεί'
+        });
+      }
+
+      // Check for missing protocols
+      const missingProtocols = (historyData || []).filter((e: any) => e.generated_documents?.protocol_number_input === null).length;
+      if (missingProtocols > 0) {
+        qualityIssues.push({
+          'Τύπος Προβλήματος': 'Λείπουν Αριθμοί Πρωτοκόλλου',
+          'Πλήθος': missingProtocols,
+          'Σοβαρότητα': 'Χαμηλή',
+          'Περιγραφή': 'Έγγραφα χωρίς αριθμό πρωτοκόλλου'
+        });
+      }
+
+      // Check for projects over budget
+      const overBudgetProjects = Array.from(projectSummaryMap.values())
+        .filter((p) => p.totalSpent > p.totalAllocated).length;
+      if (overBudgetProjects > 0) {
+        qualityIssues.push({
+          'Τύπος Προβλήματος': 'Έργα Υπέρ Προϋπολογισμού',
+          'Πλήθος': overBudgetProjects,
+          'Σοβαρότητα': 'Υψηλή',
+          'Περιγραφή': 'Έργα που έχουν ξεπεράσει τις κατανομές τους'
+        });
+      }
+
+      // Check for suspicious activity (large single changes)
+      const largeChanges = (historyData || []).filter((e: any) => {
+        const amount = Math.abs((parseFloat(e.new_amount) || 0) - (parseFloat(e.previous_amount) || 0));
+        const avgAmount = (historyData || []).reduce((sum: number, entry: any) => 
+          sum + Math.abs((parseFloat(entry.new_amount) || 0) - (parseFloat(entry.previous_amount) || 0)), 0) / ((historyData || []).length || 1);
+        return amount > avgAmount * 5; // 5x average
+      }).length;
+      if (largeChanges > 0) {
+        qualityIssues.push({
+          'Τύπος Προβλήματος': 'Ασυνήθιστα Μεγάλες Αλλαγές',
+          'Πλήθος': largeChanges,
+          'Σοβαρότητα': 'Μεσαία',
+          'Περιγραφή': 'Αλλαγές που υπερβαίνουν 5x το μέσο ποσό'
+        });
+      }
+
+      if (qualityIssues.length > 0) {
+        sheets.push({
+          name: 'Προειδοποιήσεις & Ποιότητα',
+          data: qualityIssues
+        });
+      } else {
+        sheets.push({
+          name: 'Προειδοποιήσεις & Ποιότητα',
+          data: [{
+            'Τύπος Προβλήματος': 'Καμία',
+            'Πλήθος': 0,
+            'Σοβαρότητα': 'N/A',
+            'Περιγραφή': 'Τα δεδομένα έχουν καλή ποιότητα'
+          }]
         });
       }
 

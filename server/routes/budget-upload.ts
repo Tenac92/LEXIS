@@ -258,6 +258,29 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           key.toLowerCase().includes('πληρωμεσ ετουσ')
         );
 
+        // Find project-related keys for creating new projects
+        const projectTitleKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('τίτλος έργου') ||
+          key.toLowerCase().includes('τιτλος εργου') ||
+          key.toLowerCase().includes('project_title') ||
+          key.toLowerCase().includes('project title') ||
+          key.toLowerCase().includes('project name')
+        );
+
+        const projectYearKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('έτος') ||
+          key.toLowerCase().includes('ετος') ||
+          key.toLowerCase().includes('event_year') ||
+          key.toLowerCase().includes('year') ||
+          key.toLowerCase().includes('κωδικός έργου')
+        );
+
+        const eventDescriptionKey = Object.keys(row).find(key => 
+          key.toLowerCase().includes('event_description') ||
+          key.toLowerCase().includes('description') ||
+          key.toLowerCase().includes('description')
+        );
+
         // Check if required keys exist
         if (!misKey || !na853Key) {
           throw new Error(`Missing required columns MIS or NA853 in row`);
@@ -287,6 +310,12 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
             node: nodeKey ? parseEuropeanNumber(row[nodeKey]) : undefined,
             prev_years: prevYearsKey ? parseEuropeanNumber(row[prevYearsKey]) : undefined,
             years_paid: yearsPaidKey ? parseEuropeanNumber(row[yearsPaidKey]) : undefined
+          },
+          // Project creation data
+          projectData: {
+            title: projectTitleKey ? String(row[projectTitleKey]).trim() : null,
+            year: projectYearKey ? parseEuropeanNumber(row[projectYearKey]) : null,
+            description: eventDescriptionKey ? String(row[eventDescriptionKey]).trim() : null
           }
         };
 
@@ -396,14 +425,14 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
     // Process updates
     for (const update of updates) {
       try {
-        const { mis, na853, data } = update;
+        const { mis, na853, data, projectData } = update;
 
         // Try to find the project_id by mis or na853
         let projectId = null;
         
         // Try to find project by MIS first
         const { data: projectByMis, error: misError } = await supabase
-          .from('projects')
+          .from('Projects')
           .select('id')
           .eq('mis', parseInt(mis))
           .single();
@@ -413,7 +442,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         } else {
           // Try to find project by NA853
           const { data: projectByNa853, error: na853Error } = await supabase
-            .from('projects')
+            .from('Projects')
             .select('id')
             .eq('na853', na853)
             .single();
@@ -423,11 +452,48 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           }
         }
         
-        // Log whether we found a project or not
+        // If project doesn't exist, try to create it using data from Excel
+        if (!projectId && projectData) {
+          console.log(`[BudgetUpload] Project not found for MIS ${mis} (NA853: ${na853}), attempting to create from Excel data`);
+          
+          // Create the project with data from Excel
+          const projectToCreate: any = {
+            mis: parseInt(mis),
+            na853,
+            project_title: projectData.title || `Project ${na853}`,
+            event_description: projectData.description || `Project for NA853 ${na853}`,
+            status: 'Ενεργό', // Active status
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          
+          // Add year if available
+          if (projectData.year && !isNaN(projectData.year)) {
+            projectToCreate.event_year = [projectData.year];
+            projectToCreate.inc_year = projectData.year;
+          }
+          
+          const { data: createdProject, error: createError } = await supabase
+            .from('Projects')
+            .insert(projectToCreate)
+            .select('id')
+            .single();
+            
+          if (createError) {
+            const errorMsg = createError.message || createError.details || createError.hint || JSON.stringify(createError);
+            console.warn(`[BudgetUpload] Failed to create project for MIS ${mis}: ${errorMsg}. Will continue with budget record creation only.`);
+            console.warn(`[BudgetUpload] Project data attempted:`, projectToCreate);
+          } else if (createdProject) {
+            projectId = createdProject.id;
+            console.log(`[BudgetUpload] Successfully created new project ID ${projectId} for MIS ${mis} (NA853: ${na853})`);
+          }
+        }
+        
+        // Log whether we found or created a project
         if (projectId) {
-          console.log(`[BudgetUpload] Found project ID ${projectId} for MIS ${mis} (NA853: ${na853})`);
+          console.log(`[BudgetUpload] Using project ID ${projectId} for MIS ${mis} (NA853: ${na853})`);
         } else {
-          console.log(`[BudgetUpload] No project found for MIS ${mis} (NA853: ${na853}), creating budget record without project_id`);
+          console.log(`[BudgetUpload] No project found or created for MIS ${mis} (NA853: ${na853}), creating budget record without project_id`);
         }
 
         // Check if the record exists - use different lookup depending on whether we have project_id
