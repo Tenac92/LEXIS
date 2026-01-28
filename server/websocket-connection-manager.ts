@@ -14,6 +14,7 @@ interface ManagedConnection {
   connectedAt: number;
   lastActivity: number;
   isAuthenticated: boolean;
+  userId?: string;
 }
 
 class WebSocketConnectionManager {
@@ -27,13 +28,14 @@ class WebSocketConnectionManager {
     }, 5 * 60 * 1000);
   }
 
-  addConnection(ws: WebSocket, clientId: string, req: Request): void {
+  addConnection(ws: WebSocket, clientId: string, req: Request, userId?: string): void {
     const connection: ManagedConnection = {
       ws,
       clientId,
       connectedAt: Date.now(),
       lastActivity: Date.now(),
-      isAuthenticated: false // Start as unauthenticated
+      isAuthenticated: false,
+      userId
     };
 
     this.connections.set(clientId, connection);
@@ -55,10 +57,13 @@ class WebSocketConnectionManager {
     }
   }
 
-  setAuthenticated(clientId: string, authenticated: boolean): void {
+  setAuthenticated(clientId: string, authenticated: boolean, userId?: string): void {
     const connection = this.connections.get(clientId);
     if (connection) {
       connection.isAuthenticated = authenticated;
+      if (userId) {
+        connection.userId = userId;
+      }
       console.log(`[WSManager] Connection ${clientId} authentication: ${authenticated}`);
     }
   }

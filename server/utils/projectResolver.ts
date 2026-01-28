@@ -4,7 +4,7 @@
  * Provides a unified interface for project lookups across the application
  */
 
-import { supabase } from '../data';
+import { supabase } from '../config/db';
 
 export interface ProjectIdentifier {
   id: number;

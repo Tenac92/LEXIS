@@ -33,6 +33,8 @@ export function useBudgetUpdates(
   // Fetch basic budget data
   const budgetQuery = useQuery<BudgetData>({
     queryKey: ["budget", projectId],
+    staleTime: 0, // Mark as stale immediately so invalidate triggers refetch
+    refetchOnWindowFocus: false, // Disable auto-refetch on window focus to prevent disruptions
     queryFn: async () => {
       if (!projectId) {
         // Return empty but valid budget data structure
@@ -68,6 +70,7 @@ export function useBudgetUpdates(
         }
         
         const responseData = await budgetResponse.json();
+        console.log(`[Budget] Received data for project ${projectId}:`, responseData);
         
         // Simplified response handling - expect consistent structure from backend
         const budgetData = responseData?.status === 'success' && responseData.data 

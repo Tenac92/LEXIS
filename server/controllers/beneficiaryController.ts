@@ -1010,7 +1010,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     if (req.body.monada) {
       // Client provided a monada - verify it's in their authorized units
       if (!authorizedUnitCodes.includes(req.body.monada)) {
-        console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to create beneficiary in unauthorized unit ${req.body.monada}`);
+        console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} attempted to create beneficiary in unauthorized unit ${req.body.monada}`);
         return res.status(403).json({
           message: 'Δεν έχετε πρόσβαση στη συγκεκριμένη μονάδα'
         });
@@ -1021,7 +1021,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
       assignedMonada = authorizedUnitCodes[0];
     }
 
-    console.log(`[Beneficiaries] SECURITY: Creating beneficiary in authorized unit ${assignedMonada} for user ${req.user.id}`);
+    console.log(`[Beneficiaries] SECURITY: Creating beneficiary in authorized unit ${assignedMonada} for user ${req.user?.id}`);
 
     // Transform data for proper validation
     const transformedData = {
@@ -1148,13 +1148,13 @@ router.put('/:id', authenticateSession, async (req: AuthenticatedRequest, res: R
     const hasNoPayments = beneficiaryUnitIds.length === 0;
     
     if (!hasPaymentsForUserUnit && !hasNoPayments) {
-      console.log(`[Beneficiaries] SECURITY: User ${req.user.id} attempted to update beneficiary ${id} which belongs to other units: ${beneficiaryUnitIds.join(', ')}`);
+      console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} attempted to update beneficiary ${id} which belongs to other units: ${beneficiaryUnitIds.join(', ')}`);
       return res.status(403).json({
         message: 'Δεν έχετε πρόσβαση σε αυτόν τον δικαιούχο'
       });
     }
 
-    console.log(`[Beneficiaries] SECURITY: User ${req.user.id} authorized to update beneficiary ${id} (payments for user unit: ${hasPaymentsForUserUnit}, no payments: ${hasNoPayments})`);
+    console.log(`[Beneficiaries] SECURITY: User ${req.user?.id} authorized to update beneficiary ${id} (payments for user unit: ${hasPaymentsForUserUnit}, no payments: ${hasNoPayments})`);
     
     // Transform data for proper validation with type safety
     // Note: beneficiaries table does NOT have a 'monada' column - unit association is via beneficiary_payments

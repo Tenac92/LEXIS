@@ -95,14 +95,13 @@ export function parseDatabaseError(error: any): {
           type: ErrorType.CONFLICT,
           message: 'Duplicate entry detected',
           statusCode: 409,
-          code: error.code, // Preserve original PostgreSQL error code
           constraint: error.constraint, // Add constraint at top level for client parsing
           details: {
             constraint: error.constraint,
             detail: error.detail,
-            code: error.code // Also keep in details for compatibility
+            code: error.code // PostgreSQL error code for debugging
           }
-        };
+        } as any;
       case '23503': // foreign_key_violation
         return {
           type: ErrorType.VALIDATION,
@@ -183,69 +182,75 @@ export function errorHandler(
       code: err.code
     }));
     
-    return res.status(400).json({
+    res.status(400).json({
       status: 'error',
       type: ErrorType.VALIDATION,
       message: 'Validation failed',
       errors: validationErrors,
       timestamp: new Date().toISOString()
     });
+    return;
   }
   
   // Handle application errors
   if (error.type && error.statusCode) {
-    return res.status(error.statusCode).json({
+    res.status(error.statusCode).json({
       status: 'error',
       type: error.type,
       message: error.message,
       details: error.details,
       timestamp: error.timestamp
     });
+    return;
   }
   
   // Handle database errors
   if (isDatabaseError(error)) {
     const dbError = parseDatabaseError(error);
-    return res.status(dbError.statusCode).json({
+    res.status(dbError.statusCode).json({
       status: 'error',
       type: dbError.type,
       message: dbError.message,
       details: dbError.details,
       timestamp: new Date().toISOString()
     });
+    return;
   }
   
   // Handle authentication errors
   if (error.message?.includes('Unauthorized') || 
       error.message?.includes('Authentication')) {
-    return res.status(401).json({
+    res.status(401).json({
       status: 'error',
       type: ErrorType.AUTHENTICATION,
       message: 'Authentication required',
       timestamp: new Date().toISOString()
     });
+    return;
   }
   
   // Handle authorization errors
   if (error.message?.includes('Forbidden') || 
       error.message?.includes('Access denied')) {
-    return res.status(403).json({
+    res.status(403).json({
       status: 'error',
       type: ErrorType.AUTHORIZATION,
       message: 'Access forbidden',
       timestamp: new Date().toISOString()
     });
+    return;
   }
   
   // Handle not found errors
   if (error.message?.includes('not found') || 
       error.message?.includes('Not found')) {
-    return res.status(404).json({
+    res.status(404).json({
       status: 'error',
       type: ErrorType.NOT_FOUND,
       message: 'Resource not found',
       timestamp: new Date().toISOString()
     });
+    return;
   }
   
   // Generic internal server error

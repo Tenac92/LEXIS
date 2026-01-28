@@ -578,11 +578,7 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
                       <ErrorDisplay error={budgetError} title="Σφάλμα φόρτωσης οικονομικών στοιχείων" />
                     ) : budgetInfo ? (
                       <div className="bg-white rounded-lg p-4 border border-blue-100 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                          <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                            <span className="font-medium text-blue-700 block mb-2">Ετήσια Πίστωση:</span>
-                            <p className="text-2xl font-bold text-blue-900">{formatCurrency(budgetInfo.ethsia_pistosi)}</p>
-                          </div>
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mb-6">
                           <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
                             <span className="font-medium text-green-700 block mb-2">Κατανομές Έτους:</span>
                             <p className="text-xl font-semibold text-green-900">{formatCurrency(budgetInfo.katanomes_etous)}</p>

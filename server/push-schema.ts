@@ -5,7 +5,7 @@ async function main() {
   console.log("Running migrations...");
   
   try {
-    await migrate(db, { migrationsFolder: "./migrations" });
+    await migrate(db as any, { migrationsFolder: "./migrations" });
     console.log("Migrations completed successfully");
     process.exit(0);
   } catch (error) {

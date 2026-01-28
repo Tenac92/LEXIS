@@ -9,6 +9,7 @@ import { Router, Request, Response } from 'express';
 import { requireAdmin, authenticateSession, AuthenticatedRequest } from '../authentication';
 import { manualQuarterTransitionCheck, processQuarterTransition, manualYearEndClosure } from '../services/schedulerService';
 import { createLogger } from '../utils/logger';
+import { broadcastAdminOperation } from '../websocket';
 
 const logger = createLogger('AdminRoutes');
 
@@ -28,7 +29,20 @@ export function registerAdminRoutes(router: Router, wss: any) {
         userId: req.user?.id
       });
       
+      broadcastAdminOperation({
+        operation: 'quarter_transition',
+        status: 'started',
+        message: 'Quarter transition check initiated by admin'
+      });
+      
       const result = await manualQuarterTransitionCheck(wss);
+      
+      broadcastAdminOperation({
+        operation: 'quarter_transition',
+        status: 'completed',
+        message: 'Quarter transition check completed',
+        data: result
+      });
       
       return res.status(200).json({
         success: true,
@@ -38,6 +52,13 @@ export function registerAdminRoutes(router: Router, wss: any) {
     } catch (error) {
       logger.error('[Admin API] Error in manual quarter transition check', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      broadcastAdminOperation({
+        operation: 'quarter_transition',
+        status: 'error',
+        message: errorMessage
+      });
+      
       return res.status(500).json({
         success: false,
         message: 'Error initiating quarter transition check',
@@ -126,7 +147,20 @@ export function registerAdminRoutes(router: Router, wss: any) {
         userId: req.user?.id
       });
       
+      broadcastAdminOperation({
+        operation: 'year_end_closure',
+        status: 'started',
+        message: 'Year-end closure initiated by admin'
+      });
+      
       const result = await manualYearEndClosure(wss);
+      
+      broadcastAdminOperation({
+        operation: 'year_end_closure',
+        status: result.success ? 'completed' : 'error',
+        message: result.message || (result.success ? 'Year-end closure completed' : 'Year-end closure failed'),
+        data: result.stats
+      });
       
       return res.status(200).json({
         success: result.success,
@@ -137,6 +171,13 @@ export function registerAdminRoutes(router: Router, wss: any) {
     } catch (error) {
       logger.error('[Admin API] Error in manual year-end closure', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      broadcastAdminOperation({
+        operation: 'year_end_closure',
+        status: 'error',
+        message: errorMessage
+      });
+      
       return res.status(500).json({
         success: false,
         message: 'Error processing year-end closure',

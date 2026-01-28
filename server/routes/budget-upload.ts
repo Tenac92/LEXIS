@@ -8,6 +8,7 @@ import ExcelJS from 'exceljs';
 import { readXlsxToRows } from '../utils/safeExcel';
 import { parse } from 'csv-parse/sync';
 import { BudgetService } from '../services/budgetService';
+import { broadcastBudgetImportProgress } from '../websocket';
 
 // Helper function to parse numerical values with European number formatting (e.g., 22.000,00 -> 22000.00)
 function parseEuropeanNumber(value: any): number {
@@ -159,6 +160,11 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
 
       console.log(`[BudgetUpload] Extracted ${rawData.length} rows from Excel`);
     }
+
+    // Generate unique batch ID for this import operation
+    const { randomUUID } = await import('crypto');
+    const batchId = randomUUID();
+    console.log(`[BudgetUpload] Starting Excel import with batch_id: ${batchId}`);
 
     // Validate and transform the data
     const updates = [];
@@ -525,7 +531,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
         if (fetchError || !existingRecord) {
           // For new records, initialize user_view to 0 (not to katanomes_etous as before)
           // user_view should start at 0 and only be increased by document creation
-          let initialUserView = 0;
+          const initialUserView = 0;
           const initialKatanomesEtous = data.katanomes_etous || 0;
           
           // DO NOT set user_view to match katanomes_etous - this was the previous incorrect behavior
@@ -574,7 +580,8 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(initialKatanomesEtous),
               change_type: 'import',
               change_reason: `Initial import from Excel for MIS ${mis} (NA853: ${na853})`,
-              document_id: null
+              document_id: null,
+              batch_id: batchId
             });
           }
         } else {
@@ -636,7 +643,7 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
           
           // Special handling for user_view: DO NOT change user_view from admin uploads
           // user_view is only increased by document creation, not by admin uploads
-          let newUserView = existingRecord.user_view;
+          const newUserView = existingRecord.user_view;
           
           // Calculate katanomes_etous difference for notification resolution, but DON'T change user_view
           let katanomesDifference = 0;
@@ -690,7 +697,8 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
               new_amount: String(newKatanomesEtous),
               change_type: 'import',
               change_reason: `Updated from Excel import for MIS ${mis} (NA853: ${na853})`,
-              document_id: null
+              document_id: null,
+              batch_id: batchId
             });
           }
         }
@@ -719,6 +727,17 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
     const message = `Processed ${results.success + results.failures} records: ${results.success} succeeded, ${results.failures} failed`;
     console.log(`[BudgetUpload] ${message}`);
     
+    try {
+      broadcastBudgetImportProgress({
+        stage: 'completed',
+        processed: results.success + results.failures,
+        total: rawData.length,
+        message
+      });
+    } catch (err) {
+      console.error('[BudgetUpload] Broadcast failed:', err);
+    }
+    
     return res.json({
       status: results.success > 0,
       message,
@@ -727,6 +746,16 @@ router.post('/', authenticateSession, upload.single('file'), async (req: Authent
 
   } catch (error) {
     console.error('[BudgetUpload] Error processing file:', error);
+    
+    try {
+      broadcastBudgetImportProgress({
+        stage: 'error',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } catch (err) {
+      console.error('[BudgetUpload] Broadcast failed:', err);
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Failed to process the Excel file',

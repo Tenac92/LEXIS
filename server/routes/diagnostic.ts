@@ -83,7 +83,7 @@ router.post('/test-document', authenticateSession, async (req, res) => {
     });
   } catch (error) {
     console.error('[Diagnostic] Test document creation error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
 

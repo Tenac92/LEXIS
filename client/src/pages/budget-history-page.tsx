@@ -23,7 +23,7 @@ import {
   User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Select,
   SelectContent,
@@ -50,6 +50,7 @@ import { ProjectDetailsDialog } from "@/components/projects/ProjectDetailsDialog
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 import type { GeneratedDocument } from "@shared/schema";
 import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
+import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 
 // Hook to fetch users from the same unit for the creator filter
 const useUnitUsers = (userUnits: (string | number)[] | undefined) => {
@@ -207,6 +208,7 @@ interface BudgetHistoryEntry {
   created_by?: string;  // This now contains the actual user name
   created_by_id?: string; // This contains the numeric user ID
   created_at: string;
+  batch_id?: string; // UUID for grouping related entries
   metadata?: {
     previous_version?: Record<string, any>;
     updated_version?: Record<string, any>;
@@ -224,6 +226,8 @@ interface PaginationData {
 
 export default function BudgetHistoryPage() {
   const { user } = useAuth();
+  // Enable real-time updates via WebSocket
+  useWebSocketUpdates();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [changeType, setChangeType] = useState<string>('all');
@@ -232,6 +236,8 @@ export default function BudgetHistoryPage() {
   const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
   const [dateFilter, setDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [creatorFilter, setCreatorFilter] = useState<string>('');
+  const [unitFilter, setUnitFilter] = useState<string>('all');
+
   
   // State for modals
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -244,6 +250,7 @@ export default function BudgetHistoryPage() {
   const [appliedExpenditureTypeFilter, setAppliedExpenditureTypeFilter] = useState<string>('');
   const [appliedDateFilter, setAppliedDateFilter] = useState<{ from: string; to: string }>({ from: '', to: '' });
   const [appliedCreatorFilter, setAppliedCreatorFilter] = useState<string>('');
+  const [appliedUnitFilter, setAppliedUnitFilter] = useState<string>('');
 
   const isManager = user?.role === 'manager';
   const isAdmin = user?.role === 'admin';
@@ -253,6 +260,23 @@ export default function BudgetHistoryPage() {
   
   // Fetch expenditure types for the filter
   const { data: expenditureTypes } = useExpenditureTypesForFilter();
+
+  // Admin-only: fetch Monada units list for Unit filter
+  const { data: monadaUnits } = useQuery({
+    queryKey: ['monada-units'],
+    queryFn: async () => {
+      const res = await fetch('/api/public/monada');
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isAdmin,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const unitOptions = useMemo(() => {
+    const list = Array.isArray(monadaUnits) ? monadaUnits : [];
+    return list.map((u: any) => ({ id: String(u.id), name: u.unit || u.name || `Μονάδα ${u.id}` }));
+  }, [monadaUnits]);
 
   // Reset to page 1 when filters change
   const applyNa853Filter = () => {
@@ -267,6 +291,7 @@ export default function BudgetHistoryPage() {
     setAppliedExpenditureTypeFilter(expenditureTypeFilter === 'all' ? '' : expenditureTypeFilter);
     setAppliedDateFilter(dateFilter);
     setAppliedCreatorFilter(creatorFilter === 'all' ? '' : creatorFilter);
+    setAppliedUnitFilter(isAdmin && unitFilter !== 'all' ? unitFilter : '');
   };
 
   // Clear all filters
@@ -280,6 +305,8 @@ export default function BudgetHistoryPage() {
     setAppliedExpenditureTypeFilter('');
     setAppliedDateFilter({ from: '', to: '' });
     setAppliedCreatorFilter('');
+    setUnitFilter('all');
+    setAppliedUnitFilter('');
   };
 
   // Reset page when change type changes
@@ -295,8 +322,158 @@ export default function BudgetHistoryPage() {
     }));
   };
 
+  // Component to render a batch group of entries
+  const BatchGroup = ({ entries, batchId }: { entries: BudgetHistoryEntry[]; batchId: string }) => {
+    const [isGroupExpanded, setIsGroupExpanded] = useState(false);
+    const firstEntry = entries[0];
+    const totalChange = entries.reduce((sum, e) => {
+      const change = parseFloat(e.new_amount) - parseFloat(e.previous_amount);
+      return sum + change;
+    }, 0);
+
+    return (
+      <>
+        <TableRow 
+          className="cursor-pointer hover:bg-blue-50/50 bg-blue-50/30 border-l-4 border-l-blue-500"
+          onClick={() => setIsGroupExpanded(!isGroupExpanded)}
+        >
+          <TableCell>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronDown className={`h-4 w-4 transition-transform ${isGroupExpanded ? 'rotate-180' : ''}`} />
+            </Button>
+          </TableCell>
+          <TableCell>
+            {firstEntry.created_at 
+              ? format(new Date(firstEntry.created_at), 'dd/MM/yyyy HH:mm')
+              : 'N/A'}
+          </TableCell>
+          <TableCell colSpan={2}>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+                Μαζική Εισαγωγή Excel
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {entries.length} εγγραφές
+              </span>
+            </div>
+          </TableCell>
+          <TableCell colSpan={2}>
+            <div className={`font-medium ${totalChange < 0 ? "text-red-500" : totalChange > 0 ? "text-green-500" : ""}`}>
+              Συνολική Αλλαγή: {formatCurrency(totalChange)}
+            </div>
+          </TableCell>
+          <TableCell>
+            {getChangeTypeBadge('import')}
+          </TableCell>
+          <TableCell colSpan={3}>
+            <div className="text-sm text-muted-foreground">
+              Κλικ για προβολή όλων των εγγραφών
+            </div>
+          </TableCell>
+        </TableRow>
+        {isGroupExpanded && entries.map((entry) => {
+          const previousAmount = parseFloat(entry.previous_amount);
+          const newAmount = parseFloat(entry.new_amount);
+          const change = newAmount - previousAmount;
+          const isExpanded = expandedRows[entry.id] || false;
+          
+          return (
+            <React.Fragment key={entry.id}>
+              <TableRow 
+                className="cursor-pointer hover:bg-muted/50 bg-blue-50/10 border-l-4 border-l-blue-300"
+                onClick={() => toggleRowExpanded(entry.id)}
+              >
+                <TableCell className="pl-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </Button>
+                </TableCell>
+                <TableCell>
+                  {entry.created_at 
+                    ? format(new Date(entry.created_at), 'dd/MM/yyyy HH:mm')
+                    : 'N/A'}
+                </TableCell>
+                <TableCell 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (entry.project_id) {
+                      setSelectedProject({ id: entry.project_id, mis: entry.mis, na853: entry.na853 });
+                      setProjectDialogOpen(true);
+                    }
+                  }}
+                  className={entry.project_id ? "cursor-pointer hover:underline text-blue-600" : ""}
+                  data-testid={`link-project-${entry.id}`}
+                >
+                  {entry.na853 || entry.mis || 'N/A'}
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium">{formatCurrency(previousAmount)}</div>
+                </TableCell>
+                <TableCell>
+                  <div className="font-medium">{formatCurrency(newAmount)}</div>
+                </TableCell>
+                <TableCell>
+                  <div className={`font-medium ${change < 0 ? "text-red-500" : change > 0 ? "text-green-500" : ""}`}>
+                    {change === 0 ? '-' : (
+                      <>
+                        {change > 0 ? '+' : ''}
+                        {formatCurrency(change)}
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {entry.change_type ? getChangeTypeBadge(entry.change_type) : '-'}
+                </TableCell>
+                <TableCell>
+                  {entry.change_reason ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="max-w-[200px] truncate hover:cursor-help">
+                            {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" align="start" className="max-w-[400px] p-3">
+                          <div className="text-xs whitespace-pre-wrap">
+                            {entry.change_reason.replace('Updated from Excel import for', 'Εισαγωγή από Excel για')}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">-</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <UserIcon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                    <span>{entry.created_by || 'Σύστημα'}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-muted-foreground text-sm">Κανένα</span>
+                </TableCell>
+              </TableRow>
+              {isExpanded && (
+                <TableRow className="bg-muted/30">
+                  <TableCell colSpan={10} className="p-4">
+                    <div className="space-y-2 text-sm">
+                      <div><strong>Μέρος Μαζικής Εισαγωγής:</strong> {batchId.substring(0, 8)}...</div>
+                      <div><strong>Λεπτομέρειες:</strong> {entry.change_reason}</div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </>
+    );
+  };
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedExpenditureTypeFilter, appliedDateFilter, appliedCreatorFilter],
+    queryKey: ['/api/budget/history', page, limit, changeType, appliedNa853Filter, appliedExpenditureTypeFilter, appliedDateFilter, appliedCreatorFilter, appliedUnitFilter],
     staleTime: 2 * 60 * 1000, // 2 minutes cache for better performance
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
@@ -326,6 +503,10 @@ export default function BudgetHistoryPage() {
       if (appliedCreatorFilter) {
         url += `&creator=${appliedCreatorFilter}`;
       }
+
+      if (isAdmin && appliedUnitFilter) {
+        url += `&unit_id=${appliedUnitFilter}`;
+      }
       
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch budget history');
@@ -352,9 +533,47 @@ export default function BudgetHistoryPage() {
         created_by: entry.created_by || 'Σύστημα',
         created_by_id: entry.created_by_id || '',
         created_at: entry.created_at || new Date().toISOString(),
+        batch_id: entry.batch_id,
         metadata: entry.metadata || {}
       }))
     : [];
+  
+  // Group entries by batch_id for imports
+  const groupedHistory = useMemo(() => {
+    const groups: Array<{ isBatch: boolean; entries: BudgetHistoryEntry[]; batchId?: string }> = [];
+    const seenBatchIds = new Set<string>();
+    
+    history.forEach(entry => {
+      if (entry.batch_id && !seenBatchIds.has(entry.batch_id)) {
+        // Find all entries with this batch_id
+        const batchEntries = history.filter(e => e.batch_id === entry.batch_id);
+        if (batchEntries.length > 1) {
+          groups.push({
+            isBatch: true,
+            entries: batchEntries,
+            batchId: entry.batch_id
+          });
+          seenBatchIds.add(entry.batch_id);
+        } else {
+          // Single entry with batch_id (shouldn't happen, but handle gracefully)
+          groups.push({
+            isBatch: false,
+            entries: [entry]
+          });
+        }
+      } else if (!entry.batch_id || !seenBatchIds.has(entry.batch_id)) {
+        // Entry without batch_id or not yet processed
+        if (!entry.batch_id) {
+          groups.push({
+            isBatch: false,
+            entries: [entry]
+          });
+        }
+      }
+    });
+    
+    return groups;
+  }, [history]);
   
   // Fetch document details for selected document
   const { data: selectedDocument } = useQuery<GeneratedDocument>({
@@ -398,6 +617,10 @@ export default function BudgetHistoryPage() {
       
       if (appliedCreatorFilter) {
         params.append('creator', appliedCreatorFilter);
+      }
+
+      if (isAdmin && appliedUnitFilter) {
+        params.append('unit_id', appliedUnitFilter);
       }
       
       const url = `/api/budget/history/export?${params.toString()}`;
@@ -521,7 +744,7 @@ export default function BudgetHistoryPage() {
             matches.forEach((match: string) => {
               const [key, value] = match.split(':');
               const cleanKey = key.replace(/"/g, '');
-              let cleanValue = value.trim();
+              const cleanValue = value.trim();
               
               // Check if it's a numeric string
               const isNumeric = !isNaN(Number(cleanValue));
@@ -538,7 +761,7 @@ export default function BudgetHistoryPage() {
     }
 
     // Get project info from the change_reason
-    let projectInfo = {
+    const projectInfo = {
       mis: '',
       na853: ''
     };
@@ -685,32 +908,40 @@ export default function BudgetHistoryPage() {
     const amountChangeSection = (previous_amount !== undefined || new_amount !== undefined) ? (
       <div className="mt-3 p-3 border rounded">
         <h4 className="text-sm font-medium mb-2">
-          {entryChangeType === 'document_created' 
+          {entryChangeType === 'spending' || entryChangeType === 'refund'
             ? 'Μεταβολή Διαθέσιμου Προϋπολογισμού' 
             : 'Αλλαγή Ποσού'}
         </h4>
-        {entryChangeType === 'document_created' && (
+        {(entryChangeType === 'spending' || entryChangeType === 'refund') && (
           <div className="text-xs mb-2 text-muted-foreground">
-            Η δημιουργία εγγράφου μειώνει το διαθέσιμο προϋπολογισμό (διαφορά κατανομών έτους και ποσού διαβιβάσεων)
+            Τα ποσά εμφανίζουν το διαθέσιμο υπόλοιπο χρηματοδότησης. Όταν δημιουργείται έγγραφο, το διαθέσιμο μειώνεται.
           </div>
         )}
         <div className="grid grid-cols-3 gap-2 text-sm">
           <div>
-            <span className="text-xs text-muted-foreground">Προηγούμενο</span>
+            <span className="text-xs text-muted-foreground">Προηγούμενο Διαθέσιμο</span>
             <div className="font-medium">{formatCurrency(previous_amount || 0)}</div>
           </div>
           <div>
-            <span className="text-xs text-muted-foreground">Νέο</span>
+            <span className="text-xs text-muted-foreground">Νέο Διαθέσιμο</span>
             <div className="font-medium">{formatCurrency(new_amount || 0)}</div>
           </div>
           <div>
             <span className="text-xs text-muted-foreground">Διαφορά</span>
             <div className={
-              (new_amount || 0) > (previous_amount || 0) 
-                ? "font-medium text-green-600" 
-                : (new_amount || 0) < (previous_amount || 0) 
-                  ? "font-medium text-red-600" 
-                  : "font-medium"
+              // For spending/refund entries: decrease is expected (neutral/red for spending, green for refund)
+              // Show red for spending decrease (budget reduced), green for refund increase (budget restored)
+              (entryChangeType === 'spending' || entryChangeType === 'refund')
+                ? ((new_amount || 0) > (previous_amount || 0) 
+                    ? "font-medium text-green-600"  // Available increased (refund) = good
+                    : (new_amount || 0) < (previous_amount || 0) 
+                      ? "font-medium text-red-600"  // Available decreased (spending) = expected but show in red
+                      : "font-medium")
+                : ((new_amount || 0) > (previous_amount || 0) 
+                    ? "font-medium text-green-600"  // Other types: increase = good
+                    : (new_amount || 0) < (previous_amount || 0) 
+                      ? "font-medium text-red-600"  // Other types: decrease = bad
+                      : "font-medium")
             }>
               {formatCurrency((new_amount || 0) - (previous_amount || 0))}
             </div>
@@ -983,6 +1214,22 @@ export default function BudgetHistoryPage() {
                         </SelectContent>
                       </Select>
                     </div>
+                    {isAdmin && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-gray-700">Μονάδα</label>
+                        <Select value={unitFilter} onValueChange={setUnitFilter}>
+                          <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Όλες οι Μονάδες" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Όλες οι Μονάδες</SelectItem>
+                            {unitOptions.map(u => (
+                              <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <label className="text-sm font-medium text-gray-700">Από Ημερομηνία</label>
                       <Input
@@ -1178,7 +1425,13 @@ export default function BudgetHistoryPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {history.map((entry) => {
+                        {groupedHistory.map((group, groupIndex) => {
+                          if (group.isBatch && group.batchId) {
+                            return <BatchGroup key={group.batchId} entries={group.entries} batchId={group.batchId} />;
+                          }
+                          
+                          // Single entry (not part of a batch)
+                          const entry = group.entries[0];
                           const previousAmount = parseFloat(entry.previous_amount);
                           const newAmount = parseFloat(entry.new_amount);
                           const change = newAmount - previousAmount;
@@ -1280,28 +1533,42 @@ export default function BudgetHistoryPage() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Badge 
-                                            className={`cursor-pointer hover:opacity-80 ${getDocumentStatusDetails(entry.document_status).className}`}
+                                            className={`${
+                                              entry.document_status 
+                                                ? `cursor-pointer hover:opacity-80 ${getDocumentStatusDetails(entry.document_status).className}` 
+                                                : 'bg-gray-400 text-white cursor-not-allowed'
+                                            }`}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              setSelectedDocumentId(entry.document_id!);
-                                              setDocumentModalOpen(true);
+                                              if (entry.document_status) {
+                                                setSelectedDocumentId(entry.document_id!);
+                                                setDocumentModalOpen(true);
+                                              }
                                             }}
                                             data-testid={`link-document-${entry.id}`}
                                           >
                                             <FileText className="h-3 w-3 mr-1" />
                                             {entry.protocol_number_input 
                                               ? `Αρ. Πρωτ.: ${entry.protocol_number_input}` 
-                                              : getDocumentStatusDetails(entry.document_status).label}
+                                              : entry.document_status 
+                                                ? getDocumentStatusDetails(entry.document_status).label
+                                                : 'Έγγραφο Διαγραμμένο'}
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent>
                                           <div className="text-xs">
-                                            {entry.protocol_number_input ? (
-                                              <div>Αρ. Πρωτ.: {entry.protocol_number_input}</div>
+                                            {entry.document_status ? (
+                                              <>
+                                                {entry.protocol_number_input ? (
+                                                  <div>Αρ. Πρωτ.: {entry.protocol_number_input}</div>
+                                                ) : (
+                                                  <div>ID Εγγράφου: {entry.document_id}</div>
+                                                )}
+                                                <div className="mt-1">Κλικ για λεπτομέρειες</div>
+                                              </>
                                             ) : (
-                                              <div>ID Εγγράφου: {entry.document_id}</div>
+                                              <div>Το έγγραφο έχει διαγραφεί.<br/>Η εγγραφή διατηρείται για λόγους ελέγχου.</div>
                                             )}
-                                            <div className="mt-1">Κλικ για προβολή εγγράφου</div>
                                           </div>
                                         </TooltipContent>
                                       </Tooltip>

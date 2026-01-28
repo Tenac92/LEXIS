@@ -374,9 +374,24 @@ router.get(
       const creator = req.query.creator as string | undefined;
       const expenditureType = req.query.expenditure_type as string | undefined;
 
-      // Get user unit IDs for access control - admins see all data, others see only their units
-      const userUnitIds =
-        req.user.role === "admin" ? undefined : req.user.unit_id || undefined;
+      // Get user unit IDs for access control - admins see all data unless they explicitly filter by unit
+      let userUnitIds: number[] | undefined;
+      if (req.user.role === "admin") {
+        // Admins can optionally filter by unit via query param `unit_id`
+        const unitIdParam = req.query.unit_id as string | undefined;
+        if (unitIdParam && unitIdParam.trim() !== "") {
+          // Support single id or comma-separated list
+          const parsed = unitIdParam
+            .split(",")
+            .map((v) => parseInt(v.trim(), 10))
+            .filter((n) => !isNaN(n));
+          userUnitIds = parsed.length > 0 ? parsed : undefined;
+        } else {
+          userUnitIds = undefined; // no restriction for admins by default
+        }
+      } else {
+        userUnitIds = req.user.unit_id || undefined; // non-admin restricted by their units
+      }
 
       console.log(
         `[Budget] Fetching history with params: page=${page}, limit=${limit}, na853=${na853 || "all"}, changeType=${changeType || "all"}, userUnitIds=${userUnitIds?.join(",") || "admin"}`,
@@ -945,9 +960,22 @@ router.get(
       const dateTo = req.query.date_to as string | undefined;
       const creator = req.query.creator as string | undefined;
 
-      // Get user unit IDs for access control - admins see all data
-      const userUnitIds =
-        req.user.role === "admin" ? undefined : req.user.unit_id || undefined;
+      // Get user unit IDs for access control - admins see all data unless they explicitly filter by unit
+      let userUnitIds: number[] | undefined;
+      if (req.user.role === 'admin') {
+        const unitIdParam = req.query.unit_id as string | undefined;
+        if (unitIdParam && unitIdParam.trim() !== '') {
+          const parsed = unitIdParam
+            .split(',')
+            .map(v => parseInt(v.trim(), 10))
+            .filter(n => !isNaN(n));
+          userUnitIds = parsed.length > 0 ? parsed : undefined;
+        } else {
+          userUnitIds = undefined;
+        }
+      } else {
+        userUnitIds = req.user.unit_id || undefined;
+      }
 
       // Build the base query to fetch ALL budget history data (no pagination for export)
       let query = supabase
@@ -1288,7 +1316,7 @@ router.get(
       // Fetch user data for creator names
       const userIds = Array.from(
         new Set(
-          historyData?.filter((e) => e.created_by).map((e) => e.created_by) ||
+          historyData?.filter((e: any) => e.created_by).map((e: any) => e.created_by) ||
             [],
         ),
       );
@@ -1500,7 +1528,7 @@ router.get(
           municipalities: [],
         };
         const document = Array.isArray(entry.generated_documents) && entry.generated_documents.length > 0 ? entry.generated_documents[0] : entry.generated_documents;
-        const project = entry.Projects;
+        const project = (entry as any).Projects;
 
         const prevAmount = parseFloat(entry.previous_amount) || 0;
         const newAmount = parseFloat(entry.new_amount) || 0;
@@ -1539,10 +1567,10 @@ router.get(
           "Προηγούμενο Ποσό": prevAmount,
           "Νέο Ποσό": newAmount,
           Μεταβολή: change,
-          "Αρ. Πρωτοκόλλου": document?.protocol_number_input || "",
-          "Κατάσταση Εγγράφου": document?.status || "",
-          Χρήστης: entry.created_by
-            ? userMap[entry.created_by] || `Χρήστης ${entry.created_by}`
+          "Αρ. Πρωτοκόλλου": (document as any)?.protocol_number_input || "",
+          "Κατάσταση Εγγράφου": (document as any)?.status || "",
+          Χρήστης: (entry as any).created_by
+            ? userMap[(entry as any).created_by] || `Χρήστης ${(entry as any).created_by}`
             : "Σύστημα",
           "Αιτία/Σχόλια": entry.change_reason || "",
         };

@@ -45,7 +45,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 let lastClientCreation = new Date();
 
 // Track connection status
-let connectionStatus = {
+const connectionStatus = {
   isConnected: true,
   lastCheck: new Date(),
   failureCount: 0,

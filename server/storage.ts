@@ -1,6 +1,7 @@
 import { users, type User, type GeneratedDocument, type InsertGeneratedDocument, type Project, type ProjectBudget, type InsertBudgetHistory, type Employee, type InsertEmployee, type Beneficiary, type InsertBeneficiary, type BeneficiaryPayment, type InsertBeneficiaryPayment, type ProjectBudgetVersion, type InsertProjectBudgetVersion, type EpaFinancials, type InsertEpaFinancials } from "@shared/schema";
 import { integer } from "drizzle-orm/pg-core";
 import { supabase } from "./config/db";
+import { broadcastDashboardRefresh } from './websocket';
 import session from 'express-session';
 import MemoryStore from 'memorystore';
 import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
@@ -287,6 +288,16 @@ export class DatabaseStorage implements IStorage {
       }
       
       console.log('[Storage] Successfully created budget history entry');
+
+      try {
+        broadcastDashboardRefresh({
+          projectId: entry.project_id || undefined,
+          changeType: entry.change_type,
+          reason: entry.change_reason || undefined
+        });
+      } catch (broadcastError) {
+        console.error('[Storage] Failed to broadcast dashboard refresh:', broadcastError);
+      }
     } catch (error) {
       console.error('[Storage] Error in createBudgetHistoryEntry:', error);
       throw error;
@@ -310,7 +321,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Find the budget record using project_id (preferred) or fallback to MIS
-      let budgetQuery = supabase
+      const budgetQuery = supabase
         .from('project_budget')
         .select('*')
         .eq('project_id', projectId);
@@ -353,6 +364,8 @@ export class DatabaseStorage implements IStorage {
       const availableBudget = katanomesEtous - currentSpending;
       const yearlyAvailable = ethsiaPistosi - currentSpending;
       
+      console.log(`[Storage] Budget values for project ${projectId} - currentSpending: ${currentSpending}, katanomes_etous: ${katanomesEtous}, amount to add/subtract: ${amount}`);
+      
       // TWO-TIER VALIDATION: Only check for spending (positive amounts), not refunds
       // PRIORITY ORDER: Check πίστωση first (HARD BLOCK), then κατανομή (SOFT WARNING)
       if (amount > 0) {
@@ -378,10 +391,26 @@ export class DatabaseStorage implements IStorage {
       
       // 2026 POLICY: Recalculate user_view from 2026+ documents only
       // Instead of incrementing, we query the actual sum to ensure accuracy
+      // IMPORTANT: Documents are linked to project_index records, not directly to Projects
+      // So we need to get all project_index IDs for this project first
+      const { data: projectIndexRecords, error: indexError } = await supabase
+        .from('project_index')
+        .select('id')
+        .eq('project_id', projectId);
+      
+      if (indexError) {
+        console.error('[Storage] Error fetching project_index records:', indexError);
+        throw indexError;
+      }
+      
+      const projectIndexIds = (projectIndexRecords || []).map(rec => rec.id);
+      console.log(`[Storage] Found ${projectIndexIds.length} project_index records for project ${projectId}:`, projectIndexIds);
+      
+      // Now query documents using the project_index IDs
       const { data: documentSum, error: sumError } = await supabase
         .from('generated_documents')
         .select('total_amount')
-        .eq('project_index_id', projectId)
+        .in('project_index_id', projectIndexIds)
         .in('status', ['approved', 'pending', 'processed'])
         .gte('created_at', '2026-01-01T00:00:00Z');  // Only 2026+ documents
       
@@ -390,16 +419,32 @@ export class DatabaseStorage implements IStorage {
         throw sumError;
       }
       
+      console.log(`[Storage] Found ${documentSum?.length || 0} documents for project_index IDs ${projectIndexIds.join(', ')}:`, documentSum?.map(d => d.total_amount));
+      
       // Calculate new user_view from actual document totals (2026+ only)
       const newSpending = (documentSum || []).reduce((sum, doc) => {
         return sum + parseFloat(String(doc.total_amount || 0));
       }, 0);
+      
+      console.log(`[Storage] Recalculated spending from documents: ${newSpending} (from ${documentSum?.length || 0} documents)`);
+      console.log(`[Storage] Budget change: ${currentSpending} → ${newSpending} (difference: ${newSpending - currentSpending})`);
       
       // For current_quarter_spent, we still increment/decrement
       const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
       const newQuarterSpent = currentQuarterSpent + amount;
       
       console.log(`[Storage] Budget calculation (2026+ docs only): recalculated user_view = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
+      
+      // Calculate available budget for history tracking
+      // Available budget = allocation (katanomes_etous) - spending (user_view)
+      // IMPORTANT: Use the amount parameter to calculate the actual change,
+      // not the difference between old and new totals, because the budget may be out of sync
+      const previousAvailable = katanomesEtous - currentSpending;
+      const actualChange = amount;  // This is the actual document amount being added/removed
+      const newAvailable = previousAvailable - actualChange;  // Spending reduces available
+      
+      console.log(`[Storage] Available budget: ${previousAvailable} → ${newAvailable} (change from document amount: ${actualChange})`);
+
       
       // Update the budget record with new spending (both year total and current quarter)
       const { error: updateError } = await supabase
@@ -416,19 +461,18 @@ export class DatabaseStorage implements IStorage {
         throw updateError;
       }
       
-      // Create budget history entry showing the decrease in available budget (katanomes_etous)
-      // When spending increases, available budget decreases
-      const previousAvailableBudget = katanomesEtous - currentSpending;
-      const newAvailableBudget = katanomesEtous - newSpending;
-      
-      // Determine if this is spending (positive amount) or a refund (negative amount)
+      // Create budget history entry showing the change in AVAILABLE BUDGET
+      // Users want to see: "Previous Available: X, New Available: Y, Difference: Y-X"
+      // When spending increases, available decreases (and vice versa)
       const isSpending = amount > 0;
       const absoluteAmount = Math.abs(amount);
       
+      // For history, show the ACTUAL before/after AVAILABLE BUDGET
+      // This makes it intuitive: spending a document reduces available budget
       await this.createBudgetHistoryEntry({
         project_id: projectId,
-        previous_amount: String(previousAvailableBudget),
-        new_amount: String(newAvailableBudget),
+        previous_amount: String(previousAvailable),  // Previous available budget
+        new_amount: String(newAvailable),            // New available budget
         change_type: isSpending ? 'spending' : 'refund',
         change_reason: isSpending 
           ? `Δαπάνη εγγράφου: €${absoluteAmount.toFixed(2)}`
@@ -838,6 +882,7 @@ export class DatabaseStorage implements IStorage {
           created_by,
           created_at,
           updated_at,
+          batch_id,
           Projects!budget_history_project_id_fkey (
             id,
             mis,
@@ -1110,7 +1155,7 @@ export class DatabaseStorage implements IStorage {
       const { data: statsData, error: statsError } = await statsQuery;
       
       // Calculate statistics
-      let statistics = {
+      const statistics = {
         totalEntries: 0,
         totalAmountChange: 0,
         changeTypes: {} as Record<string, number>,
@@ -1123,7 +1168,7 @@ export class DatabaseStorage implements IStorage {
         // Calculate total amount change and change types
         let totalChange = 0;
         const changeTypeCounts: Record<string, number> = {};
-        let dates: string[] = [];
+        const dates: string[] = [];
         
         statsData.forEach(entry => {
           const prevAmount = parseFloat(entry.previous_amount) || 0;
@@ -1247,7 +1292,9 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Now get the paginated data with all columns
+      // Order by created_at first for true chronological order, then by id as tie-breaker
       const { data, error } = await query
+        .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(offset, offset + limit - 1);
         
@@ -1368,6 +1415,7 @@ export class DatabaseStorage implements IStorage {
           created_by: creatorName,
           created_by_id: entry.created_by,
           created_at: entry.created_at,
+          batch_id: entry.batch_id,
           // Add metadata for detailed view
           metadata: {
             // Since we don't have the new schema fields yet, provide empty objects
@@ -1820,7 +1868,7 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Fetching ALL beneficiaries for unit: ${unit} using pagination`);
       
-      let allBeneficiaries: Beneficiary[] = [];
+      const allBeneficiaries: Beneficiary[] = [];
       let fromIndex = 0;
       const batchSize = 1000;
       let hasMore = true;
@@ -1940,7 +1988,7 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Fetch beneficiaries in batches using .in() for the filtered IDs
-      let allBeneficiaries: any[] = [];
+      const allBeneficiaries: any[] = [];
       const batchSize = 1000;
       
       for (let i = 0; i < uniqueBeneficiaryIds.length; i += batchSize) {

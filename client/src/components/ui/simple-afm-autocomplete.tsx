@@ -1,9 +1,68 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { User, Building2, Search, Loader2 } from "lucide-react";
 import { type Employee, type Beneficiary } from "@shared/schema";
+
+// Utility: Find scrollable parent container (reused from ProjectSelect)
+const getScrollableParent = (node: HTMLElement | null): HTMLElement | null => {
+  if (!node) return null;
+  const regex = /(auto|scroll)/;
+  let current: HTMLElement | null = node;
+  while (current && current !== document.body) {
+    const { overflowY } = window.getComputedStyle(current);
+    if (regex.test(overflowY)) return current;
+    current = current.parentElement;
+  }
+  return null;
+};
+
+// Utility: Center element in scroll container (reused from ProjectSelect)
+interface CenterParams {
+  containerEl: HTMLElement;
+  targetEl: HTMLElement;
+  offsetRatio?: number;
+  dropdownMaxHeight?: number;
+  behavior?: ScrollBehavior;
+}
+
+const centerElementInScrollContainer = ({
+  containerEl,
+  targetEl,
+  offsetRatio = 0.4,
+  dropdownMaxHeight = 400,
+  behavior = "smooth",
+}: CenterParams): void => {
+  const containerRect = containerEl.getBoundingClientRect();
+  const targetRect = targetEl.getBoundingClientRect();
+  
+  const targetScrollTop =
+    containerEl.scrollTop +
+    (targetRect.top - containerRect.top) -
+    (containerEl.clientHeight * offsetRatio);
+
+  const targetBottomInContainer =
+    containerEl.scrollTop +
+    (targetRect.bottom - containerRect.top) +
+    dropdownMaxHeight;
+  const containerBottomEdge = containerEl.scrollTop + containerEl.clientHeight;
+
+  let finalScrollTop = Math.max(0, targetScrollTop);
+  if (targetBottomInContainer > containerBottomEdge) {
+    finalScrollTop = Math.min(
+      finalScrollTop,
+      targetBottomInContainer - containerEl.clientHeight + 16
+    );
+  }
+
+  finalScrollTop = Math.max(
+    0,
+    Math.min(finalScrollTop, containerEl.scrollHeight - containerEl.clientHeight)
+  );
+
+  containerEl.scrollTo({ top: finalScrollTop, behavior });
+};
 
 // Data validation utilities
 const isValidPayment = (payment: any): boolean => {
@@ -77,7 +136,7 @@ interface SimpleAFMAutocompleteProps {
 export function SimpleAFMAutocomplete({
   expenditureType,
   onSelectPerson,
-  placeholder = "ΑΦΜ",
+  placeholder = "π.χ. 012345678",
   disabled = false,
   className,
   value = "",
@@ -88,9 +147,14 @@ export function SimpleAFMAutocomplete({
   const [searchTerm, setSearchTerm] = useState(value);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownOpenTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const prevShowDropdownRef = useRef(showDropdown);
   
   // Update search term when value prop changes
   useEffect(() => {
@@ -140,6 +204,58 @@ export function SimpleAFMAutocomplete({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // When dropdown opens, center the input in modal scroll container
+  useEffect(() => {
+    const justOpened = showDropdown && !prevShowDropdownRef.current;
+    prevShowDropdownRef.current = showDropdown;
+
+    if (!justOpened) {
+      if (dropdownOpenTimerRef.current) {
+        clearTimeout(dropdownOpenTimerRef.current);
+      }
+      return;
+    }
+
+    dropdownOpenTimerRef.current = setTimeout(() => {
+      const input = inputRef.current;
+      const container = containerRef.current;
+      if (!input || !container) return;
+
+      const modalScroll = getScrollableParent(container);
+      if (!modalScroll || modalScroll === document.body) {
+        return;
+      }
+
+      centerElementInScrollContainer({
+        containerEl: modalScroll,
+        targetEl: input,
+        offsetRatio: 0.35,
+        dropdownMaxHeight: 400,
+        behavior: "smooth",
+      });
+
+      try {
+        input.focus({ preventScroll: true });
+      } catch {
+        input.focus();
+      }
+    }, 0);
+
+    return () => {
+      if (dropdownOpenTimerRef.current) {
+        clearTimeout(dropdownOpenTimerRef.current);
+      }
+    };
+  }, [showDropdown]);
+
+  // Scroll highlighted item into view
+  const scrollHighlightedIntoView = useCallback((index: number) => {
+    const item = itemRefs.current[index];
+    if (item && dropdownRef.current) {
+      item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
   }, []);
   
   // Determine if we should use employee or beneficiary data
@@ -218,6 +334,63 @@ export function SimpleAFMAutocomplete({
   const isLoading = useEmployeeData ? employeesLoading : beneficiariesLoading;
   const searchResults = useEmployeeData ? employees : beneficiaries;
 
+  // Reset highlight when results change
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      setHighlightedIndex(0);
+    } else {
+      setHighlightedIndex(-1);
+    }
+  }, [searchResults.length]);
+
+  const handleSelect = useCallback((person: Employee | Beneficiary) => {
+    console.log('[SimpleAFM] Person selected:', person);
+    onSelectPerson(person);
+    setShowDropdown(false);
+    setSearchTerm(String(person.afm || ""));
+  }, [onSelectPerson]);
+
+  // Keyboard navigation handler (placed after searchResults is defined)
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!showDropdown || searchResults.length === 0) {
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const next = prev < searchResults.length - 1 ? prev + 1 : 0;
+          scrollHighlightedIntoView(next);
+          return next;
+        });
+        break;
+
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(prev => {
+          const next = prev > 0 ? prev - 1 : searchResults.length - 1;
+          scrollHighlightedIntoView(next);
+          return next;
+        });
+        break;
+
+      case 'Enter':
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < searchResults.length) {
+          const result = searchResults[highlightedIndex];
+          handleSelect(result);
+        }
+        break;
+
+      case 'Escape':
+        e.preventDefault();
+        setShowDropdown(false);
+        inputRef.current?.blur();
+        break;
+    }
+  }, [showDropdown, searchResults, highlightedIndex, scrollHighlightedIntoView, handleSelect]);
+
   // Fixed installment logic based on user requirements
   const getSmartInstallmentData = useCallback((beneficiary: any, expenditureType: string, userUnit: string, projectNa853?: string) => {
     if (import.meta.env.NODE_ENV === 'development') {
@@ -229,7 +402,7 @@ export function SimpleAFMAutocomplete({
     }
 
     // CRITICAL: Only use payments from the SAME expenditure type as the current document
-    let expenditureData = beneficiary.oikonomika[expenditureType];
+    const expenditureData = beneficiary.oikonomika[expenditureType];
     if (!expenditureData || !Array.isArray(expenditureData)) {
       // Check if this beneficiary has payments for OTHER expenditure types
       const hasOtherExpenditureTypes = Object.keys(beneficiary.oikonomika).some(key => {
@@ -362,26 +535,28 @@ export function SimpleAFMAutocomplete({
     };
   }, []);
 
-  const handleSelect = useCallback((person: Employee | Beneficiary) => {
-    console.log('[SimpleAFM] Person selected:', person);
-    
-    // No financial data fetching - just pass the person directly
-    onSelectPerson(person);
-    
-    setShowDropdown(false);
-    setSearchTerm(String(person.afm || ""));
-  }, [onSelectPerson]);
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
+    const input = e.target;
+    const newValue = input.value;
+    const cursorPos = input.selectionStart || 0;
     
     // Only allow numeric input and limit to 9 digits
     const numericValue = newValue.replace(/\D/g, '').slice(0, 9);
+    
+    // Calculate how many characters were removed before cursor
+    const removedBeforeCursor = newValue.slice(0, cursorPos).replace(/\D/g, '').length;
     
     setSearchTerm(numericValue);
     
     // Notify parent component when user types
     onChange?.(numericValue);
+    
+    // Restore cursor position after React re-render
+    setTimeout(() => {
+      if (input) {
+        input.setSelectionRange(removedBeforeCursor, removedBeforeCursor);
+      }
+    }, 0);
     
     // Show dropdown when user types at least 4 characters
     if (numericValue.length >= 4) {
@@ -392,7 +567,7 @@ export function SimpleAFMAutocomplete({
   };
 
   return (
-    <div className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative", className)}>
       <div className="relative">
         <Input
           ref={inputRef}
@@ -400,6 +575,7 @@ export function SimpleAFMAutocomplete({
           placeholder={placeholder}
           value={searchTerm}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => searchTerm.length >= 4 && setShowDropdown(true)}
           disabled={disabled}
           className="w-full pr-8"
@@ -437,11 +613,16 @@ export function SimpleAFMAutocomplete({
             </div>
           ) : (
             <div>
-              {searchResults.map((person: Employee | Beneficiary) => (
+              {searchResults.map((person: Employee | Beneficiary, index: number) => (
                 <div
                   key={person.id}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent cursor-pointer border-b border-border last:border-b-0 transition-colors"
+                  ref={el => { itemRefs.current[index] = el; }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-border last:border-b-0 transition-colors",
+                    highlightedIndex === index ? "bg-accent" : "hover:bg-accent"
+                  )}
                   onClick={() => handleSelect(person)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
                   data-testid={`item-afm-${person.afm}`}
                 >
                   {useEmployeeData ? (

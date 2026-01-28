@@ -436,10 +436,12 @@ export default function AdminNotificationsPage() {
                               <p className="text-muted-foreground text-xs mb-1">Τρέχων Προϋπολογισμός</p>
                               <p className="font-bold text-lg">€{notification.current_budget.toLocaleString('el-GR', { minimumFractionDigits: 2 })}</p>
                             </div>
-                            <div className="bg-background/50 rounded-lg p-3">
-                              <p className="text-muted-foreground text-xs mb-1">Ετήσια Πίστωση</p>
-                              <p className="font-bold text-lg">€{notification.ethsia_pistosi.toLocaleString('el-GR', { minimumFractionDigits: 2 })}</p>
-                            </div>
+                            {notification.ethsia_pistosi > 0 && (
+                              <div className="bg-background/50 rounded-lg p-3">
+                                <p className="text-muted-foreground text-xs mb-1">Ετήσια Πίστωση</p>
+                                <p className="font-bold text-lg">€{notification.ethsia_pistosi.toLocaleString('el-GR', { minimumFractionDigits: 2 })}</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                         

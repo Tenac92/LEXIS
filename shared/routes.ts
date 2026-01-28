@@ -211,9 +211,9 @@ export function isValidRoute(path: string): boolean {
 export function getEnabledAdminControls() {
   return Object.entries(ADMIN_CONTROLS).reduce(
     (acc, [category, items]) => {
-      acc[category] = items.filter((item) => !item.feature); // Filter out features with flags
+      acc[category] = items.filter((item: any) => !item.feature);
       return acc;
     },
-    {} as Record<string, typeof ADMIN_CONTROLS[keyof typeof ADMIN_CONTROLS]>
+    {} as Record<string, any>
   );
 }

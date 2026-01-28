@@ -221,7 +221,6 @@ export const authenticateSession = async (
       unit_id: sessionUser.unit_id || [],
       department: sessionUser.department || undefined,
       telephone: sessionUser.telephone || undefined,
-      descr: sessionUser.descr || undefined,
       details: sessionUser.details || undefined,
     };
 
@@ -493,7 +492,6 @@ export async function authenticateUser(
       unit_id: userData.unit_id || [],
       department: userData.department || undefined,
       telephone: userData.telephone || undefined,
-      descr: userData.descr || undefined,
       details: userData.details || undefined,
       created_at: userData.created_at || undefined,
       updated_at: userData.updated_at || undefined,
@@ -641,7 +639,6 @@ export async function setupAuth(app: Express) {
         unit_id: userData.unit_id || [],
         department: userData.department || undefined,
         telephone: userData.telephone || undefined,
-        descr: userData.descr || undefined,
         details: userData.details || undefined,
       };
 
@@ -870,7 +867,6 @@ export async function setupAuth(app: Express) {
         unit_id: sessionUser.unit_id || [],
         department: sessionUser.department,
         telephone: sessionUser.telephone,
-        descr: sessionUser.descr,
         details: sessionUser.details,
       };
 

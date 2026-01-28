@@ -151,8 +151,8 @@ async function updateBudgetQuarter(budget: any, targetQuarterKey: 'q1' | 'q2' | 
     
     // Map quarter keys to numbers for sequential processing
     const quarterMap: Record<'q1' | 'q2' | 'q3' | 'q4', number> = { q1: 1, q2: 2, q3: 3, q4: 4 };
-    const startQuarter = quarterMap[startQuarterKey];
-    const targetQuarter = quarterMap[targetQuarterKey];
+    const startQuarter = quarterMap[(startQuarterKey as any) as 'q1'];
+    const targetQuarter = quarterMap[(targetQuarterKey as any) as 'q1'];
     
     // Prepare the sum object if it doesn't exist
     let sumObject = budget.sum || {};
@@ -524,7 +524,9 @@ async function createYearEndClosureHistoryEntry(projectId: number, year: number,
         previous_amount: String(closedAmount),
         new_amount: '0',
         change_type: 'year_end_closure',
-        change_reason: `Year ${year} closure: saved ${closedAmount} to history, reset spending to 0, quarter to Q1`
+        change_reason: `Κλείσιμο έτους ${year}: Αρχειοθέτηση €${closedAmount.toFixed(2)} στο year_close και μηδενισμός user_view`,
+        document_id: null,
+        created_by: null
       });
     
     if (error) {

@@ -437,13 +437,13 @@ export function ManagerDashboard() {
                               </Badge>
                             </Link>
                           )}
-                          {activity.na853 && (
+                          {(activity as any).na853 && (
                             <Badge
                               variant="outline"
                               className="text-xs hover:bg-gray-50 cursor-pointer transition-colors"
                             >
                               <FileText className="w-3 h-3 mr-1" />
-                              NA853: {activity.na853}
+                              NA853: {(activity as any).na853}
                             </Badge>
                           )}
 

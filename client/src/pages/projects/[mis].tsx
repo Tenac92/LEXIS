@@ -8,6 +8,13 @@ import { Header } from "@/components/header";
 import { type Project } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 
+// Extended project type with optional fields that may be populated via related queries or views
+type ExtendedProject = Project & {
+  region?: { region: string[], municipality: string[], regional_unit: string[] };
+  implementing_agency?: string | string[];
+  kya?: string | string[];
+};
+
 export default function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -15,7 +22,7 @@ export default function ProjectDetailsPage() {
   
   console.log("Project Details Page - ID Parameter:", id);
 
-  const { data: project, isLoading, error } = useQuery<Project>({
+  const { data: project, isLoading, error } = useQuery<ExtendedProject>({
     queryKey: [`/api/projects/${id}`], // Using project ID from route
     enabled: !!id && !!user // Only fetch if we have both ID and user
   });
@@ -97,9 +104,9 @@ export default function ProjectDetailsPage() {
     }).format(amount);
   };
 
-  const getRegionText = (project: Project) => {
+  const getRegionText = (project: Project & { region?: { region: string[], municipality: string[], regional_unit: string[] } }) => {
     if (!project.region) return '';
-    const regionData = project.region as { region: string[], municipality: string[], regional_unit: string[] };
+    const regionData = project.region;
     const parts = [];
     if (regionData.region?.length) parts.push(regionData.region[0]);
     if (regionData.regional_unit?.length) parts.push(regionData.regional_unit[0]);

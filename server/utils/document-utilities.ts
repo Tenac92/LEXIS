@@ -491,7 +491,7 @@ export class DocumentUtilities {
       return {
         unit: String(unit),
         name: unitInfo.name,
-        unit_name: unitInfo,
+        unit_name: { ...unitInfo, title: unitInfo.name },
         manager: {
           name: "ΑΓΓΕΛΟΣ ΣΑΡΙΔΑΚΗΣ",
           order: "ΜΕ ΕΝΤΟΛΗ ΑΝΑΠΛ. ΠΡΟΪΣΤΑΜΕΝΟΥ Γ.Δ.Α.Ε.Φ.Κ.",

@@ -219,10 +219,46 @@ class DatabaseAccess {
   }
 }
 
-// Export singleton instances
-export const supabase = DatabaseAccess.getInstance().supabase;
-export const pool = DatabaseAccess.getInstance().pool;
-export const db = DatabaseAccess.getInstance().db;
+// Export singleton instance getter (lazy access)
+export const getDatabaseAccess = () => DatabaseAccess.getInstance();
+
+// Export lazy accessors to avoid initialization warnings
+export const getSupabase = () => DatabaseAccess.getInstance().supabase;
+export const getPool = () => DatabaseAccess.getInstance().pool;
+export const getDb = () => DatabaseAccess.getInstance().db;
+
+// Backward compatibility: export instances directly (but warn about initialization)
+// These will trigger the warning if accessed before init, but at least won't break imports
+let _supabaseInstance: any = null;
+let _poolInstance: any = null;
+let _dbInstance: any = null;
+
+Object.defineProperty(exports, 'supabase', {
+  get() {
+    if (!_supabaseInstance) {
+      _supabaseInstance = DatabaseAccess.getInstance().supabase;
+    }
+    return _supabaseInstance;
+  }
+});
+
+Object.defineProperty(exports, 'pool', {
+  get() {
+    if (!_poolInstance) {
+      _poolInstance = DatabaseAccess.getInstance().pool;
+    }
+    return _poolInstance;
+  }
+});
+
+Object.defineProperty(exports, 'db', {
+  get() {
+    if (!_dbInstance) {
+      _dbInstance = DatabaseAccess.getInstance().db;
+    }
+    return _dbInstance;
+  }
+});
 
 // Export utility functions
 export const verifyDatabaseConnections = () => 

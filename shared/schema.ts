@@ -159,6 +159,7 @@ export const budgetHistory = pgTable("budget_history", {
   created_by: bigint("created_by", { mode: "number" }),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+  batch_id: text("batch_id"), // UUID string for grouping related entries
 });
 
 /**

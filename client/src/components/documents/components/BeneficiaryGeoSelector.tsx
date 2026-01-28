@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { MapPin, AlertCircle, RefreshCcw, X } from "lucide-react";
 import {
   Select,
@@ -30,7 +30,7 @@ interface BeneficiaryGeoSelectorProps {
   onRetry?: () => void;
 }
 
-export function BeneficiaryGeoSelector({
+function BeneficiaryGeoSelectorComponent({
   regions,
   regionalUnits,
   municipalities,
@@ -277,3 +277,40 @@ export function BeneficiaryGeoSelector({
     </div>
   );
 }
+
+const getSelectionKey = (
+  value: RegiondetSelection | null | undefined,
+): string => {
+  const { regionCode, unitCode, municipalityCode } =
+    deriveGeoSelectionFromRegiondet(value);
+  return `${regionCode || ""}|${unitCode || ""}|${municipalityCode || ""}`;
+};
+
+const arePropsEqual = (
+  prev: BeneficiaryGeoSelectorProps,
+  next: BeneficiaryGeoSelectorProps,
+) => {
+  const sameOptions =
+    prev.regions === next.regions &&
+    prev.regionalUnits === next.regionalUnits &&
+    prev.municipalities === next.municipalities;
+
+  const sameSelection =
+    getSelectionKey(prev.value) === getSelectionKey(next.value);
+
+  return (
+    sameOptions &&
+    sameSelection &&
+    prev.required === next.required &&
+    prev.loading === next.loading &&
+    prev.error === next.error &&
+    prev.onChange === next.onChange &&
+    prev.onRetry === next.onRetry
+  );
+};
+
+// Memoized to avoid re-rendering when unrelated dialog fields change
+export const BeneficiaryGeoSelector = memo(
+  BeneficiaryGeoSelectorComponent,
+  arePropsEqual,
+);

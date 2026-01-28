@@ -7,6 +7,7 @@ import { createServer } from 'http';
 import { storage } from './storage';
 import { getBudgetByMis } from './controllers/budgetController';
 import { validateBudgetAllocation } from './services/budgetNotificationService';
+import { broadcastBeneficiaryUpdate } from './websocket';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -439,6 +440,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to create payment', error: error.message });
       }
 
+      // Broadcast beneficiary payment update
+      try {
+        broadcastBeneficiaryUpdate({
+          beneficiaryId: data.beneficiary_id,
+          paymentId: data.id,
+          action: 'create',
+          unitId: data.unit_id || undefined
+        });
+      } catch (broadcastError) {
+        console.error('[Beneficiary Payments] Failed to broadcast update:', broadcastError);
+      }
+
       res.status(201).json(data);
     } catch (error) {
       console.error('[Beneficiary Payments] Error in create payment:', error);
@@ -494,6 +507,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to update payment', error: error.message });
       }
 
+      // Broadcast beneficiary payment update
+      try {
+        broadcastBeneficiaryUpdate({
+          beneficiaryId: data.beneficiary_id,
+          paymentId: data.id,
+          action: status !== existingPayment.status ? 'status_change' : 'update',
+          unitId: data.unit_id || undefined
+        });
+      } catch (broadcastError) {
+        console.error('[Beneficiary Payments] Failed to broadcast update:', broadcastError);
+      }
+
       res.json(data);
     } catch (error) {
       console.error('[Beneficiary Payments] Error in update payment:', error);
@@ -533,6 +558,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error('[Beneficiary Payments] Error deleting payment:', error);
         return res.status(500).json({ message: 'Failed to delete payment', error: error.message });
+      }
+
+      // Broadcast beneficiary payment deletion
+      try {
+        broadcastBeneficiaryUpdate({
+          beneficiaryId: existingPayment.beneficiary_id,
+          paymentId: existingPayment.id,
+          action: 'delete',
+          unitId: existingPayment.unit_id || undefined
+        });
+      } catch (broadcastError) {
+        console.error('[Beneficiary Payments] Failed to broadcast update:', broadcastError);
       }
 
       res.json({ message: 'Payment deleted successfully' });
@@ -1972,6 +2009,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create HTTP server
   const httpServer = createServer(app);
+  
+  // Add setWebSocketServer method to connect WebSocket server
+  (httpServer as any).setWebSocketServer = (wss: any) => {
+    log('[Routes] WebSocket server connected to routes', 'info');
+    // Store WebSocket server for use in routes if needed
+    (httpServer as any).wss = wss;
+  };
   
   log('[Routes] All routes registered successfully');
   log('[Routes] Phase 2 API stubs registered - unimplemented endpoints now return 501 Not Implemented');

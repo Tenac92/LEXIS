@@ -29,6 +29,6 @@ const noop = (..._args: unknown[]) => {};
 
 methodLevels.forEach(({ method, level }) => {
   if (levelWeights[level] < levelWeights[configuredLevel]) {
-    console[method] = noop as Console['log'];
+    (console[method] as any) = noop;
   }
 });

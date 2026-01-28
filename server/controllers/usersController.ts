@@ -379,7 +379,7 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     // Graceful fallback if is_active column is missing in the database
     if (error && isMissingIsActiveColumn(error)) {
       console.warn('[Users] is_active column missing; retrying user create without it');
-      const fallbackUserData = { ...userData };
+      const fallbackUserData = { ...userData } as Partial<typeof userData>;
       delete fallbackUserData.is_active;
 
       const fallback = await supabaseAdmin
@@ -572,6 +572,45 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
 // Get users with matching units
 router.get('/matching-units', authenticateSession, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    // Admins can view all users across all units by default
+    if (req.user?.role === 'admin') {
+      console.log('[Users] Admin requesting users across all units');
+      // Get all active users except the current admin
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, name, unit_id, role, is_active')
+        .eq('is_active', true)
+        .neq('id', req.user.id)
+        .order('name');
+
+      if (error && isMissingIsActiveColumn(error)) {
+        console.warn('[Users] is_active column missing; fetching all users without status filter (admin)');
+        const fallback = await supabase
+          .from('users')
+          .select('id, email, name, unit_id, role')
+          .neq('id', req.user.id)
+          .order('name');
+
+        if (fallback.error) {
+          console.error('[Users] Supabase fallback query error (admin):', fallback.error);
+          throw fallback.error;
+        }
+
+        const users = (fallback.data || []).map((u: any) => ({ ...u, is_active: true }));
+        console.log('[Users] Admin fetched users count:', users.length);
+        return res.json(users);
+      }
+
+      if (error) {
+        console.error('[Users] Supabase query error (admin):', error);
+        throw error;
+      }
+
+      console.log('[Users] Admin fetched users count:', (data || []).length);
+      return res.json(data || []);
+    }
+
+    // For non-admins, ensure the requester has assigned units
     if (!req.user?.unit_id || req.user.unit_id.length === 0) {
       return res.status(400).json({ message: 'User has no assigned units' });
     }

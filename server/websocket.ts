@@ -1,15 +1,29 @@
 import { WebSocket, WebSocketServer } from 'ws';
 import type { Server } from 'http';
+import { EventEmitter } from 'events';
 import type { BudgetNotification } from '@shared/schema';
 import { wsConnectionManager } from './websocket-connection-manager';
+import { wsSessionManager } from './websocket-session-manager';
+import { sessionMiddleware } from './authentication';
 import { getClientIpFromSocket, isGreekIp } from './middleware/geoIpMiddleware';
+import { supabase } from './config/db';
 
 const WS_PATH = '/ws';
+
+let currentWss: WebSocketServer | null = null;
+
+export function getWebSocketServer(): WebSocketServer | null {
+  return currentWss;
+}
 
 interface ExtendedWebSocket extends WebSocket {
   isAlive: boolean;
   clientId?: string;
   geoVerified?: boolean;
+  sessionId?: string;
+  userId?: string;
+  isAuthenticated?: boolean;
+  unitIds?: number[]; // User's assigned unit IDs for scoped filtering
 }
 
 export interface BudgetUpdate {
@@ -29,26 +43,91 @@ export interface BudgetUpdate {
 export function createWebSocketServer(server: Server) {
   try {
     const wss = new WebSocketServer({ 
-      server,
-      path: WS_PATH,
+      noServer: true,
       clientTracking: true,
       handleProtocols: () => 'notifications'
     });
 
+    currentWss = wss;
+
+    // Helper: determine if an IP is private (aligned with geo middleware)
+    const isPrivateIp = (ip: string): boolean => {
+      if (!ip) return false;
+      const parts = ip.split('.').map(p => parseInt(p, 10));
+      if (parts.length < 4 || parts.some(Number.isNaN)) return false;
+      return ip.startsWith('10.') ||
+        ip.startsWith('127.') ||
+        ip === '::1' ||
+        (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+        ip.startsWith('192.168.') ||
+        (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127);
+    };
+
+    // Run the existing express-session middleware during WS upgrade
+    const applySessionToRequest = (req: any) => new Promise<void>((resolve, reject) => {
+      const fakeRes = new EventEmitter() as any;
+      fakeRes.statusCode = 200;
+      fakeRes.headersSent = false;
+      fakeRes.getHeader = () => undefined;
+      fakeRes.setHeader = () => {};
+      fakeRes.writeHead = () => fakeRes;
+      fakeRes.end = () => {
+        fakeRes.emit('finish');
+      };
+
+      sessionMiddleware(req as any, fakeRes, (err?: any) => {
+        if (err) {
+          return reject(err);
+        }
+        // Ensure the session touch/save hooks fire
+        fakeRes.emit('finish');
+        resolve();
+      });
+    });
+
+    // Manually handle upgrades so we can enforce auth/geo before accepting
+    server.on('upgrade', async (req, socket, head) => {
+      const url = req.url ? new URL(req.url, `http://${req.headers.host || 'localhost'}`) : null;
+      if (!url || url.pathname !== WS_PATH) {
+        socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      try {
+        await applySessionToRequest(req);
+      } catch (err) {
+        console.error('[WebSocket] Session parse failed during upgrade:', err);
+        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      const sessionInfo = wsSessionManager.validateSession(req as any);
+      if (!sessionInfo) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      // Attach session info for the connection handler
+      (req as any).__sessionInfo = sessionInfo;
+
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+      });
+    });
+
     console.log(`[WebSocket] Server initialized on path: ${WS_PATH}`);
 
-    wss.on('connection', (ws: ExtendedWebSocket, req) => {
+    wss.on('connection', async (ws: ExtendedWebSocket, req) => {
       // Generate a more unique client ID with timestamp
       const clientId = `${Math.random().toString(36).substring(7)}${Date.now().toString(36)}`;
       ws.clientId = clientId;
       
       // SECURITY: Get client IP with proper proxy handling
       const socketIp = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
-      const isDirectPrivate = socketIp.startsWith('10.') || 
-                              socketIp.startsWith('127.') || 
-                              socketIp.startsWith('192.168.') ||
-                              socketIp.startsWith('172.') ||
-                              socketIp.startsWith('100.64.');
+      const isDirectPrivate = isPrivateIp(socketIp);
       
       // Only trust X-Forwarded-For if the direct connection is from a trusted proxy
       let clientIp = socketIp;
@@ -58,14 +137,14 @@ export function createWebSocketServer(server: Server) {
       
       console.log(`[WebSocket] New client attempting connection: ${clientId} from ${clientIp} (socket: ${socketIp})`);
       
-      // GEO-VERIFICATION: Check if connection is from Greece
-      // Pass true for isFromSocket only if the final IP is the direct socket IP
+      // GEO-VERIFICATION: Check if connection is from Greece unless the session was geo-verified earlier
+      const sessionInfo = (req as any).__sessionInfo;
+      const sessionGeoVerified = Boolean((req as any).session?.geoVerified);
       const isDirectSocket = clientIp === socketIp;
-      const fromGreece = isGreekIp(clientIp, isDirectSocket && isDirectPrivate);
+      const fromGreece = sessionGeoVerified || isGreekIp(clientIp, isDirectSocket && isDirectPrivate);
       ws.geoVerified = fromGreece;
-      
+
       if (!fromGreece) {
-        // Not from Greece - close connection immediately
         console.log(`[WebSocket] Connection DENIED - not from Greece: ${clientId} from ${clientIp}`);
         try {
           ws.close(4003, 'Access denied: Greece only');
@@ -75,6 +154,31 @@ export function createWebSocketServer(server: Server) {
         }
         return;
       }
+
+      if (!sessionInfo) {
+        console.log(`[WebSocket] Connection DENIED - missing session after upgrade: ${clientId}`);
+        ws.close(4401, 'Authentication required');
+        return;
+      }
+      ws.sessionId = sessionInfo.sessionId;
+      ws.userId = sessionInfo.userId;
+      ws.isAuthenticated = true;
+      
+      // Fetch user's unit_ids for scoped filtering
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('unit_id')
+          .eq('id', sessionInfo.userId)
+          .single();
+        
+        if (!userError && userData?.unit_id) {
+          ws.unitIds = userData.unit_id;
+          console.log(`[WebSocket] User ${sessionInfo.userId} has units:`, ws.unitIds);
+        }
+      } catch (error) {
+        console.error(`[WebSocket] Failed to fetch user units for ${sessionInfo.userId}:`, error);
+      }
       
       console.log(`[WebSocket] Connection ALLOWED from Greece: ${clientId} from ${clientIp}`);
 
@@ -82,7 +186,9 @@ export function createWebSocketServer(server: Server) {
       ws.isAlive = true;
 
       // Add connection to manager without forced session validation
-      wsConnectionManager.addConnection(ws, clientId, req as any);
+      wsConnectionManager.addConnection(ws, clientId, req as any, sessionInfo.userId);
+      wsConnectionManager.setAuthenticated(clientId, true, sessionInfo.userId);
+      wsSessionManager.updateActivity(sessionInfo.sessionId);
       console.log(`[WebSocket] Connection ${clientId} registered with manager`);
 
       // Try to send a welcome message
@@ -107,11 +213,19 @@ export function createWebSocketServer(server: Server) {
       // Handle pong response (keep-alive)
       ws.on('pong', () => {
         ws.isAlive = true;
+        wsConnectionManager.updateActivity(clientId);
+        if (ws.sessionId) {
+          wsSessionManager.updateActivity(ws.sessionId);
+        }
       });
 
       // Handle incoming messages
       ws.on('message', (data) => {
         try {
+          wsConnectionManager.updateActivity(clientId);
+          if (ws.sessionId) {
+            wsSessionManager.updateActivity(ws.sessionId);
+          }
           // Try to parse the message as JSON
           let message;
           try {
@@ -229,6 +343,8 @@ export function createWebSocketServer(server: Server) {
     wss.on('close', () => {
       console.log('[WebSocket] Server closing, clearing heartbeat interval');
       clearInterval(heartbeatInterval);
+      wsConnectionManager.destroy();
+      wsSessionManager.destroy();
     });
 
     return wss;
@@ -237,6 +353,77 @@ export function createWebSocketServer(server: Server) {
     throw error;
   }
 }
+
+export const broadcastDashboardRefresh = (payload?: { projectId?: number; changeType?: string; reason?: string }) => {
+  if (!currentWss) {
+    console.error('[WebSocket] Dashboard refresh broadcast failed: Server not initialized');
+    return;
+  }
+
+  if (currentWss.clients.size === 0) {
+    return;
+  }
+
+  const message = JSON.stringify({
+    type: 'dashboard_refresh',
+    data: payload || {},
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send dashboard refresh to client ${client.clientId}:`, error);
+      client.isAlive = false;
+    }
+  });
+};
+
+export interface DocumentUpdate {
+  type: 'DOCUMENT_UPDATE' | 'PROTOCOL_UPDATE';
+  documentId: number;
+  data: any;
+}
+
+export const broadcastDocumentUpdate = (update: DocumentUpdate) => {
+  if (!currentWss) {
+    console.warn('[WebSocket] Document update broadcast failed: Server not initialized');
+    return;
+  }
+
+  if (currentWss.clients.size === 0) {
+    return;
+  }
+
+  const message = JSON.stringify({
+    ...update,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send document update to client ${client.clientId}:`, error);
+      client.isAlive = false;
+    }
+  });
+};
 
 export const broadcastNotification = (wss: WebSocketServer, notification: BudgetNotification) => {
   if (!wss) {
@@ -263,7 +450,7 @@ export const broadcastNotification = (wss: WebSocketServer, notification: Budget
   const clientList = Array.from(wss.clients) as ExtendedWebSocket[];
   
   // Group clients by readyState for better logging
-  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN);
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
   const closingClients = clientList.filter(client => client.readyState === WebSocket.CLOSING);
   const closedClients = clientList.filter(client => client.readyState === WebSocket.CLOSED);
   const connectingClients = clientList.filter(client => client.readyState === WebSocket.CONNECTING);
@@ -282,6 +469,10 @@ export const broadcastNotification = (wss: WebSocketServer, notification: Budget
     try {
       client.send(message);
       sentCount++;
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
     } catch (error) {
       errorCount++;
       console.error(`[WebSocket] Failed to send to client ${client.clientId}:`, error);
@@ -338,13 +529,22 @@ export const broadcastBudgetUpdate = (wss: WebSocketServer, update: BudgetUpdate
   const clientList = Array.from(wss.clients) as ExtendedWebSocket[];
   
   // Only send to OPEN clients
-  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN);
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
   
   // Only send to OPEN clients
   openClients.forEach((client) => {
+    // Skip echoing back to the same session if provided
+    if (update.sessionId && client.sessionId === update.sessionId) {
+      return;
+    }
+
     try {
       client.send(message);
       sentCount++;
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
     } catch (error) {
       errorCount++;
       console.error(`[WebSocket] Failed to send budget update to client ${client.clientId}:`, error);
@@ -361,4 +561,235 @@ export const broadcastBudgetUpdate = (wss: WebSocketServer, update: BudgetUpdate
     sentCount,
     errorCount
   };
+};
+
+// Broadcast beneficiary payment updates with unit-scoped filtering
+export const broadcastBeneficiaryUpdate = async (payload: { 
+  beneficiaryId?: number; 
+  paymentId?: number; 
+  action: 'create' | 'update' | 'delete' | 'status_change';
+  afm?: string;
+  unitId?: number; // Unit ID for scoped filtering
+}) => {
+  if (!currentWss) {
+    console.error('[WebSocket] Beneficiary update broadcast failed: Server not initialized');
+    return;
+  }
+
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'beneficiary_update',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    // SECURITY: Only send to users who have access to this unit
+    if (payload.unitId && client.unitIds && !client.unitIds.includes(payload.unitId)) {
+      return; // Skip this client - they don't have access to this unit
+    }
+
+    try {
+      client.send(message);
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send beneficiary update to client ${client.clientId}:`, error);
+      client.isAlive = false;
+    }
+  });
+};
+
+// Broadcast project updates with unit-scoped filtering
+export const broadcastProjectUpdate = async (payload: {
+  projectId: number;
+  action: 'create' | 'update' | 'delete';
+  changes?: string[];
+  unitIds?: number[]; // Unit IDs associated with this project for scoped filtering
+}) => {
+  if (!currentWss) {
+    console.error('[WebSocket] Project update broadcast failed: Server not initialized');
+    return;
+  }
+
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'project_update',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    // SECURITY: Only send to users who have access to units associated with this project
+    if (payload.unitIds && payload.unitIds.length > 0 && client.unitIds) {
+      const hasAccess = payload.unitIds.some(unitId => client.unitIds!.includes(unitId));
+      if (!hasAccess) {
+        return; // Skip this client - they don't have access to any of the project's units
+      }
+    }
+
+    try {
+      client.send(message);
+      wsConnectionManager.updateActivity(client.clientId!);
+      if (client.sessionId) {
+        wsSessionManager.updateActivity(client.sessionId);
+      }
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send project update to client ${client.clientId}:`, error);
+      client.isAlive = false;
+    }
+  });
+};
+
+// Broadcast budget import progress
+export const broadcastBudgetImportProgress = (payload: {
+  stage: 'started' | 'processing' | 'completed' | 'error';
+  processed?: number;
+  total?: number;
+  message?: string;
+}) => {
+  if (!currentWss) return;
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'budget_import_progress',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send import progress:`, error);
+    }
+  });
+};
+
+// Broadcast admin operations
+export const broadcastAdminOperation = (payload: {
+  operation: 'quarter_transition' | 'year_end_closure' | 'system_maintenance';
+  status: 'started' | 'completed' | 'error';
+  message?: string;
+  data?: any;
+}) => {
+  if (!currentWss) return;
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'admin_operation',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send admin operation:`, error);
+    }
+  });
+};
+
+// Broadcast user management changes
+export const broadcastUserUpdate = (payload: {
+  userId: number;
+  action: 'create' | 'update' | 'delete' | 'deactivate' | 'activate';
+  userName?: string;
+}) => {
+  if (!currentWss) return;
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'user_update',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send user update:`, error);
+    }
+  });
+};
+
+// Broadcast reference data changes
+export const broadcastReferenceDataUpdate = (payload: {
+  type: 'units' | 'event_types' | 'expenditure_types' | 'templates';
+  action: 'create' | 'update' | 'delete';
+}) => {
+  if (!currentWss) return;
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'reference_data_update',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    try {
+      client.send(message);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send reference data update:`, error);
+    }
+  });
+};
+
+// Broadcast real-time notification
+export const broadcastRealtimeNotification = (payload: {
+  userId?: number;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  link?: string;
+}) => {
+  if (!currentWss) return;
+  if (currentWss.clients.size === 0) return;
+
+  const message = JSON.stringify({
+    type: 'realtime_notification',
+    data: payload,
+    timestamp: new Date().toISOString()
+  });
+
+  const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
+  const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
+
+  openClients.forEach((client) => {
+    // If userId specified, only send to that user
+    if (payload.userId && client.userId !== payload.userId.toString()) {
+      return;
+    }
+
+    try {
+      client.send(message);
+    } catch (error) {
+      console.error(`[WebSocket] Failed to send notification:`, error);
+    }
+  });
 };

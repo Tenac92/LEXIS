@@ -1324,7 +1324,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
     );
 
     // Load normalized geographic data (new system replaces old kallikratis table)
-    let kallikratis: any[] = []; // Empty - table no longer exists
+    const kallikratis: any[] = []; // Empty - table no longer exists
     let regions: any[] = [];
     let regionalUnits: any[] = [];
     let municipalities: any[] = [];
@@ -1527,7 +1527,7 @@ router.get("/:id/complete", authenticateSession, async (req: AuthenticatedReques
       })
       .map(v => v.id);
     
-    let epaFinancialsByVersion = new Map<number, any[]>();
+    const epaFinancialsByVersion = new Map<number, any[]>();
     if (epaVersionIds.length > 0) {
       console.log(`[ProjectComplete] Fetching financials for ${epaVersionIds.length} EPA versions`);
       const { data: epaFinancialsData, error: epaFinancialsError } = await supabase
@@ -1628,7 +1628,7 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
       ]);
 
     // Kallikratis table no longer exists - using normalized geographic data instead
-    let kallikratisFromIndex: any[] = [];
+    const kallikratisFromIndex: any[] = [];
     console.log(
       "[ProjectReference] Using normalized geographic tables instead of old kallikratis table",
     );

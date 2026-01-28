@@ -27,9 +27,9 @@ export const STEPS = {
 } as const;
 
 export const STEP_TITLES = {
-  [STEPS.UNIT_PROJECT]: "Επιλογή Μονάδας & Έργου",
-  [STEPS.EXPENDITURE_INSTALLMENTS]: "Τύπος Δαπάνης & Δόσεις",
+  [STEPS.UNIT_PROJECT]: "Μονάδα",
+  [STEPS.EXPENDITURE_INSTALLMENTS]: "Έργο",
   [STEPS.RECIPIENTS]: "Δικαιούχοι",
-  [STEPS.DISTRIBUTION]: "Διανομή",
-  [STEPS.SUMMARY]: "Επισκόπηση"
+  [STEPS.DISTRIBUTION]: "Υπογραφή",
+  [STEPS.SUMMARY]: "Συνημμένα"
 } as const;

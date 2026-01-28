@@ -3,7 +3,7 @@ import { supabase } from "../config/db";
 import type { AuthenticatedRequest } from "../authentication";
 import { authenticateSession } from "../authentication";
 import { DocumentGenerator } from "../utils/document-generator";
-import { broadcastDocumentUpdate } from "../services/websocketService";
+import { broadcastDocumentUpdate, broadcastDashboardRefresh } from "../websocket";
 import { createLogger } from "../utils/logger";
 import { storage } from "../storage";
 import { encryptAFM, hashAFM, decryptAFM } from "../utils/crypto";
@@ -309,6 +309,17 @@ router.post(
           req.user?.id,
         );
         console.log("[DocumentsController] V1 Budget updated successfully");
+
+        // Broadcast dashboard refresh to trigger budget indicator updates
+        try {
+          broadcastDashboardRefresh({
+            projectId: project_id,
+            changeType: 'document_created',
+            reason: `Document ${data.id} created with amount ${total_amount}`
+          });
+        } catch (broadcastError) {
+          console.error('[DocumentsController] V1 Failed to broadcast dashboard refresh:', broadcastError);
+        }
       } catch (budgetError) {
         console.error(
           "[DocumentsController] V1 Error updating budget:",
@@ -637,7 +648,7 @@ router.post(
       // Pre-validate ΕΚΤΟΣ ΕΔΡΑΣ recipients before creating the document to avoid orphan records
       if (isEktosEdrasType) {
         const hasMissingMonth = formattedRecipients.some(
-          (recipient) => !recipient.month || !String(recipient.month).trim(),
+          (recipient: any) => !recipient.month || !String(recipient.month).trim(),
         );
 
         if (hasMissingMonth) {
@@ -647,7 +658,7 @@ router.post(
           });
         }
 
-        const hasZeroExpenses = formattedRecipients.some((recipient) => {
+        const hasZeroExpenses = formattedRecipients.some((recipient: any) => {
           const dailyComp = Number(recipient.daily_compensation) || 0;
           const accommodation = Number(recipient.accommodation_expenses) || 0;
           const kmTraveled = Number(recipient.kilometers_traveled) || 0;
@@ -1580,6 +1591,18 @@ router.post(
           req.user?.id,
         );
         console.log("[DocumentsController] V2 Budget updated successfully");
+
+        // Broadcast dashboard refresh to trigger budget indicator updates in all connected clients
+        try {
+          broadcastDashboardRefresh({
+            projectId: project_id,
+            changeType: 'document_created',
+            reason: `Document ${data.id} created with amount ${total_amount}`
+          });
+        } catch (broadcastError) {
+          console.error('[DocumentsController] Failed to broadcast dashboard refresh:', broadcastError);
+          // Don't fail document creation if broadcast fails
+        }
 
         // Validate budget and trigger notifications if needed
         try {
@@ -5024,6 +5047,17 @@ router.delete(
             );
             
             console.log(`[DocumentsController] Budget returned: €${amountToReturn} for project ${projectIndex.project_id}`);
+
+            // Broadcast dashboard refresh to trigger budget indicator updates
+            try {
+              broadcastDashboardRefresh({
+                projectId: projectIndex.project_id,
+                changeType: 'document_deleted',
+                reason: `Document ${documentId} deleted - budget returned €${amountToReturn}`
+              });
+            } catch (broadcastError) {
+              console.error('[DocumentsController] Failed to broadcast dashboard refresh on deletion:', broadcastError);
+            }
           } else {
             console.warn(`[DocumentsController] Could not find project for budget return - project_index_id: ${projectIndexId}`);
           }
@@ -5141,6 +5175,17 @@ router.post(
           console.log(
             `[DocumentsController] Budget adjusted by ${budgetAdjustment} for document ${documentId} (returned: ${newReturnedStatus})`,
           );
+
+          // Broadcast dashboard refresh to trigger budget indicator updates
+          try {
+            broadcastDashboardRefresh({
+              projectId: projectIndex.project_id,
+              changeType: 'document_returned_status_changed',
+              reason: `Document ${documentId} returned status changed to ${newReturnedStatus} - budget adjusted by €${budgetAdjustment}`
+            });
+          } catch (broadcastError) {
+            console.error('[DocumentsController] Failed to broadcast dashboard refresh on status change:', broadcastError);
+          }
         } catch (budgetError) {
           console.error(
             "[DocumentsController] Error updating budget:",

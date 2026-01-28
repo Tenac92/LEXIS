@@ -62,7 +62,7 @@ export function useFormInitialization({
           const implementingAgencyName =
             unit?.unit_name?.name || unit?.name || unit?.unit || "";
 
-          let locationDetail = {
+          const locationDetail = {
             implementing_agency: implementingAgencyName,
             event_type: eventType?.name || "",
             expenditure_types: [],

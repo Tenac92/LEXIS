@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from '../data';
+import { supabase } from '../config/db';
 import { storage } from '../storage';
 import { InsertBudgetHistory } from '@shared/schema';
 
@@ -331,9 +331,9 @@ export class BudgetService {
       
       // If we have data, analyze changes between current state and previous state (if available)
       const currentState: BudgetUpdateIndicators = {
-        available_budget: (budgetData.katanomes_etous || 0) - (budgetData.user_view || 0),
+        available_budget: Math.round(((budgetData.katanomes_etous || 0) - (budgetData.user_view || 0)) * 100) / 100,
         quarter_available: 0, // Calculate based on quarter if needed
-        yearly_available: (budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0),
+        yearly_available: Math.round(((budgetData.ethsia_pistosi || 0) - (budgetData.user_view || 0)) * 100) / 100,
         katanomes_etous: budgetData.katanomes_etous || 0,
         ethsia_pistosi: budgetData.ethsia_pistosi || 0,
         user_view: budgetData.user_view || 0,
@@ -527,7 +527,7 @@ export class BudgetService {
       // Query project_budget using project_id
       console.log(`[BudgetService] Validation - Querying project_budget with project_id: ${projectIdToUse}`);
       
-      let { data: budgetData, error } = await supabase
+      const { data: budgetData, error } = await supabase
         .from('project_budget')
         .select('*')
         .eq('project_id', projectIdToUse)
@@ -1025,10 +1025,11 @@ export class BudgetService {
       }
       
       // Calculate available budget using effective (possibly updated) budget data
-      const available_budget = parseFloat(katanomesEtous) - parseFloat(userView);
+      // Round to 2 decimal places to avoid floating point precision issues
+      const available_budget = Math.round((parseFloat(katanomesEtous) - parseFloat(userView)) * 100) / 100;
       const currentQuarterAllocation = parseFloat(effectiveBudgetData[quarterKey]?.toString() || '0');
-      const quarter_available = currentQuarterAllocation - parseFloat(userView);
-      const yearly_available = parseFloat(ethsiaPistosi) - parseFloat(userView);
+      const quarter_available = Math.round((currentQuarterAllocation - parseFloat(userView)) * 100) / 100;
+      const yearly_available = Math.round((parseFloat(ethsiaPistosi) - parseFloat(userView)) * 100) / 100;
       
       console.log(`[BudgetService] Quarter calculation debug for MIS ${mis}:`, {
         quarterKey,
@@ -1326,21 +1327,26 @@ export class BudgetService {
       
       // Broadcast real-time budget update to all connected clients
       try {
-        const { broadcastBudgetUpdate } = await import('./websocketService');
+        const { broadcastBudgetUpdate, getWebSocketServer } = await import('../websocket');
         
-        // Get updated budget data for broadcasting
-        const updatedBudgetResult = await this.getBudget(mis);
-        if (updatedBudgetResult.status === 'success' && updatedBudgetResult.data) {
-          await broadcastBudgetUpdate(mis, {
-            available_budget: updatedBudgetResult.data.available_budget || 0,
-            quarter_available: updatedBudgetResult.data.quarter_available || 0,
-            yearly_available: updatedBudgetResult.data.yearly_available || 0,
-            user_view: updatedBudgetResult.data.user_view,
-            ethsia_pistosi: updatedBudgetResult.data.ethsia_pistosi,
-            katanomes_etous: updatedBudgetResult.data.katanomes_etous
-          });
-          
-          console.log(`[BudgetService] Broadcasting real-time budget update for MIS: ${mis}`);
+        // Get WebSocket server instance
+        const wss = getWebSocketServer();
+        if (wss) {
+          // Get updated budget data for broadcasting
+          const updatedBudgetResult = await this.getBudget(mis);
+          if (updatedBudgetResult.status === 'success' && updatedBudgetResult.data) {
+            await broadcastBudgetUpdate(wss, {
+              mis: String(mis),
+              available_budget: updatedBudgetResult.data.available_budget || 0,
+              quarter_available: updatedBudgetResult.data.quarter_available || 0,
+              yearly_available: updatedBudgetResult.data.yearly_available || 0,
+              user_view: updatedBudgetResult.data.user_view,
+              ethsia_pistosi: updatedBudgetResult.data.ethsia_pistosi,
+              katanomes_etous: updatedBudgetResult.data.katanomes_etous
+            } as any);
+            
+            console.log(`[BudgetService] Broadcasting real-time budget update for MIS: ${mis}`);
+          }
         }
       } catch (broadcastError) {
         console.warn(`[BudgetService] Error broadcasting budget update: ${broadcastError}`);

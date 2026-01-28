@@ -99,7 +99,7 @@ import {
 } from "./constants";
 import { useDebounce } from "./hooks/useDebounce";
 import { EsdianFieldsWithSuggestions } from "./components/EsdianFieldsWithSuggestions";
-import { ProjectSelect } from "./components/ProjectSelect";
+import { ProjectSelect, type ProjectSelectHandle } from "./components/ProjectSelect";
 import { SubprojectSelect } from "./components/SubprojectSelect";
 import { StepIndicator } from "./components/StepIndicator";
 import { BeneficiaryGeoSelector } from "./components/BeneficiaryGeoSelector";
@@ -109,6 +109,11 @@ import {
   normalizeRegiondetEntry,
   type RegiondetSelection,
 } from "./utils/beneficiary-geo";
+import { UnitSelectionStep } from "./components/UnitSelectionStep";
+import { ProjectContextStep } from "./components/ProjectContextStep";
+import { RecipientsStep } from "./components/RecipientsStep";
+import { SignatureStep } from "./components/SignatureStep";
+import { AttachmentsAndExtrasStep } from "./components/AttachmentsAndExtrasStep";
 
 // Main project interface - simplified as components are now extracted
 interface Project {
@@ -332,6 +337,10 @@ export function CreateDocumentDialog({
   // References
   const closeButtonRef = React.useRef<HTMLButtonElement>(null);
   const dialogCloseRef = React.useRef<HTMLButtonElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const projectSelectRef = useRef<ProjectSelectHandle | null>(null);
+  const recipientCardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [activeRecipientIndex, setActiveRecipientIndex] = useState<number | null>(null);
 
   // Set current step using the context
   // COMPLETE REWRITE: Advanced form step management with guaranteed state preservation
@@ -1150,6 +1159,35 @@ export function CreateDocumentDialog({
   const esdianField2 = form.watch("esdian_field2") || "";
   const selectedForYlId = form.watch("for_yl_id");
 
+  const scrollElementIntoDialog = useCallback(
+    (element: HTMLElement | null, offset: number = 16) => {
+      if (!element) return;
+      const container = scrollContainerRef.current;
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const targetTop =
+          elementRect.top - containerRect.top + container.scrollTop - offset;
+        const targetBottom =
+          elementRect.bottom - containerRect.top + container.scrollTop + offset;
+        const viewTop = container.scrollTop;
+        const viewBottom = container.scrollTop + container.clientHeight;
+
+        if (targetTop < viewTop) {
+          container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
+        } else if (targetBottom > viewBottom) {
+          container.scrollTo({
+            top: Math.max(0, targetBottom - container.clientHeight),
+            behavior: "smooth",
+          });
+        }
+      } else {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    },
+    [],
+  );
+
   // Effect to validate for_yl_id when unit or forYlData changes
   // Clear for_yl_id if it no longer belongs to the available options for the selected unit
   useEffect(() => {
@@ -1174,6 +1212,18 @@ export function CreateDocumentDialog({
       updateFormData({ for_yl_id: null });
     }
   }, [selectedUnit, forYlData, selectedForYlId, form, updateFormData]);
+
+  useEffect(() => {
+    if (!open || currentStep !== 1) return;
+    const timer = setTimeout(() => {
+      projectSelectRef.current?.focusInput?.();
+      const target = projectSelectRef.current?.getInputElement?.() || null;
+      if (target) {
+        requestAnimationFrame(() => scrollElementIntoDialog(target));
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [open, currentStep, scrollElementIntoDialog]);
 
   // Simplified state management - replace complex ref-based blocking
   const [isDialogInitializing, setIsDialogInitializing] = useState(false);
@@ -1214,6 +1264,29 @@ export function CreateDocumentDialog({
   const currentAmount = recipients.reduce((sum: number, r) => {
     return sum + (typeof r.amount === "number" ? r.amount : 0);
   }, 0);
+
+  useEffect(() => {
+    recipientCardRefs.current = recipientCardRefs.current.slice(0, recipients.length);
+    if (activeRecipientIndex !== null && activeRecipientIndex >= recipients.length) {
+      setActiveRecipientIndex(recipients.length ? recipients.length - 1 : null);
+    }
+  }, [recipients.length, activeRecipientIndex]);
+
+  useEffect(() => {
+    if (!open || currentStep !== 2) return;
+    if (!recipients.length) return;
+
+    const indexToScroll =
+      activeRecipientIndex === null ? Math.max(0, recipients.length - 1) : activeRecipientIndex;
+    if (activeRecipientIndex === null && recipients.length > 0) {
+      setActiveRecipientIndex(indexToScroll);
+    }
+
+    requestAnimationFrame(() => {
+      const card = recipientCardRefs.current[indexToScroll] || null;
+      scrollElementIntoDialog(card, 12);
+    });
+  }, [open, currentStep, activeRecipientIndex, recipients.length, scrollElementIntoDialog]);
 
   // Add this function to get available installments based on expenditure type
   const getAvailableInstallments = (expenditureType: string) => {
@@ -3196,6 +3269,16 @@ export function CreateDocumentDialog({
       "recipients",
       currentRecipients.filter((_, i) => i !== index),
     );
+    setActiveRecipientIndex((prev) => {
+      if (prev === null) return prev;
+      if (prev === index) {
+        return currentRecipients.length > 1
+          ? Math.min(index, currentRecipients.length - 2)
+          : null;
+      }
+      if (prev > index) return prev - 1;
+      return prev;
+    });
     setRegiondetErrors({});
   };
 
@@ -3723,254 +3806,72 @@ export function CreateDocumentDialog({
             className="space-y-4"
           >
             {currentStep === 0 && (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="unit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Επιλογή Μονάδας</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          try {
-                            // First update the field directly for immediate UI update
-                            field.onChange(value);
-
-                            // Log to help with debugging
-                            console.log("[UnitSelect] Unit selected:", value);
-
-                            // Mark unit initialization as completed to prevent overriding user selection
-                            if (!unitInitializationRef.current.isCompleted) {
-                              unitInitializationRef.current.isCompleted = true;
-                            }
-
-                            // CRITICAL: Also update unitAutoSelectionRef to track manual selections
-                            // This ensures the selection persists through session refresh
-                            unitAutoSelectionRef.current = {
-                              hasSelected: true,
-                              selectedUnit: value,
-                            };
-
-                            // Always save the form context after unit change
-                            const formValues = form.getValues();
-                            // Clear for_yl when unit changes (for_yl options are unit-specific)
-                            form.setValue("for_yl_id", null);
-                            updateFormData({
-                              ...formValues,
-                              unit: value,
-                              // Clear project and for_yl when unit changes to avoid invalid combinations
-                              project_id: "",
-                              for_yl_id: null,
-                            });
-
-                            // Force a refresh of projects data
-                            setTimeout(() => {
-                              // Invalidate projects to force a refresh with the new unit
-                              queryClient.invalidateQueries({
-                                queryKey: ["projects", value],
-                              });
-                            }, 100);
-                          } catch (error) {
-                            console.error(
-                              "[UnitSelect] Error during unit selection:",
-                              error,
-                            );
-                          }
-                        }}
-                        value={field.value}
-                        disabled={unitsLoading || (units && units.length <= 1)}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue
-                              placeholder={
-                                units && units.length === 1
-                                  ? "Αυτόματη επιλογή μονάδας"
-                                  : "Επιλέξτε μονάδα"
-                              }
-                            >
-                              {field.value &&
-                              Array.isArray(units) &&
-                              units.length > 0
-                                ? units.find((u: any) => u.id === field.value)
-                                    ?.name || field.value
-                                : undefined}
-                            </SelectValue>
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {Array.isArray(units) && units.length > 0 ? (
-                            units.map((unit: any) => (
-                              <SelectItem
-                                key={unit.id || unit.name}
-                                value={unit.id}
-                              >
-                                {unit.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="no-units" disabled>
-                              Δεν βρέθηκαν μονάδες
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                      {field.value && (
-                        <p className="text-xs text-muted-foreground mt-1 font-medium">
-                          Επιλεγμένη μονάδα:{" "}
-                          {Array.isArray(units) && units.length > 0
-                            ? units.find((u: any) => u.id === field.value)
-                                ?.name ||
-                              (userUnitIds.length === 1
-                                ? units.find((u) => u.id === userUnitIds[0])
-                                    ?.name || field.value
-                                : field.value)
-                            : userUnitIds.length === 1
-                              ? units.find((u) => u.id === userUnitIds[0])
-                                  ?.name || field.value
-                              : field.value}
-                        </p>
-                      )}
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <UnitSelectionStep
+                form={form}
+                units={units}
+                unitsLoading={unitsLoading}
+                userUnitIds={userUnitIds}
+                onUnitChange={(value) => {
+                  try {
+                    console.log("[UnitSelect] Unit selected:", value);
+                    if (!unitInitializationRef.current.isCompleted) {
+                      unitInitializationRef.current.isCompleted = true;
+                    }
+                    unitAutoSelectionRef.current = {
+                      hasSelected: true,
+                      selectedUnit: value,
+                    };
+                    const formValues = form.getValues();
+                    form.setValue("for_yl_id", null);
+                    updateFormData({
+                      ...formValues,
+                      unit: value,
+                      project_id: "",
+                      for_yl_id: null,
+                    });
+                    setTimeout(() => {
+                      queryClient.invalidateQueries({
+                        queryKey: ["projects", value],
+                      });
+                    }, 100);
+                  } catch (error) {
+                    console.error("[UnitSelect] Error during unit selection:", error);
+                  }
+                }}
+              />
             )}
 
             {currentStep === 1 && (
-              <div className="space-y-4">
-                {/* Budget debug logging removed for production */}
-
-                {/* Always show budget indicator - handle null data inside component */}
-                <BudgetIndicator
-                  budgetData={budgetData}
-                  currentAmount={currentAmount}
-                />
-
-                <div className="grid gap-4">
-                  <FormField
-                    control={form.control}
-                    name="project_id"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Έργο</FormLabel>
-                        <ProjectSelect
-                          selectedUnit={selectedUnit || ""}
-                          onProjectSelect={(project) => {
-                            // Project selection handler called
-
-                            if (project) {
-                              // Update the form field
-                              field.onChange(project.id);
-
-                              // Update the form context to ensure state persistence
-                              updateFormData({
-                                ...formData,
-                                project_id: String(project.id),
-                              });
-
-                              // Project selected successfully
-                            } else {
-                              // Clear selection
-                              field.onChange("");
-                              updateFormData({
-                                ...formData,
-                                project_id: "",
-                              });
-
-                              // Project selection cleared
-                            }
-                          }}
-                          value={field.value}
-                          placeholder="Επιλέξτε έργο..."
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Subproject Selection */}
-                  {/* <FormField
-                    control={form.control}
-                    name="subproject_id"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Υποέργο (Προαιρετικό)</FormLabel>
-                        <SubprojectSelect
-                          projectId={form.watch("project_id")}
-                          onSubprojectSelect={(subproject) => {
-                            if (subproject) {
-                              field.onChange(String(subproject.id));
-                              updateFormData({
-                                ...formData,
-                                subproject_id: String(subproject.id),
-                              });
-                            } else {
-                              field.onChange("");
-                              updateFormData({
-                                ...formData,
-                                subproject_id: "",
-                              });
-                            }
-                          }}
-                          selectedSubprojectId={field.value}
-                        />
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  /> */}
-
-                  {currentStep === 1 && selectedProject && (
-                    <FormField
-                      control={form.control}
-                      name="expenditure_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Τύπος Δαπάνης</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            disabled={!selectedProjectId}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε τύπο δαπάνης" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {selectedProject?.expenditure_types?.length >
-                              0 ? (
-                                selectedProject.expenditure_types.map(
-                                  (type: string) => (
-                                    <SelectItem key={type} value={type}>
-                                      {type}
-                                    </SelectItem>
-                                  ),
-                                )
-                              ) : (
-                                <SelectItem
-                                  key="no-expenditure-types"
-                                  value="no-expenditure-types"
-                                  disabled
-                                >
-                                  Δεν υπάρχουν διαθέσιμοι τύποι δαπάνης
-                                </SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                </div>
-              </div>
+              <ProjectContextStep
+                form={form}
+                selectedUnit={selectedUnit || ""}
+                selectedProject={selectedProject}
+                budgetData={budgetData}
+                currentAmount={currentAmount}
+                onProjectSelect={(project) => {
+                  if (project) {
+                    console.log("[ProjectSelect] Project selected:", project.id);
+                  } else {
+                    console.log("[ProjectSelect] Project selection cleared");
+                  }
+                }}
+                updateFormData={updateFormData}
+                formData={formData}
+                projectSelectRef={projectSelectRef}
+              />
             )}
 
             {currentStep === 2 && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Section Header */}
+                <div className="pb-3 border-b">
+                  <h2 className="text-lg font-semibold">Δικαιούχοι και Οικονομική Κατανομή</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Προσθέστε τους δικαιούχους και καθορίστε την οικονομική κατανομή
+                  </p>
+                </div>
+
+                <div className="space-y-4">
                 {/* Always show budget indicator for recipient step, with conditional rendering inside component */}
                 <BudgetIndicator
                   budgetData={budgetData}
@@ -4130,9 +4031,9 @@ export function CreateDocumentDialog({
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <div>
-                      <h3 className="text-lg font-medium">Δικαιούχοι</h3>
+                      <h3 className="text-base font-medium">Λίστα Δικαιούχων</h3>
                       <p className="text-sm text-muted-foreground">
-                        Προσθήκη έως 10 δικαιούχων
+                        {recipients.length === 0 ? 'Προσθέστε έως 10 δικαιούχους' : `${recipients.length}/10 δικαιούχοι`}
                       </p>
                     </div>
                     <Button
@@ -4149,7 +4050,15 @@ export function CreateDocumentDialog({
 
                   <div className="space-y-3">
                     {recipients.map((recipient, index) => (
-                      <Card key={index} className="p-4 relative">
+                      <Card
+                        key={index}
+                        className="p-4 relative"
+                        ref={(el) => {
+                          recipientCardRefs.current[index] = el;
+                        }}
+                        onFocusCapture={() => setActiveRecipientIndex(index)}
+                        onMouseDownCapture={() => setActiveRecipientIndex(index)}
+                      >
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-x-4 gap-y-2 w-full">
                           {/* Όνομα */}
                           <div className="md:col-span-2 md:row-span-1">
@@ -5325,135 +5234,41 @@ export function CreateDocumentDialog({
                   </div>
                 </div>
               </div>
+              </div>
             )}
 
             {currentStep === 3 && (
-              <>
-                <div className="space-y-6">
-                  <h3 className="text-lg font-medium">Επιλογή Υπογραφής</h3>
+              <div className="space-y-6">
+                <SignatureStep
+                  form={form}
+                  availableDirectors={availableDirectors}
+                  availableDepartmentManagers={availableDepartmentManagers}
+                />
 
-                  {/* Helpful info about signature availability */}
-                  {form.watch("unit") &&
-                    availableDirectors.length === 0 &&
-                    availableDepartmentManagers.length === 0 && (
-                      <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
-                        <p>
-                          Η επιλεγμένη μονάδα δεν έχει διαθέσιμα στοιχεία
-                          υπογράφοντων στη βάση δεδομένων.
-                        </p>
-                        <p className="mt-1">
-                          Μονάδες με διαθέσιμους υπογράφοντες: ΔΑΕΦΚ-ΚΕ,
-                          ΔΑΕΦΚ-ΑΚ, ΔΑΕΦΚ-ΔΕ
-                        </p>
-                      </div>
-                    )}
-
-                  {/* Single Signature Selection */}
-                  <div className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="director_signature"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            Επιλογή Υπογράφοντος
-                            {availableDirectors.length === 0 &&
-                              availableDepartmentManagers.length === 0 &&
-                              form.watch("unit") && (
-                                <span className="text-sm text-muted-foreground ml-2">
-                                  (Δεν διατίθενται υπογραφές για αυτή τη μονάδα)
-                                </span>
-                              )}
-                          </FormLabel>
-                          <Select
-                            value={
-                              field.value
-                                ? JSON.stringify(field.value)
-                                : undefined
-                            }
-                            onValueChange={(value) => {
-                              if (value && value !== "no-signature") {
-                                field.onChange(JSON.parse(value));
-                              } else {
-                                field.onChange(null);
-                              }
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Επιλέξτε υπογράφοντα" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {/* Directors */}
-                              {availableDirectors.map((director: any) => (
-                                <SelectItem
-                                  key={`director-${director.unit}`}
-                                  value={JSON.stringify({
-                                    ...director.director,
-                                    type: "director",
-                                    unit: director.unit,
-                                  })}
-                                >
-                                  {director.director.name} - Διευθυντής (
-                                  {director.unit})
-                                </SelectItem>
-                              ))}
-
-                              {/* Department Managers */}
-                              {availableDepartmentManagers.map(
-                                (manager, index) => (
-                                  <SelectItem
-                                    key={`manager-${manager.unit}-${index}`}
-                                    value={JSON.stringify({
-                                      ...manager.manager,
-                                      type: "manager",
-                                      unit: manager.unit,
-                                      department: manager.department,
-                                    })}
-                                  >
-                                    {manager.manager.name} - Προϊστάμενος (
-                                    {manager.department})
-                                  </SelectItem>
-                                ),
-                              )}
-
-                              {/* Fallback for empty signature lists */}
-                              {availableDirectors.length === 0 &&
-                                availableDepartmentManagers.length === 0 && (
-                                  <SelectItem value="no-signature" disabled>
-                                    Δεν υπάρχουν διαθέσιμοι υπογράφοντες για την
-                                    επιλεγμένη μονάδα
-                                  </SelectItem>
-                                )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
-                  {(() => {
-                    const selectedUnitValue = form.watch("unit");
-                    if (!selectedUnitValue) return null;
-                    
-                    // Filter for_yl by the selected unit's monada_id
-                    const availableForYl = forYlData?.filter(
-                      (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
-                    ) || [];
-                    
-                    // Only show dropdown if there are for_yl options for this unit
-                    if (availableForYl.length === 0) return null;
-                    
-                    return (
+                {/* For YL (delegated implementing agency) dropdown - only show if options exist for selected unit */}
+                {(() => {
+                  const selectedUnitValue = form.watch("unit");
+                  if (!selectedUnitValue) return null;
+                  
+                  // Filter for_yl by the selected unit's monada_id
+                  const availableForYl = forYlData?.filter(
+                    (fy: any) => fy.monada_id && String(fy.monada_id) === String(selectedUnitValue)
+                  ) || [];
+                  
+                  // Only show dropdown if there are for_yl options for this unit
+                  if (availableForYl.length === 0) return null;
+                  
+                  return (
+                    <div className="max-w-2xl mx-auto space-y-3">
                       <FormField
                         control={form.control}
                         name="for_yl_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Φορέας Υλοποίησης (προαιρετικό)</FormLabel>
+                            <FormLabel className="text-base">
+                              Φορέας Υλοποίησης
+                              <span className="text-muted-foreground text-sm font-normal"> (προαιρετικό)</span>
+                            </FormLabel>
                             <Select
                               onValueChange={(value) => field.onChange(value === "none" ? null : Number(value))}
                               value={field.value ? String(field.value) : "none"}
@@ -5481,17 +5296,25 @@ export function CreateDocumentDialog({
                           </FormItem>
                         )}
                       />
-                    );
-                  })()}
-                </div>
-              </>
+                    </div>
+                  );
+                })()}
+              </div>
             )}
 
             {currentStep === 4 && (
               <>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Συνημμένα Έγγραφα</h3>
+                {/* Section Header */}
+                <div className="pb-3 border-b mb-6">
+                  <h2 className="text-lg font-semibold">Συνημμένα και Εσωτερική Διανομή</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Προαιρετικά στοιχεία που υποστηρίζουν το έγγραφο
+                  </p>
+                </div>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-base font-medium">Απαιτούμενα Συνημμένα</h3>
                     {/* Select All functionality - only show when there are valid attachments */}
                     {!attachmentsLoading &&
                       attachments.length > 0 &&
@@ -5675,120 +5498,17 @@ export function CreateDocumentDialog({
                   )}
                 </div>
 
-                {/* ESDIAN Fields for Internal Distribution with Suggestions */}
-                <EsdianFieldsWithSuggestions form={form} user={user} />
-
-                {/* Navigation buttons for final step */}
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handlePrevious}
-                    disabled={loading}
-                  >
-                    Προηγούμενο
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={async () => {
-                      console.log("[DocumentSubmit] Submit button clicked");
-                      console.log(
-                        "[DocumentSubmit] Recipients count:",
-                        recipients.length,
-                      );
-                      console.log("[DocumentSubmit] Loading state:", loading);
-                      console.log(
-                        "[DocumentSubmit] Recipients data:",
-                        recipients,
-                      );
-                      console.log(
-                        "[DocumentSubmit] Form errors:",
-                        form.formState.errors,
-                      );
-                      console.log(
-                        "[DocumentSubmit] Form is valid:",
-                        form.formState.isValid,
-                      );
-                      console.log(
-                        "[DocumentSubmit] Form values:",
-                        form.getValues(),
-                      );
-
-                      // First trigger form validation
-                      const isValid = await form.trigger();
-                      console.log(
-                        "[DocumentSubmit] Form validation result:",
-                        isValid,
-                      );
-
-                      if (!isValid) {
-                        console.log(
-                          "[DocumentSubmit] Form validation failed, showing errors",
-                        );
-                        console.log(
-                          "[DocumentSubmit] Specific field errors:",
-                          form.formState.errors,
-                        );
-
-                        // Show specific validation errors
-                        const errors = form.formState.errors;
-                        let errorMessage =
-                          "Παρακαλώ ελέγξτε ότι όλα τα πεδία είναι συμπληρωμένα σωστά";
-
-                        if (
-                          errors.recipients &&
-                          Array.isArray(errors.recipients)
-                        ) {
-                          errorMessage =
-                            "Παρακαλώ συμπληρώστε όλα τα υποχρεωτικά πεδία των δικαιούχων (Όνομα, Επώνυμο, ΑΦΜ)";
-                        }
-
-                        toast({
-                          title: "Σφάλμα Επικύρωσης",
-                          description: errorMessage,
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-
-                      console.log(
-                        "[DocumentSubmit] Form is valid, calling handleSubmit",
-                      );
-                      form.handleSubmit(handleSubmit)();
-                    }}
-                    disabled={loading || recipients.length === 0}
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2" />
-                        <span>Αποθήκευση...</span>
-                      </>
-                    ) : (
-                      "Αποθήκευση"
-                    )}
-                  </Button>
+                {/* ESDIAN Internal Distribution */}
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-base font-medium mb-3">Εσωτερική Διακίνηση (ESDIAN)</h3>
+                  <EsdianFieldsWithSuggestions form={form} user={user} />
                 </div>
+                </div>
+
               </>
             )}
           </motion.div>
         </AnimatePresence>
-
-        {/* Navigation buttons for non-final steps */}
-        {currentStep < 4 && (
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 0 || loading}
-            >
-              Προηγούμενο
-            </Button>
-            <Button type="button" onClick={handleNext} disabled={loading}>
-              Επόμενο
-            </Button>
-          </div>
-        )}
       </div>
     );
   };
@@ -5957,19 +5677,105 @@ export function CreateDocumentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-6xl w-[95vw] h-[90vh] max-h-[98vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Δημιουργία Εγγράφου</DialogTitle>
-          <DialogDescription>
-            Φόρμα δημιουργίας νέου διαβιβαστικού πληρωμών για το επιλεγμένο
-            έργο.
-          </DialogDescription>
+      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] max-h-[95vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0 pb-3 border-b">
+          <DialogTitle className="text-xl font-semibold">Δημιουργία Εγγράφου</DialogTitle>
+          {selectedProject && (
+            <DialogDescription className="text-sm font-medium text-foreground mt-1">
+              Έργο: {selectedProject.mis} — {selectedProject.name}
+            </DialogDescription>
+          )}
+          {!selectedProject && (
+            <DialogDescription className="text-sm text-muted-foreground">
+              Συμπληρώστε τα στοιχεία για τη δημιουργία νέου διαβιβαστικού πληρωμών
+            </DialogDescription>
+          )}
         </DialogHeader>
         <StepIndicator currentStep={currentStep} />
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-1">
           <Form {...form}>
-            <div className="space-y-6">{renderStepContent()}</div>
+            <div className="py-4">{renderStepContent()}</div>
           </Form>
+        </div>
+        {/* Sticky Footer with Navigation */}
+        <div className="flex-shrink-0 border-t pt-3 pb-1 bg-background">
+          {currentStep < 4 ? (
+            <div className="flex justify-between items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 0 || loading}
+                size="default"
+              >
+                Προηγούμενο
+              </Button>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  Βήμα {currentStep + 1} από 5 • <kbd className="px-1 py-0.5 text-[10px] border rounded">Tab</kbd> για πλοήγηση
+                </span>
+                <Button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={loading}
+                  size="default"
+                >
+                  Επόμενο
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={loading}
+                size="default"
+              >
+                Προηγούμενο
+              </Button>
+              <div className="flex items-center gap-3">
+                {recipients.length === 0 ? (
+                  <span className="text-xs text-destructive hidden sm:block">
+                    Προσθέστε τουλάχιστον έναν δικαιούχο στο Βήμα 3
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground hidden sm:block">
+                    Έτοιμο για δημιουργία • {recipients.length} {recipients.length === 1 ? 'δικαιούχος' : 'δικαιούχοι'}
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    const isValid = await form.trigger();
+                    if (!isValid) {
+                      toast({
+                        title: "Σφάλμα Επικύρωσης",
+                        description:
+                          "Παρακαλώ ελέγξτε ότι όλα τα υποχρεωτικά πεδία είναι συμπληρωμένα σωστά",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    form.handleSubmit(handleSubmit)();
+                  }}
+                  disabled={loading || recipients.length === 0}
+                  size="default"
+                  className="min-w-[180px]"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2" />
+                      <span>Αποθήκευση...</span>
+                    </>
+                  ) : (
+                    "Δημιουργία Εγγράφου"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
         {/* Hidden close button with ref for programmatic closing */}
         <DialogClose

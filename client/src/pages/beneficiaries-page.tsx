@@ -44,6 +44,7 @@ import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
 import { parseEuropeanNumber } from "@/lib/number-format";
+import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,8 @@ type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
 
 export default function BeneficiariesPage() {
   const { user } = useAuth() as { user: User };
+  // Enable real-time updates via WebSocket
+  useWebSocketUpdates();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<
     Beneficiary | undefined

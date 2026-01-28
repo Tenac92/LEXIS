@@ -61,7 +61,7 @@ export async function executeSQLQuery(req: Request, res: Response) {
         const limitMatch = query.match(/limit\s+(\d+)/i);
         const limit = limitMatch ? parseInt(limitMatch[1]) : 100;
         
-        let supabaseQuery = supabase.from(tableName);
+        let supabaseQuery: any = supabase.from(tableName);
         
         if (fields === '*') {
           supabaseQuery = supabaseQuery.select('*');

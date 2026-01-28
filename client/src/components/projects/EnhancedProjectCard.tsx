@@ -20,7 +20,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { formatNumberEuropean } from '@/lib/number-format';
+import { formatEuropeanNumber } from '@/lib/number-format';
 import DataValidation from '@/components/common/DataValidation';
 import useExpenditureTypes from '@/hooks/useExpenditureTypes';
 
@@ -105,7 +105,7 @@ const EnhancedProjectCard: React.FC<EnhancedProjectCardProps> = ({
     try {
       const numericBudget = parseFloat(budget.replace(/[^\d.-]/g, ''));
       if (isNaN(numericBudget)) return budget;
-      return formatNumberEuropean(numericBudget);
+      return formatEuropeanNumber(numericBudget);
     } catch {
       return budget;
     }
@@ -126,7 +126,7 @@ const EnhancedProjectCard: React.FC<EnhancedProjectCardProps> = ({
         return sum + (isNaN(numeric) ? 0 : numeric);
       }, 0);
       
-      return total > 0 ? formatNumberEuropean(total) : null;
+      return total > 0 ? formatEuropeanNumber(total) : null;
     } catch {
       return null;
     }

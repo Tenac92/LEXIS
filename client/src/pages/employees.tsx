@@ -76,14 +76,14 @@ export default function EmployeesPage() {
     staleTime: 60 * 60 * 1000, // 1 hour
     gcTime: 2 * 60 * 60 * 1000, // 2 hours
     refetchOnWindowFocus: false,
-    refetchOnMount: "stale",
+    refetchOnMount: true,  // Fixed: was "stale", use true to refetch if stale (React Query v5)
   });
 
   // For managers, force their unit; for admins, use selected unit
   const filterUnitForQuery = useMemo(() => {
     if (isManager && user?.unit_id?.[0]) {
       const managerUnitId = user.unit_id[0].toString();
-      const managerUnit = units?.find(
+      const managerUnit = (units as any[])?.find(
         (u: any) => u.id?.toString() === managerUnitId,
       );
       console.log("[Employees] Manager unit lookup:", {
@@ -96,7 +96,7 @@ export default function EmployeesPage() {
   }, [isManager, user?.unit_id, units, selectedUnit]);
 
   // Fetch employees with optional unit filter
-  const { data: employees = [], isLoading } = useQuery({
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({
     queryKey: [
       "/api/employees",
       filterUnitForQuery !== "all" ? filterUnitForQuery : undefined,
@@ -111,7 +111,7 @@ export default function EmployeesPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
-    refetchOnMount: "stale",
+    refetchOnMount: true,  // Fixed: was "stale", use true
   });
 
   // Create employee mutation
@@ -473,7 +473,7 @@ export default function EmployeesPage() {
                               variant="secondary"
                               className="font-mono text-xs"
                             >
-                              {maskAFM(employee.afm)}
+                              {maskAFM(employee.afm || undefined)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm">

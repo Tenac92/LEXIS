@@ -20,7 +20,7 @@ import { NumberInput } from "@/components/ui/number-input";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FileText, Filter, RefreshCcw, LayoutGrid, List } from "lucide-react";
 import DocumentCard from "@/components/documents/document-card";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryFunctionContext } from "@tanstack/react-query";
 import {
   ViewDocumentModal,
   DeleteDocumentModal,
@@ -215,7 +215,8 @@ export default function DocumentsPage() {
   });
 
   const fetchDocuments = useCallback(
-    async ({ queryKey, signal }: { queryKey: [string, Filters, number, number]; signal?: AbortSignal }) => {
+    async (context: QueryFunctionContext<readonly [string, Filters, number, number]>) => {
+      const { queryKey, signal } = context;
       const [, currentFilters, currentPage, pageSize] = queryKey;
       try {
         if (currentFilters.afm && currentFilters.afm.length === 9) {
@@ -313,14 +314,13 @@ export default function DocumentsPage() {
     error,
     refetch,
   } = useQuery<GeneratedDocument[]>({
-    queryKey: ["/api/documents", filters, page, PAGE_SIZE],
+    queryKey: ["/api/documents", filters, page, PAGE_SIZE] as const,
     staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
     gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
     refetchOnMount: false, // Use cached data when available
     refetchOnWindowFocus: false, // Prevent unnecessary refetching
-    keepPreviousData: true, // Avoid UI flicker on filter changes
     enabled: Boolean(user?.id),
-    queryFn: fetchDocuments,
+    queryFn: fetchDocuments as any,
   });
 
   const canGoPrev = page > 0;

@@ -65,7 +65,7 @@ export async function createWorkbookFromData(
     const headerRow = sheet.getRow(1);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF366092' } };
-    headerRow.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 
     // Apply currency formatting to specified columns
     if (currencyColumns.length > 0) {

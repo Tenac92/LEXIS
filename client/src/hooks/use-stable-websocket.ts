@@ -126,10 +126,65 @@ export function useStableWebSocket() {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'budget_update') {
-            setLastMessage(data);
-            // Invalidate budget-related queries
-            queryClient.invalidateQueries({ queryKey: ['/api/budget'] });
+          
+          // Handle different message types
+          switch (data.type) {
+            case 'budget_update':
+              setLastMessage(data);
+              queryClient.invalidateQueries({ queryKey: ['/api/budget'] });
+              break;
+              
+            case 'dashboard_refresh':
+              queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/budget-history'] });
+              queryClient.invalidateQueries({ queryKey: ['budget'] }); // Invalidate budget queries for CreateDocumentDialog
+              queryClient.invalidateQueries({ queryKey: ['budget-validation'] }); // Invalidate budget validation queries
+              break;
+              
+            case 'beneficiary_update':
+              queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/beneficiary-payments'] });
+              break;
+              
+            case 'project_update':
+              queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+              break;
+              
+            case 'budget_import_progress':
+              queryClient.invalidateQueries({ queryKey: ['/api/budget-upload'] });
+              break;
+              
+            case 'admin_operation':
+              queryClient.invalidateQueries({ queryKey: ['/api/admin'] });
+              toast({
+                title: data.data.operation === 'quarter_transition' ? 'Τριμηνιαία Μετάβαση' : 'Λειτουργία Συστήματος',
+                description: data.data.message || 'Ενημέρωση συστήματος',
+              });
+              break;
+              
+            case 'user_update':
+              queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+              break;
+              
+            case 'reference_data_update':
+              queryClient.invalidateQueries({ queryKey: ['/api/public/units'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/public/event-types'] });
+              queryClient.invalidateQueries({ queryKey: ['/api/public/expenditure-types'] });
+              break;
+              
+            case 'DOCUMENT_UPDATE':
+            case 'PROTOCOL_UPDATE':
+              queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+              break;
+              
+            case 'realtime_notification':
+              toast({
+                title: data.data.title,
+                description: data.data.message,
+                variant: data.data.type === 'error' ? 'destructive' : 'default',
+              });
+              break;
           }
         } catch (error) {
           console.error('[StableWebSocket] Failed to parse message:', error);

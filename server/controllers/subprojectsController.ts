@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authenticateSession } from '../authentication';
 import { supabase } from '../config/db';
 import { log } from '../vite';
+import { broadcastProjectUpdate } from '../websocket';
 
 const router = Router();
 router.use(authenticateSession);
@@ -188,6 +189,16 @@ router.put('/subprojects/:id', async (req: AuthenticatedRequest, res: Response) 
     }
 
     log(`[Subprojects] Successfully updated subproject: ${subproject.title}`);
+
+    try {
+      broadcastProjectUpdate({
+        projectId: subproject.epa_project_id,
+        action: 'update',
+        changes: ['subproject']
+      });
+    } catch (broadcastError) {
+      log(`[Subprojects] Broadcast failed:`, broadcastError instanceof Error ? broadcastError.message : String(broadcastError));
+    }
 
     res.json({
       success: true,

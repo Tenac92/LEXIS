@@ -15,7 +15,7 @@ interface BudgetIndicatorProps {
 // Compact version of the budget indicator for project cards
 export function CompactBudgetIndicator({ 
   budgetData,
-  _mis
+  mis
 }: { 
   budgetData: BudgetData | null;
   mis: string;
@@ -137,6 +137,11 @@ export function BudgetIndicator({
   // This provides a visual cue that real-time updates are occurring
   useEffect(() => {
     if (budgetData) {
+      console.log('[BudgetIndicator] Budget data updated, showing update indicator', {
+        userView: budgetData.user_view,
+        katanomesEtous: budgetData.katanomes_etous,
+        available: budgetData.available_budget
+      });
       setIsUpdating(true);
       const timer = setTimeout(() => {
         setIsUpdating(false);
@@ -304,7 +309,7 @@ export function BudgetIndicator({
   const carriedForward = budgetData.sum?.carried_forward 
     ? (typeof budgetData.sum.carried_forward === 'number' 
       ? budgetData.sum.carried_forward 
-      : parseFloat(budgetData.sum.carried_forward.toString()))
+      : parseFloat(String(budgetData.sum.carried_forward)))
     : 0;
   
   // Get current quarter spent
@@ -321,12 +326,12 @@ export function BudgetIndicator({
   const diathesimoTriminoυ = Math.max(0, (currentQuarterValue + carriedForward) - currentQuarterSpent);
   
   // Υπόλοιπο προς Πίστωση = ethsia_pistosi - user_view
+  // NOTE: Not displayed in UI for 2026+ projects where ethsia_pistosi = 0
   const ypoloipoProsPistosi = Math.max(0, ethsiaPistosi - userView);
   
   // Calculate what would remain after the current input amount for each
   const diathesimiKatanomiAfter = Math.max(0, diathesimiKatanomi - amount);
   const diathesimoTriminoυAfter = Math.max(0, diathesimoTriminoυ - amount);
-  const ypoloipoProsPistosiAfter = Math.max(0, ypoloipoProsPistosi - amount);
 
   // Calculate remaining budget after potential deduction in real-time
   // Ensure we have valid numbers by providing fallbacks
@@ -351,7 +356,7 @@ export function BudgetIndicator({
             <span>Συγχρονισμός...</span>
           </div>
         )}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div>
             <h3 className="text-sm font-medium text-gray-600">Διαθέσιμη Κατανομή</h3>
             <p className={`text-2xl font-bold ${diathesimiKatanomiAfter > 0 ? 'text-blue-600' : 'text-red-600'}`}>
@@ -383,24 +388,10 @@ export function BudgetIndicator({
               </p>
             )}
           </div>
-          <div>
-            <h3 className="text-sm font-medium text-gray-600">Υπόλοιπο προς Πίστωση</h3>
-            <p className={`text-2xl font-bold ${ypoloipoProsPistosiAfter > 0 ? 'text-gray-700' : 'text-red-600'}`}>
-              {ypoloipoProsPistosiAfter.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Υπόλοιπο προς πίστωση για το έτος
-            </p>
-            {amount > 0 && (
-              <p className={`text-xs ${ypoloipoProsPistosiAfter < 0 ? 'text-red-500' : 'text-gray-600'} mt-1`}>
-                Πριν: {ypoloipoProsPistosi.toLocaleString('el-GR', { style: 'currency', currency: 'EUR' })}
-              </p>
-            )}
-          </div>
         </div>
       </div>
 
-      {isExceedingEthsiaPistosi && (
+      {isExceedingEthsiaPistosi && ethsiaPistosi > 0 && (
         <Alert variant="destructive">
           <AlertDescription>
             Το ποσό υπερβαίνει την ετήσια πίστωση. Απαιτείται χρηματοδότηση.

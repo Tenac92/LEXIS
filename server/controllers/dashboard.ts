@@ -173,10 +173,17 @@ export async function getDashboardStats(req: Request, res: Response) {
       const difference = newAmount - previousAmount;
       const userName = activity.created_by ? (userData[activity.created_by] || `User ${activity.created_by}`) : 'System';
       
+      // For spending/refund types, amounts represent AVAILABLE budget
+      // When available budget decreases, that's spending (negative is spending)
+      // When available budget increases, that's a refund (positive is refund)
+      const isSpendingType = activity.change_type === 'spending' || activity.change_type === 'refund';
+      
       // Format amount change with clear increase/decrease indicator
-      const changeText = difference > 0 
-        ? `αύξηση κατά ${Math.abs(difference).toFixed(2)}€` 
-        : `μείωση κατά ${Math.abs(difference).toFixed(2)}€`;
+      // For spending types, flip the sign since we're showing available budget decrease as spending
+      const actualChange = isSpendingType ? -difference : difference;
+      const changeText = actualChange > 0 
+        ? `αύξηση κατά ${Math.abs(actualChange).toFixed(2)}€` 
+        : `μείωση κατά ${Math.abs(actualChange).toFixed(2)}€`;
       
       // Create a more meaningful description using project data
       // Handle Projects as either single object or array
@@ -195,13 +202,17 @@ export async function getDashboardStats(req: Request, res: Response) {
         description += `Δημιουργία ειδοποίησης για ${changeText}`;
       } else if (activity.change_type === 'import') {
         description += `Εισαγωγή νέων δεδομένων με ${changeText}`;
+      } else if (activity.change_type === 'spending') {
+        description += `Δαπάνη εγγράφου - Διαθέσιμο: ${previousAmount.toFixed(2)}€ → ${newAmount.toFixed(2)}€`;
+      } else if (activity.change_type === 'refund') {
+        description += `Επιστροφή - Διαθέσιμο: ${previousAmount.toFixed(2)}€ → ${newAmount.toFixed(2)}€`;
       } else {
         description += `${changeText} (από ${previousAmount.toFixed(2)}€ σε ${newAmount.toFixed(2)}€)`;
       }
       
       // If there's a reason, add it
       if (activity.change_reason) {
-        description += ` - Αιτία: ${activity.change_reason}`;
+        description += ` - ${activity.change_reason}`;
       }
       
       const docData = Array.isArray(activity.generated_documents) ? activity.generated_documents[0] : activity.generated_documents;
@@ -219,7 +230,7 @@ export async function getDashboardStats(req: Request, res: Response) {
         na853: na853 || null,
         previousAmount,
         newAmount,
-        changeAmount: difference
+        changeAmount: actualChange  // Use the corrected change amount
       };
     }) || [];
 

@@ -103,7 +103,7 @@ export function formatNumberWhileTyping(value: string, decimals: number = 2): st
   // Split into integer and decimal parts
   const parts = cleanValue.split(',');
   let integerPart = parts[0] || '';
-  let decimalPart = parts[1] || '';
+  const decimalPart = parts[1] || '';
   
   // Format integer part with dots as thousand separators
   if (integerPart.length > 0) {

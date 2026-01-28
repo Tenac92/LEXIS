@@ -3,7 +3,7 @@
  * Handles the transition from MIS-based to ID-based budget lookups
  */
 
-import { supabase } from '../data';
+import { supabase } from '../config/db';
 
 export class BudgetMigration {
   /**
@@ -60,7 +60,7 @@ export class BudgetMigration {
       const misToProjectId = new Map<number, number>();
       const na853ToProjectId = new Map<string, number>();
 
-      projects.forEach(project => {
+      projects.forEach((project: any) => {
         if (project.mis) {
           misToProjectId.set(project.mis, project.id);
         }
@@ -163,7 +163,7 @@ export class BudgetMigration {
       }
 
       const total = stats.length;
-      const withProjectId = stats.filter(record => record.project_id).length;
+      const withProjectId = stats.filter((record: any) => record.project_id).length;
       const withoutProjectId = total - withProjectId;
 
       console.log(`[BudgetMigration] Verification results:`);

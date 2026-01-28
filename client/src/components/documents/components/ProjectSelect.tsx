@@ -5,11 +5,14 @@ import React, {
   useCallback,
   forwardRef,
   useRef,
+  useImperativeHandle,
+  useLayoutEffect,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, X, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -17,9 +20,71 @@ import {
   CommandInput,
   CommandItem,
 } from "@/components/ui/command";
-import { useDebounce } from "../hooks/useDebounce";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+
+// Utility: Find the actual scrollable container (respects overflow:auto/scroll)
+const getScrollableParent = (node: HTMLElement | null): HTMLElement | null => {
+  if (!node) return null;
+  const regex = /(auto|scroll)/;
+  let current: HTMLElement | null = node;
+  while (current && current !== document.body) {
+    const { overflowY } = window.getComputedStyle(current);
+    if (regex.test(overflowY)) return current;
+    current = current.parentElement;
+  }
+  return null;
+};
+
+// Utility: Center element in scrollable container
+interface CenterParams {
+  containerEl: HTMLElement;
+  targetEl: HTMLElement;
+  offsetRatio?: number; // 0.4 = 40% down container (slightly above center)
+  dropdownMaxHeight?: number;
+  behavior?: ScrollBehavior;
+}
+
+const centerElementInScrollContainer = ({
+  containerEl,
+  targetEl,
+  offsetRatio = 0.4,
+  dropdownMaxHeight = 350,
+  behavior = "smooth",
+}: CenterParams): void => {
+  const containerRect = containerEl.getBoundingClientRect();
+  const targetRect = targetEl.getBoundingClientRect();
+  
+  // Calculate target scroll position: place trigger at offsetRatio of container height
+  const targetScrollTop =
+    containerEl.scrollTop +
+    (targetRect.top - containerRect.top) -
+    (containerEl.clientHeight * offsetRatio);
+
+  // Ensure dropdown has vertical space below trigger (approximate)
+  const targetBottomInContainer =
+    containerEl.scrollTop +
+    (targetRect.bottom - containerRect.top) +
+    dropdownMaxHeight;
+  const containerBottomEdge = containerEl.scrollTop + containerEl.clientHeight;
+
+  // If dropdown would extend past container bottom, adjust scroll up slightly
+  let finalScrollTop = Math.max(0, targetScrollTop);
+  if (targetBottomInContainer > containerBottomEdge) {
+    finalScrollTop = Math.min(
+      finalScrollTop,
+      targetBottomInContainer - containerEl.clientHeight + 16
+    );
+  }
+
+  // Clamp within valid bounds
+  finalScrollTop = Math.max(
+    0,
+    Math.min(finalScrollTop, containerEl.scrollHeight - containerEl.clientHeight)
+  );
+
+  containerEl.scrollTo({ top: finalScrollTop, behavior });
+};
 
 // Project interface
 interface Project {
@@ -38,36 +103,65 @@ interface ProjectSelectProps {
   placeholder?: string;
 }
 
-export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
+export interface ProjectSelectHandle {
+  focusInput: () => void;
+  getInputElement: () => HTMLInputElement | null;
+  scrollIntoView: (options?: ScrollIntoViewOptions) => void;
+}
+
+export const ProjectSelect = forwardRef<ProjectSelectHandle, ProjectSelectProps>(
   function ProjectSelect(
     { selectedUnit, onProjectSelect, value, placeholder },
     ref,
   ) {
     const [searchQuery, setSearchQuery] = useState("");
-    const [isSearching, setIsSearching] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    const [activeIndex, setActiveIndex] = useState<number>(-1);
+    const [listScrollTop, setListScrollTop] = useState(0);
     const { toast } = useToast();
     const prevSelectedUnitRef = useRef<string>("");
+    const inputRef = useRef<HTMLInputElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const listRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef<Array<HTMLDivElement | null>>([]);
+    const scrollableParentRef = useRef<HTMLElement | null>(null);
+    const isClickingDropdownRef = useRef(false);
+    const dropdownOpenTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    const debouncedSearchQuery = useDebounce(searchQuery, 300);
+    const ensureTriggerInView = () => {
+      const trigger = inputRef.current;
+      if (!trigger) return;
+      const scrollable = scrollableParentRef.current || getScrollableParent(trigger.parentElement as HTMLElement);
+      scrollableParentRef.current = scrollable;
+      if (!scrollable) return;
+      const triggerRect = trigger.getBoundingClientRect();
+      const parentRect = scrollable.getBoundingClientRect();
+      const isOutOfView = triggerRect.top < parentRect.top || triggerRect.bottom > parentRect.bottom;
+      if (isOutOfView) {
+        trigger.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    };
+
+    const scrollActiveItemIntoView = (index: number) => {
+      const listEl = listRef.current;
+      const itemEl = itemRefs.current[index];
+      if (!listEl || !itemEl) return;
+      itemEl.scrollIntoView({ block: "nearest" });
+    };
 
     // Reset search when unit actually changes (not when function reference changes)
     useEffect(() => {
       if (prevSelectedUnitRef.current !== selectedUnit) {
-        console.log(
-          "[ProjectSelect] Unit changed from",
-          prevSelectedUnitRef.current,
-          "to",
-          selectedUnit,
-        );
         setSearchQuery("");
         // Only clear selection if unit actually changed and we're not just initializing
         if (prevSelectedUnitRef.current !== "" || !selectedUnit) {
           onProjectSelect(null);
         }
         prevSelectedUnitRef.current = selectedUnit;
+        setIsFocused(false);
       }
-    }, [selectedUnit]);
+    }, [selectedUnit, onProjectSelect]);
 
     const normalizeText = useCallback((text: string) => {
       return text
@@ -75,25 +169,6 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^\w\s]/gi, "");
-    }, []);
-
-    const extractNA853Info = useCallback((name: string | undefined | null) => {
-      if (!name) {
-        return {
-          na853: "",
-          year: "",
-          budget: "",
-        };
-      }
-      const na853Match = name.match(/ΝΑ853[:\s]*([^,\s]+)/i);
-      const yearMatch = name.match(/20\d{2}/);
-      const budgetMatch = name.match(/([\d.,]+)\s*€?/);
-
-      return {
-        na853: na853Match?.[1] || "",
-        year: yearMatch?.[0] || "",
-        budget: budgetMatch?.[1] || "",
-      };
     }, []);
 
     // Fetch projects query
@@ -105,29 +180,18 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       queryKey: ["projects-working", selectedUnit],
       queryFn: async (): Promise<Project[]> => {
         if (!selectedUnit) {
-          console.log("[ProjectSelect] No selectedUnit, returning empty array");
           return [];
         }
 
-        console.log(
-          "[ProjectSelect] Fetching projects for unit:",
-          selectedUnit,
-        );
         const url = `/api/projects-working/${encodeURIComponent(selectedUnit)}?t=${Date.now()}`;
         const response = await apiRequest(url);
-        console.log("[ProjectSelect] API response:", response);
 
         if (!Array.isArray(response)) {
-          console.error("[ProjectSelect] Invalid response format:", response);
           throw new Error("Invalid response format");
         }
 
         const validProjects = response.filter(
           (item: any) => item && typeof item === "object" && item.mis,
-        );
-        console.log(
-          "[ProjectSelect] Valid projects filtered:",
-          validProjects.length,
         );
 
         return validProjects.map((item: any): Project => {
@@ -170,7 +234,6 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     // Handle query errors
     useEffect(() => {
       if (error) {
-        console.error("[ProjectSelect] Query error:", error);
         toast({
           title: "Σφάλμα",
           description: "Αποτυχία φόρτωσης έργων. Παρακαλώ δοκιμάστε ξανά.",
@@ -179,20 +242,6 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
       }
     }, [error, toast]);
 
-    // Add debug logging for state changes
-    useEffect(() => {
-      console.log(
-        "[ProjectSelect] State update - selectedUnit:",
-        selectedUnit,
-        "projects:",
-        projects?.length,
-        "isLoading:",
-        isLoading,
-        "isFocused:",
-        isFocused,
-      );
-    }, [selectedUnit, projects, isLoading, isFocused]);
-
     const selectedProject = useMemo(
       () => projects?.find((p: Project) => p.id === Number(value)) || null,
       [projects, value],
@@ -200,246 +249,352 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
 
     const filteredProjects = useMemo(() => {
       if (!projects || projects.length === 0) return [];
-      if (!debouncedSearchQuery.trim()) return projects.slice(0, 20);
+      if (!searchQuery.trim()) return projects.slice(0, 50);
 
-      const normalizedQuery = normalizeText(debouncedSearchQuery);
+      const normalizedQuery = normalizeText(searchQuery);
 
-      if (normalizedQuery.length < 2) return projects.slice(0, 20);
+      if (normalizedQuery.length < 1) return projects.slice(0, 50);
 
-      setIsSearching(true);
+      const results = projects.filter((project: Project) => {
+        const normalizedName = normalizeText(project.name);
+        const normalizedNA853 = normalizeText(String(project.na853) || "");
 
-      try {
-        console.log(
-          "[ProjectSelect] Searching for:",
-          debouncedSearchQuery,
-          "normalized:",
-          normalizedQuery,
+        // Raw exact matches for NA853 code
+        const rawNA853Match = String(project.na853).includes(searchQuery);
+
+        // Normalized substring matches
+        const nameMatch = normalizedName.includes(normalizedQuery);
+        const na853Match = normalizedNA853.includes(normalizedQuery);
+
+        // Word-based matching: split by whitespace and match any word
+        const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+        const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 0);
+        const wordMatch = queryWords.some(queryWord =>
+          nameWords.some(nameWord => nameWord.includes(queryWord))
         );
 
-        const results = projects.filter((project: Project) => {
-          const normalizedName = normalizeText(project.name);
-          const normalizedMis = normalizeText(String(project.mis) || "");
-          const normalizedId = normalizeText(String(project.id));
-          const normalizedNA853 = normalizeText(String(project.na853) || "");
+        return rawNA853Match || nameMatch || na853Match || wordMatch;
+      });
 
-          // Also check raw values without normalization for exact number matches
-          const rawMisMatch = String(project.mis).includes(
-            debouncedSearchQuery,
-          );
-          const rawIdMatch = String(project.id).includes(debouncedSearchQuery);
-          const rawNA853Match = String(project.na853 || "").includes(
-            debouncedSearchQuery,
-          );
+      return results.slice(0, 50);
+    }, [projects, searchQuery, normalizeText]);
 
-          // Split query and name into words for word-based matching
-          const queryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
-          const nameWords = normalizedName.split(/\s+/).filter(w => w.length > 0);
-          
-          // Check if any word from query matches any word in name (word contains match)
-          const wordMatch = queryWords.some(queryWord =>
-            nameWords.some(nameWord => nameWord.includes(queryWord))
-          );
+    useLayoutEffect(() => {
+      if (isFocused) {
+        ensureTriggerInView();
+        if (listRef.current && listScrollTop && filteredProjects.length > 0) {
+          listRef.current.scrollTop = listScrollTop;
+        }
+      }
+    }, [isFocused, filteredProjects.length, listScrollTop]);
 
-          const matches =
-            normalizedName.includes(normalizedQuery) ||
-            normalizedMis.includes(normalizedQuery) ||
-            normalizedId.includes(normalizedQuery) ||
-            normalizedNA853.includes(normalizedQuery) ||
-            rawMisMatch ||
-            rawIdMatch ||
-            rawNA853Match ||
-            wordMatch;
+    // When dropdown opens, center the trigger in the modal scroll container
+    useEffect(() => {
+      if (!isFocused) {
+        if (dropdownOpenTimerRef.current) {
+          clearTimeout(dropdownOpenTimerRef.current);
+        }
+        return;
+      }
 
-          // Debug log for the specific project we're looking for
-          if (String(project.mis) === "5222801") {
-            console.log("[ProjectSelect] Found target project 5222801:", {
-              project,
-              normalizedQuery,
-              normalizedName,
-              normalizedMis,
-              normalizedId,
-              rawMisMatch,
-              rawIdMatch,
-              wordMatch,
-              matches,
-            });
-          }
+      // Defer scroll until after dropdown renders
+      dropdownOpenTimerRef.current = setTimeout(() => {
+        const trigger = inputRef.current;
+        const container = containerRef.current;
+        if (!trigger || !container) return;
 
-          return matches;
+        // Find the modal scroll container (typically parent of the ProjectSelect container)
+        const modalScroll = getScrollableParent(container);
+        if (!modalScroll || modalScroll === document.body) {
+          // Not in a modal or at document root—skip modal-specific scrolling
+          return;
+        }
+
+        // Center the trigger in the modal's scroll container
+        centerElementInScrollContainer({
+          containerEl: modalScroll,
+          targetEl: trigger,
+          offsetRatio: 0.35,
+          dropdownMaxHeight: 350,
+          behavior: "smooth",
         });
 
-        console.log(
-          "[ProjectSelect] Search results count:",
-          results.length,
-          "showing first 50",
-        );
-        console.log(
-          "[ProjectSelect] Results include 5222801:",
-          results.some((p) => String(p.mis) === "5222801"),
-        );
-        return results.slice(0, 50);
-      } catch (error) {
-        return projects.slice(0, 20);
-      } finally {
-        setIsSearching(false);
+        // Focus input with scroll prevention to avoid jump
+        const inputEl = inputRef.current;
+        if (inputEl && "focus" in inputEl) {
+          try {
+            inputEl.focus({ preventScroll: true });
+          } catch {
+            // Older browsers don't support preventScroll option
+            inputEl.focus();
+          }
+        }
+      }, 0);
+
+      return () => {
+        if (dropdownOpenTimerRef.current) {
+          clearTimeout(dropdownOpenTimerRef.current);
+        }
+      };
+    }, [isFocused]);
+
+    useEffect(() => {
+      if (!isFocused) {
+        setActiveIndex(-1);
+        return;
       }
-    }, [projects, debouncedSearchQuery, normalizeText]);
+      setActiveIndex(filteredProjects.length > 0 ? 0 : -1);
+      if (filteredProjects.length > 0) {
+        requestAnimationFrame(() => scrollActiveItemIntoView(0));
+      }
+    }, [filteredProjects, isFocused]);
+
+    const focusInput = () => {
+      setIsFocused(true);
+      // Let the dropdown-open effect handle centering and focus
+    };
+
+    useImperativeHandle(ref, () => ({
+      focusInput,
+      getInputElement: () => inputRef.current,
+      scrollIntoView: (options) => {
+        const target = inputRef.current || containerRef.current;
+        if (!target) return;
+        target.scrollIntoView(
+          options || { behavior: "smooth", block: "center", inline: "nearest" },
+        );
+      },
+    }));
 
     const handleFocus = () => {
-      console.log(
-        "[ProjectSelect] Focus activated, selectedUnit:",
-        selectedUnit,
-        "projects count:",
-        projects?.length,
-      );
-      setIsFocused(true);
+      focusInput();
+    };
+
+    const handleDropdownMouseDown = () => {
+      isClickingDropdownRef.current = true;
     };
 
     const handleBlur = () => {
-      console.log("[ProjectSelect] Blur triggered");
-      setTimeout(() => setIsFocused(false), 500);
+      if (isClickingDropdownRef.current) {
+        isClickingDropdownRef.current = false;
+        return;
+      }
+      setTimeout(() => setIsFocused(false), 150);
     };
 
-    const handleProjectSelect = (project: Project) => {
-      onProjectSelect(project);
+    const handleClearSelection = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onProjectSelect(null);
       setSearchQuery("");
-      setIsFocused(false);
+      setIsFocused(true);
+      inputRef.current?.focus();
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!isFocused && (e.key === "ArrowDown" || e.key === "Enter")) {
+        setIsFocused(true);
+        return;
+      }
+      if (e.key === "Escape") {
+        setIsFocused(false);
+        setSearchQuery("");
+        inputRef.current?.focus();
+        return;
+      }
+      if (!isFocused) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (filteredProjects.length === 0) return;
+        const next = activeIndex < filteredProjects.length - 1 ? activeIndex + 1 : 0;
+        setActiveIndex(next);
+        scrollActiveItemIntoView(next);
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (filteredProjects.length === 0) return;
+        const prev = activeIndex > 0 ? activeIndex - 1 : filteredProjects.length - 1;
+        setActiveIndex(prev);
+        scrollActiveItemIntoView(prev);
+      }
+      if (e.key === "Enter" && activeIndex >= 0 && activeIndex < filteredProjects.length) {
+        e.preventDefault();
+        const selected = filteredProjects[activeIndex];
+        onProjectSelect(selected);
+        setSearchQuery("");
+        setIsFocused(false);
+        inputRef.current?.focus();
+      }
+      if (listRef.current) {
+        setListScrollTop(listRef.current.scrollTop);
+      }
     };
 
     if (!selectedUnit) {
       return (
-        <div className="text-sm text-gray-500 p-3 border rounded-md bg-gray-50">
-          Παρακαλώ επιλέξτε πρώτα μονάδα
+        <div className="text-sm text-muted-foreground p-3 border rounded-md bg-muted/20">
+          Παρακαλώ επιλέξτε πρώτα μονάδα υπηρεσίας
         </div>
       );
     }
 
     return (
-      <div ref={ref} className="relative">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
-          <Input
-            type="text"
-            placeholder={
-              placeholder || "Αναζήτηση έργου (MIS, τίτλος, κωδικός)..."
-            }
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            className="pl-10"
-            disabled={isLoading}
-          />
-        </div>
-
+      <div ref={containerRef} className="relative w-full">
         {/* Selected Project Display */}
         {selectedProject && !isFocused && (
-          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="font-medium text-blue-900">
-                  {selectedProject.name}
-                </div>
-                <div className="text-sm text-blue-600 mt-1">
-                  ΝΑ853: {selectedProject.na853 || "N/A"} | ID:{" "}
-                  {selectedProject.id}
-                </div>
-                {selectedProject.expenditure_types?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {selectedProject.expenditure_types.map((type, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {type}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-blue-900 flex items-baseline gap-2">
+                <span className="font-mono text-sm bg-blue-100 px-2 py-1 rounded">
+                  {selectedProject.na853 || selectedProject.mis || "N/A"}
+                </span>
+                <span className="truncate">{selectedProject.name}</span>
               </div>
+              {selectedProject.expenditure_types?.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {selectedProject.expenditure_types.map((type, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {type}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {selectedProject.mis && (
+                <div className="text-xs text-blue-600 mt-2">
+                  MIS: {selectedProject.mis}
+                </div>
+              )}
             </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSelection}
+              className="ml-2 flex-shrink-0 h-8 w-8 p-0"
+              title="Αλλαγή έργου"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         )}
 
-        {/* Search Results */}
-        {isFocused && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-96 overflow-hidden">
-            <Command
-              className="rounded-lg border-none shadow-none"
-              shouldFilter={false}
-            >
-              <div className="p-2">
-                <CommandInput
-                  value={searchQuery}
-                  onValueChange={setSearchQuery}
-                  placeholder="Αναζήτηση έργου..."
-                  className="border-none focus:ring-0"
-                />
+        {/* Search Input */}
+        {!selectedProject || isFocused ? (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 z-10" />
+            <Input
+              ref={inputRef}
+              type="text"
+              placeholder={
+                placeholder || "Αναζήτηση (ΝΑ853, τίτλος)..."
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              className="pl-10 pr-10"
+              disabled={isLoading}
+              autoComplete="off"
+            />
+            {isLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-muted-foreground border-t-foreground" />
               </div>
+            )}
+          </div>
+        ) : null}
 
-              <div className="border-t">
-                {isLoading ? (
-                  <div className="p-4 text-center text-sm text-gray-500">
-                    Φόρτωση έργων...
-                  </div>
-                ) : filteredProjects.length === 0 ? (
-                  <CommandEmpty className="py-6 text-center text-sm">
-                    Δεν βρέθηκαν έργα.
-                  </CommandEmpty>
-                ) : (
-                  <CommandGroup className="max-h-[300px] overflow-y-auto">
-                    {filteredProjects.map((project) => {
-                      const na853Info = extractNA853Info(project.name);
+        {/* Results Dropdown */}
+        {isFocused && (
+          <div
+            ref={dropdownRef}
+            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg"
+            onMouseDown={handleDropdownMouseDown}
+          >
+            <Command className="rounded-none border-none shadow-none">
+              {isLoading ? (
+                <div className="p-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-muted-foreground border-t-foreground" />
+                  Φόρτωση έργων...
+                </div>
+              ) : filteredProjects.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">
+                  {searchQuery.trim()
+                    ? "Δεν βρέθηκαν έργα με αυτά τα κριτήρια"
+                    : "Δεν υπάρχουν διαθέσιμα έργα"}
+                </div>
+              ) : (
+                <CommandGroup
+                  ref={listRef}
+                  className="max-h-[350px] overflow-y-auto"
+                  style={{ maxHeight: "min(350px, calc(80vh - 200px))" }}
+                  onScroll={(e) => setListScrollTop((e.target as HTMLDivElement).scrollTop)}
+                >
+                  {filteredProjects.map((project, idx) => (
+                    <CommandItem
+                      key={project.id}
+                      value={String(project.id)}
+                      onSelect={(value) => {
+                        const selected = filteredProjects.find(p => String(p.id) === value);
+                        if (selected) {
+                          onProjectSelect(selected);
+                          setSearchQuery("");
+                          setIsFocused(false);
+                        }
+                      }}
+                      className={
+                        "flex flex-col items-start p-3 cursor-pointer hover:bg-muted/50 border-b last:border-b-0" +
+                        (activeIndex === idx ? " bg-muted/50" : "")
+                      }
+                      ref={(el) => {
+                        itemRefs.current[idx] = el;
+                      }}
+                    >
+                      <div className="w-full">
+                        {/* NA853 + Title on first line */}
+                        <div className="flex items-baseline gap-2 mb-1">
+                          <span className="font-mono font-semibold text-sm bg-gray-100 px-2 py-1 rounded flex-shrink-0">
+                            {project.na853 || project.mis || "N/A"}
+                          </span>
+                          <span className="text-sm font-medium truncate">
+                            {project.name}
+                          </span>
+                        </div>
 
-                      return (
-                        <CommandItem
-                          key={project.id}
-                          value={String(project.id)}
-                          onSelect={() => {
-                            console.log(
-                              "[ProjectSelect] Project selected:",
-                              project,
-                            );
-                            onProjectSelect(project);
-                            setIsFocused(false);
-                            setSearchQuery("");
-                          }}
-                          className="flex flex-col items-start p-3 cursor-pointer hover:bg-gray-50"
-                        >
-                          <div className="flex justify-between w-full items-start">
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900 line-clamp-2">
-                                {project.name}
-                              </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                ΝΑ853: {project.na853 || "N/A"} | ID:{" "}
-                                {project.id}
-                              </div>
-                              {project.expenditure_types?.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {project.expenditure_types
-                                    .slice(0, 3)
-                                    .map((type, idx) => (
-                                      <Badge
-                                        key={idx}
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        {type}
-                                      </Badge>
-                                    ))}
-                                  {project.expenditure_types.length > 3 && (
-                                    <span className="text-xs text-gray-400">
-                                      +{project.expenditure_types.length - 3}
-                                    </span>
-                                  )}
-                                </div>
+                        {/* Secondary info: expenditure types */}
+                        {project.expenditure_types?.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap mt-1">
+                            <div className="flex gap-1 flex-wrap">
+                              {project.expenditure_types
+                                .slice(0, 2)
+                                .map((type, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="text-xs"
+                                  >
+                                    {type}
+                                  </Badge>
+                                ))}
+                              {project.expenditure_types.length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                  +{project.expenditure_types.length - 2}
+                                </span>
                               )}
                             </div>
                           </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                )}
-              </div>
+                        )}
+                        {project.mis && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            MIS: {project.mis}
+                          </div>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
             </Command>
           </div>
         )}
@@ -447,3 +602,5 @@ export const ProjectSelect = forwardRef<HTMLDivElement, ProjectSelectProps>(
     );
   },
 );
+
+ProjectSelect.displayName = "ProjectSelect";
