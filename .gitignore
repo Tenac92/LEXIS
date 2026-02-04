@@ -40,6 +40,7 @@ vite.config.ts.*
 # Archives
 *.tar.gz
 *.zip
+*.md
 
 # Project-specific (migrations and scripts are tracked)
 # scripts/  - commented out if tracking scripts
