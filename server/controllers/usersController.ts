@@ -12,6 +12,9 @@ const supabaseAdmin = createClient(
   {
     auth: {
       persistSession: false
+    },
+    db: {
+      schema: process.env.SUPABASE_SCHEMA || 'public'
     }
   }
 );

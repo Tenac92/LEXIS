@@ -4520,8 +4520,8 @@ export function CreateDocumentDialog({
                                   name={`recipients.${index}.daily_compensation`}
                                   render={({ field }) => (
                                     <FormItem>
-                                      <FormLabel className="text-sm">
-                                        Ημερήσια Αποζημίωση
+                                      <FormLabel className="text-sm whitespace-nowrap">
+                                        Συνολική Ημερήσια Αποζημίωση (€)
                                       </FormLabel>
                                       <FormControl>
                                         <NumberInput
@@ -5083,7 +5083,7 @@ export function CreateDocumentDialog({
                                         </FormLabel>
                                         <p className="text-sm text-muted-foreground">
                                           {form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE
-                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση"
+                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση (συνολικό ποσό)"
                                             : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
                                         </p>
                                       </div>
@@ -5398,7 +5398,7 @@ export function CreateDocumentDialog({
                       <FileText className="h-8 w-8 animate-spin text-primary" />
                     </div>
                   ) : attachments.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {attachments.map(
                         (attachment: {
                           id: string;
@@ -5410,7 +5410,7 @@ export function CreateDocumentDialog({
                             // Display message for no attachments found
                             <div
                               key={attachment.id}
-                              className="flex flex-col items-center justify-center py-8 text-muted-foreground"
+                              className="md:col-span-2 flex flex-col items-center justify-center py-8 text-muted-foreground"
                             >
                               <FileX className="h-12 w-12 mb-4" />
                               <p className="font-medium">{attachment.title}</p>
@@ -5422,7 +5422,7 @@ export function CreateDocumentDialog({
                             // Display regular attachments with checkboxes
                             <div
                               key={attachment.id}
-                              className="flex items-center space-x-2 rounded-lg border p-3"
+                              className="flex items-center space-x-2 rounded-lg border p-2"
                             >
                               <Checkbox
                                 checked={form
@@ -5485,7 +5485,9 @@ export function CreateDocumentDialog({
                                   }, 100);
                                 }}
                               />
-                              <span>{attachment.title}</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm block truncate font-medium">{attachment.title}</span>
+                              </div>
                             </div>
                           ),
                       )}
@@ -5500,7 +5502,6 @@ export function CreateDocumentDialog({
 
                 {/* ESDIAN Internal Distribution */}
                 <div className="mt-6 pt-6 border-t">
-                  <h3 className="text-base font-medium mb-3">Εσωτερική Διακίνηση (ESDIAN)</h3>
                   <EsdianFieldsWithSuggestions form={form} user={user} />
                 </div>
                 </div>

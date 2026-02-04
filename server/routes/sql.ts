@@ -8,7 +8,12 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
+  process.env.SUPABASE_SERVICE_KEY!,
+  {
+    db: {
+      schema: process.env.SUPABASE_SCHEMA || 'public'
+    }
+  }
 );
 
 export async function executeSQLQuery(req: Request, res: Response) {

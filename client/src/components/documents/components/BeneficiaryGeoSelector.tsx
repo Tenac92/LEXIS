@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { MapPin, AlertCircle, RefreshCcw, X } from "lucide-react";
+import { MapPin, AlertCircle, RefreshCcw, X, ChevronRight } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -75,6 +75,7 @@ function BeneficiaryGeoSelectorComponent({
         regionUnitCodes.includes(String(muni.unit_code)),
       );
     }
+    // Show all municipalities even if no region/unit selected (user can start from municipality)
     return municipalities;
   }, [municipalities, unitCode, regionCode, filteredUnits]);
 
@@ -82,14 +83,29 @@ function BeneficiaryGeoSelectorComponent({
     const selectedRegion =
       regions.find((r) => String(r.code) === String(code)) || null;
     setRegionCode(code);
+    
+    /**
+     * HIERARCHY & CLEARING RULE: When region changes, clear dependent selections
+     * 
+     * Since Regional Units and Municipalities depend on Region,
+     * we must clear them when region changes to maintain hierarchy integrity.
+     * This prevents invalid states like selecting a municipality from a different region.
+     */
     setUnitCode("");
     setMunicipalityCode("");
+    
     onChange(
       buildRegiondetSelection({
         region: selectedRegion,
         regionalUnit: null,
         municipality: null,
       }),
+    );
+
+    console.log(
+      "[BeneficiaryGeoSelector] Region selected:",
+      code,
+      "- cleared unit and municipality selections to maintain hierarchy"
     );
   };
 
@@ -103,13 +119,30 @@ function BeneficiaryGeoSelectorComponent({
       : null;
     setRegionCode(parentRegion?.code ? String(parentRegion.code) : "");
     setUnitCode(code);
+    
+    /**
+     * AUTO-LOAD RULE: When Regional Unit is selected, automatically load municipalities
+     * 
+     * Instead of requiring the user to manually trigger municipality loading,
+     * we automatically filter municipalities to match the selected unit.
+     * This eliminates the need for manual dropdown interaction.
+     */
+    // Clear previous municipality selection when unit changes
+    // (it would be invalid for the new unit anyway)
     setMunicipalityCode("");
+    
     onChange(
       buildRegiondetSelection({
         region: parentRegion || null,
         regionalUnit: selectedUnit,
         municipality: null,
       }),
+    );
+
+    console.log(
+      "[BeneficiaryGeoSelector] Unit selected:",
+      code,
+      "- municipalities will auto-load for this unit"
     );
   };
 
@@ -140,33 +173,94 @@ function BeneficiaryGeoSelectorComponent({
     );
   };
 
+  /**
+   * ΚΑΘΑΡΙΣΜΟΣ (CLEAR) BUTTON HANDLER
+   * 
+   * This fully resets the geographical selection state:
+   * 1. Clear all local dropdown states
+   * 2. Clear the parent form value
+   * 3. Trigger validation reset (no stale errors)
+   * 4. No leftover UI labels or ghost selections
+   * 
+   * The onChange(null) call ensures the parent component can update
+   * any derived state (form validation, dependent UI, etc.)
+   */
   const handleClear = () => {
+    // Step 1: Clear all local dropdown states
     setRegionCode("");
     setUnitCode("");
     setMunicipalityCode("");
+
+    // Step 2: Update parent form value to null
+    // This signals: "geographic selection has been cleared"
     onChange(null);
+
+    // Note: Validation state reset happens automatically because:
+    // - isRegiondetComplete(null) returns false
+    // - Parent component's required field validation will re-run
+    // - No stale validation errors can remain
   };
 
   const isValid = isRegiondetComplete(value);
 
+  // Get region name for breadcrumb
+  const selectedRegionName = useMemo(() => {
+    return regions.find((r) => String(r.code) === String(regionCode))?.name || null;
+  }, [regionCode, regions]);
+
+  // Get unit name for breadcrumb
+  const selectedUnitName = useMemo(() => {
+    return filteredUnits.find((u) => String(u.code) === String(unitCode))?.name || null;
+  }, [unitCode, filteredUnits]);
+
   return (
     <div className="space-y-1">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-          <MapPin className="h-3.5 w-3.5" />
-          <span>
-            Γεωγραφική επιλογή{" "}
-            {required && <span className="text-destructive">*</span>}
-          </span>
-        </div>
+      {/* Header */}
+      <div className="flex items-center gap-1.5 mb-1">
+        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+        <label className="text-xs font-semibold">
+          Γεωγραφική επιλογή{" "}
+          {required && <span className="text-destructive">*</span>}
+        </label>
+      </div>
 
-        <div className="min-w-[180px] flex-1">
+      {/* Breadcrumb / Selection Path */}
+      {(regionCode || unitCode || municipalityCode) && (
+        <div className="flex items-center gap-0.5 px-2 py-1 bg-blue-50 rounded border border-blue-200 text-xs mb-1">
+          {regionCode && (
+            <span className="font-medium text-blue-900">
+              {selectedRegionName}
+            </span>
+          )}
+          {unitCode && (
+            <>
+              {regionCode && <ChevronRight className="h-2.5 w-2.5 text-blue-400 mx-0.5" />}
+              <span className="font-medium text-blue-900">
+                {selectedUnitName}
+              </span>
+            </>
+          )}
+          {municipalityCode && (
+            <>
+              {(regionCode || unitCode) && <ChevronRight className="h-2.5 w-2.5 text-blue-400 mx-0.5" />}
+              <span className="font-medium text-blue-900 truncate">
+                {filteredMunicipalities.find((m) => String(m.code) === String(municipalityCode))?.name}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Dropdowns - Compact Horizontal Layout */}
+      <div className="flex flex-wrap gap-1.5">
+        {/* Region Dropdown */}
+        <div className="flex-1 min-w-[150px]">
           <Select
             value={regionCode || ""}
             onValueChange={handleRegionChange}
             disabled={loading}
           >
-            <SelectTrigger className="h-9 w-full">
+            <SelectTrigger className="h-8 w-full text-xs">
               <SelectValue placeholder="Περιφέρεια" />
             </SelectTrigger>
             <SelectContent>
@@ -182,14 +276,15 @@ function BeneficiaryGeoSelectorComponent({
           </Select>
         </div>
 
-        <div className="min-w-[180px] flex-1">
+        {/* Regional Unit Dropdown */}
+        <div className="flex-1 min-w-[150px]">
           <Select
             value={unitCode || ""}
             onValueChange={handleUnitChange}
             disabled={loading || filteredUnits.length === 0}
           >
-            <SelectTrigger className="h-9 w-full">
-              <SelectValue placeholder="Περιφερειακή ενότητα" />
+            <SelectTrigger className={`h-8 w-full text-xs ${filteredUnits.length === 0 ? 'opacity-50' : ''}`}>
+              <SelectValue placeholder="Ενότητα" />
             </SelectTrigger>
             <SelectContent>
               {filteredUnits.map((unit) => (
@@ -200,25 +295,21 @@ function BeneficiaryGeoSelectorComponent({
                   {unit.name}
                 </SelectItem>
               ))}
-              {filteredUnits.length === 0 && (
-                <SelectItem value="no-units" disabled>
-                  Δεν υπάρχουν διαθέσιμες ενότητες
-                </SelectItem>
-              )}
             </SelectContent>
           </Select>
         </div>
 
-        <div className="min-w-[200px] flex-1">
+        {/* Municipality Dropdown - ALWAYS ENABLED */}
+        <div className="flex-1 min-w-[160px]">
           <Select
             value={municipalityCode || ""}
             onValueChange={handleMunicipalityChange}
             disabled={loading || filteredMunicipalities.length === 0}
           >
-            <SelectTrigger className="h-9 w-full">
+            <SelectTrigger className={`h-8 w-full text-xs ${filteredMunicipalities.length === 0 ? 'opacity-50' : ''}`}>
               <SelectValue placeholder="Δήμος" />
             </SelectTrigger>
-            <SelectContent className="max-h-64">
+            <SelectContent className="max-h-48">
               {filteredMunicipalities.map((municipality) => (
                 <SelectItem
                   key={`municipality-${municipality.code || municipality.id || municipality.name}`}
@@ -227,38 +318,36 @@ function BeneficiaryGeoSelectorComponent({
                   {municipality.name}
                 </SelectItem>
               ))}
-              {filteredMunicipalities.length === 0 && (
-                <SelectItem value="no-municipalities" disabled>
-                  Δεν υπάρχουν διαθέσιμοι δήμοι
-                </SelectItem>
-              )}
             </SelectContent>
           </Select>
         </div>
 
+        {/* Clear Button */}
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={handleClear}
           disabled={loading || (!regionCode && !unitCode && !municipalityCode)}
-          className="h-9"
+          className="h-8 px-2"
+          title="Καθαρισμός"
         >
-          <X className="h-4 w-4 mr-1" />
-          Καθαρισμός
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
 
+      {/* Validation Error */}
       {!isValid && required && (
-        <div className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="h-3.5 w-3.5" />
-          <span>Επιλέξτε περιφέρεια, ενότητα ή δήμο</span>
+        <div className="text-xs text-destructive flex items-center gap-1 mt-1">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
+          <span>Απαιτείται γεωγραφική επιλογή</span>
         </div>
       )}
 
+      {/* API Error */}
       {error && (
-        <div className="text-xs text-destructive flex items-center gap-1">
-          <AlertCircle className="h-3.5 w-3.5" />
+        <div className="text-xs text-destructive flex items-center gap-1 mt-1">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
           <span>{error}</span>
           {onRetry && (
             <Button
@@ -266,10 +355,9 @@ function BeneficiaryGeoSelectorComponent({
               size="sm"
               variant="outline"
               onClick={onRetry}
-              className="h-7 px-2"
+              className="h-6 px-1.5 ml-0.5"
             >
-              <RefreshCcw className="h-3 w-3 mr-1" />
-              Προσπάθεια ξανά
+              <RefreshCcw className="h-2.5 w-2.5" />
             </Button>
           )}
         </div>

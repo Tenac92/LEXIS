@@ -439,7 +439,7 @@ export function DocumentDetailsModal({
                             )}
                             {recipient.daily_compensation !== undefined && recipient.daily_compensation > 0 && (
                               <div className="space-y-1">
-                                <span className="text-xs text-green-600 font-medium">Ημερήσια Αποζημίωση</span>
+                                <span className="text-xs text-green-600 font-medium">Συνολική Ημερ. Αποζημίωση</span>
                                 <p className="text-green-900 font-semibold">{formatCurrency(recipient.daily_compensation)}</p>
                               </div>
                             )}

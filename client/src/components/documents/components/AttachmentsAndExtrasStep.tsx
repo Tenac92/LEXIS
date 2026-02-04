@@ -41,10 +41,10 @@ export function AttachmentsAndExtrasStep({
       {/* Attachments Section */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <h3 className="text-base font-medium">
+          <h3 className="text-sm font-semibold">
             Απαιτούμενα Συνημμένα{" "}
             {validAttachments.length > 0 && (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-muted-foreground text-xs">
                 ({selectedAttachments.length}/{validAttachments.length})
               </span>
             )}
@@ -55,6 +55,7 @@ export function AttachmentsAndExtrasStep({
               variant="outline"
               size="sm"
               onClick={onSelectAll}
+              className="h-8 text-xs"
             >
               {allSelected ? "Αποεπιλογή Όλων" : "Επιλογή Όλων"}
             </Button>
@@ -66,12 +67,12 @@ export function AttachmentsAndExtrasStep({
             <FileText className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : validAttachments.length > 0 ? (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {attachments.map((attachment: any) =>
               attachment.file_type === "none" ? (
                 <div
                   key={attachment.id}
-                  className="flex flex-col items-center justify-center py-8 text-muted-foreground"
+                  className="md:col-span-2 flex flex-col items-center justify-center py-8 text-muted-foreground"
                 >
                   <FileX className="h-12 w-12 mb-4" />
                   <p className="font-medium">{attachment.title}</p>
@@ -80,7 +81,7 @@ export function AttachmentsAndExtrasStep({
               ) : (
                 <div
                   key={attachment.id}
-                  className="flex items-center space-x-3 rounded-lg border p-3 hover:bg-muted/30 transition-colors"
+                  className="flex items-center space-x-3 rounded-lg border p-2 hover:bg-muted/30 transition-colors"
                 >
                   <Checkbox
                     checked={selectedAttachments.includes(attachment.id)}
@@ -88,13 +89,8 @@ export function AttachmentsAndExtrasStep({
                       onAttachmentToggle?.(attachment.id, Boolean(checked))
                     }
                   />
-                  <div className="flex-1">
-                    <span className="text-sm">{attachment.title}</span>
-                    {attachment.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {attachment.description}
-                      </p>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm block truncate font-medium">{attachment.title}</span>
                   </div>
                 </div>
               )
@@ -103,14 +99,13 @@ export function AttachmentsAndExtrasStep({
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-muted-foreground bg-muted/20 rounded-lg border">
             <FileText className="h-12 w-12 mb-4" />
-            <p>Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης</p>
+            <p className="text-sm">Δεν βρέθηκαν συνημμένα για αυτόν τον τύπο δαπάνης</p>
           </div>
         )}
       </div>
 
       {/* ESDIAN Fields for Internal Distribution */}
       <div className="pt-4 border-t">
-        <h3 className="text-base font-medium mb-3">Εσωτερική Διανομή (ESDIAN)</h3>
         <EsdianFieldsWithSuggestions form={form} user={user} />
       </div>
 

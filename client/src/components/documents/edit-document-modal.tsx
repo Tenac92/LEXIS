@@ -761,12 +761,12 @@ export function EditDocumentModal({
           parseFloat(recipient.tickets_tolls_rental?.toString() || "0") || 0;
 
         const totalExpense =
-          days * dailyComp + accommodation + kilometers * pricePerKm + tickets;
+          dailyComp + accommodation + kilometers * pricePerKm + tickets;
 
         // Calculate deduction if applicable
-        // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation (days * dailyComp)
+        // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation (total amount)
         const has2PercentDeduction = recipient.has_2_percent_deduction ?? false;
-        const withholdingBase = isEktosEdras ? days * dailyComp : totalExpense;
+        const withholdingBase = isEktosEdras ? dailyComp : totalExpense;
         const deduction = has2PercentDeduction ? withholdingBase * 0.02 : 0;
         const netPayable = totalExpense - deduction;
 
@@ -827,7 +827,71 @@ export function EditDocumentModal({
     });
 
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, isEktosEdras]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const recipients = (form.getValues("recipients") as any[]) || [];
+    recipients.forEach((recipient, index) => {
+      if (!recipient) return;
+
+      const dailyComp =
+        parseFloat(recipient.daily_compensation?.toString() || "0") || 0;
+      const accommodation =
+        parseFloat(recipient.accommodation_expenses?.toString() || "0") || 0;
+      const kilometers =
+        parseFloat(recipient.kilometers_traveled?.toString() || "0") || 0;
+      const pricePerKm =
+        parseFloat(recipient.price_per_km?.toString() || "0.2") || 0.2;
+      const tickets =
+        parseFloat(recipient.tickets_tolls_rental?.toString() || "0") || 0;
+
+      const totalExpense =
+        dailyComp + accommodation + kilometers * pricePerKm + tickets;
+
+      const has2PercentDeduction = recipient.has_2_percent_deduction ?? false;
+      const withholdingBase = isEktosEdras ? dailyComp : totalExpense;
+      const deduction = has2PercentDeduction ? withholdingBase * 0.02 : 0;
+      const netPayable = totalExpense - deduction;
+
+      const currentTotalExpense = form.getValues(
+        `recipients.${index}.total_expense` as any,
+      );
+      const currentDeduction = form.getValues(
+        `recipients.${index}.deduction_2_percent` as any,
+      );
+      const currentNetPayable = form.getValues(
+        `recipients.${index}.net_payable` as any,
+      );
+      const currentAmount = form.getValues(
+        `recipients.${index}.amount` as any,
+      );
+
+      if (totalExpense !== currentTotalExpense) {
+        form.setValue(`recipients.${index}.total_expense` as any, totalExpense, {
+          shouldValidate: false,
+        });
+      }
+      if (deduction !== currentDeduction) {
+        form.setValue(
+          `recipients.${index}.deduction_2_percent` as any,
+          deduction,
+          { shouldValidate: false },
+        );
+      }
+      if (netPayable !== currentNetPayable) {
+        form.setValue(`recipients.${index}.net_payable` as any, netPayable, {
+          shouldValidate: false,
+        });
+      }
+      if (netPayable !== currentAmount) {
+        form.setValue(`recipients.${index}.amount` as any, netPayable, {
+          shouldValidate: false,
+        });
+      }
+    });
+  }, [form, isEktosEdras, open]);
 
   useEffect(() => {
     const timers = regiondetSaveTimers.current;
@@ -1999,7 +2063,8 @@ export function EditDocumentModal({
                         </div>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Identity fields - compact row layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           <FormField
                             control={form.control}
                             name={`recipients.${index}.firstname`}
@@ -2050,9 +2115,7 @@ export function EditDocumentModal({
                               </FormItem>
                             )}
                           />
-                        </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
                             <FormLabel>ΑΦΜ *</FormLabel>
                             <SimpleAFMAutocomplete
@@ -2102,92 +2165,98 @@ export function EditDocumentModal({
                               )}
                             />
                           </div>
-
-                          <FormField
-                            control={form.control}
-                            name={`recipients.${index}.amount`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="flex items-center gap-1">
-                                  <Euro className="w-3 h-3" />
-                                  Ποσό *
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    {...field}
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    onChange={(e) =>
-                                      field.onChange(
-                                        parseFloat(e.target.value) || 0,
-                                      )
-                                    }
-                                    data-testid={`input-recipient-amount-${index}`}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`recipients.${index}.installment`}
-                            render={({ field }) => {
-                              // Get the expenditure type name to determine available installments
-                              const expenditureType = allExpenditureTypes?.find(
-                                (t: any) => t.id === selectedExpenditureTypeId,
-                              );
-                              const expenditureTypeName =
-                                expenditureType?.expenditure_types ||
-                                expenditureType?.expenditure_types_minor;
-                              const availableInstallments =
-                                getAvailableInstallments(expenditureTypeName);
-                              // Normalize the saved value for housing allowance (e.g., "12" → "ΤΡΙΜΗΝΟ 12")
-                              const normalizedValue = normalizeInstallmentValue(
-                                field.value,
-                                expenditureTypeName,
-                              );
-
-                              return (
-                                <FormItem>
-                                  <FormLabel>Δόση</FormLabel>
-                                  <Select
-                                    value={normalizedValue}
-                                    onValueChange={(value) => {
-                                      // When selecting, store as-is (either "ΤΡΙΜΗΝΟ 12" or "ΕΦΑΠΑΞ" etc.)
-                                      field.onChange(value);
-                                    }}
-                                  >
-                                    <FormControl>
-                                      <SelectTrigger
-                                        data-testid={`select-recipient-installment-${index}`}
-                                      >
-                                        <SelectValue placeholder="Επιλέξτε δόση" />
-                                      </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                      {availableInstallments.map(
-                                        (installment: string) => (
-                                          <SelectItem
-                                            key={installment}
-                                            value={installment}
-                                          >
-                                            {installment}
-                                          </SelectItem>
-                                        ),
-                                      )}
-                                    </SelectContent>
-                                  </Select>
-                                  <FormMessage />
-                                </FormItem>
-                              );
-                            }}
-                          />
                         </div>
 
-                        {(() => {
+                        {/* Amount and Installment fields - only for non-ΕΚΤΟΣ ΕΔΡΑΣ */}
+                        {!isEktosEdras && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.amount`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center gap-1">
+                                    <Euro className="w-3 h-3" />
+                                    Ποσό *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      {...field}
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      onChange={(e) =>
+                                        field.onChange(
+                                          parseFloat(e.target.value) || 0,
+                                        )
+                                      }
+                                      data-testid={`input-recipient-amount-${index}`}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name={`recipients.${index}.installment`}
+                              render={({ field }) => {
+                                // Get the expenditure type name to determine available installments
+                                const expenditureType = allExpenditureTypes?.find(
+                                  (t: any) => t.id === selectedExpenditureTypeId,
+                                );
+                                const expenditureTypeName =
+                                  expenditureType?.expenditure_types ||
+                                  expenditureType?.expenditure_types_minor;
+                                const availableInstallments =
+                                  getAvailableInstallments(expenditureTypeName);
+                                // Normalize the saved value for housing allowance (e.g., "12" → "ΤΡΙΜΗΝΟ 12")
+                                const normalizedValue = normalizeInstallmentValue(
+                                  field.value,
+                                  expenditureTypeName,
+                                );
+
+                                return (
+                                  <FormItem>
+                                    <FormLabel>Δόση</FormLabel>
+                                    <Select
+                                      value={normalizedValue}
+                                      onValueChange={(value) => {
+                                        // When selecting, store as-is (either "ΤΡΙΜΗΝΟ 12" or "ΕΦΑΠΑΞ" etc.)
+                                        field.onChange(value);
+                                      }}
+                                    >
+                                      <FormControl>
+                                        <SelectTrigger
+                                          data-testid={`select-recipient-installment-${index}`}
+                                        >
+                                          <SelectValue placeholder="Επιλέξτε δόση" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {availableInstallments.map(
+                                          (installment: string) => (
+                                            <SelectItem
+                                              key={installment}
+                                              value={installment}
+                                            >
+                                              {installment}
+                                            </SelectItem>
+                                          ),
+                                        )}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Γεωγραφική επιλογή - shown outside ΕΚΤΟΣ ΕΔΡΑΣ section for non-ΕΚΤΟΣ ΕΔΡΑΣ documents */}
+                        {!isEktosEdras && (() => {
                           const saveKey =
                             recipient?.beneficiary_id ?? recipient?.id;
                           const saveState = regiondetSaveState[
@@ -2235,13 +2304,53 @@ export function EditDocumentModal({
                               </h4>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-4">
+                            {/* Γεωγραφική επιλογή - inside ΕΚΤΟΣ ΕΔΡΑΣ section */}
+                            {(() => {
+                              const saveKey =
+                                recipient?.beneficiary_id ?? recipient?.id;
+                              const saveState = regiondetSaveState[
+                                String(saveKey)
+                              ] || { status: "idle" };
+                              const geoError =
+                                regiondetErrors[index] ||
+                                (saveState.status === "error"
+                                  ? saveState.message
+                                  : undefined);
+                              return (
+                                <div className="mb-4">
+                                  <BeneficiaryGeoSelector
+                                    regions={availableRegions}
+                                    regionalUnits={availableUnits}
+                                    municipalities={availableMunicipalities}
+                                    value={
+                                      recipient?.regiondet as RegiondetSelection
+                                    }
+                                    onChange={(value) =>
+                                      handleRecipientGeoChange(index, value)
+                                    }
+                                    required={!recipient?.employee_id}
+                                    loading={
+                                      regionsLoading || regiondetMutation.isPending
+                                    }
+                                    error={geoError || undefined}
+                                    onRetry={
+                                      saveState.status === "error" && saveKey
+                                        ? () => retryRegiondetSave(Number(saveKey))
+                                        : undefined
+                                    }
+                                  />
+                                </div>
+                              );
+                            })()}
+
+                            {/* Period, Days, Daily Compensation - Responsive row */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                               <FormField
                                 control={form.control}
                                 name={`recipients.${index}.month` as any}
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel className="text-xs font-medium">
+                                    <FormLabel className="text-sm font-medium">
                                       Περίοδος (Μήνες)
                                     </FormLabel>
                                     <FormControl>
@@ -2261,7 +2370,7 @@ export function EditDocumentModal({
                                 name={`recipients.${index}.days` as any}
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>Ημέρες</FormLabel>
+                                    <FormLabel className="text-sm font-medium">Ημέρες</FormLabel>
                                     <FormControl>
                                       <Input
                                         {...field}
@@ -2287,8 +2396,8 @@ export function EditDocumentModal({
                                 }
                                 render={({ field }) => (
                                   <FormItem>
-                                    <FormLabel>
-                                      Ημερήσια Αποζημίωση (€)
+                                    <FormLabel className="text-sm font-medium whitespace-nowrap">
+                                      Συνολική Ημερήσια Αποζημίωση (€)
                                     </FormLabel>
                                     <FormControl>
                                       <Input
@@ -2549,7 +2658,77 @@ export function EditDocumentModal({
                                       <FormControl>
                                         <Checkbox
                                           checked={field.value}
-                                          onCheckedChange={field.onChange}
+                                          onCheckedChange={(checked) => {
+                                            field.onChange(checked);
+                                            // Trigger recalculation
+                                            const recipient = form.getValues(
+                                              `recipients.${index}` as any,
+                                            );
+                                            const days =
+                                              parseFloat(
+                                                recipient.days?.toString() || "0",
+                                              ) || 0;
+                                            const dailyComp =
+                                              parseFloat(
+                                                recipient.daily_compensation?.toString() ||
+                                                  "0",
+                                              ) || 0;
+                                            const accommodation =
+                                              parseFloat(
+                                                recipient.accommodation_expenses?.toString() ||
+                                                  "0",
+                                              ) || 0;
+                                            const kilometers =
+                                              parseFloat(
+                                                recipient.kilometers_traveled?.toString() ||
+                                                  "0",
+                                              ) || 0;
+                                            const pricePerKm =
+                                              parseFloat(
+                                                recipient.price_per_km?.toString() || "0.2",
+                                              ) || 0.2;
+                                            const tickets =
+                                              parseFloat(
+                                                recipient.tickets_tolls_rental?.toString() ||
+                                                  "0",
+                                              ) || 0;
+
+                                            const totalExpense =
+                                              dailyComp +
+                                              accommodation +
+                                              kilometers * pricePerKm +
+                                              tickets;
+
+                                            const withholdingBase = isEktosEdras
+                                              ? dailyComp
+                                              : totalExpense;
+                                            const deduction = checked
+                                              ? withholdingBase * 0.02
+                                              : 0;
+                                            const netPayable =
+                                              totalExpense - deduction;
+
+                                            form.setValue(
+                                              `recipients.${index}.total_expense` as any,
+                                              totalExpense,
+                                              { shouldValidate: false },
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.deduction_2_percent` as any,
+                                              deduction,
+                                              { shouldValidate: false },
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.net_payable` as any,
+                                              netPayable,
+                                              { shouldValidate: false },
+                                            );
+                                            form.setValue(
+                                              `recipients.${index}.amount` as any,
+                                              netPayable,
+                                              { shouldValidate: false },
+                                            );
+                                          }}
                                           data-testid={`checkbox-2percent-${index}`}
                                         />
                                       </FormControl>
@@ -2559,7 +2738,7 @@ export function EditDocumentModal({
                                         </FormLabel>
                                         <p className="text-sm text-muted-foreground">
                                           {isEktosEdras
-                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση (ημέρες × ημερήσια αποζημίωση)"
+                                            ? "Εφαρμογή παρακράτησης 2% μόνο στην ημερήσια αποζημίωση (συνολικό ποσό)"
                                             : "Εφαρμογή παρακράτησης 2% επί της συνολικής δαπάνης"}
                                         </p>
                                       </div>

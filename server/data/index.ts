@@ -14,6 +14,7 @@ import type { Database } from '@shared/schema';
 class DatabaseConfig {
   static supabaseUrl = process.env.SUPABASE_URL;
   static supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
+  static supabaseSchema = process.env.SUPABASE_SCHEMA || 'public';
 
   static validateConfig() {
     if (!this.supabaseUrl || !this.supabaseKey) {
@@ -74,6 +75,9 @@ class DatabaseAccess {
             params: {
               eventsPerSecond: 10
             }
+          },
+          db: {
+            schema: DatabaseConfig.supabaseSchema
           }
         }
       );

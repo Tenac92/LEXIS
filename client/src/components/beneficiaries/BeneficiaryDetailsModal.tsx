@@ -155,9 +155,11 @@ interface EngineerComboboxProps {
   placeholder?: string;
   testId?: string;
   isLoading?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
 }
 
-function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId, isLoading = false }: EngineerComboboxProps) {
+function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επιλέξτε...", testId, isLoading = false, error = null, onRetry }: EngineerComboboxProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -236,56 +238,78 @@ function EngineerCombobox({ engineers, value, onValueChange, placeholder = "Επ
       
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-full bg-popover border rounded-md shadow-lg z-[9999]">
-          <div className="flex items-center border-b px-3 py-2">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Αναζήτηση μηχανικού..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setIsOpen(false);
-                  setSearchTerm("");
-                }
-              }}
-              className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-          <div className="max-h-[200px] overflow-y-auto">
-            {!Array.isArray(engineers) || engineers.length === 0 ? (
-              <div className="py-4 text-center text-sm text-muted-foreground">
-                Φόρτωση μηχανικών...
+          {error ? (
+            <div className="p-3 space-y-2">
+              <div className="flex items-center gap-2 text-destructive text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>Σφάλμα φόρτωσης μηχανικών</span>
               </div>
-            ) : filteredEngineers.length === 0 ? (
-              <div className="py-4 text-center text-sm text-muted-foreground">
-                Δεν βρέθηκαν μηχανικοί
-              </div>
-            ) : (
-              <div className="p-1">
-                <button
+              {onRetry && (
+                <Button
                   type="button"
-                  className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                  onClick={() => handleSelect(null)}
+                  variant="outline"
+                  size="sm"
+                  onClick={onRetry}
+                  className="w-full"
                 >
-                  <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
-                  Κανένας
-                </button>
-                {filteredEngineers.map((eng: any) => (
-                  <button
-                    type="button"
-                    key={eng.id}
-                    className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-                    onClick={() => handleSelect(eng.id)}
-                  >
-                    <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
-                    {eng.surname} {eng.name}
-                  </button>
-                ))}
+                  Επανάληψη
+                </Button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center border-b px-3 py-2">
+                <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Αναζήτηση μηχανικού..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setIsOpen(false);
+                      setSearchTerm("");
+                    }
+                  }}
+                  className="flex h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                />
               </div>
-            )}
-          </div>
+              <div className="max-h-[200px] overflow-y-auto">
+                {!Array.isArray(engineers) || engineers.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    Φόρτωση μηχανικών...
+                  </div>
+                ) : filteredEngineers.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-muted-foreground">
+                    Δεν βρέθηκαν μηχανικοί
+                  </div>
+                ) : (
+                  <div className="p-1">
+                    <button
+                      type="button"
+                      className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+                      onClick={() => handleSelect(null)}
+                    >
+                      <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
+                      Κανένας
+                    </button>
+                    {filteredEngineers.map((eng: any) => (
+                      <button
+                        type="button"
+                        key={eng.id}
+                        className="relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+                        onClick={() => handleSelect(eng.id)}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", value === eng.id ? "opacity-100" : "opacity-0")} />
+                        {eng.surname} {eng.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -302,6 +326,11 @@ export function BeneficiaryDetailsModal({
 }: BeneficiaryDetailsModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Retry function for engineer loading (IMPORTANT #6: Error handling)
+  const handleRetryLoadEngineers = useCallback(() => {
+    queryClient.refetchQueries({ queryKey: ["/api/employees/engineers"] });
+  }, [queryClient]);
   
   // Determine if this is a create operation (no beneficiary provided)
   const isCreateMode = !beneficiary;
@@ -351,7 +380,7 @@ export function BeneficiaryDetailsModal({
 
   // Fetch engineers directly from optimized endpoint (already filtered and sorted server-side)
   // Data is prefetched on the beneficiaries page, so this uses cached data
-  const { data: engineersResponse, isLoading: isEngineersLoading } = useQuery({
+  const { data: engineersResponse, isLoading: isEngineersLoading, error: engineersError } = useQuery({
     queryKey: ["/api/employees/engineers"],
     queryFn: async () => {
       const response = await fetch('/api/employees/engineers', { credentials: 'include' });
@@ -806,6 +835,20 @@ export function BeneficiaryDetailsModal({
       return acc;
     }, {}) : {};
 
+  // IMPORTANT #7: Handle unsaved changes confirmation when closing modal
+  const handleDialogOpenChange = useCallback((newOpen: boolean) => {
+    // If closing (newOpen = false) and form is dirty, show confirmation dialog
+    if (!newOpen && isEditing && form.formState.isDirty) {
+      const confirmed = window.confirm(
+        'Έχετε αναπόσταστες αλλαγές. Σίγουρα θέλετε να κλείσετε χωρίς να αποθηκεύσετε;'
+      );
+      if (!confirmed) {
+        return; // Don't close the modal
+      }
+    }
+    onOpenChange(newOpen);
+  }, [isEditing, form.formState.isDirty, onOpenChange]);
+
     useEffect(() => {
     return () => {
       if (regiondetSaveTimerRef.current) {
@@ -815,7 +858,7 @@ export function BeneficiaryDetailsModal({
   }, []);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader className="border-b pb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -1042,9 +1085,9 @@ export function BeneficiaryDetailsModal({
                 if (!isEditing && !hasRegionData) return null;
 
                 return (
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200 shadow-sm">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
-                      <MapPin className="w-5 h-5" />
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200 shadow-sm">
+                    <h3 className="text-base font-semibold text-green-900 mb-3 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
                       Γεωγραφικά Στοιχεία
                     </h3>
                     {isEditing ? (
@@ -1062,7 +1105,7 @@ export function BeneficiaryDetailsModal({
                         }
                       />
                     ) : (
-                      <div className="bg-white/70 p-4 rounded-lg border border-green-200">
+                      <div className="bg-white/70 p-3 rounded-lg border border-green-200">
                         {(() => {
                           const formatted = formatRegiondet(
                             (regiondetSelection as any) || beneficiary?.regiondet,
@@ -1073,27 +1116,27 @@ export function BeneficiaryDetailsModal({
                             formatted.municipalities.length === 0
                           ) {
                             return (
-                              <div className="text-sm text-green-700 flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 text-amber-500" />
-                                No region selected
+                              <div className="text-xs text-green-700 flex items-center gap-2">
+                                <AlertCircle className="w-3 h-3 text-amber-500" />
+                                Δεν έχει επιλεγεί περιοχή
                               </div>
                             );
                           }
                           return (
-                            <div className="space-y-2">
+                            <div className="space-y-1 text-xs">
                               {formatted.regions.length > 0 && (
-                                <div className="text-sm font-semibold text-green-800">
+                                <div className="font-semibold text-green-800">
                                   {formatted.regions.join(', ')}
                                 </div>
                               )}
                               {formatted.regionalUnits.length > 0 && (
-                                <div className="text-xs text-green-700">
-                                  Περιφερειακές Ενότητες: {formatted.regionalUnits.join(', ')}
+                                <div className="text-green-700">
+                                  ΠΕ: {formatted.regionalUnits.join(', ')}
                                 </div>
                               )}
                               {formatted.municipalities.length > 0 && (
-                                <div className="text-xs text-green-700">
-                                  Δήμοι/Κοινότητες: {formatted.municipalities.join(', ')}
+                                <div className="text-green-700">
+                                  Δήμοι: {formatted.municipalities.join(', ')}
                                 </div>
                               )}
                             </div>
@@ -1197,6 +1240,8 @@ export function BeneficiaryDetailsModal({
                                 placeholder="Επιλέξτε μηχανικό..."
                                 testId="select-ceng1"
                                 isLoading={isEngineersLoading}
+                                error={engineersError}
+                                onRetry={handleRetryLoadEngineers}
                               />
                               <FormMessage />
                             </FormItem>
@@ -1226,6 +1271,8 @@ export function BeneficiaryDetailsModal({
                                 placeholder="Επιλέξτε μηχανικό..."
                                 testId="select-ceng2"
                                 isLoading={isEngineersLoading}
+                                error={engineersError}
+                                onRetry={handleRetryLoadEngineers}
                               />
                               <FormMessage />
                             </FormItem>
@@ -1392,8 +1439,8 @@ export function BeneficiaryDetailsModal({
                           </p>
                         </div>
                         <div>
-                          <label className="text-gray-600 font-medium">EPS:</label>
-                          <p className="text-gray-900 truncate">{payment.freetext || 'Δ/Υ'}</p>
+                          <label className="text-gray-600 font-medium">Σημειώσεις:</label>
+                          <p className="text-gray-900 truncate">{payment.freetext || 'χωρίς σημειώσεις'}</p>
                         </div>
                         <div>
                           <label className="text-gray-600 font-medium">Καταχωρήθηκε:</label>
@@ -1419,62 +1466,40 @@ export function BeneficiaryDetailsModal({
                   </Button>
                 </div>
               )}
-              <div className="bg-blue-50 p-6 rounded-xl border border-blue-200 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
+              
+              {/* CRITICAL #3: Geographic info - READ-ONLY in Payments tab, editable in Details tab */}
+              <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-blue-700" />
-                    <h4 className="text-lg font-semibold text-blue-900">Geographical details</h4>
+                    <MapPin className="w-4 h-4 text-blue-700" />
+                    <h4 className="text-base font-semibold text-blue-900">Γεωγραφικά Στοιχεία</h4>
                   </div>
-                  {!isRegiondetComplete(regiondetSelection as RegiondetSelection) && (
-                    <Badge variant="outline" className="text-xs text-destructive border-destructive">
-                      Required
-                    </Badge>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("details")}
+                    className="text-xs h-7 px-2"
+                  >
+                    Επεξεργασία
+                  </Button>
                 </div>
-                {isEditing ? (
-                  <BeneficiaryGeoSelector
-                    regions={regionOptions}
-                    regionalUnits={regionalUnitOptions}
-                    municipalities={municipalityOptions}
-                    value={regiondetSelection as RegiondetSelection}
-                    onChange={handleRegiondetChange}
-                    required
-                    loading={regiondetStatus === "saving"}
-                    error={regiondetError || undefined}
-                    onRetry={regiondetStatus === "error" ? retryRegiondetSave : undefined}
-                  />
-                ) : (
-                  <div className="bg-white p-4 rounded-lg border border-blue-100">
-                    {(() => {
-                      const formatted = formatRegiondet((regiondetSelection as any) || (beneficiary as any)?.regiondet);
-                      if (
-                        formatted.regions.length === 0 &&
-                        formatted.regionalUnits.length === 0 &&
-                        formatted.municipalities.length === 0
-                      ) {
-                        return (
-                          <div className="text-sm text-blue-800 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4 text-amber-500" />
-                            No region selected
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="space-y-2 text-sm text-blue-900">
-                          {formatted.regions.length > 0 && (
-                            <div>Region: {formatted.regions.join(", ")}</div>
-                          )}
-                          {formatted.regionalUnits.length > 0 && (
-                            <div>Prefecture: {formatted.regionalUnits.join(", ")}</div>
-                          )}
-                          {formatted.municipalities.length > 0 && (
-                            <div>Municipality: {formatted.municipalities.join(", ")}</div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                
+                {/* READ-ONLY display - click to edit in Details tab */}
+                <div className="bg-white p-3 rounded-lg border border-blue-100 cursor-pointer hover:border-blue-300 transition-colors">
+                  {(() => {
+                    const formatted = formatRegiondet((regiondetSelection as any) || beneficiary?.regiondet);
+                    if (formatted.regions.length === 0 && formatted.regionalUnits.length === 0 && formatted.municipalities.length === 0) {
+                      return <p className="text-xs text-blue-700 text-muted-foreground">Δεν έχουν επιλεγεί περιοχές</p>;
+                    }
+                    return (
+                      <div className="space-y-1 text-xs text-blue-900">
+                        {formatted.regions.length > 0 && <div><strong>Περ.:</strong> {formatted.regions.join(", ")}</div>}
+                        {formatted.regionalUnits.length > 0 && <div><strong>ΠΕ:</strong> {formatted.regionalUnits.join(", ")}</div>}
+                        {formatted.municipalities.length > 0 && <div><strong>Δήμ.:</strong> {formatted.municipalities.join(", ")}</div>}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
             </div>

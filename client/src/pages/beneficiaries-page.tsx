@@ -26,6 +26,8 @@ import {
   MapPin,
   Building2,
   Shield,
+  Copy,
+  Filter,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
@@ -40,6 +42,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +63,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Form,
   FormControl,
@@ -119,7 +129,7 @@ const beneficiaryFormSchema = z.object({
       const remainder = sum % 11;
       const checkDigit = remainder < 2 ? remainder : 11 - remainder;
       return checkDigit === digits[8];
-    }, "Μη έγκυρο ΑΦΜ"),
+    }, "Το ΑΦΜ δεν είναι έγκυρο (αποτυχία ελέγχου checksum)"),
 
   // Project & Location Information
   project: z.string().optional(),
@@ -189,6 +199,22 @@ export default function BeneficiariesPage() {
     fathername: string;
     afm: string;
   } | undefined>(undefined);
+  
+  // Advanced filters state
+  const [advancedFilters, setAdvancedFilters] = useState({
+    unit: "",
+    project: "",
+    expenditureType: "",
+    amountFrom: "",
+    amountTo: "",
+    dateFrom: "",
+    dateTo: "",
+    region: "",
+    adeia: "",
+    ceng1: "",
+    hasPayments: "all", // "all" | "yes" | "no"
+  });
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -217,6 +243,50 @@ export default function BeneficiariesPage() {
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
+
+  // IMPORTANT #1: Fetch engineers for card display resolution
+  const { data: engineersResponse } = useQuery({
+    queryKey: ["/api/employees/engineers"],
+    queryFn: async () => {
+      const response = await fetch('/api/employees/engineers', { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch engineers');
+      return response.json();
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes cache
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  // Fetch units data for filters
+  const { data: allUnits = [] } = useQuery({
+    queryKey: ["/api/public/units"],
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch projects data for filters
+  const { data: allProjects = [] } = useQuery({
+    queryKey: ["/api/projects"],
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  // IMPORTANT #1: Memoized map for fast engineer name lookups on cards
+  const engineerMap = useMemo(() => {
+    const map = new Map();
+    const engineers = engineersResponse?.data || [];
+    if (Array.isArray(engineers)) {
+      engineers.forEach((eng: any) => {
+        if (eng?.id) {
+          map.set(eng.id, eng);
+        }
+      });
+    }
+    return map;
+  }, [engineersResponse]);
 
   // Fetch units for dropdown with aggressive caching
   const { data: units = [] } = useQuery<Unit[]>({
@@ -262,7 +332,9 @@ export default function BeneficiariesPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
+      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
       setDialogOpen(false);
       setSelectedBeneficiary(undefined);
       toast({
@@ -287,7 +359,9 @@ export default function BeneficiariesPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
+      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
       setDialogOpen(false);
       setSelectedBeneficiary(undefined);
       toast({
@@ -309,7 +383,9 @@ export default function BeneficiariesPage() {
     mutationFn: (id: number) =>
       apiRequest(`/api/beneficiaries/${id}`, { method: "DELETE" }),
     onSuccess: () => {
+      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
       queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
       toast({
         title: "Επιτυχία",
         description: "Ο δικαιούχος διαγράφηκε επιτυχώς",
@@ -323,6 +399,28 @@ export default function BeneficiariesPage() {
       });
     },
   });
+
+  // Helper to copy AFM to clipboard
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: "Αντιγράφηκε",
+        description: `Το ${label} αντιγράφηκε στο πρόχειρο`,
+      });
+    }).catch(() => {
+      toast({
+        title: "Σφάλμα",
+        description: "Αποτυχία αντιγραφής στο πρόχειρο",
+        variant: "destructive",
+      });
+    });
+  };
+
+  // Helper to mask AFM for display (show last 5 digits)
+  const maskAFM = (afm: string): string => {
+    if (!afm || afm.length < 5) return afm;
+    return `...${afm.slice(-5)}`;
+  };
 
   const handleEdit = (beneficiary: Beneficiary) => {
     // Open Details Modal with edit mode active
@@ -374,68 +472,38 @@ export default function BeneficiariesPage() {
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
-  // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
-  const filteredBeneficiaries = useMemo(() => {
-    // If AFM search results are available (9-digit AFM), use them
-    if (afmSearchResults) {
-      console.log(`[Beneficiaries] Using server-side AFM search results: ${afmSearchResults.length} beneficiaries`);
-      return afmSearchResults;
-    }
-
-    // Otherwise, do client-side filtering (for non-AFM searches)
-    const baseList = !searchTerm.trim()
-      ? beneficiaries
-      : beneficiaries.filter((beneficiary) => {
-          const searchLower = searchTerm.toLowerCase();
-          return (
-            beneficiary.surname?.toLowerCase().includes(searchLower) ||
-            beneficiary.name?.toLowerCase().includes(searchLower)
-          );
-        });
-
-    // Deduplicate by beneficiary ID to avoid duplicate keys in the list/grid
-    const seen = new Set<number>();
-    return baseList.filter((beneficiary) => {
-      if (seen.has(beneficiary.id)) return false;
-      seen.add(beneficiary.id);
-      return true;
-    });
-  }, [beneficiaries, searchTerm, afmSearchResults]);
-
-  // PERFORMANCE OPTIMIZATION: Memoized pagination
-  const paginationData = useMemo(() => {
-    const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const paginatedBeneficiaries = filteredBeneficiaries.slice(
-      startIndex,
-      startIndex + itemsPerPage,
-    );
-
-    return { totalPages, paginatedBeneficiaries };
-  }, [filteredBeneficiaries, currentPage, itemsPerPage]);
-
-  const { totalPages, paginatedBeneficiaries } = paginationData;
-
-  // IDs of beneficiaries currently visible (limit server fetch scope)
-  const visibleBeneficiaryIds = useMemo(
-    () => paginatedBeneficiaries.map((b) => b.id),
-    [paginatedBeneficiaries],
+  // Check if advanced filters that need payment data are active
+  const hasPaymentFilters = Boolean(
+    advancedFilters.hasPayments !== "all" ||
+    advancedFilters.amountFrom ||
+    advancedFilters.amountTo ||
+    advancedFilters.project ||
+    advancedFilters.expenditureType ||
+    advancedFilters.unit ||
+    advancedFilters.dateFrom ||
+    advancedFilters.dateTo
   );
 
-  // Fetch payments only for visible beneficiaries instead of the entire table
+  // Fetch ALL beneficiary IDs for payment-based filtering
+  const allBeneficiaryIds = useMemo(
+    () => beneficiaries.map((b) => b.id),
+    [beneficiaries]
+  );
+
+  // Fetch payments - either for all beneficiaries (when filters are active) or for visible ones
   const { data: beneficiaryPayments = [], isFetching: paymentsLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", { ids: visibleBeneficiaryIds }],
+    queryKey: ["/api/beneficiary-payments", { ids: hasPaymentFilters ? allBeneficiaryIds : [] }],
     queryFn: async () => {
-      if (visibleBeneficiaryIds.length === 0) return [];
-      const idParam = visibleBeneficiaryIds.join(",");
+      if (allBeneficiaryIds.length === 0) return [];
+      const idParam = allBeneficiaryIds.join(",");
       return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
     },
-    enabled: visibleBeneficiaryIds.length > 0,
-    staleTime: 2 * 60 * 1000, // keep short; list view refreshes when pages change
+    enabled: Boolean(hasPaymentFilters && allBeneficiaryIds.length > 0),
+    staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
-  // PERFORMANCE: Memoized payment data for O(1) lookups in list rendering
+  // PERFORMANCE: Memoized payment data for O(1) lookups in filtering and rendering
   const beneficiaryPaymentData = useMemo(() => {
     if (!Array.isArray(beneficiaryPayments)) return new Map();
 
@@ -462,17 +530,185 @@ export default function BeneficiariesPage() {
     return paymentMap;
   }, [beneficiaryPayments]);
 
+  // PERFORMANCE OPTIMIZATION: Memoized search and pagination to prevent unnecessary filtering
+  const filteredBeneficiaries = useMemo(() => {
+    // If AFM search results are available (9-digit AFM), use them
+    if (afmSearchResults) {
+      console.log(`[Beneficiaries] Using server-side AFM search results: ${afmSearchResults.length} beneficiaries`);
+      return afmSearchResults;
+    }
+
+    // Otherwise, do client-side filtering (for non-AFM searches)
+    let baseList = !searchTerm.trim()
+      ? beneficiaries
+      : beneficiaries.filter((beneficiary) => {
+          const searchLower = searchTerm.toLowerCase();
+          return (
+            beneficiary.surname?.toLowerCase().includes(searchLower) ||
+            beneficiary.name?.toLowerCase().includes(searchLower)
+          );
+        });
+
+    // Apply advanced filters
+    if (advancedFilters.adeia) {
+      baseList = baseList.filter((b) => 
+        b.adeia?.toString().includes(advancedFilters.adeia)
+      );
+    }
+
+    if (advancedFilters.ceng1) {
+      baseList = baseList.filter((b) => 
+        b.ceng1?.toString() === advancedFilters.ceng1
+      );
+    }
+
+    if (advancedFilters.region) {
+      baseList = baseList.filter((b) => {
+        if (!b.regiondet) return false;
+        const regionStr = JSON.stringify(b.regiondet).toLowerCase();
+        return regionStr.includes(advancedFilters.region.toLowerCase());
+      });
+    }
+
+    if (advancedFilters.hasPayments !== "all") {
+      baseList = baseList.filter((b) => {
+        const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
+        const hasPayments = payments.length > 0;
+        return advancedFilters.hasPayments === "yes" ? hasPayments : !hasPayments;
+      });
+    }
+
+    // Filter by amount range (requires payment data)
+    if (advancedFilters.amountFrom || advancedFilters.amountTo) {
+      baseList = baseList.filter((b) => {
+        const total = beneficiaryPaymentData.get(b.id)?.totalAmount || 0;
+        const amountFrom = advancedFilters.amountFrom ? parseEuropeanNumber(advancedFilters.amountFrom) || 0 : 0;
+        const amountTo = advancedFilters.amountTo ? parseEuropeanNumber(advancedFilters.amountTo) || Infinity : Infinity;
+        return total >= amountFrom && total <= amountTo;
+      });
+    }
+
+    // Filter by project and expenditure type (requires payment data)
+    if (advancedFilters.project || advancedFilters.expenditureType || advancedFilters.unit) {
+      baseList = baseList.filter((b) => {
+        const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
+        if (payments.length === 0 && (advancedFilters.project || advancedFilters.expenditureType || advancedFilters.unit)) {
+          return false;
+        }
+        
+        return payments.some((payment: any) => {
+          let matches = true;
+          if (advancedFilters.project && payment.na853 !== advancedFilters.project) {
+            matches = false;
+          }
+          if (advancedFilters.expenditureType && payment.expenditure_type !== advancedFilters.expenditureType) {
+            matches = false;
+          }
+          if (advancedFilters.unit && payment.unit?.toString() !== advancedFilters.unit) {
+            matches = false;
+          }
+          return matches;
+        });
+      });
+    }
+
+    // Filter by date range (requires payment data)
+    if (advancedFilters.dateFrom || advancedFilters.dateTo) {
+      baseList = baseList.filter((b) => {
+        const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
+        if (payments.length === 0) return false;
+        
+        return payments.some((payment: any) => {
+          if (!payment.payment_date) return false;
+          const paymentDate = new Date(payment.payment_date).getTime();
+          const dateFrom = advancedFilters.dateFrom ? new Date(advancedFilters.dateFrom).getTime() : 0;
+          const dateTo = advancedFilters.dateTo ? new Date(advancedFilters.dateTo).getTime() : Infinity;
+          return paymentDate >= dateFrom && paymentDate <= dateTo;
+        });
+      });
+    }
+
+    // Deduplicate by beneficiary ID to avoid duplicate keys in the list/grid
+    const seen = new Set<number>();
+    return baseList.filter((beneficiary) => {
+      if (seen.has(beneficiary.id)) return false;
+      seen.add(beneficiary.id);
+      return true;
+    });
+  }, [beneficiaries, searchTerm, afmSearchResults, advancedFilters, beneficiaryPaymentData]);
+
+  // PERFORMANCE OPTIMIZATION: Memoized pagination
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(filteredBeneficiaries.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedBeneficiaries = filteredBeneficiaries.slice(
+      startIndex,
+      startIndex + itemsPerPage,
+    );
+
+    return { totalPages, paginatedBeneficiaries };
+  }, [filteredBeneficiaries, currentPage, itemsPerPage]);
+
+  const { totalPages, paginatedBeneficiaries } = paginationData;
+
+  // IDs of beneficiaries currently visible (for fetching visible payments when no filters)
+  const visibleBeneficiaryIds = useMemo(
+    () => paginatedBeneficiaries.map((b) => b.id),
+    [paginatedBeneficiaries],
+  );
+
+  // Fetch payments for visible beneficiaries only when no payment filters are active
+  const { data: visiblePayments = [] } = useQuery({
+    queryKey: ["/api/beneficiary-payments", { ids: visibleBeneficiaryIds }],
+    queryFn: async () => {
+      if (visibleBeneficiaryIds.length === 0) return [];
+      const idParam = visibleBeneficiaryIds.join(",");
+      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
+    },
+    enabled: Boolean(!hasPaymentFilters && visibleBeneficiaryIds.length > 0),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
+  // Merge payment data - use all payments when filters active, visible only otherwise
+  const allPaymentData = useMemo(() => {
+    const payments = hasPaymentFilters ? beneficiaryPayments : visiblePayments;
+    if (!Array.isArray(payments)) return new Map();
+
+    const paymentMap = new Map();
+
+    payments.forEach((payment: any) => {
+      const id = payment.beneficiary_id;
+      if (!paymentMap.has(id)) {
+        paymentMap.set(id, {
+          payments: [],
+          totalAmount: 0,
+          expenditureTypes: new Set(),
+        });
+      }
+
+      const data = paymentMap.get(id);
+      data.payments.push(payment);
+      data.totalAmount += parseEuropeanNumber(payment.amount) || 0;
+      if (payment.expenditure_type) {
+        data.expenditureTypes.add(payment.expenditure_type);
+      }
+    });
+
+    return paymentMap;
+  }, [beneficiaryPayments, visiblePayments, hasPaymentFilters]);
+
   // Optimized helper functions using memoized data
   const getPaymentsForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.payments || [];
+    return allPaymentData.get(beneficiaryId)?.payments || [];
   };
 
   const getTotalAmountForBeneficiary = (beneficiaryId: number) => {
-    return beneficiaryPaymentData.get(beneficiaryId)?.totalAmount || 0;
+    return allPaymentData.get(beneficiaryId)?.totalAmount || 0;
   };
 
   const getExpenditureTypesForBeneficiary = (beneficiaryId: number) => {
-    const types = beneficiaryPaymentData.get(beneficiaryId)?.expenditureTypes;
+    const types = allPaymentData.get(beneficiaryId)?.expenditureTypes;
     return types ? Array.from(types) : [];
   };
 
@@ -577,14 +813,405 @@ export default function BeneficiariesPage() {
               </div>
             </div>
 
-            {/* Search */}
-            <div className="mb-6">
-              <Input
-                placeholder="Αναζήτηση δικαιούχων (όνομα, επώνυμο, ΑΦΜ, περιοχή)..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-md"
-              />
+            {/* Search and Filters */}
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <Input
+                  placeholder="Αναζήτηση δικαιούχων (όνομα, επώνυμο, ΑΦΜ)..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="flex-1 max-w-md"
+                />
+                
+                {/* Advanced Filters Sheet */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex justify-between items-center gap-2"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Filter className="h-4 w-4" />
+                        Προχωρημένα Φίλτρα
+                      </span>
+                      {(advancedFilters.unit ||
+                        advancedFilters.project ||
+                        advancedFilters.expenditureType ||
+                        advancedFilters.amountFrom ||
+                        advancedFilters.amountTo ||
+                        advancedFilters.dateFrom ||
+                        advancedFilters.dateTo ||
+                        advancedFilters.region ||
+                        advancedFilters.adeia ||
+                        advancedFilters.ceng1 ||
+                        advancedFilters.hasPayments !== "all") && (
+                        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                          Ενεργά
+                        </span>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Προχωρημένα Φίλτρα</SheetTitle>
+                    </SheetHeader>
+                    <div className="grid gap-4 py-4">
+                      {/* Unit Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Μονάδα</label>
+                        <Select
+                          value={advancedFilters.unit}
+                          onValueChange={(value) =>
+                            setAdvancedFilters((prev) => ({ ...prev, unit: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε μονάδα" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Όλες οι μονάδες</SelectItem>
+                            {Array.isArray(allUnits) &&
+                              allUnits.map((unit: any) => (
+                                <SelectItem
+                                  key={unit.id}
+                                  value={unit.id.toString()}
+                                >
+                                  {unit.unit} - {unit.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Project Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Έργο (NA853)</label>
+                        <Select
+                          value={advancedFilters.project}
+                          onValueChange={(value) =>
+                            setAdvancedFilters((prev) => ({ ...prev, project: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε έργο" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Όλα τα έργα</SelectItem>
+                            {Array.isArray(allProjects) &&
+                              allProjects
+                                .filter((p: any) => p.na853)
+                                .map((project: any) => (
+                                  <SelectItem
+                                    key={project.id}
+                                    value={project.na853}
+                                  >
+                                    {project.na853} - {project.project_name}
+                                  </SelectItem>
+                                ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Expenditure Type Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Τύπος Δαπάνης</label>
+                        <Input
+                          placeholder="Αναζήτηση τύπου δαπάνης"
+                          value={advancedFilters.expenditureType}
+                          onChange={(e) =>
+                            setAdvancedFilters((prev) => ({
+                              ...prev,
+                              expenditureType: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      {/* Amount Range */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Εύρος Ποσού</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground">
+                              Από
+                            </label>
+                            <Input
+                              type="text"
+                              placeholder="0,00"
+                              value={advancedFilters.amountFrom}
+                              onChange={(e) =>
+                                setAdvancedFilters((prev) => ({
+                                  ...prev,
+                                  amountFrom: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">
+                              Έως
+                            </label>
+                            <Input
+                              type="text"
+                              placeholder="0,00"
+                              value={advancedFilters.amountTo}
+                              onChange={(e) =>
+                                setAdvancedFilters((prev) => ({
+                                  ...prev,
+                                  amountTo: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Date Range */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Εύρος Ημερομηνιών Πληρωμής
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-xs text-muted-foreground">
+                              Από
+                            </label>
+                            <Input
+                              type="date"
+                              value={advancedFilters.dateFrom}
+                              onChange={(e) =>
+                                setAdvancedFilters((prev) => ({
+                                  ...prev,
+                                  dateFrom: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-muted-foreground">
+                              Έως
+                            </label>
+                            <Input
+                              type="date"
+                              value={advancedFilters.dateTo}
+                              onChange={(e) =>
+                                setAdvancedFilters((prev) => ({
+                                  ...prev,
+                                  dateTo: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Region Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Περιοχή</label>
+                        <Input
+                          placeholder="Αναζήτηση περιοχής"
+                          value={advancedFilters.region}
+                          onChange={(e) =>
+                            setAdvancedFilters((prev) => ({
+                              ...prev,
+                              region: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      {/* License Number */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Αρ. Άδειας</label>
+                        <Input
+                          placeholder="Αναζήτηση αριθμού άδειας"
+                          value={advancedFilters.adeia}
+                          onChange={(e) =>
+                            setAdvancedFilters((prev) => ({
+                              ...prev,
+                              adeia: e.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      {/* Engineer Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Μηχανικός</label>
+                        <Select
+                          value={advancedFilters.ceng1}
+                          onValueChange={(value) =>
+                            setAdvancedFilters((prev) => ({ ...prev, ceng1: value }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε μηχανικό" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Όλοι</SelectItem>
+                            {Array.isArray(engineersResponse?.engineers) &&
+                              engineersResponse.engineers.map((engineer: any) => (
+                                <SelectItem
+                                  key={engineer.id}
+                                  value={engineer.id.toString()}
+                                >
+                                  {engineer.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Has Payments Filter */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Κατάσταση Πληρωμών</label>
+                        <Select
+                          value={advancedFilters.hasPayments}
+                          onValueChange={(value) =>
+                            setAdvancedFilters((prev) => ({
+                              ...prev,
+                              hasPayments: value,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε κατάσταση" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Όλοι</SelectItem>
+                            <SelectItem value="yes">Με πληρωμές</SelectItem>
+                            <SelectItem value="no">Χωρίς πληρωμές</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Filter Actions */}
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setAdvancedFilters({
+                            unit: "",
+                            project: "",
+                            expenditureType: "",
+                            amountFrom: "",
+                            amountTo: "",
+                            dateFrom: "",
+                            dateTo: "",
+                            region: "",
+                            adeia: "",
+                            ceng1: "",
+                            hasPayments: "all",
+                          });
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Καθαρισμός
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* Active Filters Display */}
+              {(advancedFilters.unit ||
+                advancedFilters.project ||
+                advancedFilters.expenditureType ||
+                advancedFilters.amountFrom ||
+                advancedFilters.amountTo ||
+                advancedFilters.dateFrom ||
+                advancedFilters.dateTo ||
+                advancedFilters.region ||
+                advancedFilters.adeia ||
+                advancedFilters.ceng1 ||
+                advancedFilters.hasPayments !== "all") && (
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-sm text-muted-foreground">Ενεργά φίλτρα:</span>
+                  {advancedFilters.unit && advancedFilters.unit !== "all" && (
+                    <Badge variant="secondary" className="gap-1">
+                      Μονάδα: {allUnits.find((u: any) => u.id.toString() === advancedFilters.unit)?.unit}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, unit: "" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {advancedFilters.project && advancedFilters.project !== "all" && (
+                    <Badge variant="secondary" className="gap-1">
+                      Έργο: {advancedFilters.project}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, project: "" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {advancedFilters.expenditureType && (
+                    <Badge variant="secondary" className="gap-1">
+                      Τύπος: {advancedFilters.expenditureType}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, expenditureType: "" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {advancedFilters.hasPayments !== "all" && (
+                    <Badge variant="secondary" className="gap-1">
+                      {advancedFilters.hasPayments === "yes" ? "Με πληρωμές" : "Χωρίς πληρωμές"}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, hasPayments: "all" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {(advancedFilters.amountFrom || advancedFilters.amountTo) && (
+                    <Badge variant="secondary" className="gap-1">
+                      Ποσό: {advancedFilters.amountFrom || "0"} - {advancedFilters.amountTo || "∞"}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({
+                            ...prev,
+                            amountFrom: "",
+                            amountTo: "",
+                          }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {advancedFilters.region && (
+                    <Badge variant="secondary" className="gap-1">
+                      Περιοχή: {advancedFilters.region}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, region: "" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {advancedFilters.adeia && (
+                    <Badge variant="secondary" className="gap-1">
+                      Άδεια: {advancedFilters.adeia}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, adeia: "" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Beneficiaries Display */}
@@ -621,7 +1248,7 @@ export default function BeneficiariesPage() {
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2 text-muted-foreground">
                                     <User className="w-4 h-4" />
-                                    <span>ΑΦΜ: {beneficiary.afm}</span>
+                                    <span className="font-mono">ΑΦΜ: {maskAFM(beneficiary.afm)}</span>
                                   </div>
                                 </div>
                                 <div className="space-y-1">
@@ -651,21 +1278,23 @@ export default function BeneficiariesPage() {
                                   {(() => {
                                     const latest = getLatestPaymentForBeneficiary(beneficiary.id);
                                     return (
-                                      <div className="space-y-1 text-muted-foreground">
-                                        <div className="flex items-center gap-2">
-                                          <Calendar className="w-4 h-4 flex-shrink-0" />
-                                          <span>
-                                            Πληρωμή: {latest?.payment_date
-                                              ? new Date(latest.payment_date).toLocaleDateString("el-GR")
-                                              : "—"}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <Hash className="w-4 h-4 flex-shrink-0" />
-                                          <span className="truncate" title={latest?.freetext || "—"}>
-                                            EPS: {latest?.freetext || "—"}
-                                          </span>
-                                        </div>
+                                      <div className="space-y-0.5 text-muted-foreground text-xs">
+                                        {latest?.payment_date && (
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="w-3 h-3 flex-shrink-0" />
+                                            <span>
+                                              {new Date(latest.payment_date).toLocaleDateString("el-GR")}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {latest?.freetext && (
+                                          <div className="flex items-center gap-2">
+                                            <Hash className="w-3 h-3 flex-shrink-0" />
+                                            <span className="truncate" title={latest.freetext}>
+                                              {latest.freetext.substring(0, 25)}
+                                            </span>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })()}
@@ -715,6 +1344,31 @@ export default function BeneficiariesPage() {
                                           πληρωμές
                                         </span>
                                       </div>
+                                      
+                                      {/* IMPORTANT #2: Payment status breakdown */}
+                                      {(() => {
+                                        const payments = getPaymentsForBeneficiary(beneficiary.id);
+                                        const byStatus = payments.reduce((acc: any, p: any) => {
+                                          acc[p.status] = (acc[p.status] || 0) + 1;
+                                          return acc;
+                                        }, {} as Record<string, number>);
+                                        
+                                        if (Object.keys(byStatus).length === 0) return null;
+                                        
+                                        return (
+                                          <div className="flex items-center gap-1 flex-wrap">
+                                            {byStatus.paid > 0 && (
+                                              <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs">{byStatus.paid} πληρ</Badge>
+                                            )}
+                                            {byStatus.submitted > 0 && (
+                                              <Badge className="bg-blue-100 text-blue-800 border border-blue-200 text-xs">{byStatus.submitted} υποβ</Badge>
+                                            )}
+                                            {byStatus.pending > 0 && (
+                                              <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-200 text-xs">{byStatus.pending} εκκρ</Badge>
+                                            )}
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                   )}
                                 </div>
@@ -800,6 +1454,18 @@ export default function BeneficiariesPage() {
                                   <span className="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded">
                                     ΑΦΜ: {beneficiary.afm}
                                   </span>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 hover:bg-purple-100"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(beneficiary.afm, "ΑΦΜ");
+                                    }}
+                                    title="Αντιγραφή ΑΦΜ"
+                                  >
+                                    <Copy className="h-3 w-3 text-purple-600" />
+                                  </Button>
                                 </div>
                               </div>
                               <div className="flex gap-1">
@@ -920,12 +1586,22 @@ export default function BeneficiariesPage() {
                                             : "—"}
                                         </p>
                                         <p className="text-xs text-purple-800 truncate" title={latest?.freetext || "—"}>
-                                          EPS: {latest?.freetext || "—"}
+                                          Σημ: {latest?.freetext || "χωρίς σημειώσεις"}
                                         </p>
                                       </div>
                                     </div>
                                   );
                                 })()}
+
+                                {/* IMPORTANT #3: Empty state indicator */}
+                                {getTotalAmountForBeneficiary(
+                                  beneficiary.id,
+                                ) === 0 && (
+                                  <div className="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                                    <AlertCircle className="w-4 h-4 text-gray-500" />
+                                    <span className="text-xs text-gray-600">Δεν υπάρχουν πληρωμές</span>
+                                  </div>
+                                )}
 
                                 {/* Region Info from regiondet */}
                                 {formatRegiondet(beneficiary.regiondet).length > 0 && (
@@ -1109,6 +1785,38 @@ export default function BeneficiariesPage() {
                                           ),
                                         )}
                                       </div>
+
+                                      {/* IMPORTANT #2: Payment status breakdown by state - only show if there are non-paid payments */}
+                                      {(() => {
+                                        const statusCounts = payments.reduce((acc: any, p: any) => {
+                                          acc[p.status] = (acc[p.status] || 0) + 1;
+                                          return acc;
+                                        }, {} as Record<string, number>);
+                                        
+                                        // Only show status section if there are unpaid/submitted payments
+                                        const hasNonPaidPayments = (statusCounts.submitted || 0) > 0 || (statusCounts.pending || 0) > 0;
+                                        if (!hasNonPaidPayments) return null;
+                                        
+                                        return (
+                                          <div className="space-y-2 mt-3 pt-3 border-t border-green-200">
+                                            <div className="text-xs text-green-700 font-medium">
+                                              Κατάσταση Πληρωμών:
+                                            </div>
+                                            <div className="flex gap-2 flex-wrap">
+                                              {statusCounts.submitted > 0 && (
+                                                <div className="bg-blue-200/50 px-2 py-1 rounded border border-blue-300 text-xs font-medium text-blue-800">
+                                                  ⬆ {statusCounts.submitted} υποβλημένες
+                                                </div>
+                                              )}
+                                              {statusCounts.pending > 0 && (
+                                                <div className="bg-yellow-200/50 px-2 py-1 rounded border border-yellow-300 text-xs font-medium text-yellow-800">
+                                                  ⏳ {statusCounts.pending} εκκρεμείς
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
                                 );
@@ -1166,7 +1874,9 @@ export default function BeneficiariesPage() {
                                           Μηχανικός 1
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          ID: {beneficiary.ceng1}
+                                          {engineerMap.has(beneficiary.ceng1)
+                                            ? `${engineerMap.get(beneficiary.ceng1)?.surname} ${engineerMap.get(beneficiary.ceng1)?.name}`
+                                            : `ID: ${beneficiary.ceng1}`}
                                         </div>
                                       </div>
                                     )}
@@ -1176,7 +1886,9 @@ export default function BeneficiariesPage() {
                                           Μηχανικός 2
                                         </div>
                                         <div className="text-sm text-orange-900 font-medium">
-                                          ID: {beneficiary.ceng2}
+                                          {engineerMap.has(beneficiary.ceng2)
+                                            ? `${engineerMap.get(beneficiary.ceng2)?.surname} ${engineerMap.get(beneficiary.ceng2)?.name}`
+                                            : `ID: ${beneficiary.ceng2}`}
                                         </div>
                                       </div>
                                     )}

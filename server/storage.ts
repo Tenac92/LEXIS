@@ -274,6 +274,31 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Creating budget history entry for project: ${entry.project_id}`);
       
+      // AUDIT: Validate consistency between available budget change and expected document amount
+      if (entry.project_id && entry.change_type === 'spending') {
+        const prevAmount = parseFloat(String(entry.previous_amount || 0));
+        const newAmount = parseFloat(String(entry.new_amount || 0));
+        const calculatedChange = Math.abs(newAmount - prevAmount);
+        
+        // Extract document amount from change_reason if available
+        const docAmountMatch = entry.change_reason?.match(/amount: €([\d.]+)/i);
+        if (docAmountMatch) {
+          const expectedChange = parseFloat(docAmountMatch[1]);
+          const tolerance = 0.01; // Allow rounding errors
+          
+          if (Math.abs(calculatedChange - expectedChange) > tolerance) {
+            console.error(
+              `[AUDIT] Budget calculation mismatch for project ${entry.project_id}: ` +
+              `change_reason indicates €${expectedChange}, but available budget changed by €${calculatedChange}`
+            );
+            // Add warning to metadata
+            if (!entry.metadata) entry.metadata = {};
+            entry.metadata.audit_warning = 
+              `Ανακάλυψη: Δαπάνη εγγράφου €${expectedChange} δεν ταιριάζει με αλλαγή υπολοίπου €${calculatedChange}`;
+          }
+        }
+      }
+      
       // createdAt is automatically handled by the database
       // Remove any created_at property to avoid type errors
       const { created_at, ...entryData } = entry;
@@ -411,7 +436,7 @@ export class DatabaseStorage implements IStorage {
         .from('generated_documents')
         .select('total_amount')
         .in('project_index_id', projectIndexIds)
-        .in('status', ['approved', 'pending', 'processed'])
+        .in('status', ['approved', 'pending', 'processed', 'completed'])
         .gte('created_at', '2026-01-01T00:00:00Z');  // Only 2026+ documents
       
       if (sumError) {
@@ -475,10 +500,15 @@ export class DatabaseStorage implements IStorage {
         new_amount: String(newAvailable),            // New available budget
         change_type: isSpending ? 'spending' : 'refund',
         change_reason: isSpending 
-          ? `Δαπάνη εγγράφου: €${absoluteAmount.toFixed(2)}`
-          : `Επιστροφή λόγω επεξεργασίας ή διαγραφής εγγράφου: €${absoluteAmount.toFixed(2)}`,
+          ? `Document ID: ${documentId}, amount: €${absoluteAmount.toFixed(2)}`
+          : `Document deleted (ID: ${documentId}, amount: €${absoluteAmount.toFixed(2)})`,
         document_id: documentId,
-        created_by: userId
+        created_by: userId,
+        metadata: {
+          document_amount: absoluteAmount.toFixed(2),
+          available_before: previousAvailable.toFixed(2),
+          available_after: newAvailable.toFixed(2)
+        }
       });
       
       console.log(`[Storage] Successfully updated project budget spending: ${currentSpending} → ${newSpending} (2026+ documents only)`);
@@ -1292,9 +1322,10 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Now get the paginated data with all columns
-      // Order by created_at first for true chronological order, then by id as tie-breaker
+      // Order by created_at first for true chronological order, then sequence in batch, then id as tie-breaker
       const { data, error } = await query
         .order('created_at', { ascending: false })
+        .order('metadata->sequence_in_batch', { ascending: false })
         .order('id', { ascending: false })
         .range(offset, offset + limit - 1);
         

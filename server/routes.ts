@@ -843,6 +843,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's unit_id to get relevant suggestions
       const userUnitId = userUnitIdNum;
       
+      // First, resolve expenditure type if provided
+      let expenditureTypeId: number | null = null;
+      if (expenditureType) {
+        const { data: expTypeData } = await supabase
+          .from('expenditure_types')
+          .select('id')
+          .eq('expenditure_types', expenditureType)
+          .maybeSingle();
+        if (expTypeData?.id) {
+          expenditureTypeId = expTypeData.id;
+        }
+      }
+
       // Fetch comprehensive data for smart suggestions
       let baseQuery = supabase
         .from('generated_documents')
@@ -890,6 +903,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to fetch suggestions' });
       }
 
+      // If expenditure_type filtering is needed, fetch project_index data to map project_index_id -> expenditure_type_id
+      let projectIndexExpTypeMap = new Map<number, number>();
+      if (expenditureTypeId && allDocuments && allDocuments.length > 0) {
+        // Get unique project_index_ids from documents
+        const projectIndexIds = [...new Set(allDocuments.map((doc: any) => doc.project_index_id).filter(Boolean))];
+        console.log('[UserPreferences] Filtering by expenditure_type:', expenditureTypeId, 'Found', projectIndexIds.length, 'unique project_index_ids');
+        
+        if (projectIndexIds.length > 0) {
+          const { data: projIndexData } = await supabase
+            .from('project_index')
+            .select('id, expenditure_type_id')
+            .in('id', projectIndexIds);
+          
+          if (projIndexData) {
+            console.log('[UserPreferences] Fetched', projIndexData.length, 'project_index records');
+            projIndexData.forEach((pi: any) => {
+              projectIndexExpTypeMap.set(pi.id, pi.expenditure_type_id);
+            });
+          }
+        }
+        
+        // Now filter documents by expenditure_type
+        const beforeFilter = allDocuments.length;
+        allDocuments = allDocuments.filter((doc: any) => {
+          const docExpendTypeId = projectIndexExpTypeMap.get(doc.project_index_id);
+          return docExpendTypeId === expenditureTypeId;
+        });
+        console.log('[UserPreferences] Expenditure type filter result: ', beforeFilter, 'documents -> ', allDocuments.length, 'documents');
+      }
+
       // Find project_index_id for current context (handle multiple rows per project)
       let currentProjectIndexId = null;
       if (projectId) {
@@ -928,6 +971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Analyze suggestions with metadata
+      console.log('[UserPreferences] Analyzing', allDocuments?.length || 0, 'documents for ESDIAN suggestions');
       const valueFrequency = new Map<string, {
         count: number;
         lastUsed: string;
@@ -1028,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamFrequency: data.teamCount,
         contextMatches: data.contextMatches,
         source: data.userCount > 0 ? 'user' as const : 'team' as const,
-        score: calculateSuggestionScore(data, Boolean(currentProjectIndexId))
+        score: calculateSuggestionScore(data, Boolean(currentProjectIndexId), Boolean(expenditureTypeId))
       }));
 
       // Sort by relevance score
@@ -1078,7 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper functions for scoring suggestions
-  function calculateSuggestionScore(data: any, hasContext: boolean): number {
+  function calculateSuggestionScore(data: any, hasContext: boolean, expenditureTypeMatch: boolean = false): number {
     let score = 0;
     
     // Base frequency score
@@ -1087,9 +1131,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // User preference bonus
     score += data.userCount * 20;
     
-    // Context match bonus
+    // Context match bonus (same project)
     if (hasContext && data.contextMatches > 0) {
       score += data.contextMatches * 30;
+    }
+    
+    // Expenditure type match bonus (same expense category)
+    if (expenditureTypeMatch) {
+      score += 10;
     }
     
     // Recency bonus (more recent = higher score)

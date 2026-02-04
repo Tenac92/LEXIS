@@ -32,12 +32,16 @@ function resolveSupabaseCreds() {
 }
 
 const { url: supabaseUrl, key: supabaseKey } = resolveSupabaseCreds();
+const supabaseSchema = process.env.SUPABASE_SCHEMA || 'public';
 
 // Create Supabase client with configuration options
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: false
+  },
+  db: {
+    schema: supabaseSchema
   }
 });
 
@@ -174,6 +178,9 @@ export function resetConnectionPoolIfNeeded(): boolean {
         auth: {
           autoRefreshToken: true,
           persistSession: false
+        },
+        db: {
+          schema: supabaseSchema
         }
       });
       

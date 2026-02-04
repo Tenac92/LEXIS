@@ -166,134 +166,162 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
     form.setValue("esdian_fields", set.fields);
   };
 
+  // Helper function to get badge label for suggestion source/reason
+  const getSuggestionBadgeLabel = (suggestion: EsdianSuggestion): string => {
+    if (suggestion.contextMatches > 0) return "Σχετικό έργο";
+    if (suggestion.frequency > 2) return "Συχνό";
+    if (suggestion.source === "user") return "Δικό σας";
+    return "Ομάδα";
+  };
+
+  // Helper function to get badge color for suggestion source
+  const getSuggestionBadgeColor = (suggestion: EsdianSuggestion): string => {
+    if (suggestion.contextMatches > 0) return "bg-green-50 text-green-700 border-green-200";
+    if (suggestion.frequency > 2) return "bg-orange-50 text-orange-700 border-orange-200";
+    if (suggestion.source === "user") return "bg-blue-50 text-blue-700 border-blue-200";
+    return "bg-gray-50 text-gray-700 border-gray-200";
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">Εσωτερική Διανομή</h3>
-          <p className="text-sm text-gray-600">Επιλέξτε τμήματα για διανομή του εγγράφου</p>
+          <h3 className="text-sm font-semibold text-gray-900">Εσωτερική Διανομή</h3>
+          <p className="text-xs text-gray-500">
+            Τμήματα για διανομή εγγράφου • 
+            <span className="text-green-600 font-medium"> 1. Χρονολογικό Αρχείο</span> συμπεριλαμβάνεται αυτόματα
+          </p>
         </div>
         {suggestions.length > 0 && hasContext && (
-          <Badge variant="secondary" className="text-xs">
+          <Badge variant="secondary" className="text-xs h-fit whitespace-nowrap">
             <Lightbulb className="h-3 w-3 mr-1" />
-            Έξυπνες προτάσεις
+            Σχετικό
           </Badge>
         )}
       </div>
 
-      {/* Auto-Population Indicator */}
+      {/* Auto-Population Indicator - Compact */}
       {autoPopulate && autoPopulate.confidence === 'high' && (
-        <div className="bg-blue-50 border border-blue-200 rounded p-3">
-          <div className="flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-800">
-              Τα πεδία συμπληρώθηκαν αυτόματα βάσει {autoPopulate.reason === 'context_match' ? 'παρόμοιων εγγράφων για αυτό το έργο' : 'της συνήθους χρήσης σας'}
+        <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
+          <div className="flex items-start gap-2">
+            <Lightbulb className="h-3.5 w-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <span className="text-blue-800 font-medium">
+              {autoPopulate.reason === 'context_match' 
+                ? 'Συμπληρώθηκε βάσει παρόμοιων εγγράφων'
+                : 'Συμπληρώθηκε βάσει της συνήθειας σας'}
             </span>
           </div>
         </div>
       )}
 
-      {/* Suggested fields (purple) */}
-      {displayedSuggestions.length > 0 && (
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded p-3">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-800">
-                {contextSuggestions.length > 0 ? "Για αυτό το έργο συνήθως:" : "Προτεινόμενα πεδία"}
-              </span>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-purple-700 hover:bg-purple-100 border-purple-200"
-              onClick={applyContextSuggestions}
-            >
-              Συμπλήρωση όλων
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {displayedSuggestions.map((suggestion: EsdianSuggestion, index: number) => (
-              <div
-                key={index}
-                className="flex items-center justify-between bg-white rounded p-2 text-sm border border-purple-100"
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <Badge variant="secondary" className="text-xs max-w-[240px] truncate">
-                    {suggestion.value}
-                  </Badge>
-                  {suggestion.contextMatches > 0 && <span className="text-green-600 text-xs">✨</span>}
-                  {suggestion.frequency > 2 && <span className="text-orange-500 text-xs">🔥</span>}
-                  {suggestion.source === "user" && <span className="text-blue-600 text-xs">👤</span>}
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-purple-700 hover:bg-purple-50"
-                  onClick={() => applySuggestionToNext(suggestion.value)}
-                  data-testid={`button-suggestion-apply-${index}`}
-                >
-                  Εισαγωγή
-                </Button>
+      {/* Side-by-Side Layout: Suggestions (Left) + Input Fields (Right) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {/* Suggested fields - Left side */}
+        {displayedSuggestions.length > 0 && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded p-2 h-fit md:max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between gap-2 mb-2 sticky top-0 bg-gradient-to-r from-purple-50 to-indigo-50 pb-1 z-10">
+              <div className="flex items-center gap-2 min-w-0">
+                <Star className="h-3.5 w-3.5 text-purple-600 flex-shrink-0" />
+                <span className="text-xs font-semibold text-purple-800 truncate">
+                  {contextSuggestions.length > 0 ? "Για αυτό το έργο:" : "Προτάσεις"}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Dynamic ESDIAN Input Fields */}
-      <div className="space-y-4">
-        {esdianFields.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            Τα πεδία εσωτερικής διανομής είναι προαιρετικά. Προσθέστε νέο μόνο αν χρειάζεται.
-          </p>
-        )}
-        {esdianFields.map((field: string, index: number) => (
-          <div key={index} className="flex items-end gap-2">
-            <div className="flex-1">
-              <FormField
-                control={form.control}
-                name={`esdian_fields.${index}`}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Εσωτερική Διανομή {index + 1}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        placeholder="π.χ. ΤΜΗΜΑ ΔΙΑΧΕΙΡΙΣΗΣ ΚΡΙΣΕΩΝ" 
-                        data-testid={`input-esdian-field-${index + 1}`}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-purple-700 hover:bg-purple-100 border-purple-300 h-7 text-xs px-2 flex-shrink-0"
+                onClick={applyContextSuggestions}
+              >
+                Όλες
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-10 px-3 text-red-600 hover:bg-red-50 hover:border-red-300"
-              onClick={() => removeEsdianField(index)}
-              data-testid={`button-remove-esdian-field-${index + 1}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="space-y-1">
+              {displayedSuggestions.map((suggestion: EsdianSuggestion, index: number) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between bg-white rounded p-1.5 text-xs border border-purple-100 hover:border-purple-300 transition-colors group"
+                >
+                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                    <Badge variant="outline" className="text-xs max-w-[140px] truncate flex-shrink-0 text-purple-700 border-purple-200">
+                      {suggestion.value}
+                    </Badge>
+                    <Badge variant="secondary" className={`text-xs h-fit whitespace-nowrap flex-shrink-0 border text-[10px] py-0.5 ${getSuggestionBadgeColor(suggestion)}`}>
+                      {getSuggestionBadgeLabel(suggestion)}
+                    </Badge>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-purple-700 hover:bg-purple-100 h-6 w-6 p-0 flex-shrink-0 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => applySuggestionToNext(suggestion.value)}
+                    data-testid={`button-suggestion-apply-${index}`}
+                    title="Προσθήκη στα πεδία"
+                  >
+                    +
+                  </Button>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
-        
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-full h-10 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
-          onClick={addEsdianField}
-          data-testid="button-add-esdian-field"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Προσθήκη νέου πεδίου διανομής
-        </Button>
+        )}
+
+        {/* Dynamic ESDIAN Input Fields - Right side */}
+        <div className="space-y-1.5">
+          {esdianFields.length === 0 && displayedSuggestions.length === 0 && (
+            <p className="text-xs text-muted-foreground italic">
+              Προαιρετικά. Προσθέστε μόνο εάν χρειάζεται.
+            </p>
+          )}
+          {esdianFields.map((field: string, index: number) => (
+            <div key={index} className="flex items-end gap-1">
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name={`esdian_fields.${index}`}
+                  render={({ field }) => (
+                    <FormItem className="pb-1">
+                      <FormLabel className="text-xs font-medium">Διανομή {index + 1}</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          placeholder="Τμήμα/Μονάδα" 
+                          className="h-8 text-xs"
+                          data-testid={`input-esdian-field-${index + 1}`}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-red-600 hover:bg-red-50 hover:border-red-300 flex-shrink-0"
+                onClick={() => removeEsdianField(index)}
+                data-testid={`button-remove-esdian-field-${index + 1}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
+          
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full h-8 text-blue-600 hover:bg-blue-50 hover:border-blue-300 text-xs"
+            onClick={addEsdianField}
+            data-testid="button-add-esdian-field"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Προσθήκη
+          </Button>
+        </div>
       </div>
     </div>
   );
