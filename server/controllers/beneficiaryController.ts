@@ -107,11 +107,43 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       });
     }
     
-    // PERFORMANCE: Check cache first
+    // PAGINATION: Parse limit and offset from query parameters
+    const limitParam = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const offsetParam = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+    const limit =
+      typeof limitParam === "number" && Number.isFinite(limitParam) && limitParam > 0
+        ? Math.min(limitParam, 500) // Cap at 500 per request for performance
+        : undefined;
+    const offset =
+      typeof offsetParam === "number" && Number.isFinite(offsetParam) && offsetParam >= 0
+        ? offsetParam
+        : 0;
+    
+    // PERFORMANCE: Check cache first (only full list, not paginated)
     const cachedData = getCachedBeneficiaries(userUnits);
     if (cachedData) {
-      console.log(`[Beneficiaries] Returning ${cachedData.length} cached beneficiaries for units: ${userUnits.join(', ')}`);
-      return res.json(cachedData);
+      console.log(`[Beneficiaries] Cache hit for units: ${userUnits.join(', ')}`);
+      
+      // Apply pagination to cached data
+      let paginatedData = cachedData;
+      let total = cachedData.length;
+      
+      if (limit) {
+        paginatedData = cachedData.slice(offset, offset + limit);
+        console.log(`[Beneficiaries] Returning paginated cached data: offset=${offset}, limit=${limit}, total=${total}, returned=${paginatedData.length}`);
+      } else {
+        console.log(`[Beneficiaries] Returning all ${total} cached beneficiaries`);
+      }
+      
+      // Set pagination headers
+      res.set('X-Total-Count', total.toString());
+      if (limit) {
+        res.set('X-Returned-Count', paginatedData.length.toString());
+        res.set('X-Offset', offset.toString());
+        res.set('X-Limit', limit.toString());
+      }
+      
+      return res.json(paginatedData);
     }
     
     // SECURITY: Get beneficiaries ONLY for user's assigned units
@@ -134,14 +166,26 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     // Cache the results
     setCachedBeneficiaries(userUnits, allBeneficiaries);
     
-    console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries (OPTIMIZED - AFM masked) from ${userUnits.length} authorized units only`);
+    // Apply pagination
+    let paginatedData = allBeneficiaries;
+    let total = allBeneficiaries.length;
     
-    // Prevent caching to ensure new pagination code runs
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
+    if (limit) {
+      paginatedData = allBeneficiaries.slice(offset, offset + limit);
+      console.log(`[Beneficiaries] SECURITY: Returning ${paginatedData.length} beneficiaries (paginated) from ${userUnits.length} authorized units (total=${total})`);
+    } else {
+      console.log(`[Beneficiaries] SECURITY: Returning ${allBeneficiaries.length} beneficiaries (OPTIMIZED - AFM masked) from ${userUnits.length} authorized units only`);
+    }
     
-    res.json(allBeneficiaries);
+    // Set pagination headers
+    res.set('X-Total-Count', total.toString());
+    if (limit) {
+      res.set('X-Returned-Count', paginatedData.length.toString());
+      res.set('X-Offset', offset.toString());
+      res.set('X-Limit', limit.toString());
+    }
+    
+    res.json(paginatedData);
   } catch (error) {
     console.error('[Beneficiaries] Error fetching beneficiaries:', error);
     res.status(500).json({ 

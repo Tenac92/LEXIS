@@ -185,7 +185,7 @@ export default function BeneficiariesPage() {
   const [detailsInitialEditMode, setDetailsInitialEditMode] = useState(false);
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1); // 1-based indexing for proper offset calculation
   const [itemsPerPage] = useState(24); // Reduced from 60 to 24 for better performance
   const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] =
     useState(false);
@@ -232,20 +232,30 @@ export default function BeneficiariesPage() {
     });
   }, [queryClient]);
 
-  // Fetch beneficiaries with caching
+  // Fetch beneficiaries with pagination support
   const {
     data: beneficiaries = [],
     isLoading,
     error,
   } = useQuery<Beneficiary[]>({
-    queryKey: ["/api/beneficiaries"],
+    queryKey: ["/api/beneficiaries", currentPage, itemsPerPage],
+    queryFn: async () => {
+      const offset = (currentPage - 1) * itemsPerPage;
+      const response = await fetch(
+        `/api/beneficiaries?limit=${itemsPerPage}&offset=${offset}`,
+        { credentials: 'include' }
+      );
+      if (!response.ok) throw new Error('Failed to fetch beneficiaries');
+      const data = await response.json();
+      return data;
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
   });
 
   // IMPORTANT #1: Fetch engineers for card display resolution
-  const { data: engineersResponse } = useQuery({
+  const { data: engineersResponse, error: engineersError, isLoading: engineersLoading } = useQuery({
     queryKey: ["/api/employees/engineers"],
     queryFn: async () => {
       const response = await fetch('/api/employees/engineers', { credentials: 'include' });
@@ -259,7 +269,7 @@ export default function BeneficiariesPage() {
   });
 
   // Fetch units data for filters
-  const { data: allUnits = [] } = useQuery({
+  const { data: allUnits = [], error: unitsError, isLoading: unitsLoading } = useQuery({
     queryKey: ["/api/public/units"],
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -267,7 +277,7 @@ export default function BeneficiariesPage() {
   });
 
   // Fetch projects data for filters
-  const { data: allProjects = [] } = useQuery({
+  const { data: allProjects = [], error: projectsError, isLoading: projectsLoading } = useQuery({
     queryKey: ["/api/projects"],
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -332,9 +342,9 @@ export default function BeneficiariesPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
+      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
+      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
       setDialogOpen(false);
       setSelectedBeneficiary(undefined);
       toast({
@@ -359,9 +369,9 @@ export default function BeneficiariesPage() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
+      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
+      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
       setDialogOpen(false);
       setSelectedBeneficiary(undefined);
       toast({
@@ -383,9 +393,9 @@ export default function BeneficiariesPage() {
     mutationFn: (id: number) =>
       apiRequest(`/api/beneficiaries/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      // CRITICAL #2: Invalidate both beneficiary list AND payments for consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/beneficiary-payments"] });
+      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
+      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
+      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
       toast({
         title: "Επιτυχία",
         description: "Ο δικαιούχος διαγράφηκε επιτυχώς",
@@ -1043,14 +1053,18 @@ export default function BeneficiariesPage() {
                           onValueChange={(value) =>
                             setAdvancedFilters((prev) => ({ ...prev, ceng1: value }))
                           }
+                          disabled={engineersLoading || engineersError ? true : false}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε μηχανικό" />
+                            <SelectValue placeholder={engineersLoading ? "Φόρτωση..." : engineersError ? "Σφάλμα φόρτωσης" : "Επιλέξτε μηχανικό"} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Όλοι</SelectItem>
-                            {Array.isArray(engineersResponse?.engineers) &&
-                              engineersResponse.engineers.map((engineer: any) => (
+                            {engineersError && (
+                              <div className="px-2 py-1.5 text-xs text-red-600">Σφάλμα: δεν ήταν δυνατή η φόρτωση</div>
+                            )}
+                            {Array.isArray(engineersResponse?.data) &&
+                              engineersResponse.data.map((engineer: any) => (
                                 <SelectItem
                                   key={engineer.id}
                                   value={engineer.id.toString()}
@@ -1131,7 +1145,7 @@ export default function BeneficiariesPage() {
                   <span className="text-sm text-muted-foreground">Ενεργά φίλτρα:</span>
                   {advancedFilters.unit && advancedFilters.unit !== "all" && (
                     <Badge variant="secondary" className="gap-1">
-                      Μονάδα: {allUnits.find((u: any) => u.id.toString() === advancedFilters.unit)?.unit}
+                      Μονάδα: {(allUnits as any[]).find((u: any) => u.id.toString() === advancedFilters.unit)?.unit}
                       <X
                         className="w-3 h-3 cursor-pointer"
                         onClick={() =>

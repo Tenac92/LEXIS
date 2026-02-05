@@ -332,186 +332,60 @@ export class DatabaseStorage implements IStorage {
   async updateProjectBudgetSpending(projectId: number, amount: number, documentId: number, userId?: number): Promise<void> {
     try {
       console.log(`[Storage] Updating budget spending for project ${projectId}: ${amount} (document: ${documentId})`);
-      
-      // First, get the project details to find the associated budget record
-      const { data: project, error: projectError } = await supabase
-        .from('Projects')
-        .select('id, mis, na853')
-        .eq('id', projectId)
-        .single();
-        
-      if (projectError || !project) {
-        console.error('[Storage] Error fetching project details:', projectError);
-        throw new Error(`Project ${projectId} not found`);
-      }
-      
-      // Find the budget record using project_id (preferred) or fallback to MIS
-      const budgetQuery = supabase
-        .from('project_budget')
-        .select('*')
-        .eq('project_id', projectId);
-      
-      let { data: budgetData, error: budgetError } = await budgetQuery.single();
-      
-      // If no budget found by project_id, try by MIS as fallback
-      if (budgetError && project.mis) {
-        console.log(`[Storage] Budget not found by project_id, trying MIS: ${project.mis}`);
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('project_budget')
-          .select('*')
-          .eq('mis', project.mis)
-          .single();
-          
-        budgetData = fallbackData;
-        budgetError = fallbackError;
-        
-        // SYNC FIX: If we found budget by MIS but project_id is missing, update it
-        if (!fallbackError && fallbackData && !fallbackData.project_id) {
-          console.log(`[Storage] SYNC: Updating project_id in project_budget for MIS ${project.mis}`);
-          await supabase
-            .from('project_budget')
-            .update({ project_id: projectId })
-            .eq('id', fallbackData.id);
-        }
-      }
-      
-      if (budgetError || !budgetData) {
-        console.error('[Storage] No budget record found for project:', projectId, budgetError);
-        throw new Error(`No budget record found for project ${projectId}`);
-      }
-      
-      console.log(`[Storage] Found budget record - current user_view: ${budgetData.user_view}`);
-      
-      // Calculate budget values
-      const currentSpending = parseFloat(String(budgetData.user_view || 0));
-      const katanomesEtous = parseFloat(String(budgetData.katanomes_etous || 0));
-      const ethsiaPistosi = parseFloat(String(budgetData.ethsia_pistosi || 0));
-      const availableBudget = katanomesEtous - currentSpending;
-      const yearlyAvailable = ethsiaPistosi - currentSpending;
-      
-      console.log(`[Storage] Budget values for project ${projectId} - currentSpending: ${currentSpending}, katanomes_etous: ${katanomesEtous}, amount to add/subtract: ${amount}`);
-      
-      // TWO-TIER VALIDATION: Only check for spending (positive amounts), not refunds
-      // PRIORITY ORDER: Check πίστωση first (HARD BLOCK), then κατανομή (SOFT WARNING)
-      if (amount > 0) {
-        // HARD BLOCK: Check if this spending would exceed the annual credit (ethsia_pistosi)
-        // This is the absolute limit - cannot proceed
-        // NOTE: Starting 2026, government no longer uses ethsia_pistosi - field will be 0
-        // Only enforce constraint if ethsia_pistosi is configured (> 0)
-        if (ethsiaPistosi > 0 && amount > yearlyAvailable) {
-          const errorMsg = `Ανεπαρκές ετήσιο υπόλοιπο πίστωσης. Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμο: €${yearlyAvailable.toFixed(2)}`;
-          console.error(`[Storage] BUDGET HARD BLOCK (πίστωση exceeded): ${errorMsg}`);
-          throw new Error(`BUDGET_EXCEEDED: ${errorMsg}`);
-        }
-        
-        // SOFT WARNING: Check if this spending would exceed the allocation (katanomes_etous)
-        // Allow proceeding but log warning - document can still be saved
-        if (amount > availableBudget) {
-          console.warn(`[Storage] BUDGET SOFT WARNING (κατανομή exceeded): Ζητούμενο: €${amount.toFixed(2)}, Διαθέσιμη Κατανομή: €${availableBudget.toFixed(2)} - Επιτρέπεται η αποθήκευση με προειδοποίηση`);
-          // Don't throw - allow the spending to proceed
-        } else {
-          console.log(`[Storage] Budget validation passed: amount ${amount} <= available ${availableBudget}`);
-        }
-      }
-      
-      // 2026 POLICY: Recalculate user_view from 2026+ documents only
-      // Instead of incrementing, we query the actual sum to ensure accuracy
-      // IMPORTANT: Documents are linked to project_index records, not directly to Projects
-      // So we need to get all project_index IDs for this project first
-      const { data: projectIndexRecords, error: indexError } = await supabase
-        .from('project_index')
-        .select('id')
-        .eq('project_id', projectId);
-      
-      if (indexError) {
-        console.error('[Storage] Error fetching project_index records:', indexError);
-        throw indexError;
-      }
-      
-      const projectIndexIds = (projectIndexRecords || []).map(rec => rec.id);
-      console.log(`[Storage] Found ${projectIndexIds.length} project_index records for project ${projectId}:`, projectIndexIds);
-      
-      // Now query documents using the project_index IDs
-      const { data: documentSum, error: sumError } = await supabase
-        .from('generated_documents')
-        .select('total_amount')
-        .in('project_index_id', projectIndexIds)
-        .in('status', ['approved', 'pending', 'processed', 'completed'])
-        .gte('created_at', '2026-01-01T00:00:00Z');  // Only 2026+ documents
-      
-      if (sumError) {
-        console.error('[Storage] Error calculating document sum:', sumError);
-        throw sumError;
-      }
-      
-      console.log(`[Storage] Found ${documentSum?.length || 0} documents for project_index IDs ${projectIndexIds.join(', ')}:`, documentSum?.map(d => d.total_amount));
-      
-      // Calculate new user_view from actual document totals (2026+ only)
-      const newSpending = (documentSum || []).reduce((sum, doc) => {
-        return sum + parseFloat(String(doc.total_amount || 0));
-      }, 0);
-      
-      console.log(`[Storage] Recalculated spending from documents: ${newSpending} (from ${documentSum?.length || 0} documents)`);
-      console.log(`[Storage] Budget change: ${currentSpending} → ${newSpending} (difference: ${newSpending - currentSpending})`);
-      
-      // For current_quarter_spent, we still increment/decrement
-      const currentQuarterSpent = parseFloat(String(budgetData.current_quarter_spent || 0));
-      const newQuarterSpent = currentQuarterSpent + amount;
-      
-      console.log(`[Storage] Budget calculation (2026+ docs only): recalculated user_view = ${newSpending}, current_quarter_spent ${currentQuarterSpent} + ${amount} = ${newQuarterSpent}`);
-      
-      // Calculate available budget for history tracking
-      // Available budget = allocation (katanomes_etous) - spending (user_view)
-      // IMPORTANT: Use the amount parameter to calculate the actual change,
-      // not the difference between old and new totals, because the budget may be out of sync
-      const previousAvailable = katanomesEtous - currentSpending;
-      const actualChange = amount;  // This is the actual document amount being added/removed
-      const newAvailable = previousAvailable - actualChange;  // Spending reduces available
-      
-      console.log(`[Storage] Available budget: ${previousAvailable} → ${newAvailable} (change from document amount: ${actualChange})`);
 
-      
-      // Update the budget record with new spending (both year total and current quarter)
-      const { error: updateError } = await supabase
-        .from('project_budget')
-        .update({ 
-          user_view: newSpending,
-          current_quarter_spent: newQuarterSpent,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', budgetData.id);
-        
-      if (updateError) {
-        console.error('[Storage] Error updating budget spending:', updateError);
-        throw updateError;
+      const { data, error } = await supabase.rpc('lock_and_update_budget', {
+        p_project_id: projectId,
+        p_amount: amount,
+        p_document_id: documentId,
+        p_user_id: userId ?? null,
+      });
+
+      if (error) {
+        console.error('[Storage] Error updating budget via lock_and_update_budget:', error);
+        throw new Error(`Budget update failed: ${error.message}`);
       }
-      
+
+      const result = Array.isArray(data) ? data[0] : data;
+      if (!result) {
+        throw new Error('Budget update failed: empty response from lock_and_update_budget');
+      }
+
+      if (!result.success) {
+        const message = String(result.message || 'Budget update failed');
+        if (message.includes('BUDGET_EXCEEDED')) {
+          throw new Error(message);
+        }
+        throw new Error(`BUDGET_UPDATE_FAILED: ${message}`);
+      }
+
+      const availableAfter = Number(result.available_budget || 0);
+      const previousAvailable = availableAfter + amount;
+
       // Create budget history entry showing the change in AVAILABLE BUDGET
       // Users want to see: "Previous Available: X, New Available: Y, Difference: Y-X"
       // When spending increases, available decreases (and vice versa)
       const isSpending = amount > 0;
       const absoluteAmount = Math.abs(amount);
-      
-      // For history, show the ACTUAL before/after AVAILABLE BUDGET
-      // This makes it intuitive: spending a document reduces available budget
+
       await this.createBudgetHistoryEntry({
         project_id: projectId,
-        previous_amount: String(previousAvailable),  // Previous available budget
-        new_amount: String(newAvailable),            // New available budget
+        previous_amount: String(previousAvailable),
+        new_amount: String(availableAfter),
         change_type: isSpending ? 'spending' : 'refund',
-        change_reason: isSpending 
+        change_reason: isSpending
           ? `Document ID: ${documentId}, amount: €${absoluteAmount.toFixed(2)}`
           : `Document deleted (ID: ${documentId}, amount: €${absoluteAmount.toFixed(2)})`,
         document_id: documentId,
         created_by: userId,
         metadata: {
           document_amount: absoluteAmount.toFixed(2),
-          available_before: previousAvailable.toFixed(2),
-          available_after: newAvailable.toFixed(2)
-        }
+          available_before: Number(previousAvailable).toFixed(2),
+          available_after: Number(availableAfter).toFixed(2),
+          new_user_view: Number(result.new_user_view || 0).toFixed(2),
+        },
       });
-      
-      console.log(`[Storage] Successfully updated project budget spending: ${currentSpending} → ${newSpending} (2026+ documents only)`);
+
+      console.log('[Storage] Successfully updated project budget spending via lock_and_update_budget');
       
     } catch (error) {
       console.error('[Storage] Error in updateProjectBudgetSpending:', error);

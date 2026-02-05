@@ -1626,41 +1626,40 @@ router.post(
         // We should rollback by deleting the document and payments
         const errorMessage = budgetError instanceof Error ? budgetError.message : "Unknown budget error";
         
-        // Check if this is a budget exceeded error
-        if (errorMessage.includes('BUDGET_EXCEEDED')) {
-          console.log('[DocumentsController] V2 Budget exceeded - rolling back document creation');
-          
-          try {
-            // Delete beneficiary payments first
-            if (beneficiaryPaymentsIds.length > 0) {
-              await supabase
-                .from("BeneficiaryPayments")
-                .delete()
-                .in("id", beneficiaryPaymentsIds);
-              console.log('[DocumentsController] V2 Rollback: Deleted beneficiary payments:', beneficiaryPaymentsIds);
-            }
-            
-            // Delete employee payments if any
-            if (employeePaymentsIds.length > 0) {
-              await supabase
-                .from("EmployeePayments")
-                .delete()
-                .in("id", employeePaymentsIds);
-              console.log('[DocumentsController] V2 Rollback: Deleted employee payments:', employeePaymentsIds);
-            }
-            
-            // Delete the document
+        const isBudgetExceeded = errorMessage.includes('BUDGET_EXCEEDED');
+        console.log('[DocumentsController] V2 Budget update failed - rolling back document creation');
+        
+        try {
+          // Delete beneficiary payments first
+          if (beneficiaryPaymentsIds.length > 0) {
             await supabase
-              .from("generated_documents")
+              .from("BeneficiaryPayments")
               .delete()
-              .eq("id", data.id);
-            console.log('[DocumentsController] V2 Rollback: Deleted document:', data.id);
-            
-          } catch (rollbackError) {
-            console.error('[DocumentsController] V2 Rollback failed:', rollbackError);
+              .in("id", beneficiaryPaymentsIds);
+            console.log('[DocumentsController] V2 Rollback: Deleted beneficiary payments:', beneficiaryPaymentsIds);
           }
           
-          // Return error to client
+          // Delete employee payments if any
+          if (employeePaymentsIds.length > 0) {
+            await supabase
+              .from("EmployeePayments")
+              .delete()
+              .in("id", employeePaymentsIds);
+            console.log('[DocumentsController] V2 Rollback: Deleted employee payments:', employeePaymentsIds);
+          }
+          
+          // Delete the document
+          await supabase
+            .from("generated_documents")
+            .delete()
+            .eq("id", data.id);
+          console.log('[DocumentsController] V2 Rollback: Deleted document:', data.id);
+          
+        } catch (rollbackError) {
+          console.error('[DocumentsController] V2 Rollback failed:', rollbackError);
+        }
+        
+        if (isBudgetExceeded) {
           return res.status(422).json({
             message: "Ανεπαρκής προϋπολογισμός",
             error: errorMessage.replace('BUDGET_EXCEEDED: ', ''),
@@ -1668,8 +1667,10 @@ router.post(
           });
         }
         
-        // For non-budget errors, log but continue (document already created)
-        console.warn('[DocumentsController] V2 Non-budget error during update, document created but budget not updated');
+        return res.status(500).json({
+          message: "Αποτυχία ενημέρωσης προϋπολογισμού",
+          error: errorMessage,
+        });
       }
 
       // Broadcast document update to all connected clients
@@ -2064,6 +2065,48 @@ router.get("/", async (req: Request, res: Response) => {
     // Apply filters to enriched documents (client-side filtering for expenditure type and NA853)
     let filteredDocuments = enrichedDocuments;
 
+    // Date filters - filter by created_at date
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      filteredDocuments = filteredDocuments.filter((doc) => {
+        const docDate = new Date(doc.created_at);
+        return docDate >= fromDate;
+      });
+    }
+
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      // Set to end of day to include documents created on this date
+      toDate.setHours(23, 59, 59, 999);
+      filteredDocuments = filteredDocuments.filter((doc) => {
+        const docDate = new Date(doc.created_at);
+        return docDate <= toDate;
+      });
+    }
+
+    // Amount filters - sum all recipient amounts and filter
+    if (filters.amountFrom) {
+      filteredDocuments = filteredDocuments.filter((doc) => {
+        if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
+        const totalAmount = doc.recipients.reduce(
+          (sum: number, recipient: any) => sum + (recipient.amount || 0),
+          0,
+        );
+        return totalAmount >= filters.amountFrom;
+      });
+    }
+
+    if (filters.amountTo) {
+      filteredDocuments = filteredDocuments.filter((doc) => {
+        if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
+        const totalAmount = doc.recipients.reduce(
+          (sum: number, recipient: any) => sum + (recipient.amount || 0),
+          0,
+        );
+        return totalAmount <= filters.amountTo;
+      });
+    }
+
     if (filters.expenditureType) {
       filteredDocuments = filteredDocuments.filter(
         (doc) =>
@@ -2113,7 +2156,19 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    return res.json(filteredDocuments);
+    // Add pagination metadata headers
+    const total = filteredDocuments.length;
+    if (limit) {
+      const paginatedDocuments = filteredDocuments.slice(offset, offset + limit);
+      res.set('X-Total-Count', total.toString());
+      res.set('X-Returned-Count', paginatedDocuments.length.toString());
+      res.set('X-Offset', offset.toString());
+      res.set('X-Limit', limit.toString());
+      return res.json(paginatedDocuments);
+    } else {
+      res.set('X-Total-Count', total.toString());
+      return res.json(filteredDocuments);
+    }
   } catch (error) {
     console.error("Error fetching documents:", error);
     return res.status(500).json({

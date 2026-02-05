@@ -19,6 +19,8 @@ import { initializeScheduledTasks } from './services/schedulerService';
 import { registerAdminRoutes } from './routes/admin';
 import { Router } from 'express';
 import { applyConsoleLogLevelFilter, getCurrentLogLevel } from './utils/logger';
+import cacheControlMiddleware from './middleware/cacheControlMiddleware';
+import { initializeRedis } from './config/redis';
 
 applyConsoleLogLevelFilter('server');
 
@@ -117,6 +119,20 @@ async function startServer() {
       console.warn('[Startup] The server will start anyway, and database functions will be retried at runtime');
     }
 
+    // Initialize Redis cache (optional, will gracefully degrade if unavailable)
+    try {
+      console.log('[Startup] Initializing Redis cache...');
+      const redisInitialized = await initializeRedis();
+      if (redisInitialized) {
+        console.log('[Startup] Redis cache initialized successfully');
+      } else {
+        console.warn('[Startup] Redis cache unavailable, will use in-memory caching as fallback');
+      }
+    } catch (redisErr) {
+      console.error('[Startup] Error initializing Redis:', redisErr);
+      console.warn('[Startup] Redis cache unavailable, will use in-memory caching as fallback');
+    }
+
     const app = express();
     console.log('[Startup] Express app created');
 
@@ -135,6 +151,10 @@ async function startServer() {
     // Apply GeoIP restriction middleware to limit access to Greece only
     app.use(geoIpRestriction);
     console.log('[Startup] GeoIP restriction middleware applied (Greece only)');
+
+    // Apply cache control middleware for intelligent caching headers
+    app.use(cacheControlMiddleware);
+    console.log('[Startup] Cache control middleware applied');
 
     // Body parsing middleware with size limits
     app.use(express.json({ limit: '10mb' }));

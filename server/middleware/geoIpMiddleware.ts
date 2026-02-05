@@ -24,6 +24,7 @@ const TRUSTED_PROXY_RANGES = [
  */
 const EXEMPT_PATHS = [
   '/api/health',
+  '/api/public',  // All public endpoints (including /api/public/units)
 ];
 
 /**

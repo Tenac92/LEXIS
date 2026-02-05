@@ -8,6 +8,7 @@ import { storage } from './storage';
 import { getBudgetByMis } from './controllers/budgetController';
 import { validateBudgetAllocation } from './services/budgetNotificationService';
 import { broadcastBeneficiaryUpdate } from './websocket';
+import { cacheReferenceData, getReferenceData } from './utils/reference-data-cache';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -1192,6 +1193,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Basic expenditure types endpoint  
   app.get('/api/expenditure-types', async (req: Request, res: Response) => {
     try {
+      const cacheKey = 'expenditure_types_all';
+      
+      // Try to get from cache first
+      const cached = await getReferenceData(cacheKey, 'ExpenditureTypes');
+      if (cached) {
+        return res.json(cached);
+      }
+      
       const { data: expenditureTypes, error } = await supabase
         .from('expenditure_types')
         .select('*')
@@ -1200,6 +1209,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error('[API] Error fetching expenditure types:', error);
         return res.status(500).json({ error: error.message });
+      }
+      
+      // Cache the results
+      if (expenditureTypes) {
+        await cacheReferenceData(cacheKey, expenditureTypes, 'ExpenditureTypes');
       }
       
       res.json(expenditureTypes || []);
@@ -1214,6 +1228,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Regions endpoint
   app.get('/api/regions', async (req: Request, res: Response) => {
     try {
+      const cacheKey = 'regions_all';
+      
+      // Try to get from cache first
+      const cached = await getReferenceData(cacheKey, 'Regions');
+      if (cached) {
+        return res.json(cached);
+      }
+      
       const { data: regions, error } = await supabase
         .from('regions')
         .select('*')
@@ -1222,6 +1244,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error) {
         console.error('[API] Error fetching regions:', error);
         return res.status(500).json({ error: error.message });
+      }
+      
+      // Cache the results
+      if (regions) {
+        await cacheReferenceData(cacheKey, regions, 'Regions');
       }
       
       res.json(regions || []);
@@ -1518,22 +1545,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .order('unit');
       
       if (error) {
-        console.error('[API] Error fetching units:', error);
-        return res.status(500).json({ error: error.message });
+        console.error('[API] /api/public/units error:', error);
+        return res.status(500).json({ error: 'Failed to fetch units' });
       }
       
+      // Transform units to match frontend Unit interface
+      // Keep id as number, include all necessary fields
+      // Prefer unit field, but use unit_name or fallback to id if empty
+      const formattedUnits = (units || []).map((unit: any) => {
+        // Use unit field as display name (all units have this field)
+        const displayName = (unit.unit || `Unit ${unit.id}`).trim();
+        
+        return {
+          id: Number(unit.id),
+          unit: unit.unit,
+          unit_name: unit.unit_name,
+          name: displayName
+        };
+      });
       
-      // Return units with proper field mapping for frontend lookup
-      const transformedData = units.map(unit => ({
-        id: unit.id, // Numeric ID for lookup
-        unit: unit.unit, // String identifier
-        unit_name: unit.unit_name, // Full JSONB object
-        name: unit.unit_name && unit.unit_name.name ? unit.unit_name.name : (unit.unit || `Μονάδα ${unit.id}`)
-      }));
-      
-      res.json(transformedData);
+      console.log('[API] /api/public/units returning:', formattedUnits.length, 'units');
+      res.json(formattedUnits);
     } catch (error) {
-      console.error('[API] Error in units endpoint:', error);
+      console.error('[API] /api/public/units catch error:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error) {
+        console.error('[API] /api/public/units stack:', error.stack);
+      }
       res.status(500).json({ error: 'Internal server error' });
     }
   });
