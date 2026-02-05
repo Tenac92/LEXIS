@@ -5,7 +5,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FileText,
   Euro,
@@ -34,9 +34,24 @@ import {
   calculateCompletionRate,
   sumObjectValues,
 } from "@/lib/dashboard-utils";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
+import { apiRequest } from "@/lib/queryClient";
 
 export function ManagerDashboard() {
   const { user } = useAuth();
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+  // Handler for clicking on documents in recent activity
+  const handleDocumentClick = async (documentId: number) => {
+    try {
+      const document = await apiRequest<any>(`/api/documents/${documentId}`);
+      setSelectedDocument(document);
+      setShowDocumentModal(true);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+    }
+  };
 
   const {
     data: stats,
@@ -264,6 +279,19 @@ export function ManagerDashboard() {
           maxItems={8}
           viewAllHref="/budget/history"
           emptyMessage="Δεν υπάρχει πρόσφατη δραστηριότητα"
+          onDocumentClick={handleDocumentClick}
+        />
+      )}
+
+      {/* Document Details Modal */}
+      {selectedDocument && (
+        <DocumentDetailsModal
+          open={showDocumentModal}
+          onOpenChange={(open) => {
+            setShowDocumentModal(open);
+            if (!open) setSelectedDocument(null);
+          }}
+          document={selectedDocument}
         />
       )}
     </DashboardShell>

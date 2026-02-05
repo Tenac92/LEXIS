@@ -36,6 +36,7 @@ interface RecentActivityPanelProps {
   maxItems?: number;
   viewAllHref?: string;
   emptyMessage?: string;
+  onDocumentClick?: (documentId: number) => void;
 }
 
 export function RecentActivityPanel({
@@ -44,6 +45,7 @@ export function RecentActivityPanel({
   maxItems = 10,
   viewAllHref,
   emptyMessage = "Δεν υπάρχει πρόσφατη δραστηριότητα",
+  onDocumentClick,
 }: RecentActivityPanelProps) {
   const displayActivities = activities.slice(0, maxItems);
 
@@ -82,18 +84,30 @@ export function RecentActivityPanel({
 
                       <div className="flex flex-wrap items-center gap-2">
                         {activity.documentId && (
-                          <Link
-                            href={`/documents?highlight=${activity.documentId}`}
-                          >
+                          onDocumentClick ? (
                             <Badge
                               variant="outline"
                               className="text-xs hover:bg-gray-50 cursor-pointer transition-colors"
+                              onClick={() => onDocumentClick(activity.documentId!)}
                             >
                               <FileText className="w-3 h-3 mr-1" />
                               {activity.protocolNumber ||
                                 `Έγγραφο #${activity.documentId}`}
                             </Badge>
-                          </Link>
+                          ) : (
+                            <Link
+                              href={`/documents?highlight=${activity.documentId}`}
+                            >
+                              <Badge
+                                variant="outline"
+                                className="text-xs hover:bg-gray-50 cursor-pointer transition-colors"
+                              >
+                                <FileText className="w-3 h-3 mr-1" />
+                                {activity.protocolNumber ||
+                                  `Έγγραφο #${activity.documentId}`}
+                              </Badge>
+                            </Link>
+                          )
                         )}
 
                         {activity.na853 && (

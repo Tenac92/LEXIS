@@ -5,7 +5,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   FileText,
@@ -41,9 +41,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { formatCurrency, formatLargeNumber } from "@/lib/dashboard-utils";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
+import { apiRequest } from "@/lib/queryClient";
 
 export function AdminDashboard() {
   const { user } = useAuth();
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+
+  // Handler for clicking on documents in recent activity
+  const handleDocumentClick = async (documentId: number) => {
+    try {
+      const document = await apiRequest<any>(`/api/documents/${documentId}`);
+      setSelectedDocument(document);
+      setShowDocumentModal(true);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+    }
+  };
 
   // Primary stats query
   const {
@@ -493,6 +508,19 @@ export function AdminDashboard() {
           maxItems={10}
           viewAllHref="/budget/history"
           emptyMessage="Δεν υπάρχει πρόσφατη δραστηριότητα"
+          onDocumentClick={handleDocumentClick}
+        />
+      )}
+
+      {/* Document Details Modal */}
+      {selectedDocument && (
+        <DocumentDetailsModal
+          open={showDocumentModal}
+          onOpenChange={(open) => {
+            setShowDocumentModal(open);
+            if (!open) setSelectedDocument(null);
+          }}
+          document={selectedDocument}
         />
       )}
     </DashboardShell>

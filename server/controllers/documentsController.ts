@@ -1847,6 +1847,7 @@ router.get("/", async (req: Request, res: Response) => {
               installment,
               status,
               freetext,
+              eps,
               payment_date,
               created_at,
               beneficiaries (
@@ -1986,7 +1987,8 @@ router.get("/", async (req: Request, res: Response) => {
               installment: payment.installment || "",
               region: beneficiary?.regiondet || "",
               status: payment.status || "pending",
-              freetext: payment.freetext || null,
+              freetext: payment.eps ?? payment.freetext ?? null,
+              eps: payment.eps ?? payment.freetext ?? null,
               payment_date: payment.payment_date || null,
             };
           });
@@ -2019,7 +2021,7 @@ router.get("/", async (req: Request, res: Response) => {
           
           const latestPayment = sorted[0];
           latest_payment_date = latestPayment.payment_date || null;
-          latest_eps = latestPayment.freetext || null;
+          latest_eps = latestPayment.eps ?? latestPayment.freetext ?? null;
         }
       }
 
@@ -4145,6 +4147,7 @@ router.get(
             amount,
             installment,
             freetext,
+            eps,
             beneficiaries:beneficiary_id (
               id,
               afm,
@@ -4170,7 +4173,8 @@ router.get(
                 afm: decryptedAFM,
                 amount: parseFloat(payment.amount || "0"),
                 installment: payment.installment || "ΕΦΑΠΑΞ",
-                freetext: payment.freetext || null,
+                freetext: payment.eps ?? payment.freetext ?? null,
+                eps: payment.eps ?? payment.freetext ?? null,
               };
             });
           }
@@ -4461,6 +4465,7 @@ router.get(
         status,
         payment_date,
         freetext,
+        eps,
         beneficiaries (
           id,
           afm,
@@ -4486,9 +4491,12 @@ router.get(
         const beneficiary = Array.isArray(payment.beneficiaries)
           ? payment.beneficiaries[0]
           : payment.beneficiaries;
+        const epsValue = payment.eps ?? payment.freetext ?? null;
         
         return {
           ...payment,
+          eps: epsValue,
+          freetext: epsValue,
           beneficiaries: beneficiary ? {
             ...beneficiary,
             afm: decryptAFM(beneficiary.afm) || ""

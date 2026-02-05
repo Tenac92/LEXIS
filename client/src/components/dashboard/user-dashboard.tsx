@@ -45,6 +45,7 @@ import {
 } from "@/lib/dashboard-utils";
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 import { ViewDocumentModal } from "@/components/documents/document-modals";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DocumentItem {
   id: number;
@@ -70,6 +71,17 @@ export function UserDashboard() {
   );
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showProtocolModal, setShowProtocolModal] = useState(false);
+
+  // Handler for clicking on documents in recent activity
+  const handleDocumentClick = async (documentId: number) => {
+    try {
+      const document = await apiRequest<any>(`/api/documents/${documentId}`);
+      setSelectedDocument(document);
+      setShowDocumentModal(true);
+    } catch (error) {
+      console.error("Error fetching document:", error);
+    }
+  };
 
   // Dashboard stats
   const {
@@ -470,6 +482,7 @@ export function UserDashboard() {
           maxItems={8}
           viewAllHref="/budget/history"
           emptyMessage="Δεν υπάρχει πρόσφατη δραστηριότητα"
+          onDocumentClick={handleDocumentClick}
         />
       )}
 

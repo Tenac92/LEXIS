@@ -247,10 +247,14 @@ router.post(
         }
 
         const epsRaw = row[epsIndex as number];
-        const epsValue =
-          epsRaw === null || epsRaw === undefined
-            ? null
-            : String(epsRaw).trim();
+        let epsValue: string | null = null;
+        if (epsRaw !== null && epsRaw !== undefined) {
+          const trimmed = String(epsRaw).trim();
+          // EPS must be exactly 7 digits
+          if (/^\d{7}$/.test(trimmed)) {
+            epsValue = trimmed;
+          }
+        }
 
         // DEBUGGING: Log first 3 rows to detect column misalignment
         if (index < 3) {
@@ -349,6 +353,7 @@ router.post(
           Array<{
             id: number | string;
             payment_date: string | null;
+            eps: string | null;
             freetext: string | null;
           }>
         >
@@ -362,6 +367,7 @@ router.post(
             id,
             document_id,
             payment_date,
+            eps,
             freetext,
             beneficiaries:beneficiary_id (
               afm
@@ -411,6 +417,7 @@ router.post(
           existing.push({
             id: payment.id,
             payment_date: payment.payment_date ?? null,
+            eps: payment.eps ?? payment.freetext ?? null,
             freetext: payment.freetext ?? null,
           });
           byAfm.set(afm, existing);
@@ -469,8 +476,8 @@ router.post(
         for (const payment of matches) {
           const updatePayload: Record<string, string> = {};
           const existingDate = payment.payment_date || null;
-          const existingFreetext = payment.freetext || null;
-          const existingFreetextValue = existingFreetext?.trim() || "";
+          const existingEps = payment.eps || payment.freetext || null;
+          const existingEpsValue = existingEps?.trim() || "";
 
           if (row.paymentDate) {
             if (override || !existingDate) {
@@ -480,9 +487,10 @@ router.post(
             }
           }
 
-          if (row.eps) {
-            if (override || !existingFreetextValue) {
-              if (override || existingFreetextValue !== row.eps.trim()) {
+          if (row.eps && /^\d{7}$/.test(row.eps)) {
+            if (override || !existingEpsValue) {
+              if (override || existingEpsValue !== row.eps) {
+                updatePayload.eps = row.eps;
                 updatePayload.freetext = row.eps;
               }
             }

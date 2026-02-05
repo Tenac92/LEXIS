@@ -375,8 +375,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const enriched = (data || []).map((payment) => {
           const expName = payment.project_index?.expenditure_types?.expenditure_types || null;
+          const epsValue = payment.eps ?? payment.freetext ?? null;
           return {
             ...payment,
+            eps: epsValue,
+            freetext: epsValue,
             expenditure_type: expName,
           };
         });

@@ -45,7 +45,7 @@ const formSchema = z.object({
   file: z
     .any()
     .refine((file) => file instanceof FileList && file.length > 0, {
-      message: "Please select an Excel file",
+      message: "Please select an Excel file (.xlsx)",
     })
     .refine(
       (file) => {
@@ -53,10 +53,10 @@ const formSchema = z.object({
           return true;
         }
         const fileName = file[0]?.name?.toLowerCase();
-        return fileName?.endsWith(".xlsx") || fileName?.endsWith(".xls");
+        return fileName?.endsWith(".xlsx");
       },
       {
-        message: "File must be an Excel file (.xlsx or .xls)",
+        message: "File must be an Excel file (.xlsx)",
       },
     ),
   override: z.boolean().default(false),
@@ -165,15 +165,15 @@ export default function AdminPaymentsImportPage() {
           Beneficiary Payments Import
         </h1>
         <p className="text-muted-foreground mb-8">
-          Upload an Excel file and match rows by protocol number and AFM to
-          update payment_date and freetext for beneficiary payments.
+          Upload an Excel (.xlsx) file and match rows by protocol number and
+          AFM to update payment_date and EPS for beneficiary payments.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="md:col-span-5">
             <Card>
               <CardHeader>
-                <CardTitle>Upload Excel File</CardTitle>
+                <CardTitle>Upload Excel (.xlsx) File</CardTitle>
                 <CardDescription>
                   Use the exact Greek column headers listed in the instructions.
                 </CardDescription>
@@ -189,13 +189,13 @@ export default function AdminPaymentsImportPage() {
                       name="file"
                       render={({ field: { onChange, value, ...field } }) => (
                         <FormItem>
-                          <FormLabel>Payments Excel File</FormLabel>
+                          <FormLabel>Payments Excel (.xlsx) File</FormLabel>
                           <FormControl>
                             <div className="flex flex-col gap-2">
                               <Input
                                 {...field}
                                 type="file"
-                                accept=".xlsx,.xls"
+                                accept=".xlsx"
                                 onChange={(e) => onChange(e.target.files)}
                                 disabled={isUploading}
                                 className="cursor-pointer"
@@ -224,7 +224,7 @@ export default function AdminPaymentsImportPage() {
                           <div className="space-y-0.5">
                             <FormLabel>Override existing values</FormLabel>
                             <FormDescription>
-                              When enabled, payment_date and freetext are
+                              When enabled, payment_date and EPS are
                               overwritten even if already set.
                             </FormDescription>
                           </div>
@@ -405,7 +405,7 @@ export default function AdminPaymentsImportPage() {
                 <CardHeader>
                   <CardTitle>Import Instructions</CardTitle>
                   <CardDescription>
-                    Ensure your Excel file includes the exact columns below.
+                    Ensure your Excel (.xlsx) file includes the exact columns below.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -2481,10 +2481,15 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Transform the data to include expenditure_type at the root level
-      const transformedData = data?.map(payment => ({
-        ...payment,
-        expenditure_type: payment.project_index?.expenditure_types?.expenditure_types || 'UNKNOWN'
-      })) || [];
+      const transformedData = data?.map(payment => {
+        const epsValue = payment.eps ?? payment.freetext ?? null;
+        return {
+          ...payment,
+          eps: epsValue,
+          freetext: epsValue,
+          expenditure_type: payment.project_index?.expenditure_types?.expenditure_types || 'UNKNOWN'
+        };
+      }) || [];
       
       console.log(`[Storage] Found ${transformedData.length} payments for beneficiary ${beneficiaryId}`);
       if (transformedData.length > 0) {

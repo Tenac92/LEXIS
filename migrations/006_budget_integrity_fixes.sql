@@ -1,14 +1,15 @@
 -- Migration: Add Budget Integrity Constraints and Functions
 -- Date: 2026-01-23
 -- Purpose: Fix race conditions and improve budget data integrity
+-- NOTE: This migration is IDEMPOTENT - safe to run multiple times
 
 -- ============================================================================
 -- Part 1: Add Foreign Key Constraint for Budget History
 -- ============================================================================
 
--- Ensure budget_history entries reference valid projects
+-- Ensure budget_history entries reference valid projects (idempotent)
 ALTER TABLE budget_history
-ADD CONSTRAINT fk_budget_history_project
+ADD CONSTRAINT IF NOT EXISTS fk_budget_history_project
 FOREIGN KEY (project_id) 
 REFERENCES "Projects"(id) 
 ON DELETE CASCADE;
@@ -221,9 +222,9 @@ COMMENT ON FUNCTION log_budget_audit IS
 -- Part 6: Add Check Constraint to Prevent Negative user_view
 -- ============================================================================
 
--- Add constraint to ensure user_view is never negative
+-- Add constraint to ensure user_view is never negative (idempotent)
 ALTER TABLE project_budget
-ADD CONSTRAINT chk_user_view_non_negative
+ADD CONSTRAINT IF NOT EXISTS chk_user_view_non_negative
 CHECK (user_view >= 0);
 
 COMMENT ON CONSTRAINT chk_user_view_non_negative ON project_budget IS 

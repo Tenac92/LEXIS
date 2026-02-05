@@ -438,6 +438,7 @@ export const beneficiaryPayments = pgTable(
     amount: decimal("amount", { precision: 12, scale: 2 }),
     status: text("status").default("pending"),
     payment_date: date("payment_date"),
+    eps: varchar("eps", { length: 7 }), // 7-digit EPS number
     freetext: text("freetext"),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
