@@ -173,6 +173,15 @@ type BeneficiaryFormData = z.infer<typeof beneficiaryFormSchema>;
 
 export default function BeneficiariesPage() {
   const { user } = useAuth() as { user: User };
+  const unitIdsKey = useMemo(() => {
+    const unitIds = user?.unit_id ? [...user.unit_id].sort((a, b) => a - b) : [];
+    return unitIds.length > 0 ? unitIds.join(",") : "none";
+  }, [user?.unit_id]);
+  const authKey = useMemo(() => {
+    if (!user?.id) return "anonymous";
+    return `${user.id}:${user.role ?? "none"}:${unitIdsKey}`;
+  }, [user?.id, user?.role, unitIdsKey]);
+  const isAuthReady = Boolean(user?.id);
   // Enable real-time updates via WebSocket
   useWebSocketUpdates();
   const [searchTerm, setSearchTerm] = useState("");
@@ -239,16 +248,17 @@ export default function BeneficiariesPage() {
     isLoading,
     error,
   } = useQuery<Beneficiary[]>({
-    queryKey: ["/api/beneficiaries"],
+    queryKey: ["/api/beneficiaries", authKey],
     queryFn: async () => {
       const response = await fetch(
         `/api/beneficiaries`,
-        { credentials: 'include' }
+        { credentials: 'include', cache: "no-store" }
       );
       if (!response.ok) throw new Error('Failed to fetch beneficiaries');
       const data = await response.json();
       return data;
     },
+    enabled: isAuthReady,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     gcTime: 15 * 60 * 1000, // 15 minutes cache retention
     refetchOnWindowFocus: false,
@@ -473,12 +483,12 @@ export default function BeneficiariesPage() {
 
   // Server-side AFM search query - only triggers when AFM is 9 digits
   const { data: afmSearchResults } = useQuery<Beneficiary[]>({
-    queryKey: ['/api/beneficiaries/search', searchTerm],
+    queryKey: ['/api/beneficiaries/search', authKey, searchTerm],
     queryFn: async () => {
       const response = await apiRequest<{ success: boolean; data: Beneficiary[]; count: number }>(`/api/beneficiaries/search?afm=${searchTerm}`);
       return response.data; // Extract the data array from the response object
     },
-    enabled: searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
+    enabled: isAuthReady && searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
@@ -502,13 +512,13 @@ export default function BeneficiariesPage() {
 
   // Fetch payments - either for all beneficiaries (when filters are active) or for visible ones
   const { data: beneficiaryPayments = [], isFetching: paymentsLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", { ids: hasPaymentFilters ? allBeneficiaryIds : [] }],
+    queryKey: ["/api/beneficiary-payments", authKey, { ids: hasPaymentFilters ? allBeneficiaryIds : [] }],
     queryFn: async () => {
       if (allBeneficiaryIds.length === 0) return [];
       const idParam = allBeneficiaryIds.join(",");
       return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
     },
-    enabled: Boolean(hasPaymentFilters && allBeneficiaryIds.length > 0),
+    enabled: Boolean(isAuthReady && hasPaymentFilters && allBeneficiaryIds.length > 0),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -681,13 +691,13 @@ export default function BeneficiariesPage() {
 
   // Fetch payments for visible beneficiaries only when no payment filters are active
   const { data: visiblePayments = [] } = useQuery({
-    queryKey: ["/api/beneficiary-payments", { ids: visibleBeneficiaryIds }],
+    queryKey: ["/api/beneficiary-payments", authKey, { ids: visibleBeneficiaryIds }],
     queryFn: async () => {
       if (visibleBeneficiaryIds.length === 0) return [];
       const idParam = visibleBeneficiaryIds.join(",");
       return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
     },
-    enabled: Boolean(!hasPaymentFilters && visibleBeneficiaryIds.length > 0),
+    enabled: Boolean(isAuthReady && !hasPaymentFilters && visibleBeneficiaryIds.length > 0),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
@@ -753,7 +763,9 @@ export default function BeneficiariesPage() {
   };
 
   // Handle loading state
-  if (isLoading) {
+  const beneficiariesLoading = !isAuthReady || isLoading;
+
+  if (beneficiariesLoading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -774,7 +786,7 @@ export default function BeneficiariesPage() {
   }
 
   // Handle error state
-  if (error) {
+  if (isAuthReady && error) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -2103,10 +2115,15 @@ function ExistingPaymentsDisplay({
 }) {
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const { user } = useAuth() as { user: User | null };
+  const authKey = useMemo(() => {
+    if (!user?.id) return "anonymous";
+    return `${user.id}:${user.role ?? "none"}`;
+  }, [user?.id, user?.role]);
   
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", beneficiary.id],
-    enabled: !!beneficiary.id,
+    queryKey: ["/api/beneficiary-payments", authKey, beneficiary.id],
+    enabled: Boolean(user?.id && beneficiary.id),
   });
   
   const handleDocumentClick = async (documentId: number) => {
@@ -2293,6 +2310,11 @@ function BeneficiaryForm({
     useState(false);
   const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
     useState<Beneficiary | null>(null);
+  const { user } = useAuth() as { user: User | null };
+  const authKey = useMemo(() => {
+    if (!user?.id) return "anonymous";
+    return `${user.id}:${user.role ?? "none"}`;
+  }, [user?.id, user?.role]);
 
   const { data: userData } = useQuery({
     queryKey: ["/api/auth/me"],
@@ -2317,11 +2339,11 @@ function BeneficiaryForm({
   });
 
   const { data: existingPayments } = useQuery({
-    queryKey: ["/api/beneficiary-payments", beneficiary?.id],
+    queryKey: ["/api/beneficiary-payments", authKey, beneficiary?.id],
     staleTime: 2 * 60 * 1000, // 2 minutes cache
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
-    enabled: !!beneficiary?.id,
+    enabled: Boolean(user?.id && beneficiary?.id),
   });
 
   const form = useForm<BeneficiaryFormData>({

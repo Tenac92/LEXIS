@@ -130,7 +130,7 @@ export function cacheControlMiddleware(req: Request, res: Response, next: NextFu
     
     // Add Vary header for endpoints that might vary by authentication
     if (config.private) {
-      res.setHeader('Vary', 'Authorization');
+      res.setHeader('Vary', 'Authorization, Cookie');
     }
   }
   
@@ -154,7 +154,7 @@ export function setCacheControl(res: Response, type: keyof typeof cacheConfigs |
   res.setHeader('Cache-Control', cacheHeader);
   
   if (config.private) {
-    res.setHeader('Vary', 'Authorization');
+    res.setHeader('Vary', 'Authorization, Cookie');
   }
 }
 

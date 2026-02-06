@@ -4,6 +4,7 @@ import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { TokenManager } from "@/lib/token-manager";
 
 interface LoginCredentials {
   email: string;
@@ -206,6 +207,18 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
+      const currentUser = queryClient.getQueryData<User>(["/api/auth/me"]);
+
+      // Clear any stored auth tokens or per-user session markers
+      TokenManager.getInstance().clearToken();
+      if (currentUser?.id) {
+        sessionStorage.removeItem(`afm_prefetch_${currentUser.id}`);
+      }
+      sessionStorage.removeItem("clientSessionId");
+
+      // Clear user cache early so UI reflects logout immediately
+      queryClient.setQueryData(["/api/auth/me"], null);
+
       // Clear ALL cached queries to prevent stale data from previous user
       // This is critical for security and proper user experience when switching accounts
       queryClient.clear();
