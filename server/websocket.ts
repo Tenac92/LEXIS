@@ -189,7 +189,10 @@ export function createWebSocketServer(server: Server) {
       wsConnectionManager.addConnection(ws, clientId, req as any, sessionInfo.userId);
       wsConnectionManager.setAuthenticated(clientId, true, sessionInfo.userId);
       wsSessionManager.updateActivity(sessionInfo.sessionId);
-      console.log(`[WebSocket] Connection ${clientId} registered with manager`);
+      
+      // Log connection with user role for debugging
+      const userRole = (req as any).session?.user?.role || 'unknown';
+      console.log(`[WebSocket] Connection ${clientId} registered for user ${sessionInfo.userId} with role: ${userRole} and units: ${ws.unitIds?.join(',') || 'none'}`);
 
       // Try to send a welcome message
       try {
@@ -354,7 +357,7 @@ export function createWebSocketServer(server: Server) {
   }
 }
 
-export const broadcastDashboardRefresh = (payload?: { projectId?: number; changeType?: string; reason?: string }) => {
+export const broadcastDashboardRefresh = (payload?: { projectId?: number; changeType?: string; reason?: string; unitIds?: number[] }) => {
   if (!currentWss) {
     console.error('[WebSocket] Dashboard refresh broadcast failed: Server not initialized');
     return;
@@ -373,7 +376,22 @@ export const broadcastDashboardRefresh = (payload?: { projectId?: number; change
   const clientList = Array.from(currentWss.clients) as ExtendedWebSocket[];
   const openClients = clientList.filter(client => client.readyState === WebSocket.OPEN && client.isAuthenticated === true);
 
-  openClients.forEach((client) => {
+  // If specific units are provided, only broadcast to users who have those units
+  let targetClients = openClients;
+  if (payload?.unitIds && payload.unitIds.length > 0) {
+    targetClients = openClients.filter(client => {
+      // Send to admins (no unit restriction) and users whose units overlap with the event units
+      if (!client.unitIds || client.unitIds.length === 0) {
+        // Likely an admin with no unit restriction
+        return true;
+      }
+      // Check if user has at least one unit that matches
+      return payload.unitIds.some(unitId => client.unitIds!.includes(unitId));
+    });
+    console.log(`[WebSocket] Filtering broadcast for units ${payload.unitIds.join(',')}: targeting ${targetClients.length} of ${openClients.length} clients`);
+  }
+
+  targetClients.forEach((client) => {
     try {
       client.send(message);
       wsConnectionManager.updateActivity(client.clientId!);

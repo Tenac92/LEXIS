@@ -376,6 +376,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (refreshUser as any).lastRefresh = now;
 
       const result = await refetch();
+      
+      // Invalidate all dashboard queries to ensure fresh data after auth refresh
+      // This handles cases where unit assignments changed while user was logged in
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/dashboard/stats"],
+        exact: false, // Match all dashboard stat queries (including user-scoped ones)
+        type: "all",
+      });
+      console.log("[Auth] Invalidated dashboard queries after refresh");
+      
       return result.data ?? null;
     } catch (error) {
       console.error("[Auth] Error refreshing user session:", error);

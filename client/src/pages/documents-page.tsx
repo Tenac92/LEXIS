@@ -217,7 +217,7 @@ export default function DocumentsPage() {
   const fetchDocuments = useCallback(
     async (context: QueryFunctionContext<readonly [string, Filters, number, number]>) => {
       const { queryKey, signal } = context;
-      const [, currentFilters, currentPage, pageSize] = queryKey;
+      const [, currentFilters] = queryKey;
       try {
         if (currentFilters.afm && currentFilters.afm.length === 9) {
           const data = await apiRequest<GeneratedDocument[]>(
@@ -281,9 +281,8 @@ export default function DocumentsPage() {
           queryParams.append("protocolNumber", currentFilters.protocolNumber);
         }
 
-        queryParams.append("limit", pageSize.toString());
-        queryParams.append("offset", (currentPage * pageSize).toString());
-
+        // Fetch ALL documents for client-side pagination
+        // Don't use limit/offset params - let the backend return all results
         const url = `/api/documents?${queryParams.toString()}`;
         const data = await apiRequest<GeneratedDocument[]>(url, { signal });
         return Array.isArray(data) ? data : [];
@@ -309,12 +308,12 @@ export default function DocumentsPage() {
 
   // PERFORMANCE OPTIMIZATION: Enhanced documents query with aggressive caching
   const {
-    data: documents = [],
+    data: allDocuments = [],
     isLoading,
     error,
     refetch,
   } = useQuery<GeneratedDocument[]>({
-    queryKey: ["/api/documents", filters, page, PAGE_SIZE] as const,
+    queryKey: ["/api/documents", filters] as const,
     staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
     gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
     refetchOnMount: false, // Use cached data when available
@@ -323,8 +322,18 @@ export default function DocumentsPage() {
     queryFn: fetchDocuments as any,
   });
 
+  // Client-side pagination
+  const paginationData = useMemo(() => {
+    const totalPages = Math.ceil(allDocuments.length / PAGE_SIZE);
+    const startIndex = page * PAGE_SIZE;
+    const paginatedDocuments = allDocuments.slice(startIndex, startIndex + PAGE_SIZE);
+    return { totalPages, paginatedDocuments };
+  }, [allDocuments, page]);
+
+  const { totalPages, paginatedDocuments: documents } = paginationData;
+
   const canGoPrev = page > 0;
-  const canGoNext = documents.length === PAGE_SIZE;
+  const canGoNext = page < totalPages - 1;
 
   // PERFORMANCE OPTIMIZATION: Memoized refresh handler and optimized filter functions
   const handleRefresh = useCallback(() => {
@@ -784,30 +793,31 @@ export default function DocumentsPage() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-3 px-6 pb-6">
-            <div className="text-sm text-muted-foreground">
-              Page {page + 1} • Showing {documents.length} documents
-              {documents.length < PAGE_SIZE && " (last page)"}
-            </div>
-            <div className="flex justify-end gap-2">
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 px-6 pb-6">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handlePrevPage}
                 disabled={!canGoPrev || isLoading}
               >
-                Previous
+                Προηγούμενη
               </Button>
+              <span className="text-sm text-muted-foreground">
+                Σελίδα {page + 1} από {totalPages} • {documents.length} έγγραφα
+              </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleNextPage}
                 disabled={!canGoNext || isLoading}
               >
-                Next
+                Επόμενη
               </Button>
             </div>
-          </div>
+          )}
         </Card>
       </div>
 
@@ -831,7 +841,9 @@ export default function DocumentsPage() {
         onClose={() => setModalState((prev) => ({ ...prev, delete: false }))}
         documentId={selectedDocument?.id.toString() || ""}
         onDelete={() => {
+          // Force refetch after deletion to immediately update the UI
           queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
+          queryClient.refetchQueries({ queryKey: ["/api/documents"] });
         }}
       />
 

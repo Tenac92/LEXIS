@@ -6,6 +6,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useMemo } from "react";
+import { createDashboardQueryKey } from "@/lib/dashboard-query-keys";
 import {
   FileText,
   Euro,
@@ -89,7 +90,7 @@ export function UserDashboard() {
     isLoading,
     error,
   } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: createDashboardQueryKey(user?.id, user?.unit_id),
     retry: 2,
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000,

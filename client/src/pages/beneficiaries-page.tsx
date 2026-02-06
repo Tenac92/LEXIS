@@ -32,6 +32,7 @@ import {
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
 import { CreateDocumentDialog } from "@/components/documents/create-document-dialog";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 import {
   Card,
   CardContent,
@@ -232,17 +233,16 @@ export default function BeneficiariesPage() {
     });
   }, [queryClient]);
 
-  // Fetch beneficiaries with pagination support
+  // Fetch ALL beneficiaries (client-side pagination and filtering is applied later)
   const {
     data: beneficiaries = [],
     isLoading,
     error,
   } = useQuery<Beneficiary[]>({
-    queryKey: ["/api/beneficiaries", currentPage, itemsPerPage],
+    queryKey: ["/api/beneficiaries"],
     queryFn: async () => {
-      const offset = (currentPage - 1) * itemsPerPage;
       const response = await fetch(
-        `/api/beneficiaries?limit=${itemsPerPage}&offset=${offset}`,
+        `/api/beneficiaries`,
         { credentials: 'include' }
       );
       if (!response.ok) throw new Error('Failed to fetch beneficiaries');
@@ -581,11 +581,23 @@ export default function BeneficiariesPage() {
     }
 
     if (advancedFilters.hasPayments !== "all") {
-      baseList = baseList.filter((b) => {
-        const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
-        const hasPayments = payments.length > 0;
-        return advancedFilters.hasPayments === "yes" ? hasPayments : !hasPayments;
-      });
+      // When filtering by payment status, we need payment data
+      // If data is still loading for the first time, don't filter yet
+      // Note: beneficiaryPaymentData can legitimately be empty if no beneficiaries have payments
+      if (paymentsLoading) {
+        console.log('[Beneficiaries] Payment data still loading, temporarily showing all beneficiaries');
+        // Don't apply filter while loading - show all for now
+      } else {
+        console.log(`[Beneficiaries] Applying hasPayments filter: ${advancedFilters.hasPayments}, payment data size: ${beneficiaryPaymentData.size}`);
+        baseList = baseList.filter((b) => {
+          const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
+          // Consider a beneficiary as "having payments" only if they have payment records with EPS data
+          const hasPayments = payments.some((p: any) => p.eps || p.freetext);
+          const result = advancedFilters.hasPayments === "yes" ? hasPayments : !hasPayments;
+          return result;
+        });
+        console.log(`[Beneficiaries] After hasPayments filter: ${baseList.length} beneficiaries remaining`);
+      }
     }
 
     // Filter by amount range (requires payment data)
@@ -645,7 +657,7 @@ export default function BeneficiariesPage() {
       seen.add(beneficiary.id);
       return true;
     });
-  }, [beneficiaries, searchTerm, afmSearchResults, advancedFilters, beneficiaryPaymentData]);
+  }, [beneficiaries, searchTerm, afmSearchResults, advancedFilters, beneficiaryPaymentData, paymentsLoading]);
 
   // PERFORMANCE OPTIMIZATION: Memoized pagination
   const paginationData = useMemo(() => {
@@ -1228,6 +1240,14 @@ export default function BeneficiariesPage() {
               )}
             </div>
 
+            {/* Loading indicator for payment data */}
+            {paymentsLoading && hasPaymentFilters && (
+              <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                Φόρτωση δεδομένων πληρωμών...
+              </div>
+            )}
+
             {/* Beneficiaries Display */}
             {paginatedBeneficiaries.length > 0 ? (
               <div
@@ -1600,7 +1620,7 @@ export default function BeneficiariesPage() {
                                             : "—"}
                                         </p>
                                         <p className="text-xs text-purple-800 truncate" title={latest?.freetext || "—"}>
-                                          Σημ: {latest?.freetext || "χωρίς σημειώσεις"}
+                                          EPS: {latest?.freetext || "Δεν έχει πραγματοποιηθεί η πληρωμή"}
                                         </p>
                                       </div>
                                     </div>
@@ -1985,7 +2005,7 @@ export default function BeneficiariesPage() {
                   Προηγούμενη
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Σελίδα {currentPage} από {totalPages}
+                  Σελίδα {currentPage} από {totalPages} • {paginatedBeneficiaries.length} δικαιούχοι
                 </span>
                 <Button
                   variant="outline"
@@ -2081,10 +2101,23 @@ function ExistingPaymentsDisplay({
 }: {
   beneficiary: Beneficiary;
 }) {
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["/api/beneficiary-payments", beneficiary.id],
     enabled: !!beneficiary.id,
   });
+  
+  const handleDocumentClick = async (documentId: number) => {
+    try {
+      const doc = await apiRequest(`/api/documents/${documentId}`);
+      setSelectedDocument(doc);
+      setShowDocumentModal(true);
+    } catch (error) {
+      console.error('Error fetching document:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -2194,10 +2227,42 @@ function ExistingPaymentsDisplay({
                   </span>
                 </div>
               )}
+              
+              {/* EPS Field */}
+              <div className="mt-2 pt-2 border-t border-muted">
+                <span className="text-xs text-muted-foreground">
+                  EPS:{" "}
+                </span>
+                <span className="text-xs font-mono">
+                  {payment.eps || payment.freetext || "Δεν έχει πραγματοποιηθεί η πληρωμή"}
+                </span>
+              </div>
+              
+              {/* Document Link */}
+              {payment.document_id && (
+                <div className="mt-2 pt-2 border-t border-muted">
+                  <span className="text-xs text-muted-foreground">
+                    Έγγραφο:{" "}
+                  </span>
+                  <button
+                    onClick={() => handleDocumentClick(payment.document_id)}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                  >
+                    Άνοιγμα εγγράφου #{payment.document_id}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
+      
+      {/* Document Details Modal */}
+      <DocumentDetailsModal
+        open={showDocumentModal}
+        onOpenChange={setShowDocumentModal}
+        document={selectedDocument}
+      />
     </div>
   );
 }
@@ -2523,6 +2588,7 @@ function BeneficiaryForm({
   });
 
   return (
+    <>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Personal Information */}
@@ -3047,5 +3113,36 @@ function BeneficiaryForm({
         </div>
       </form>
     </Form>
+    
+    {/* Existing Payments Modal inside form */}
+    <Dialog
+      open={existingPaymentsModalOpen}
+      onOpenChange={setExistingPaymentsModalOpen}
+    >
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <DollarSign className="h-5 w-5" />
+            Υπάρχουσες Πληρωμές
+            {selectedBeneficiaryForPayments && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {selectedBeneficiaryForPayments.surname}{" "}
+                {selectedBeneficiaryForPayments.name}
+              </span>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            Προβολή όλων των καταχωρημένων πληρωμών για τον επιλεγμένο
+            δικαιούχο
+          </DialogDescription>
+        </DialogHeader>
+        {selectedBeneficiaryForPayments && (
+          <ExistingPaymentsDisplay
+            beneficiary={selectedBeneficiaryForPayments}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

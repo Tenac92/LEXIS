@@ -1744,10 +1744,11 @@ router.get("/", async (req: Request, res: Response) => {
       protocolNumber: req.query.protocolNumber as string,
     };
 
-    // Base query with optional pagination
+    // Base query - fetch ALL matching documents to apply client-side filters before pagination
+    // Use 'exact' count to get the total count of matching rows (ignores pagination)
     let query = supabase
       .from("generated_documents")
-      .select("*, employee_payments_id, beneficiary_payments_id")
+      .select("*, employee_payments_id, beneficiary_payments_id", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (filters.unit_id) {
@@ -1760,11 +1761,9 @@ router.get("/", async (req: Request, res: Response) => {
       query = query.eq("generated_by", filters.generated_by);
     }
 
-    if (limit) {
-      query = query.range(offset, offset + limit - 1);
-    }
-
-    const { data: documents, error } = await query;
+    // Fetch all filtered documents - no pagination at query level
+    // Supabase will return up to 1000 rows by default
+    const { data: allDocuments, error, count: totalCountAll } = await query;
 
     if (error) {
       console.error("Database error:", error);
@@ -1774,9 +1773,12 @@ router.get("/", async (req: Request, res: Response) => {
       });
     }
 
-    if (!documents || documents.length === 0) {
+    if (!allDocuments || allDocuments.length === 0) {
+      console.log("[DocumentsController] No documents found from database query");
       return res.json([]);
     }
+
+    console.log(`[DocumentsController] Fetched ${allDocuments.length} raw documents from database for unit_id=${filters.unit_id}`);
 
     // Collect all related IDs for batched fetching
     const employeePaymentIds = new Set<number>();
@@ -1785,7 +1787,7 @@ router.get("/", async (req: Request, res: Response) => {
     const projectIndexIds = new Set<number>();
     const attachmentIds = new Set<number>();
 
-    for (const doc of documents) {
+    for (const doc of allDocuments) {
       if (doc.unit_id) unitIds.add(doc.unit_id);
       if (doc.project_index_id) projectIndexIds.add(doc.project_index_id);
       if (Array.isArray(doc.attachment_id)) {
@@ -1934,7 +1936,7 @@ router.get("/", async (req: Request, res: Response) => {
       (expenditureTypesData as any[]).map((e: any) => [e.id, e.expenditure_types]),
     );
 
-    const enrichedDocuments = documents.map((doc) => {
+    const enrichedDocuments = allDocuments.map((doc) => {
       let recipients: any[] = [];
 
       if (Array.isArray(doc.employee_payments_id) && doc.employee_payments_id.length > 0) {
@@ -2158,19 +2160,15 @@ router.get("/", async (req: Request, res: Response) => {
       );
     }
 
-    // Add pagination metadata headers
-    const total = filteredDocuments.length;
+    // Apply pagination AFTER client-side filtering
+    let resultDocuments = filteredDocuments;
+    const totalCount = filteredDocuments.length;
+    
     if (limit) {
-      const paginatedDocuments = filteredDocuments.slice(offset, offset + limit);
-      res.set('X-Total-Count', total.toString());
-      res.set('X-Returned-Count', paginatedDocuments.length.toString());
-      res.set('X-Offset', offset.toString());
-      res.set('X-Limit', limit.toString());
-      return res.json(paginatedDocuments);
-    } else {
-      res.set('X-Total-Count', total.toString());
-      return res.json(filteredDocuments);
+      resultDocuments = filteredDocuments.slice(offset, offset + limit);
     }
+    
+    res.json(resultDocuments);
   } catch (error) {
     console.error("Error fetching documents:", error);
     return res.status(500).json({

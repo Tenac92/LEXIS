@@ -58,7 +58,7 @@ export function ManagerDashboard() {
     isLoading,
     error,
   } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: createDashboardQueryKey(user?.id, user?.unit_id),
     retry: 2,
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000,

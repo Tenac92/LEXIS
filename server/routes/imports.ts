@@ -491,7 +491,6 @@ router.post(
             if (override || !existingEpsValue) {
               if (override || existingEpsValue !== row.eps) {
                 updatePayload.eps = row.eps;
-                updatePayload.freetext = row.eps;
               }
             }
           }

@@ -183,15 +183,25 @@ export const authenticateSession = async (
     // Keep account status in sync to prevent inactive users from accessing the app
     const { data: userStatus, error: statusError } = await supabase
       .from("users")
-      .select("is_active")
+      .select("is_active, unit_id, name, role, department, telephone, details")
       .eq("id", sessionUser.id)
       .single();
 
     if (statusError) {
-      console.error("[Auth] Error checking user active status:", statusError);
+      console.error("[Auth] Error fetching user data:", statusError);
     }
 
     const isActive = userStatus?.is_active ?? sessionUser.is_active ?? true;
+    
+    // CRITICAL: Use fresh unit_id from database, not from session
+    const freshUnitId = userStatus?.unit_id || sessionUser.unit_id || [];
+    
+    console.log("[Auth] User unit_id from database:", {
+      userId: sessionUser.id,
+      sessionUnitId: sessionUser.unit_id,
+      dbUnitId: userStatus?.unit_id,
+      finalUnitId: freshUnitId
+    });
 
     if (!isActive) {
       console.log("[Auth] Blocking inactive user session:", {
@@ -211,20 +221,20 @@ export const authenticateSession = async (
     // Persist latest status on the session for downstream handlers
     req.session.user.is_active = isActive;
 
-    // Add user to request with all required fields
+    // Add user to request with all required fields - USE FRESH DATA FROM DATABASE
     req.user = {
       id: sessionUser.id,
       email: sessionUser.email,
       name: sessionUser.name || "",
       role: sessionUser.role,
       is_active: isActive,
-      unit_id: sessionUser.unit_id || [],
-      department: sessionUser.department || undefined,
-      telephone: sessionUser.telephone || undefined,
-      details: sessionUser.details || undefined,
+      unit_id: freshUnitId, // USE FRESH DATA FROM DATABASE, NOT SESSION
+      department: userStatus?.department || sessionUser.department || undefined,
+      telephone: userStatus?.telephone || sessionUser.telephone || undefined,
+      details: userStatus?.details || sessionUser.details || undefined,
     };
 
-    console.log("[Auth] User authenticated:", {
+    console.log("[Auth] User authenticated with fresh data:", {
       id: req.user?.id,
       name: req.user?.name,
       email: req.user?.email,

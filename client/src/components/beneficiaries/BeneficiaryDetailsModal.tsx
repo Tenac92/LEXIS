@@ -54,6 +54,7 @@ import {
   normalizeRegiondetEntry,
   type RegiondetSelection,
 } from "@/components/documents/utils/beneficiary-geo";
+import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 
 interface BeneficiaryDetailsModalProps {
   beneficiary: Beneficiary | null;
@@ -344,6 +345,10 @@ export function BeneficiaryDetailsModal({
   const lastRegiondetValueRef = useRef<RegiondetSelection | null>(null);
   const [regiondetStatus, setRegiondetStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [regiondetError, setRegiondetError] = useState<string | null>(null);
+  
+  // Document modal state
+  const [documentModalOpen, setDocumentModalOpen] = useState(false);
+  const [selectedDocumentForView, setSelectedDocumentForView] = useState<any>(null);
   
   // Initialize form with react-hook-form (MOVED BEFORE CONDITIONAL RETURN)
   const form = useForm<BeneficiaryEditForm>({
@@ -1383,9 +1388,10 @@ export function BeneficiaryDetailsModal({
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <div className="flex items-center gap-3 mb-2">
-                            <Badge className={`${getFinancialStatusColor(payment.status)} border`}>
+                            <Badge className={`${getFinancialStatusColor((payment.eps || payment.freetext) ? 'paid' : payment.status)} border`}>
                               {payment.status === 'paid' ? 'Πληρωμένη' : 
-                               payment.status === 'submitted' ? 'Υποβλημένη' : 'Εκκρεμής'}
+                               payment.status === 'submitted' ? 'Υποβλημένη' : 
+                               (payment.eps || payment.freetext) ? 'Έχει Πληρωθεί' : 'Εκκρεμής'}
                             </Badge>
                             <span className="text-sm text-gray-600">ID: {payment.id}</span>
                           </div>
@@ -1439,8 +1445,8 @@ export function BeneficiaryDetailsModal({
                           </p>
                         </div>
                         <div>
-                          <label className="text-gray-600 font-medium">Σημειώσεις:</label>
-                          <p className="text-gray-900 truncate">{payment.freetext || 'χωρίς σημειώσεις'}</p>
+                          <label className="text-gray-600 font-medium">EPS:</label>
+                          <p className="text-gray-900 truncate">{payment.eps || payment.freetext || 'Δεν έχει πραγματοποιηθεί η πληρωμή'}</p>
                         </div>
                         <div>
                           <label className="text-gray-600 font-medium">Καταχωρήθηκε:</label>
@@ -1449,6 +1455,27 @@ export function BeneficiaryDetailsModal({
                           </p>
                         </div>
                       </div>
+                      
+                      {/* Document Link */}
+                      {payment.document_id && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <label className="text-gray-600 font-medium text-sm">Έγγραφο:</label>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const doc = await apiRequest(`/api/documents/${payment.document_id}`);
+                                setSelectedDocumentForView(doc);
+                                setDocumentModalOpen(true);
+                              } catch (error) {
+                                console.error('Error fetching document:', error);
+                              }
+                            }}
+                            className="ml-2 text-sm text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                          >
+                            Άνοιγμα εγγράφου #{payment.document_id}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1506,6 +1533,13 @@ export function BeneficiaryDetailsModal({
           </TabsContent>
         </Tabs>
       </DialogContent>
+      
+      {/* Document Details Modal */}
+      <DocumentDetailsModal
+        open={documentModalOpen}
+        onOpenChange={setDocumentModalOpen}
+        document={selectedDocumentForView}
+      />
     </Dialog>
   );
 }

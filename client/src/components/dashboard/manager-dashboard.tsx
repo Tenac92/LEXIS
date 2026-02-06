@@ -25,6 +25,7 @@ import {
   DashboardSkeleton,
 } from "./shared";
 import type { DashboardStats } from "@/lib/dashboard";
+import { createDashboardQueryKey } from "@/lib/dashboard-query-keys";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -58,7 +59,7 @@ export function ManagerDashboard() {
     isLoading,
     error,
   } = useQuery<DashboardStats>({
-    queryKey: ["/api/dashboard/stats"],
+    queryKey: createDashboardQueryKey(user?.id, user?.unit_id),
     retry: 2,
     refetchOnWindowFocus: false,
     staleTime: 2 * 60 * 1000,
