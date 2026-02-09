@@ -184,6 +184,11 @@ export const DocumentFormProvider: React.FC<{ children: React.ReactNode }> = ({ 
               
               mergedUpdate.recipients.forEach((newRecipient, index) => {
                 const prevRecipient = prev.recipients[index];
+                if (!newRecipient || !prevRecipient) {
+                  updatedRecipients[index] = (newRecipient || prevRecipient) as any;
+                  hasAnyRecipientChanged = true;
+                  return;
+                }
                 
                 // Deep comparison for each field that matters for rendering
                 const hasChanged = 

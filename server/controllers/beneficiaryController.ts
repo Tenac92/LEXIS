@@ -1109,8 +1109,9 @@ router.post('/', authenticateSession, async (req: AuthenticatedRequest, res: Res
     delete transformedData.amount;
     delete transformedData.installment;
     
-    // Validate request body
-    const validationResult = insertBeneficiarySchema.safeParse(transformedData);
+    // Validate request body (afm_hash is computed server-side)
+    const createBeneficiarySchema = insertBeneficiarySchema.omit({ afm_hash: true });
+    const validationResult = createBeneficiarySchema.safeParse(transformedData);
     if (!validationResult.success) {
       console.log('[Beneficiaries] Validation errors:', validationResult.error.issues);
       return res.status(400).json({ 

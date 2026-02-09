@@ -11,13 +11,8 @@ import {
   List,
   User,
   FileText,
-  Building,
-  Mail,
-  Phone,
   Calendar,
   DollarSign,
-  Briefcase,
-  UserCheck,
   CheckCircle2,
   AlertCircle,
   CreditCard,
@@ -36,13 +31,9 @@ import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModa
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
@@ -55,7 +46,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -81,9 +71,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useDebounce } from "@/components/documents/hooks/useDebounce";
 // Beneficiary type definition
 interface Beneficiary {
   id: number;
@@ -101,11 +92,6 @@ interface Beneficiary {
   date: string | null;
   created_at: Date | null;
   updated_at: Date | null;
-}
-
-interface Unit {
-  id: string;
-  name: string;
 }
 
 // Form validation schema for beneficiaries
@@ -185,10 +171,9 @@ export default function BeneficiariesPage() {
   // Enable real-time updates via WebSocket
   useWebSocketUpdates();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState<
-    Beneficiary | undefined
-  >();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 200);
+  const [selectedBeneficiaryForPayments, _setSelectedBeneficiaryForPayments] =
+    useState<Beneficiary | null>(null);
   const [detailsBeneficiary, setDetailsBeneficiary] =
     useState<Beneficiary | null>(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -199,16 +184,17 @@ export default function BeneficiariesPage() {
   const [itemsPerPage] = useState(24); // Reduced from 60 to 24 for better performance
   const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] =
     useState(false);
-  const [selectedBeneficiaryForPayments, setSelectedBeneficiaryForPayments] =
-    useState<Beneficiary | null>(null);
   // State for create document dialog with prefilled beneficiary
   const [createDocumentOpen, setCreateDocumentOpen] = useState(false);
-  const [initialBeneficiaryForDocument, setInitialBeneficiaryForDocument] = useState<{
+  const [initialBeneficiariesForDocument, setInitialBeneficiariesForDocument] = useState<{
     firstname: string;
     lastname: string;
     fathername: string;
     afm: string;
-  } | undefined>(undefined);
+    beneficiaryId?: number;
+    regiondet?: any;
+  }[] | undefined>(undefined);
+  const [selectedBeneficiaryIds, setSelectedBeneficiaryIds] = useState<Set<number>>(new Set());
   
   // Advanced filters state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -252,7 +238,7 @@ export default function BeneficiariesPage() {
     queryFn: async () => {
       const response = await fetch(
         `/api/beneficiaries`,
-        { credentials: 'include', cache: "no-store" }
+        { credentials: 'include' }
       );
       if (!response.ok) throw new Error('Failed to fetch beneficiaries');
       const data = await response.json();
@@ -279,7 +265,7 @@ export default function BeneficiariesPage() {
   });
 
   // Fetch units data for filters
-  const { data: allUnits = [], error: unitsError, isLoading: unitsLoading } = useQuery({
+  const { data: allUnits = [] } = useQuery({
     queryKey: ["/api/public/units"],
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
@@ -287,7 +273,7 @@ export default function BeneficiariesPage() {
   });
 
   // Fetch projects data for filters
-  const { data: allProjects = [], error: projectsError, isLoading: projectsLoading } = useQuery({
+  const { data: allProjects = [] } = useQuery({
     queryKey: ["/api/projects"],
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
@@ -307,23 +293,6 @@ export default function BeneficiariesPage() {
     }
     return map;
   }, [engineersResponse]);
-
-  // Fetch units for dropdown with aggressive caching
-  const { data: units = [] } = useQuery<Unit[]>({
-    queryKey: ["/api/public/units"],
-    staleTime: 30 * 60 * 1000, // 30 minutes cache
-    gcTime: 60 * 60 * 1000, // 1 hour cache retention
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-
-  // Fetch projects for dropdown with caching
-  const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects"],
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    gcTime: 30 * 60 * 1000, // 30 minutes cache retention
-    refetchOnWindowFocus: false,
-  });
 
   // Helper function to format regiondet JSONB data for display
   const formatRegiondet = useCallback((regiondet: Record<string, unknown> | null): string[] => {
@@ -347,16 +316,20 @@ export default function BeneficiariesPage() {
   // Create mutation
   const createMutation = useMutation({
     mutationFn: (data: BeneficiaryFormData) =>
-      apiRequest("/api/beneficiaries", {
+      apiRequest<Beneficiary>("/api/beneficiaries", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    onSuccess: () => {
-      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
-      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
-      setDialogOpen(false);
-      setSelectedBeneficiary(undefined);
+    onSuccess: (createdBeneficiary) => {
+      // Keep UI responsive: update cache immediately, then refetch in background
+      queryClient.setQueryData<Beneficiary[]>(
+        ["/api/beneficiaries", authKey],
+        (current = []) => {
+          const exists = current.some((b) => b.id === createdBeneficiary.id);
+          return exists ? current : [createdBeneficiary, ...current];
+        },
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", authKey] });
       toast({
         title: "Επιτυχία",
         description: "Ο δικαιούχος δημιουργήθηκε επιτυχώς",
@@ -371,41 +344,16 @@ export default function BeneficiariesPage() {
     },
   });
 
-  // Update mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: BeneficiaryFormData }) =>
-      apiRequest(`/api/beneficiaries/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
-      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
-      setDialogOpen(false);
-      setSelectedBeneficiary(undefined);
-      toast({
-        title: "Επιτυχία",
-        description: "Ο δικαιούχος ενημερώθηκε επιτυχώς",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Σφάλμα",
-        description: error.message || "Αποτυχία ενημέρωσης δικαιούχου",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
       apiRequest(`/api/beneficiaries/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      // CRITICAL #2: Reset queries to force immediate refetch and clear stale cache
-      queryClient.resetQueries({ queryKey: ["/api/beneficiaries"] });
-      queryClient.resetQueries({ queryKey: ["/api/beneficiary-payments"] });
+    onSuccess: (_data, id) => {
+      queryClient.setQueryData<Beneficiary[]>(
+        ["/api/beneficiaries", authKey],
+        (current = []) => current.filter((b) => b.id !== id)
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/beneficiaries", authKey] });
       toast({
         title: "Επιτυχία",
         description: "Ο δικαιούχος διαγράφηκε επιτυχώς",
@@ -481,14 +429,58 @@ export default function BeneficiariesPage() {
     });
   };
 
+  const toggleBeneficiarySelection = (beneficiary: Beneficiary) => {
+    setSelectedBeneficiaryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(beneficiary.id)) {
+        next.delete(beneficiary.id);
+        return next;
+      }
+      if (next.size >= 10) {
+        toast({
+          title: "Όριο επιλογής",
+          description: "Μπορείτε να επιλέξετε έως 10 δικαιούχους.",
+          variant: "destructive",
+        });
+        return prev;
+      }
+      next.add(beneficiary.id);
+      return next;
+    });
+  };
+
+  const handleBulkAddToDocument = () => {
+    if (selectedBeneficiaryIds.size === 0) return;
+
+    const selected = beneficiaries.filter((b) => selectedBeneficiaryIds.has(b.id));
+    const uniqueSelected = Array.from(
+      new Map(selected.map((beneficiary) => [beneficiary.id, beneficiary])).values(),
+    );
+    const prefillList = uniqueSelected.slice(0, 10).map((b) => ({
+      firstname: b.name || "",
+      lastname: b.surname || "",
+      fathername: b.fathername || "",
+      afm: b.afm || "",
+      beneficiaryId: b.id,
+      regiondet: b.regiondet || null,
+    }));
+
+    setInitialBeneficiariesForDocument(prefillList);
+    setCreateDocumentOpen(true);
+  };
+
   // Server-side AFM search query - only triggers when AFM is 9 digits
   const { data: afmSearchResults } = useQuery<Beneficiary[]>({
-    queryKey: ['/api/beneficiaries/search', authKey, searchTerm],
-    queryFn: async () => {
-      const response = await apiRequest<{ success: boolean; data: Beneficiary[]; count: number }>(`/api/beneficiaries/search?afm=${searchTerm}`);
-      return response.data; // Extract the data array from the response object
-    },
-    enabled: isAuthReady && searchTerm.length === 9 && /^\d{9}$/.test(searchTerm),
+    queryKey: ["/api/beneficiaries/search", authKey, debouncedSearchTerm],
+    queryFn: ({ signal }) =>
+      apiRequest<{ success: boolean; data: Beneficiary[]; count: number }>(
+        `/api/beneficiaries/search?afm=${debouncedSearchTerm}`,
+        { signal },
+      ).then((response) => response.data),
+    enabled:
+      isAuthReady &&
+      debouncedSearchTerm.length === 9 &&
+      /^\d{9}$/.test(debouncedSearchTerm),
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
@@ -509,18 +501,17 @@ export default function BeneficiariesPage() {
     () => beneficiaries.map((b) => b.id),
     [beneficiaries]
   );
+  const allIdsKey = useMemo(() => allBeneficiaryIds.join(","), [allBeneficiaryIds]);
 
   // Fetch payments - either for all beneficiaries (when filters are active) or for visible ones
   const { data: beneficiaryPayments = [], isFetching: paymentsLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", authKey, { ids: hasPaymentFilters ? allBeneficiaryIds : [] }],
-    queryFn: async () => {
-      if (allBeneficiaryIds.length === 0) return [];
-      const idParam = allBeneficiaryIds.join(",");
-      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
-    },
-    enabled: Boolean(isAuthReady && hasPaymentFilters && allBeneficiaryIds.length > 0),
+    queryKey: ["/api/beneficiary-payments", authKey, "all", allIdsKey],
+    queryFn: ({ signal }) =>
+      apiRequest(`/api/beneficiary-payments?beneficiaryIds=${allIdsKey}`, { signal }),
+    enabled: Boolean(isAuthReady && hasPaymentFilters && allIdsKey.length > 0),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    placeholderData: (previous) => previous ?? [],
   });
 
   // PERFORMANCE: Memoized payment data for O(1) lookups in filtering and rendering
@@ -559,10 +550,10 @@ export default function BeneficiariesPage() {
     }
 
     // Otherwise, do client-side filtering (for non-AFM searches)
-    let baseList = !searchTerm.trim()
+    let baseList = !debouncedSearchTerm.trim()
       ? beneficiaries
       : beneficiaries.filter((beneficiary) => {
-          const searchLower = searchTerm.toLowerCase();
+          const searchLower = debouncedSearchTerm.toLowerCase();
           return (
             beneficiary.surname?.toLowerCase().includes(searchLower) ||
             beneficiary.name?.toLowerCase().includes(searchLower)
@@ -667,7 +658,7 @@ export default function BeneficiariesPage() {
       seen.add(beneficiary.id);
       return true;
     });
-  }, [beneficiaries, searchTerm, afmSearchResults, advancedFilters, beneficiaryPaymentData, paymentsLoading]);
+  }, [beneficiaries, debouncedSearchTerm, afmSearchResults, advancedFilters, beneficiaryPaymentData, paymentsLoading]);
 
   // PERFORMANCE OPTIMIZATION: Memoized pagination
   const paginationData = useMemo(() => {
@@ -688,18 +679,20 @@ export default function BeneficiariesPage() {
     () => paginatedBeneficiaries.map((b) => b.id),
     [paginatedBeneficiaries],
   );
+  const visibleIdsKey = useMemo(
+    () => visibleBeneficiaryIds.join(","),
+    [visibleBeneficiaryIds],
+  );
 
   // Fetch payments for visible beneficiaries only when no payment filters are active
   const { data: visiblePayments = [] } = useQuery({
-    queryKey: ["/api/beneficiary-payments", authKey, { ids: visibleBeneficiaryIds }],
-    queryFn: async () => {
-      if (visibleBeneficiaryIds.length === 0) return [];
-      const idParam = visibleBeneficiaryIds.join(",");
-      return apiRequest(`/api/beneficiary-payments?beneficiaryIds=${idParam}`);
-    },
-    enabled: Boolean(isAuthReady && !hasPaymentFilters && visibleBeneficiaryIds.length > 0),
+    queryKey: ["/api/beneficiary-payments", authKey, "visible", visibleIdsKey],
+    queryFn: ({ signal }) =>
+      apiRequest(`/api/beneficiary-payments?beneficiaryIds=${visibleIdsKey}`, { signal }),
+    enabled: Boolean(isAuthReady && !hasPaymentFilters && visibleIdsKey.length > 0),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    placeholderData: (previous) => previous ?? [],
   });
 
   // Merge payment data - use all payments when filters active, visible only otherwise
@@ -821,6 +814,20 @@ export default function BeneficiariesPage() {
             <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0 mb-6">
               <h1 className="text-2xl font-bold text-foreground">Δικαιούχοι</h1>
               <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBulkAddToDocument}
+                  disabled={selectedBeneficiaryIds.size === 0}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Προσθήκη δικαιούχων
+                  {selectedBeneficiaryIds.size > 0 && (
+                    <span className="ml-2 text-xs font-semibold">
+                      ({selectedBeneficiaryIds.size}/10)
+                    </span>
+                  )}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1270,6 +1277,7 @@ export default function BeneficiariesPage() {
                 }
               >
                 {paginatedBeneficiaries.map((beneficiary) => {
+                  const isSelected = selectedBeneficiaryIds.has(beneficiary.id);
                   if (viewMode === "list") {
                     return (
                       <Card
@@ -1456,6 +1464,24 @@ export default function BeneficiariesPage() {
                               </Button>
                             </div>
                           </div>
+                          <div className="mt-4 flex justify-end">
+                            <Button
+                              size="sm"
+                              variant={isSelected ? "secondary" : "outline"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleBeneficiarySelection(beneficiary);
+                              }}
+                              className={
+                                isSelected
+                                  ? "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                  : "text-gray-700 border-gray-200 hover:bg-gray-50"
+                              }
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              {isSelected ? "Επιλεγμένο" : "Επιλογή"}
+                            </Button>
+                          </div>
                         </div>
                       </Card>
                     );
@@ -1478,7 +1504,7 @@ export default function BeneficiariesPage() {
                       onClick={handleCardClick}
                     >
                       <div
-                        className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""}`}
+                        className={`flip-card-inner ${isFlipped ? "rotate-y-180" : ""} ${isSelected ? "ring-2 ring-emerald-400" : ""}`}
                       >
                         {/* Front of card */}
                         <div className="flip-card-front">
@@ -1695,9 +1721,22 @@ export default function BeneficiariesPage() {
                             </div>
 
                             <div
-                              className="flex items-center justify-center"
+                              className="mt-3 flex items-center justify-between gap-2"
                               onClick={(e) => e.stopPropagation()}
                             >
+                              <Button
+                                variant={isSelected ? "secondary" : "outline"}
+                                size="sm"
+                                onClick={() => toggleBeneficiarySelection(beneficiary)}
+                                className={
+                                  isSelected
+                                    ? "text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                                    : "text-gray-700 border-gray-200 hover:bg-gray-50"
+                                }
+                              >
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                {isSelected ? "Επιλεγμένο" : "Επιλογή"}
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -2053,7 +2092,7 @@ export default function BeneficiariesPage() {
           setDetailsModalOpen(false);
         }}
         onCreatePaymentDocument={(beneficiaryData) => {
-          setInitialBeneficiaryForDocument(beneficiaryData);
+          setInitialBeneficiariesForDocument([beneficiaryData]);
           setCreateDocumentOpen(true);
         }}
       />
@@ -2064,14 +2103,14 @@ export default function BeneficiariesPage() {
         onOpenChange={(open) => {
           setCreateDocumentOpen(open);
           if (!open) {
-            setInitialBeneficiaryForDocument(undefined);
+            setInitialBeneficiariesForDocument(undefined);
           }
         }}
         onClose={() => {
           setCreateDocumentOpen(false);
-          setInitialBeneficiaryForDocument(undefined);
+          setInitialBeneficiariesForDocument(undefined);
         }}
-        initialBeneficiary={initialBeneficiaryForDocument}
+        initialBeneficiaries={initialBeneficiariesForDocument}
       />
 
       {/* Existing Payments Modal */}
@@ -2121,9 +2160,15 @@ function ExistingPaymentsDisplay({
     return `${user.id}:${user.role ?? "none"}`;
   }, [user?.id, user?.role]);
   
+  const beneficiaryId = beneficiary?.id ? String(beneficiary.id) : "";
   const { data: payments = [], isLoading } = useQuery({
-    queryKey: ["/api/beneficiary-payments", authKey, beneficiary.id],
-    enabled: Boolean(user?.id && beneficiary.id),
+    queryKey: ["/api/beneficiary-payments", authKey, beneficiaryId],
+    queryFn: ({ signal }) =>
+      apiRequest(`/api/beneficiary-payments?beneficiaryIds=${beneficiaryId}`, { signal }),
+    enabled: Boolean(user?.id && beneficiaryId),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
   
   const handleDocumentClick = async (documentId: number) => {
@@ -2284,7 +2329,7 @@ function ExistingPaymentsDisplay({
   );
 }
 
-function BeneficiaryForm({
+export function BeneficiaryForm({
   beneficiary,
   onSubmit,
   onCancel,
@@ -2338,12 +2383,15 @@ function BeneficiaryForm({
     refetchOnWindowFocus: false,
   });
 
+  const existingPaymentsId = beneficiary?.id ? String(beneficiary.id) : "";
   const { data: existingPayments } = useQuery({
-    queryKey: ["/api/beneficiary-payments", authKey, beneficiary?.id],
+    queryKey: ["/api/beneficiary-payments", authKey, existingPaymentsId],
+    queryFn: ({ signal }) =>
+      apiRequest(`/api/beneficiary-payments?beneficiaryIds=${existingPaymentsId}`, { signal }),
     staleTime: 2 * 60 * 1000, // 2 minutes cache
     gcTime: 10 * 60 * 1000, // 10 minutes cache retention
     refetchOnWindowFocus: false,
-    enabled: Boolean(user?.id && beneficiary?.id),
+    enabled: Boolean(user?.id && existingPaymentsId),
   });
 
   const form = useForm<BeneficiaryFormData>({
@@ -2469,8 +2517,12 @@ function BeneficiaryForm({
   }, [dialogOpen, beneficiary, userUnits.length, handleFormReset]);
 
   // Optimized field dependency management to prevent WebSocket issues
-  const watchedUnit = form.watch("selectedUnit");
-  const watchedNA853 = form.watch("selectedNA853");
+  const watchedUnit = useWatch({ control: form.control, name: "selectedUnit" });
+  const watchedNA853 = useWatch({ control: form.control, name: "selectedNA853" });
+  const watchedExpenditureType = useWatch({
+    control: form.control,
+    name: "expenditure_type",
+  });
 
   useEffect(() => {
     // Only clear dependent fields when unit actually changes
@@ -2592,22 +2644,6 @@ function BeneficiaryForm({
   const removePayment = (index: number) => {
     setPayments((prev) => prev.filter((_, i) => i !== index));
   };
-
-  const { data: units = [] } = useQuery<Unit[]>({
-    queryKey: ["/api/public/units"],
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ["/api/projects"],
-  });
-
-  // Fetch geographic data for region selection
-  const { data: geographicData } = useQuery({
-    queryKey: ["/api/geographic-data"],
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    refetchOnWindowFocus: false,
-  });
 
   return (
     <>
@@ -2834,7 +2870,7 @@ function BeneficiaryForm({
                     }}
                     value={field.value}
                     disabled={
-                      !form.watch("selectedUnit") ||
+                      !watchedUnit ||
                       availableProjects.length === 0
                     }
                   >
@@ -2842,7 +2878,7 @@ function BeneficiaryForm({
                       <SelectTrigger>
                         <SelectValue
                           placeholder={
-                            form.watch("selectedUnit")
+                            watchedUnit
                               ? availableProjects.length > 0
                                 ? "Επιλέξτε κωδικό ΝΑ853"
                                 : "Δεν υπάρχουν διαθέσιμα έργα"
@@ -2884,13 +2920,13 @@ function BeneficiaryForm({
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
-                    disabled={!form.watch("selectedNA853")}
+                    disabled={!watchedNA853}
                   >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue
                           placeholder={
-                            form.watch("selectedNA853")
+                            watchedNA853
                               ? "Επιλέξτε τύπο δαπάνης"
                               : "Πρώτα επιλέξτε κωδικό ΝΑ853"
                           }
@@ -2927,7 +2963,7 @@ function BeneficiaryForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {form.watch("expenditure_type") ===
+                      {watchedExpenditureType ===
                       "ΕΠΙΔΟΤΗΣΗ ΕΝΟΙΚΙΟΥ" ? (
                         <>
                           {Array.from({ length: 24 }, (_, i) => (

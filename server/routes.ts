@@ -387,15 +387,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(enriched);
       }
 
-      // Fallback: previous behavior (fetch payments for beneficiaries in first unit)
-      const beneficiaries = await storage.getBeneficiariesByUnit(userUnits[0].toString());
-      const allPayments = [];
-      for (const beneficiary of beneficiaries) {
-        const payments = await storage.getBeneficiaryPayments(beneficiary.id);
-        allPayments.push(...payments);
-      }
+      return res.status(400).json({
+        message: "beneficiaryIds is required to fetch payments efficiently"
+      });
 
-      res.json(allPayments);
     } catch (error) {
       console.error('[Beneficiary Payments] Error fetching payments:', error);
       res.status(500).json({ message: 'Failed to fetch beneficiary payments' });

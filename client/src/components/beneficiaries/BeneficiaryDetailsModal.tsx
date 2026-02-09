@@ -62,7 +62,7 @@ interface BeneficiaryDetailsModalProps {
   onOpenChange: (open: boolean) => void;
   initialEditMode?: boolean;
   onCreateBeneficiary?: (data: any) => void;
-  onCreatePaymentDocument?: (beneficiaryData: { firstname: string; lastname: string; fathername: string; afm: string }) => void;
+  onCreatePaymentDocument?: (beneficiaryData: { firstname: string; lastname: string; fathername: string; afm: string; beneficiaryId?: number; regiondet?: RegiondetSelection | null }) => void;
 }
 
 // Form schema for editing beneficiaries (omit auto-generated fields)
@@ -701,18 +701,45 @@ export function BeneficiaryDetailsModal({
     updatePaymentMutation.mutate({ paymentId, data });
   };
 
-  const handleAddNewPayment = () => {
+  const handleAddNewPayment = async () => {
     if (!beneficiary) return;
     
     // If callback provided, open create document dialog with prefilled beneficiary
     if (onCreatePaymentDocument) {
-      // Use fullBeneficiaryData if available (has decrypted AFM), otherwise use beneficiary
-      const dataSource = fullBeneficiaryData || beneficiary;
+      let dataSource = fullBeneficiaryData || beneficiary;
+      
+      // Ensure we have full data (unmasked AFM) before opening the document dialog
+      if (!fullBeneficiaryData && beneficiary?.id) {
+        try {
+          const fetched = await queryClient.fetchQuery({
+            queryKey: ["/api/beneficiaries", beneficiary.id],
+            queryFn: async () => {
+              const response = await fetch(`/api/beneficiaries/${beneficiary.id}`, {
+                credentials: "include",
+              });
+              if (!response.ok) throw new Error("Failed to fetch beneficiary");
+              return response.json();
+            },
+          });
+          if (fetched) {
+            dataSource = fetched;
+          }
+        } catch (error) {
+          toast({
+            title: "Προειδοποίηση",
+            description: "Δεν ήταν δυνατή η φόρτωση πλήρων στοιχείων δικαιούχου. Χρησιμοποιούνται τα διαθέσιμα δεδομένα.",
+            variant: "destructive",
+          });
+        }
+      }
+      
       onCreatePaymentDocument({
         firstname: dataSource.name || "",
         lastname: dataSource.surname || "",
         fathername: dataSource.fathername || "",
-        afm: dataSource.afm || ""
+        afm: String(dataSource.afm || "").trim(),
+        beneficiaryId: typeof dataSource.id === "number" ? dataSource.id : beneficiary?.id,
+        regiondet: (dataSource as any).regiondet || beneficiary?.regiondet || null,
       });
       // Close the beneficiary modal so user can focus on document creation
       onOpenChange(false);

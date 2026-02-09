@@ -9,6 +9,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/number-input";
 import {
   Select,
   SelectContent,
@@ -19,6 +22,8 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Form,
@@ -28,32 +33,37 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input";
-import { NumberInput } from "@/components/ui/number-input";
-import { parseEuropeanNumber } from "@/lib/number-format";
-import { apiRequest } from "@/lib/queryClient";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  ChevronUp,
   FileText,
   FileX,
+  Users,
+  Building,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  AlertCircle,
   Plus,
+  ClipboardList,
+  Save,
+  Info,
+  MapPin,
+  User,
+  Calendar,
+  Download,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
   RotateCcw,
   Search,
   Settings2,
   Trash2,
-  User,
-  Lightbulb,
-  Star,
+  X,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatePresence, motion } from "framer-motion";
+import { parseEuropeanNumber } from "@/lib/number-format";
+import { apiRequest } from "@/lib/queryClient";
 
 // Development logging helper
 const isDev = import.meta.env.DEV;
@@ -131,6 +141,8 @@ interface InitialBeneficiaryData {
   lastname: string;
   fathername: string;
   afm: string;
+  beneficiaryId?: number;
+  regiondet?: RegiondetSelection | null;
 }
 
 interface CreateDocumentDialogProps {
@@ -138,6 +150,7 @@ interface CreateDocumentDialogProps {
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
   initialBeneficiary?: InitialBeneficiaryData;
+  initialBeneficiaries?: InitialBeneficiaryData[];
 }
 
 type BadgeVariant = "default" | "destructive" | "outline" | "secondary";
@@ -290,6 +303,7 @@ export function CreateDocumentDialog({
   onOpenChange,
   onClose,
   initialBeneficiary,
+  initialBeneficiaries,
 }: CreateDocumentDialogProps) {
   // Get form state from context
   const {
@@ -341,6 +355,7 @@ export function CreateDocumentDialog({
   const projectSelectRef = useRef<ProjectSelectHandle | null>(null);
   const recipientCardRefs = useRef<Array<HTMLDivElement | null>>([]);
   const [activeRecipientIndex, setActiveRecipientIndex] = useState<number | null>(null);
+  const closeReasonRef = useRef<"hard" | "soft" | null>(null);
 
   // Set current step using the context
   // COMPLETE REWRITE: Advanced form step management with guaranteed state preservation
@@ -767,6 +782,43 @@ export function CreateDocumentDialog({
     initialFormState: null,
   });
 
+  const prefillCandidates = useMemo(() => {
+    if (Array.isArray(initialBeneficiaries) && initialBeneficiaries.length > 0) {
+      return initialBeneficiaries;
+    }
+    return initialBeneficiary ? [initialBeneficiary] : [];
+  }, [initialBeneficiaries, initialBeneficiary]);
+
+  const hasInitialPrefill = prefillCandidates.length > 0;
+
+  const prefillRecipients = useMemo(() => {
+    if (!hasInitialPrefill) {
+      return [];
+    }
+    return prefillCandidates.map((beneficiary) => ({
+      id: beneficiary.beneficiaryId,
+      firstname: beneficiary.firstname,
+      lastname: beneficiary.lastname,
+      fathername: beneficiary.fathername || "",
+      afm: beneficiary.afm,
+      amount: 0,
+      secondary_text: "",
+      installment: "ΕΦΑΠΑΞ",
+      installments: ["ΕΦΑΠΑΞ"],
+      installmentAmounts: {},
+      // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+      days: 1,
+      daily_compensation: 0,
+      accommodation_expenses: 0,
+      kilometers_traveled: 0,
+      price_per_km: DEFAULT_PRICE_PER_KM,
+      tickets_tolls_rental: 0,
+      tickets_tolls_rental_entries: [],
+      has_2_percent_deduction: false,
+      regiondet: null,
+    }));
+  }, [hasInitialPrefill, prefillCandidates]);
+
   const handleDialogOpen = useCallback(async () => {
     // Prevent duplicate initializations - use ref only to avoid temporal dead zone issues
     if (dialogInitializationRef.current.isInitializing) {
@@ -776,7 +828,7 @@ export function CreateDocumentDialog({
     // CRITICAL: Block reinitialization if dialog is already open and in use
     // Use formData from context (not form.getValues()) since form may not be initialized yet
     // Only block when we have meaningful form data AND dialog is currently in use
-    if (open && currentStep > 0 && !initialBeneficiary) {
+    if (open && currentStep > 0 && !hasInitialPrefill) {
       return;
     }
 
@@ -788,7 +840,7 @@ export function CreateDocumentDialog({
       (formData?.recipients && formData.recipients.length > 0);
 
     // Force reset when initialBeneficiary is provided, even if there's existing form data
-    const shouldResetForm = !hasExistingFormData || !!initialBeneficiary;
+    const shouldResetForm = !hasExistingFormData || hasInitialPrefill;
 
     if (shouldResetForm) {
       // Don't reset the unit if user has one assigned - preserve auto-selection
@@ -814,28 +866,8 @@ export function CreateDocumentDialog({
         }
       }
 
-      // Create initial recipients array with prefilled beneficiary if provided
-      const initialRecipients = initialBeneficiary ? [{
-        firstname: initialBeneficiary.firstname,
-        lastname: initialBeneficiary.lastname,
-        fathername: initialBeneficiary.fathername || "",
-        afm: initialBeneficiary.afm,
-        amount: 0,
-        secondary_text: "",
-        installment: "ΕΦΑΠΑΞ",
-        installments: ["ΕΦΑΠΑΞ"],
-        installmentAmounts: {},
-        // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
-        days: 1,
-        daily_compensation: 0,
-        accommodation_expenses: 0,
-        kilometers_traveled: 0,
-        price_per_km: DEFAULT_PRICE_PER_KM,
-        tickets_tolls_rental: 0,
-        tickets_tolls_rental_entries: [],
-        has_2_percent_deduction: false,
-        regiondet: null,
-      }] : [];
+      // Create initial recipients array with prefilled beneficiaries if provided
+      const initialRecipients = prefillRecipients;
 
       // Reset form to default values for new document, but preserve unit
       form.reset({
@@ -909,9 +941,11 @@ export function CreateDocumentDialog({
         project_id: formData?.project_id || "",
         region: formData?.region || "",
         expenditure_type: formData?.expenditure_type || "",
-        recipients: Array.isArray(formData?.recipients)
-          ? [...formData.recipients]
-          : [],
+        recipients: hasInitialPrefill
+          ? [...prefillRecipients]
+          : Array.isArray(formData?.recipients)
+            ? [...formData.recipients]
+            : [],
         status: formData?.status || "draft",
         selectedAttachments: Array.isArray(formData?.selectedAttachments)
           ? [...formData.selectedAttachments]
@@ -966,73 +1000,14 @@ export function CreateDocumentDialog({
 
       return () => clearTimeout(resetTimeout);
     }
-  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, initialBeneficiary, units, userUnitIds, updateFormData, setCurrentStep, open]);
+  }, [form, formData, queryClient, refreshUser, savedStep, toast, currentStep, hasInitialPrefill, prefillCandidates, prefillRecipients, units, userUnitIds, updateFormData, setCurrentStep, open]);
 
   // Effect to handle dialog open state - triggers on open or when initialBeneficiary changes
   useEffect(() => {
     if (open && !dialogInitializationRef.current.isInitializing) {
       handleDialogOpen();
     }
-  }, [open, initialBeneficiary]); // Also trigger when initialBeneficiary changes to prefill data
-
-  // SEPARATE EFFECT: Apply initialBeneficiary data directly to recipients without full form reset
-  // This ensures beneficiary prefill works even if dialog was previously used
-  const lastAppliedBeneficiaryRef = useRef<string | null>(null);
-  
-  // Reset the applied beneficiary ref when dialog closes or initialBeneficiary is cleared
-  useEffect(() => {
-    if (!open || !initialBeneficiary) {
-      // Reset when dialog closes or beneficiary is cleared, so it can be applied again next time
-      lastAppliedBeneficiaryRef.current = null;
-      return;
-    }
-    
-    // Create a unique key for this beneficiary to avoid duplicate applications
-    const beneficiaryKey = `${initialBeneficiary.afm}-${initialBeneficiary.firstname}-${initialBeneficiary.lastname}`;
-    
-    // Skip if we already applied this exact beneficiary
-    if (lastAppliedBeneficiaryRef.current === beneficiaryKey) {
-      return;
-    }
-    
-    console.log("[CreateDocument] Applying initialBeneficiary directly:", initialBeneficiary);
-    
-    // Create the recipient object from beneficiary data with all required fields
-    const newRecipient = {
-      firstname: initialBeneficiary.firstname,
-      lastname: initialBeneficiary.lastname,
-      fathername: initialBeneficiary.fathername || "",
-      afm: initialBeneficiary.afm,
-      amount: 0,
-      secondary_text: "",
-      installment: "ΕΦΑΠΑΞ",
-      installments: ["ΕΦΑΠΑΞ"],
-      installmentAmounts: {},
-      // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
-      days: 1,
-      daily_compensation: 0,
-      accommodation_expenses: 0,
-      kilometers_traveled: 0,
-      price_per_km: DEFAULT_PRICE_PER_KM,
-      tickets_tolls_rental: 0,
-      tickets_tolls_rental_entries: [],
-      has_2_percent_deduction: false,
-    };
-    
-    // Apply to form - replace recipients with the prefilled beneficiary
-    form.setValue("recipients", [newRecipient], { shouldValidate: false });
-    
-    // Also update the form context
-    updateFormData({
-      ...formData,
-      recipients: [newRecipient],
-    });
-    
-    // Mark as applied to prevent duplicate applications
-    lastAppliedBeneficiaryRef.current = beneficiaryKey;
-    
-    console.log("[CreateDocument] Beneficiary applied successfully");
-  }, [open, initialBeneficiary, form, formData, updateFormData]);
+  }, [open, initialBeneficiary, initialBeneficiaries]); // Also trigger when prefill data changes
 
   // CRITICAL FIX: Completely redesigned unit default-setting mechanism
   // Uses a separate reference to track unit initialization to prevent duplicate operations
@@ -1122,32 +1097,46 @@ export function CreateDocumentDialog({
     }
   }, [open]);
 
-  // Function to handle dialog closing with multiple fallback mechanisms
-  const closeDialogCompletely = useCallback(() => {
-    // No need to reset form data - we preserve state when closing
+  const resetDialogState = useCallback(() => {
+    form.reset({
+      unit: "",
+      project_id: "",
+      region: "",
+      for_yl_id: null,
+      expenditure_type: "",
+      recipients: [],
+      status: "draft",
+      selectedAttachments: [],
+      esdian_field1: "",
+      esdian_field2: "",
+    });
+    updateFormData({
+      unit: "",
+      project_id: "",
+      region: "",
+      for_yl_id: null,
+      expenditure_type: "",
+      recipients: [],
+      status: "draft",
+      selectedAttachments: [],
+      esdian_field1: "",
+      esdian_field2: "",
+    });
+    setLocalCurrentStep(0);
+    setSavedStep(0);
+  }, [form, updateFormData, setSavedStep]);
 
-    // Direct click approach using ref
+  const handleHardClose = useCallback(() => {
+    closeReasonRef.current = "hard";
+    resetDialogState();
+
     if (dialogCloseRef.current) {
       dialogCloseRef.current.click();
     }
 
-    // Use the provided callback functions
     onClose();
     onOpenChange(false);
-
-    // Fallback with Escape key
-    setTimeout(() => {
-      if (open) {
-        document.dispatchEvent(
-          new KeyboardEvent("keydown", {
-            key: "Escape",
-            code: "Escape",
-            bubbles: true,
-          }),
-        );
-      }
-    }, 100);
-  }, [onOpenChange, onClose, open]);
+  }, [onOpenChange, onClose, resetDialogState]);
 
   const selectedUnit = form.watch("unit");
   const selectedProjectId = form.watch("project_id");
@@ -3124,13 +3113,13 @@ export function CreateDocumentDialog({
         }
 
         // Reset entire form after successful document creation
-        // Convert user's unit ID to unit name for form default
+        // Convert user's unit ID to unit id for form default
         let defaultUnit = "";
         if (userUnitIds.length > 0 && units.length > 0) {
           const userUnitData = units.find(
             (unit: any) => unit.id === userUnitIds[0],
           );
-          defaultUnit = userUnitData?.name || "";
+          defaultUnit = userUnitData?.id || "";
         }
 
         form.reset({
@@ -3620,6 +3609,367 @@ export function CreateDocumentDialog({
     return true;
   };
 
+  const applyPersonSelection = useCallback(async (index: number, personData: any) => {
+    if (!personData) return;
+
+    console.log(
+      "[AFMAutocomplete] Selection made for index:",
+      index,
+      "personData:",
+      personData,
+    );
+
+    // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
+    setIsDialogInitializing(true);
+    dialogInitializationRef.current.isInitializing = true;
+    setIsFormSyncing(true);
+
+    // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (employee) vs beneficiary
+    const isEktosEdras =
+      form.getValues("expenditure_type") === EKTOS_EDRAS_TYPE;
+
+    // Use smart autocomplete data if available from enhanced AFM component
+    const enhancedData = personData as any;
+    let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
+    let installmentAmounts: Record<string, number> = { ΕΦΑΠΑΞ: 0 };
+    let totalAmount = 0;
+
+    console.log(
+      "[AFMAutocomplete] Enhanced person data:",
+      enhancedData,
+      "isEktosEdras:",
+      isEktosEdras,
+    );
+
+    // For ΕΚΤΟΣ ΕΔΡΑΣ (employees), skip installment logic entirely
+    if (!isEktosEdras) {
+      // Check if we have smart autocomplete suggestions
+      if (
+        enhancedData.suggestedInstallments &&
+        enhancedData.suggestedInstallmentAmounts
+      ) {
+        installmentsList = enhancedData.suggestedInstallments;
+        installmentAmounts = enhancedData.suggestedInstallmentAmounts;
+        totalAmount = enhancedData.suggestedAmount || 0;
+      }
+      // Fallback to legacy structure if no smart suggestions
+      else if (
+        enhancedData.oikonomika &&
+        typeof enhancedData.oikonomika === "object"
+      ) {
+        console.log(
+          "[AFMAutocomplete] Fallback to legacy extraction from JSONB oikonomika",
+        );
+
+        // Get the current expenditure type to match against oikonomika keys
+        const currentExpenditureType = form.getValues("expenditure_type");
+
+        // Find matching expenditure type in oikonomika
+        for (const [expType, paymentsList] of Object.entries(
+          enhancedData.oikonomika,
+        )) {
+          if (Array.isArray(paymentsList) && paymentsList.length > 0) {
+            const firstPayment = paymentsList[0];
+
+            if (firstPayment && typeof firstPayment === "object") {
+              // Extract amount (handle Greek number formatting)
+              let amountStr = String(firstPayment.amount || "0");
+
+              // Handle Greek formatting (periods as thousands separators)
+              if (amountStr.includes(".") && amountStr.split(".").length === 3) {
+                const parts = amountStr.split(".");
+                amountStr = parts[0] + parts[1] + "." + parts[2];
+              } else if (amountStr.includes(",")) {
+                amountStr = amountStr.replace(",", ".");
+              }
+
+              const amount = parseEuropeanNumber(amountStr) || 0;
+              const installments = firstPayment.installment || ["ΕΦΑΠΑΞ"];
+
+              if (Array.isArray(installments) && installments.length > 0) {
+                installmentsList = installments;
+                totalAmount = amount;
+
+                // Create installment amounts object
+                installmentAmounts = {};
+                if (installments.length === 1) {
+                  installmentAmounts[installments[0]] = amount;
+                } else {
+                  const amountPerInstallment = amount / installments.length;
+                  installments.forEach((inst) => {
+                    installmentAmounts[inst] = amountPerInstallment;
+                  });
+                }
+
+                console.log(
+                  "[AFMAutocomplete] Legacy extraction:",
+                  installmentsList,
+                  "amounts:",
+                  installmentAmounts,
+                );
+                break;
+              }
+            }
+          }
+        }
+      }
+      // Fallback to old structure for employees
+      else {
+        const installmentValue = enhancedData.installment || "";
+        const amountValue = parseEuropeanNumber(enhancedData.amount || "0") || 0;
+
+        if (installmentValue && amountValue) {
+          installmentsList = [installmentValue];
+          installmentAmounts = { [installmentValue]: amountValue };
+          totalAmount = amountValue;
+        }
+      }
+    } // End of if (!isEktosEdras) - installment logic
+
+    // Update the recipient data directly in the current form state
+    const currentRecipients = form.getValues("recipients") || [];
+    const personId =
+      typeof (personData as any).id === "number"
+        ? (personData as any).id
+        : (personData as any).beneficiaryId;
+
+    const initialRegiondet = normalizeRegiondetEntry(
+      (personData as any).regiondet || currentRecipients[index]?.regiondet || null,
+    );
+
+    currentRecipients[index] = {
+      ...currentRecipients[index],
+      id: personId,
+      firstname: personData.name || personData.firstname || "",
+      lastname: personData.surname || personData.lastname || "",
+      fathername: personData.fathername || "",
+      afm: String(personData.afm || ""),
+      secondary_text:
+        (personData as any).freetext || (personData as any).attribute || "",
+      amount: totalAmount,
+      installments: installmentsList,
+      installmentAmounts: installmentAmounts,
+      regiondet: initialRegiondet,
+      ...(isEktosEdras && {
+        employee_id: personId,
+      }),
+    };
+
+    // Hydrate full beneficiary data (including persisted regiondet/payment_ids)
+    let hydratedRegiondet = initialRegiondet;
+    try {
+      if (personId) {
+        const fullBeneficiary = await apiRequest(
+          `/api/beneficiaries/${personId}`,
+        );
+        if (fullBeneficiary) {
+          const enrichedRegiondet = normalizeRegiondetEntry(
+            (fullBeneficiary as any).regiondet,
+          );
+          hydratedRegiondet = enrichedRegiondet || hydratedRegiondet || null;
+          currentRecipients[index].id =
+            (fullBeneficiary as any).id || currentRecipients[index].id;
+        }
+      }
+
+      // Fallback: search by AFM if no regiondet was found (newly created or cached results)
+      if (
+        !hydratedRegiondet &&
+        personData.afm &&
+        String(personData.afm).length >= 4
+      ) {
+        const searchResults: any[] =
+          (await apiRequest(
+            `/api/beneficiaries/search?afm=${encodeURIComponent(String(personData.afm))}`,
+          )) || [];
+        if (Array.isArray(searchResults)) {
+          const matched = searchResults.find(
+            (entry) =>
+              String(entry.afm).endsWith(String(personData.afm)) ||
+              String(entry.afm) === String(personData.afm),
+          );
+          if (matched) {
+            hydratedRegiondet =
+              normalizeRegiondetEntry(matched.regiondet) ||
+              hydratedRegiondet ||
+              null;
+            currentRecipients[index].id =
+              matched.id || currentRecipients[index].id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[AFMAutocomplete] Error hydrating beneficiary data:",
+        error,
+      );
+    }
+
+    currentRecipients[index].regiondet = hydratedRegiondet;
+
+    if (
+      currentRecipients[index].id &&
+      isRegiondetComplete(
+        currentRecipients[index].regiondet as RegiondetSelection,
+      )
+    ) {
+      scheduleRegiondetSave(
+        Number(currentRecipients[index].id),
+        currentRecipients[index].regiondet as RegiondetSelection,
+      );
+    }
+
+    // Use setValue and trigger validation to ensure form recognizes the changes
+    form.setValue("recipients", currentRecipients, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    // Trigger form validation after autocomplete to ensure save button works
+    setTimeout(async () => {
+      await form.trigger(`recipients.${index}`);
+      await form.trigger("recipients");
+      setIsFormSyncing(false);
+      setIsDialogInitializing(false);
+    }, 200);
+
+    console.log(
+      "[AFMAutocomplete] Successfully updated all fields for recipient",
+      index,
+      "with data:",
+      {
+        amount: totalAmount,
+        installments: installmentsList,
+        installmentAmounts: installmentAmounts,
+      },
+    );
+  }, [form, scheduleRegiondetSave, setIsDialogInitializing, setIsFormSyncing]);
+
+  // SEPARATE EFFECT: Apply initialBeneficiary data directly to recipients without full form reset
+  // This ensures beneficiary prefill works even if dialog was previously used
+  const lastAppliedBeneficiaryRef = useRef<string | null>(null);
+  const isApplyingPrefillRef = useRef(false);
+  
+  // Reset the applied beneficiary ref when dialog closes or initialBeneficiary is cleared
+  useEffect(() => {
+    if (!open || prefillCandidates.length === 0) {
+      // Reset when dialog closes or beneficiary is cleared, so it can be applied again next time
+      lastAppliedBeneficiaryRef.current = null;
+      isApplyingPrefillRef.current = false;
+      return;
+    }
+    
+    if (formReset) {
+      return;
+    }
+
+    // Create a unique key for this beneficiary to avoid duplicate applications
+    const beneficiaryKey = prefillCandidates
+      .map((beneficiary) => `${beneficiary.afm}-${beneficiary.firstname}-${beneficiary.lastname}-${beneficiary.beneficiaryId ?? ""}`)
+      .join("|");
+
+    // Skip if we already applied this exact beneficiary or are mid-apply
+    if (
+      lastAppliedBeneficiaryRef.current === beneficiaryKey ||
+      isApplyingPrefillRef.current
+    ) {
+      return;
+    }
+
+    const applyPrefill = async () => {
+      isApplyingPrefillRef.current = true;
+      lastAppliedBeneficiaryRef.current = beneficiaryKey;
+      try {
+        const buildEmptyRecipient = (beneficiary: InitialBeneficiaryData) => ({
+          id: beneficiary.beneficiaryId,
+          firstname: beneficiary.firstname || "",
+          lastname: beneficiary.lastname || "",
+          fathername: beneficiary.fathername || "",
+          afm: beneficiary.afm || "",
+          amount: 0,
+          secondary_text: "",
+          installment: "ΕΦΑΠΑΞ",
+          installments: ["ΕΦΑΠΑΞ"],
+          installmentAmounts: {},
+          // ΕΚΤΟΣ ΕΔΡΑΣ-specific fields with defaults
+          days: 1,
+          daily_compensation: 0,
+          accommodation_expenses: 0,
+          kilometers_traveled: 0,
+          price_per_km: DEFAULT_PRICE_PER_KM,
+          tickets_tolls_rental: 0,
+          tickets_tolls_rental_entries: [],
+          has_2_percent_deduction: false,
+          regiondet: null,
+        });
+
+        const limitedCandidates = prefillCandidates.slice(0, 10);
+        const nextRecipients = limitedCandidates.map(buildEmptyRecipient);
+
+        form.setValue("recipients", nextRecipients, { shouldValidate: false });
+        updateFormData({
+          recipients: nextRecipients,
+        });
+
+        for (let index = 0; index < limitedCandidates.length; index += 1) {
+          const candidate = limitedCandidates[index];
+          let personData: any = {
+            ...candidate,
+            id: candidate.beneficiaryId ?? (candidate as any).id,
+            regiondet: candidate.regiondet ?? (candidate as any).regiondet ?? null,
+          };
+
+          if (candidate.beneficiaryId) {
+            try {
+              const fullBeneficiary = await apiRequest(
+                `/api/beneficiaries/${candidate.beneficiaryId}`,
+              );
+              if (fullBeneficiary) {
+                personData = {
+                  ...fullBeneficiary,
+                  id:
+                    (fullBeneficiary as any).id ??
+                    candidate.beneficiaryId ??
+                    (candidate as any).id,
+                  regiondet:
+                    (fullBeneficiary as any).regiondet ??
+                    candidate.regiondet ??
+                    (candidate as any).regiondet ??
+                    null,
+                };
+              }
+            } catch (error) {
+            }
+          } else if (candidate.afm) {
+            try {
+              const searchResults: any[] =
+                (await apiRequest(
+                  `/api/beneficiaries/search?afm=${encodeURIComponent(String(candidate.afm))}`,
+                )) || [];
+              if (Array.isArray(searchResults)) {
+                const matched = searchResults.find(
+                  (entry) =>
+                    String(entry.afm).endsWith(String(candidate.afm)) ||
+                    String(entry.afm) === String(candidate.afm),
+                );
+                if (matched) {
+                  personData = matched;
+                }
+              }
+            } catch (error) {
+            }
+          }
+
+          await applyPersonSelection(index, personData);
+        }
+      } finally {
+        isApplyingPrefillRef.current = false;
+      }
+    };
+
+    void applyPrefill();
+  }, [open, prefillCandidates, formReset, form, updateFormData, applyPersonSelection]);
+
   const handleRecipientGeoChange = useCallback((
     index: number,
     nextValue: RegiondetSelection | null,
@@ -3642,9 +3992,12 @@ export function CreateDocumentDialog({
       shouldValidate: false,
     });
 
-    const beneficiaryId =
-      typeof target?.id === "number" ? (target as any).id : undefined;
-    scheduleRegiondetSave(beneficiaryId, nextWithPayments as any);
+    const beneficiaryIdRaw = (target as any)?.id;
+    const beneficiaryId = Number(beneficiaryIdRaw);
+    scheduleRegiondetSave(
+      Number.isFinite(beneficiaryId) ? beneficiaryId : undefined,
+      nextWithPayments as any,
+    );
   }, [form]);
 
   useEffect(() => {
@@ -4138,308 +4491,8 @@ export function CreateDocumentDialog({
                                 // Update the AFM field in the form when user types
                                 form.setValue(`recipients.${index}.afm`, value);
                               }}
-                              onSelectPerson={async (personData) => {
-                                if (personData) {
-                                  console.log(
-                                    "[AFMAutocomplete] Selection made for index:",
-                                    index,
-                                    "personData:",
-                                    personData,
-                                  );
-
-                                  // COMPLETELY BLOCK DIALOG RESETS DURING AUTOCOMPLETE
-                                  setIsDialogInitializing(true);
-                                  dialogInitializationRef.current.isInitializing =
-                                    false;
-                                  setIsFormSyncing(true);
-
-                                  // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (employee) vs beneficiary
-                                  const isEktosEdras =
-                                    form.getValues("expenditure_type") ===
-                                    EKTOS_EDRAS_TYPE;
-
-                                  // Use smart autocomplete data if available from enhanced AFM component
-                                  const enhancedData = personData as any;
-                                  let installmentsList: string[] = ["ΕΦΑΠΑΞ"];
-                                  let installmentAmounts: Record<
-                                    string,
-                                    number
-                                  > = { ΕΦΑΠΑΞ: 0 };
-                                  let totalAmount = 0;
-
-                                  console.log(
-                                    "[AFMAutocomplete] Enhanced person data:",
-                                    enhancedData,
-                                    "isEktosEdras:",
-                                    isEktosEdras,
-                                  );
-
-                                  // For ΕΚΤΟΣ ΕΔΡΑΣ (employees), skip installment logic entirely
-                                  if (!isEktosEdras) {
-                                    // Check if we have smart autocomplete suggestions
-                                    if (
-                                      enhancedData.suggestedInstallments &&
-                                      enhancedData.suggestedInstallmentAmounts
-                                    ) {
-                                      installmentsList =
-                                        enhancedData.suggestedInstallments;
-                                      installmentAmounts =
-                                        enhancedData.suggestedInstallmentAmounts;
-                                      totalAmount =
-                                        enhancedData.suggestedAmount || 0;
-                                    }
-                                    // Fallback to legacy structure if no smart suggestions
-                                    else if (
-                                      enhancedData.oikonomika &&
-                                      typeof enhancedData.oikonomika ===
-                                        "object"
-                                    ) {
-                                      console.log(
-                                        "[AFMAutocomplete] Fallback to legacy extraction from JSONB oikonomika",
-                                      );
-
-                                      // Get the current expenditure type to match against oikonomika keys
-                                      const currentExpenditureType =
-                                        form.getValues("expenditure_type");
-
-                                      // Find matching expenditure type in oikonomika
-                                      for (const [
-                                        expType,
-                                        paymentsList,
-                                      ] of Object.entries(
-                                        enhancedData.oikonomika,
-                                      )) {
-                                        if (
-                                          Array.isArray(paymentsList) &&
-                                          paymentsList.length > 0
-                                        ) {
-                                          const firstPayment = paymentsList[0];
-
-                                          if (
-                                            firstPayment &&
-                                            typeof firstPayment === "object"
-                                          ) {
-                                            // Extract amount (handle Greek number formatting)
-                                            let amountStr = String(
-                                              firstPayment.amount || "0",
-                                            );
-
-                                            // Handle Greek formatting (periods as thousands separators)
-                                            if (
-                                              amountStr.includes(".") &&
-                                              amountStr.split(".").length === 3
-                                            ) {
-                                              const parts =
-                                                amountStr.split(".");
-                                              amountStr =
-                                                parts[0] +
-                                                parts[1] +
-                                                "." +
-                                                parts[2];
-                                            } else if (
-                                              amountStr.includes(",")
-                                            ) {
-                                              amountStr = amountStr.replace(
-                                                ",",
-                                                ".",
-                                              );
-                                            }
-
-                                            const amount =
-                                              parseEuropeanNumber(amountStr) ||
-                                              0;
-                                            const installments =
-                                              firstPayment.installment || [
-                                                "ΕΦΑΠΑΞ",
-                                              ];
-
-                                            if (
-                                              Array.isArray(installments) &&
-                                              installments.length > 0
-                                            ) {
-                                              installmentsList = installments;
-                                              totalAmount = amount;
-
-                                              // Create installment amounts object
-                                              installmentAmounts = {};
-                                              if (installments.length === 1) {
-                                                installmentAmounts[
-                                                  installments[0]
-                                                ] = amount;
-                                              } else {
-                                                const amountPerInstallment =
-                                                  amount / installments.length;
-                                                installments.forEach((inst) => {
-                                                  installmentAmounts[inst] =
-                                                    amountPerInstallment;
-                                                });
-                                              }
-
-                                              console.log(
-                                                "[AFMAutocomplete] Legacy extraction:",
-                                                installmentsList,
-                                                "amounts:",
-                                                installmentAmounts,
-                                              );
-                                              break;
-                                            }
-                                          }
-                                        }
-                                      }
-                                    }
-                                    // Fallback to old structure for employees
-                                    else {
-                                      const installmentValue =
-                                        enhancedData.installment || "";
-                                      const amountValue =
-                                        parseEuropeanNumber(
-                                          enhancedData.amount || "0",
-                                        ) || 0;
-
-                                      if (installmentValue && amountValue) {
-                                        installmentsList = [installmentValue];
-                                        installmentAmounts = {
-                                          [installmentValue]: amountValue,
-                                        };
-                                        totalAmount = amountValue;
-                                      }
-                                    }
-                                  } // End of if (!isEktosEdras) - installment logic
-
-                                  // Update the recipient data directly in the current form state
-                                  const currentRecipients =
-                                    form.getValues("recipients");
-
-                                  const initialRegiondet = normalizeRegiondetEntry(
-                                    (personData as any).regiondet ||
-                                      currentRecipients[index]?.regiondet ||
-                                      null,
-                                  );
-
-                                  currentRecipients[index] = {
-                                    ...currentRecipients[index],
-                                    id: (personData as any).id,
-                                    firstname: personData.name || "",
-                                    lastname: personData.surname || "",
-                                    fathername: personData.fathername || "",
-                                    afm: String(personData.afm || ""),
-                                    secondary_text:
-                                      (personData as any).freetext ||
-                                      (personData as any).attribute ||
-                                      "",
-                                    amount: totalAmount,
-                                    installments: installmentsList,
-                                    installmentAmounts: installmentAmounts,
-                                    regiondet: initialRegiondet,
-                                    ...(isEktosEdras && {
-                                      employee_id: (personData as any).id,
-                                    }),
-                                  };
-
-                                  // Hydrate full beneficiary data (including persisted regiondet/payment_ids)
-                                  let hydratedRegiondet = initialRegiondet;
-                                  try {
-                                    if (personData.id) {
-                                      const fullBeneficiary = await apiRequest(
-                                        `/api/beneficiaries/${personData.id}`,
-                                      );
-                                      if (fullBeneficiary) {
-                                        const enrichedRegiondet =
-                                          normalizeRegiondetEntry(
-                                            (fullBeneficiary as any).regiondet,
-                                          );
-                                        hydratedRegiondet =
-                                          enrichedRegiondet ||
-                                          hydratedRegiondet ||
-                                          null;
-                                        currentRecipients[index].id =
-                                          (fullBeneficiary as any).id ||
-                                          currentRecipients[index].id;
-                                      }
-                                    }
-
-                                    // Fallback: search by AFM if no regiondet was found (newly created or cached results)
-                                    if (
-                                      !hydratedRegiondet &&
-                                      personData.afm &&
-                                      String(personData.afm).length >= 4
-                                    ) {
-                                      const searchResults: any[] =
-                                        (await apiRequest(
-                                          `/api/beneficiaries/search?afm=${encodeURIComponent(String(personData.afm))}`,
-                                        )) || [];
-                                      if (Array.isArray(searchResults)) {
-                                        const matched = searchResults.find(
-                                          (entry) =>
-                                            String(entry.afm).endsWith(
-                                              String(personData.afm),
-                                            ) ||
-                                            String(entry.afm) ===
-                                              String(personData.afm),
-                                        );
-                                          if (matched) {
-                                          hydratedRegiondet =
-                                            normalizeRegiondetEntry(
-                                              matched.regiondet,
-                                            ) ||
-                                            hydratedRegiondet ||
-                                            null;
-                                          currentRecipients[index].id =
-                                            matched.id ||
-                                            currentRecipients[index].id;
-                                        }
-                                      }
-                                    }
-                                  } catch (error) {
-                                    console.error(
-                                      "[AFMAutocomplete] Error hydrating beneficiary data:",
-                                      error,
-                                    );
-                                  }
-
-                                  currentRecipients[index].regiondet =
-                                    hydratedRegiondet;
-
-                                  if (
-                                    currentRecipients[index].id &&
-                                    isRegiondetComplete(
-                                      currentRecipients[index]
-                                        .regiondet as RegiondetSelection,
-                                    )
-                                  ) {
-                                    scheduleRegiondetSave(
-                                      Number(currentRecipients[index].id),
-                                      currentRecipients[index]
-                                        .regiondet as RegiondetSelection,
-                                    );
-                                  }
-
-                                  // Use setValue and trigger validation to ensure form recognizes the changes
-                                  form.setValue(
-                                    "recipients",
-                                    currentRecipients,
-                                    { shouldDirty: true, shouldValidate: true },
-                                  );
-
-                                  // Trigger form validation after autocomplete to ensure save button works
-                                  setTimeout(async () => {
-                                    await form.trigger(`recipients.${index}`);
-                                    await form.trigger("recipients");
-                                    setIsFormSyncing(false);
-                                    setIsDialogInitializing(false);
-                                  }, 200);
-
-                                  console.log(
-                                    "[AFMAutocomplete] Successfully updated all fields for recipient",
-                                    index,
-                                    "with data:",
-                                    {
-                                      amount: totalAmount,
-                                      installments: installmentsList,
-                                      installmentAmounts: installmentAmounts,
-                                    },
-                                  );
-                                }
+                              onSelectPerson={(personData) => {
+                                void applyPersonSelection(index, personData);
                               }}
                               placeholder="ΑΦΜ"
                               className="w-full"
@@ -5569,118 +5622,76 @@ export function CreateDocumentDialog({
 
   // Add an effect for enhanced dialog close handling with form state preservation
   useEffect(() => {
-    // Function to preserve form state before closing
-    const preserveFormStateAndClose = () => {
-      try {
-        // Get current form values
-        const formValues = form.getValues();
-
-        // Save all form state to context before closing
-        updateFormData({
-          unit: formValues.unit,
-          project_id: formValues.project_id,
-          region: formValues.region,
-          expenditure_type: formValues.expenditure_type,
-          recipients: formValues.recipients,
-          status: formValues.status || "draft",
-          selectedAttachments: formValues.selectedAttachments,
-          esdian_field1: formValues.esdian_field1 || "",
-          esdian_field2: formValues.esdian_field2 || "",
-        });
-
-        // Form state preserved on dialog close
-      } catch (error) {
-        console.error(
-          "[CreateDocument] Error preserving form state on close:",
-          error,
-        );
-      }
-    };
-
     // Handler to help force close the dialog when escape is pressed
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) {
-        // Preserve form state before closing
-        preserveFormStateAndClose();
-
-        // Close dialog when Escape key is pressed
-        if (dialogCloseRef.current) {
-          dialogCloseRef.current.click();
-        }
+        closeReasonRef.current = "soft";
         onOpenChange(false);
-        onClose();
       }
     };
 
-    // Get any close buttons after render to allow additional close mechanisms
-    const setupCloseHandlers = () => {
-      const closeButtons = document.querySelectorAll(
-        '[data-dialog-close="true"], .dialog-close',
-      );
-      closeButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-          // Preserve form state before closing
-          preserveFormStateAndClose();
-
-          // Handle dialog close button click
-          onOpenChange(false);
-          onClose();
-        });
-      });
-    };
-
-    // Setup handlers after a short delay to ensure DOM is ready
     if (open) {
-      setTimeout(setupCloseHandlers, 100);
       window.addEventListener("keydown", handleKeyDown);
     }
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, onOpenChange, onClose, form, updateFormData, currentStep]);
+  }, [open, onOpenChange]);
 
   // Create a custom handler for dialog close that preserves form state
   const handleDialogOpenChange = useCallback(
     (newOpen: boolean) => {
       if (!newOpen && open) {
-        // Dialog is being closed, preserve form state first
-        try {
-          const formValues = form.getValues();
+        const closeReason = closeReasonRef.current || "soft";
+        closeReasonRef.current = null;
 
-          // Save all form state to context before closing
-          updateFormData({
-            unit: formValues.unit,
-            project_id: formValues.project_id,
-            region: formValues.region,
-            expenditure_type: formValues.expenditure_type,
-            recipients: formValues.recipients,
-            status: formValues.status || "draft",
-            selectedAttachments: formValues.selectedAttachments,
-            esdian_field1: formValues.esdian_field1 || "",
-            esdian_field2: formValues.esdian_field2 || "",
-          });
+        if (closeReason === "soft") {
+          // Dialog is being closed via overlay/misclick, preserve form state
+          try {
+            const formValues = form.getValues();
 
-          // Form state preserved on dialog close (click outside)
-        } catch (error) {
-          console.error(
-            "[CreateDocument] Error preserving form state on dialog close:",
-            error,
-          );
+            updateFormData({
+              unit: formValues.unit,
+              project_id: formValues.project_id,
+              region: formValues.region,
+              expenditure_type: formValues.expenditure_type,
+              recipients: formValues.recipients,
+              status: formValues.status || "draft",
+              selectedAttachments: formValues.selectedAttachments,
+              esdian_field1: formValues.esdian_field1 || "",
+              esdian_field2: formValues.esdian_field2 || "",
+            });
+          } catch (error) {
+            console.error(
+              "[CreateDocument] Error preserving form state on dialog close:",
+              error,
+            );
+          }
         }
       }
 
       // Call the original handler
       onOpenChange(newOpen);
     },
-    [open, onOpenChange, form, updateFormData, currentStep],
+    [open, onOpenChange, form, updateFormData],
   );
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-w-7xl w-[95vw] h-[90vh] max-h-[95vh] flex flex-col overflow-hidden">
+      <DialogContent
+        className="max-w-7xl w-[95vw] h-[90vh] max-h-[95vh] flex flex-col overflow-hidden"
+        hideClose
+        onInteractOutside={() => {
+          if (open) {
+            closeReasonRef.current = "soft";
+          }
+        }}
+      >
         <DialogHeader className="flex-shrink-0 pb-3 border-b">
-          <DialogTitle className="text-xl font-semibold">Δημιουργία Εγγράφου</DialogTitle>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle className="text-xl font-semibold">Δημιουργία Εγγράφου</DialogTitle>
           {selectedProject && (
             <DialogDescription className="text-sm font-medium text-foreground mt-1">
               Έργο: {selectedProject.mis} — {selectedProject.name}
@@ -5691,6 +5702,18 @@ export function CreateDocumentDialog({
               Συμπληρώστε τα στοιχεία για τη δημιουργία νέου διαβιβαστικού πληρωμών
             </DialogDescription>
           )}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleHardClose}
+              className="shrink-0"
+              aria-label="Κλείσιμο"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </DialogHeader>
         <StepIndicator currentStep={currentStep} />
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-1">
