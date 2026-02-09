@@ -7,7 +7,7 @@ import MemoryStore from 'memorystore';
 import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
 import { mergeRegiondetWithPayments } from './utils/regiondet-merge';
 
-type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute'>;
+type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute' | 'monada'>;
 
 const ENGINEERS_CACHE_TTL = 5 * 60 * 1000;
 
@@ -1410,7 +1410,7 @@ export class DatabaseStorage implements IStorage {
 
       const { data, error } = await supabase
         .from('Employees')
-        .select('id, name, surname, attribute')
+        .select('id, name, surname, attribute, monada')
         .eq('attribute', 'Μηχανικός')
         .order('surname', { ascending: true })
         .order('name', { ascending: true });

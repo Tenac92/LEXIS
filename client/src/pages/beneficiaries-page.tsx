@@ -23,6 +23,8 @@ import {
   Shield,
   Copy,
   Filter,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Header } from "@/components/header";
 import { BeneficiaryDetailsModal } from "@/components/beneficiaries/BeneficiaryDetailsModal";
@@ -38,7 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { FAB } from "@/components/ui/fab";
 import { useAuth } from "@/hooks/use-auth";
 import { Textarea } from "@/components/ui/textarea";
-import { parseEuropeanNumber } from "@/lib/number-format";
+import { formatNumberWhileTyping, parseEuropeanNumber } from "@/lib/number-format";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 import {
   Dialog,
@@ -54,6 +56,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -184,6 +198,8 @@ export default function BeneficiariesPage() {
   const [itemsPerPage] = useState(24); // Reduced from 60 to 24 for better performance
   const [existingPaymentsModalOpen, setExistingPaymentsModalOpen] =
     useState(false);
+  const [engineerSearchTerm, setEngineerSearchTerm] = useState("");
+  const [engineerDropdownOpen, setEngineerDropdownOpen] = useState(false);
   // State for create document dialog with prefilled beneficiary
   const [createDocumentOpen, setCreateDocumentOpen] = useState(false);
   const [initialBeneficiariesForDocument, setInitialBeneficiariesForDocument] = useState<{
@@ -199,7 +215,6 @@ export default function BeneficiariesPage() {
   // Advanced filters state
   const [advancedFilters, setAdvancedFilters] = useState({
     unit: "",
-    project: "",
     expenditureType: "",
     amountFrom: "",
     amountTo: "",
@@ -272,11 +287,11 @@ export default function BeneficiariesPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch projects data for filters
-  const { data: allProjects = [] } = useQuery({
-    queryKey: ["/api/projects"],
-    staleTime: 10 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
+  // Fetch expenditure types data for filters
+  const { data: expenditureTypes = [] } = useQuery({
+    queryKey: ["/api/expenditure-types"],
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
@@ -484,14 +499,60 @@ export default function BeneficiariesPage() {
     staleTime: 30 * 1000, // Cache for 30 seconds
   });
 
+  const hasUnitFilter = Boolean(
+    advancedFilters.unit && advancedFilters.unit !== "all",
+  );
+  const hasEngineerFilter = Boolean(
+    advancedFilters.ceng1 && advancedFilters.ceng1 !== "all",
+  );
+
+  const selectedUnitCode = useMemo(() => {
+    if (!hasUnitFilter || !Array.isArray(allUnits)) return "";
+    const selected = (allUnits as any[]).find(
+      (unit: any) => unit.id?.toString() === advancedFilters.unit,
+    );
+    return selected?.unit?.toString() ?? "";
+  }, [allUnits, advancedFilters.unit, hasUnitFilter]);
+
+  const engineerOptions = useMemo(() => {
+    const engineers = Array.isArray(engineersResponse?.data)
+      ? engineersResponse.data
+      : [];
+    let filtered = engineers;
+
+    if (selectedUnitCode) {
+      filtered = filtered.filter(
+        (engineer: any) => engineer.monada?.toString() === selectedUnitCode,
+      );
+    }
+
+    const searchLower = engineerSearchTerm.trim().toLowerCase();
+    if (searchLower) {
+      filtered = filtered.filter((engineer: any) => {
+        const fullName = `${engineer.surname ?? ""} ${engineer.name ?? ""}`
+          .trim()
+          .toLowerCase();
+        return fullName.includes(searchLower);
+      });
+    }
+
+    return filtered;
+  }, [engineersResponse, engineerSearchTerm, selectedUnitCode]);
+
+  const selectedEngineerLabel = useMemo(() => {
+    if (!hasEngineerFilter) return "Επιλέξτε μηχανικό";
+    const engineer = engineerMap.get(Number(advancedFilters.ceng1));
+    if (!engineer) return `ID: ${advancedFilters.ceng1}`;
+    return `${engineer.surname ?? ""} ${engineer.name ?? ""}`.trim();
+  }, [advancedFilters.ceng1, engineerMap, hasEngineerFilter]);
+
   // Check if advanced filters that need payment data are active
   const hasPaymentFilters = Boolean(
     advancedFilters.hasPayments !== "all" ||
     advancedFilters.amountFrom ||
     advancedFilters.amountTo ||
-    advancedFilters.project ||
     advancedFilters.expenditureType ||
-    advancedFilters.unit ||
+    hasUnitFilter ||
     advancedFilters.dateFrom ||
     advancedFilters.dateTo
   );
@@ -550,13 +611,17 @@ export default function BeneficiariesPage() {
     }
 
     // Otherwise, do client-side filtering (for non-AFM searches)
-    let baseList = !debouncedSearchTerm.trim()
+    const normalizedSearchTerm = debouncedSearchTerm.trim();
+    const searchLower = normalizedSearchTerm.toLowerCase();
+    const afmSearch = normalizedSearchTerm.replace(/\s+/g, "");
+
+    let baseList = !normalizedSearchTerm
       ? beneficiaries
       : beneficiaries.filter((beneficiary) => {
-          const searchLower = debouncedSearchTerm.toLowerCase();
           return (
             beneficiary.surname?.toLowerCase().includes(searchLower) ||
-            beneficiary.name?.toLowerCase().includes(searchLower)
+            beneficiary.name?.toLowerCase().includes(searchLower) ||
+            (afmSearch && beneficiary.afm?.includes(afmSearch))
           );
         });
 
@@ -567,7 +632,7 @@ export default function BeneficiariesPage() {
       );
     }
 
-    if (advancedFilters.ceng1) {
+    if (hasEngineerFilter) {
       baseList = baseList.filter((b) => 
         b.ceng1?.toString() === advancedFilters.ceng1
       );
@@ -612,22 +677,19 @@ export default function BeneficiariesPage() {
     }
 
     // Filter by project and expenditure type (requires payment data)
-    if (advancedFilters.project || advancedFilters.expenditureType || advancedFilters.unit) {
+    if (advancedFilters.expenditureType || hasUnitFilter) {
       baseList = baseList.filter((b) => {
         const payments = beneficiaryPaymentData.get(b.id)?.payments || [];
-        if (payments.length === 0 && (advancedFilters.project || advancedFilters.expenditureType || advancedFilters.unit)) {
+        if (payments.length === 0 && (advancedFilters.expenditureType || hasUnitFilter)) {
           return false;
         }
         
         return payments.some((payment: any) => {
           let matches = true;
-          if (advancedFilters.project && payment.na853 !== advancedFilters.project) {
-            matches = false;
-          }
           if (advancedFilters.expenditureType && payment.expenditure_type !== advancedFilters.expenditureType) {
             matches = false;
           }
-          if (advancedFilters.unit && payment.unit?.toString() !== advancedFilters.unit) {
+          if (hasUnitFilter && payment.unit_id?.toString() !== advancedFilters.unit) {
             matches = false;
           }
           return matches;
@@ -857,8 +919,8 @@ export default function BeneficiariesPage() {
             {/* Search and Filters */}
             <div className="mb-6 space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
-                <Input
-                  placeholder="Αναζήτηση δικαιούχων (όνομα, επώνυμο, ΑΦΜ)..."
+                  <Input
+                  placeholder="Αναζήτηση δικαιούχων (όνομα, επώνυμο, ΑΦΜ μερικό ή 9 ψηφία)..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="flex-1 max-w-md"
@@ -875,8 +937,7 @@ export default function BeneficiariesPage() {
                         <Filter className="h-4 w-4" />
                         Προχωρημένα Φίλτρα
                       </span>
-                      {(advancedFilters.unit ||
-                        advancedFilters.project ||
+                      {(hasUnitFilter ||
                         advancedFilters.expenditureType ||
                         advancedFilters.amountFrom ||
                         advancedFilters.amountTo ||
@@ -884,7 +945,7 @@ export default function BeneficiariesPage() {
                         advancedFilters.dateTo ||
                         advancedFilters.region ||
                         advancedFilters.adeia ||
-                        advancedFilters.ceng1 ||
+                        hasEngineerFilter ||
                         advancedFilters.hasPayments !== "all") && (
                         <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
                           Ενεργά
@@ -909,7 +970,7 @@ export default function BeneficiariesPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Επιλέξτε μονάδα" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="max-h-64 overflow-y-auto">
                             <SelectItem value="all">Όλες οι μονάδες</SelectItem>
                             {Array.isArray(allUnits) &&
                               allUnits.map((unit: any) => (
@@ -917,38 +978,11 @@ export default function BeneficiariesPage() {
                                   key={unit.id}
                                   value={unit.id.toString()}
                                 >
-                                  {unit.unit} - {unit.name}
+                                  {unit.name && unit.name !== unit.unit
+                                    ? `${unit.unit} - ${unit.name}`
+                                    : unit.unit}
                                 </SelectItem>
                               ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Project Filter */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Έργο (NA853)</label>
-                        <Select
-                          value={advancedFilters.project}
-                          onValueChange={(value) =>
-                            setAdvancedFilters((prev) => ({ ...prev, project: value }))
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Επιλέξτε έργο" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Όλα τα έργα</SelectItem>
-                            {Array.isArray(allProjects) &&
-                              allProjects
-                                .filter((p: any) => p.na853)
-                                .map((project: any) => (
-                                  <SelectItem
-                                    key={project.id}
-                                    value={project.na853}
-                                  >
-                                    {project.na853} - {project.project_name}
-                                  </SelectItem>
-                                ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -956,16 +990,31 @@ export default function BeneficiariesPage() {
                       {/* Expenditure Type Filter */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Τύπος Δαπάνης</label>
-                        <Input
-                          placeholder="Αναζήτηση τύπου δαπάνης"
-                          value={advancedFilters.expenditureType}
-                          onChange={(e) =>
+                        <Select
+                          value={advancedFilters.expenditureType || "all"}
+                          onValueChange={(value) =>
                             setAdvancedFilters((prev) => ({
                               ...prev,
-                              expenditureType: e.target.value,
+                              expenditureType: value === "all" ? "" : value,
                             }))
                           }
-                        />
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Επιλέξτε τύπο" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64 overflow-y-auto">
+                            <SelectItem value="all">Όλοι οι τύποι</SelectItem>
+                            {Array.isArray(expenditureTypes) &&
+                              expenditureTypes.map((type: any) => (
+                                <SelectItem
+                                  key={type.id ?? type.expenditure_types}
+                                  value={type.expenditure_types}
+                                >
+                                  {type.expenditure_types}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       {/* Amount Range */}
@@ -983,7 +1032,7 @@ export default function BeneficiariesPage() {
                               onChange={(e) =>
                                 setAdvancedFilters((prev) => ({
                                   ...prev,
-                                  amountFrom: e.target.value,
+                                  amountFrom: formatNumberWhileTyping(e.target.value, 2),
                                 }))
                               }
                             />
@@ -999,7 +1048,7 @@ export default function BeneficiariesPage() {
                               onChange={(e) =>
                                 setAdvancedFilters((prev) => ({
                                   ...prev,
-                                  amountTo: e.target.value,
+                                  amountTo: formatNumberWhileTyping(e.target.value, 2),
                                 }))
                               }
                             />
@@ -1079,32 +1128,95 @@ export default function BeneficiariesPage() {
                       {/* Engineer Filter */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium">Μηχανικός</label>
-                        <Select
-                          value={advancedFilters.ceng1}
-                          onValueChange={(value) =>
-                            setAdvancedFilters((prev) => ({ ...prev, ceng1: value }))
-                          }
-                          disabled={engineersLoading || engineersError ? true : false}
+                        <Popover
+                          open={engineerDropdownOpen}
+                          onOpenChange={(open) => {
+                            setEngineerDropdownOpen(open);
+                            if (!open) {
+                              setEngineerSearchTerm("");
+                            }
+                          }}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder={engineersLoading ? "Φόρτωση..." : engineersError ? "Σφάλμα φόρτωσης" : "Επιλέξτε μηχανικό"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Όλοι</SelectItem>
-                            {engineersError && (
-                              <div className="px-2 py-1.5 text-xs text-red-600">Σφάλμα: δεν ήταν δυνατή η φόρτωση</div>
-                            )}
-                            {Array.isArray(engineersResponse?.data) &&
-                              engineersResponse.data.map((engineer: any) => (
-                                <SelectItem
-                                  key={engineer.id}
-                                  value={engineer.id.toString()}
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={engineerDropdownOpen}
+                              className="w-full justify-between"
+                              disabled={engineersLoading || engineersError ? true : false}
+                            >
+                              <span className="truncate">
+                                {engineersLoading
+                                  ? "Φόρτωση..."
+                                  : engineersError
+                                    ? "Σφάλμα φόρτωσης"
+                                    : selectedEngineerLabel}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-full p-0" align="start">
+                            <Command shouldFilter={false}>
+                              <CommandInput
+                                placeholder="Αναζήτηση μηχανικού..."
+                                value={engineerSearchTerm}
+                                onValueChange={setEngineerSearchTerm}
+                              />
+                              <CommandList>
+                                <CommandEmpty>
+                                  {engineersLoading
+                                    ? "Φόρτωση..."
+                                    : engineersError
+                                      ? "Σφάλμα φόρτωσης"
+                                      : "Δεν βρέθηκαν μηχανικοί"}
+                                </CommandEmpty>
+                                <CommandItem
+                                  value="all"
+                                  onSelect={() =>
+                                    setAdvancedFilters((prev) => ({
+                                      ...prev,
+                                      ceng1: "all",
+                                    }))
+                                  }
                                 >
-                                  {engineer.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                                  <Check
+                                    className={
+                                      advancedFilters.ceng1 === "all"
+                                        ? "mr-2 h-4 w-4 opacity-100"
+                                        : "mr-2 h-4 w-4 opacity-0"
+                                    }
+                                  />
+                                  Όλοι
+                                </CommandItem>
+                                {engineerOptions.map((engineer: any) => {
+                                  const label = `${engineer.surname ?? ""} ${engineer.name ?? ""}`.trim();
+                                  return (
+                                    <CommandItem
+                                      key={engineer.id}
+                                      value={label}
+                                      onSelect={() =>
+                                        setAdvancedFilters((prev) => ({
+                                          ...prev,
+                                          ceng1: engineer.id.toString(),
+                                        }))
+                                      }
+                                    >
+                                      <Check
+                                        className={
+                                          advancedFilters.ceng1 ===
+                                          engineer.id.toString()
+                                            ? "mr-2 h-4 w-4 opacity-100"
+                                            : "mr-2 h-4 w-4 opacity-0"
+                                        }
+                                      />
+                                      {label}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
 
                       {/* Has Payments Filter */}
@@ -1139,7 +1251,6 @@ export default function BeneficiariesPage() {
                         onClick={() => {
                           setAdvancedFilters({
                             unit: "",
-                            project: "",
                             expenditureType: "",
                             amountFrom: "",
                             amountTo: "",
@@ -1161,8 +1272,7 @@ export default function BeneficiariesPage() {
               </div>
 
               {/* Active Filters Display */}
-              {(advancedFilters.unit ||
-                advancedFilters.project ||
+              {(hasUnitFilter ||
                 advancedFilters.expenditureType ||
                 advancedFilters.amountFrom ||
                 advancedFilters.amountTo ||
@@ -1170,7 +1280,7 @@ export default function BeneficiariesPage() {
                 advancedFilters.dateTo ||
                 advancedFilters.region ||
                 advancedFilters.adeia ||
-                advancedFilters.ceng1 ||
+                hasEngineerFilter ||
                 advancedFilters.hasPayments !== "all") && (
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-sm text-muted-foreground">Ενεργά φίλτρα:</span>
@@ -1181,17 +1291,6 @@ export default function BeneficiariesPage() {
                         className="w-3 h-3 cursor-pointer"
                         onClick={() =>
                           setAdvancedFilters((prev) => ({ ...prev, unit: "" }))
-                        }
-                      />
-                    </Badge>
-                  )}
-                  {advancedFilters.project && advancedFilters.project !== "all" && (
-                    <Badge variant="secondary" className="gap-1">
-                      Έργο: {advancedFilters.project}
-                      <X
-                        className="w-3 h-3 cursor-pointer"
-                        onClick={() =>
-                          setAdvancedFilters((prev) => ({ ...prev, project: "" }))
                         }
                       />
                     </Badge>
@@ -1214,6 +1313,19 @@ export default function BeneficiariesPage() {
                         className="w-3 h-3 cursor-pointer"
                         onClick={() =>
                           setAdvancedFilters((prev) => ({ ...prev, hasPayments: "all" }))
+                        }
+                      />
+                    </Badge>
+                  )}
+                  {hasEngineerFilter && (
+                    <Badge variant="secondary" className="gap-1">
+                      Μηχανικός: {engineerMap.has(Number(advancedFilters.ceng1))
+                        ? `${engineerMap.get(Number(advancedFilters.ceng1))?.surname ?? ""} ${engineerMap.get(Number(advancedFilters.ceng1))?.name ?? ""}`.trim()
+                        : `ID: ${advancedFilters.ceng1}`}
+                      <X
+                        className="w-3 h-3 cursor-pointer"
+                        onClick={() =>
+                          setAdvancedFilters((prev) => ({ ...prev, ceng1: "" }))
                         }
                       />
                     </Badge>
