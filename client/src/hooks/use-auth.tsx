@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { API_QUERY_KEYS } from "@/lib/query-keys";
 import { useLocation } from "wouter";
 import { TokenManager } from "@/lib/token-manager";
 
@@ -95,55 +96,13 @@ function useLoginMutation() {
       };
 
       // Update the cache with the processed user
-      queryClient.setQueryData(["/api/auth/me"], processedUser);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-
-      // PREFETCH: hydrate critical queries so the documents page renders instantly post-login
-      const defaultDocumentFilters = {
-        unit: processedUser.unit_id[0]?.toString() || "",
-        status: "all",
-        user: "current",
-        dateFrom: "",
-        dateTo: "",
-        amountFrom: "",
-        amountTo: "",
-        recipient: "",
-        afm: "",
-        expenditureType: "",
-        na853: "",
-        protocolNumber: "",
-      };
-
-      const docParams = new URLSearchParams();
-      if (defaultDocumentFilters.unit) {
-        docParams.append("unit", defaultDocumentFilters.unit);
-      }
-      if (processedUser.id) {
-        docParams.append("generated_by", processedUser.id.toString());
-      }
-      docParams.append("limit", "30");
-      docParams.append("offset", "0");
-
-      void queryClient.prefetchQuery({
-        queryKey: ["/api/documents", defaultDocumentFilters, 0, 30],
-        staleTime: 5 * 60 * 1000,
-        gcTime: 15 * 60 * 1000,
-        queryFn: async () => {
-          const response = await fetch(
-            `/api/documents${docParams.toString() ? `?${docParams.toString()}` : ""}`,
-            { credentials: "include" },
-          );
-          if (!response.ok) {
-            throw new Error("Failed to prefetch documents");
-          }
-          return response.json();
-        },
-      });
+      queryClient.setQueryData(API_QUERY_KEYS.authMe, processedUser);
+      queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.authMe });
 
       // Synchronously fetch units so dashboard query hits cache immediately (avoid duplicate request)
       try {
         await queryClient.fetchQuery({
-          queryKey: ["/api/public/units"],
+          queryKey: API_QUERY_KEYS.publicUnits,
           staleTime: 30 * 60 * 1000, // Align with all other units queries (was 10 min in dashboard, 30 min in prefetch)
           gcTime: 60 * 60 * 1000,
           queryFn: async () => {
@@ -158,18 +117,6 @@ function useLoginMutation() {
       } catch (err) {
         console.log("[Auth] Units prefetch failed (non-critical):", err);
       }
-
-      // BACKGROUND PREFETCH: Start prefetching beneficiary/employee AFM data in the background
-      // This runs silently while user navigates, making autocomplete instant later
-      fetch("/api/beneficiaries/prefetch", { credentials: "include" })
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("[Auth] Background AFM prefetch initiated:", data);
-        })
-        .catch((err) => {
-          // Silent failure - prefetch is optional optimization
-          console.log("[Auth] Background prefetch failed (non-critical):", err);
-        });
 
       toast({
         title: "Login successful",
@@ -207,7 +154,7 @@ function useLogoutMutation() {
       }
     },
     onSuccess: () => {
-      const currentUser = queryClient.getQueryData<User>(["/api/auth/me"]);
+      const currentUser = queryClient.getQueryData<User>(API_QUERY_KEYS.authMe);
 
       // Clear any stored auth tokens or per-user session markers
       TokenManager.getInstance().clearToken();
@@ -217,7 +164,7 @@ function useLogoutMutation() {
       sessionStorage.removeItem("clientSessionId");
 
       // Clear user cache early so UI reflects logout immediately
-      queryClient.setQueryData(["/api/auth/me"], null);
+      queryClient.setQueryData(API_QUERY_KEYS.authMe, null);
 
       // Clear ALL cached queries to prevent stale data from previous user
       // This is critical for security and proper user experience when switching accounts
@@ -253,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     refetch,
   } = useQuery<User | null>({
-    queryKey: ["/api/auth/me"],
+    queryKey: API_QUERY_KEYS.authMe,
     queryFn: async () => {
       try {
         const response = await fetch("/api/auth/me", {

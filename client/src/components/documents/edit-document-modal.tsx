@@ -37,6 +37,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
+import { API_QUERY_KEYS } from "@/lib/query-keys";
 import {
   Loader2,
   Save,
@@ -494,7 +495,7 @@ export function EditDocumentModal({
 
   // Geographic data query using the new normalized structure
   const { data: geographicData } = useQuery({
-    queryKey: ["geographic-data"],
+    queryKey: API_QUERY_KEYS.geographicData,
     queryFn: async () => {
       const response = await apiRequest("/api/geographic-data");
       console.log("[EditDocument] Geographic data loaded:", response);

@@ -24,6 +24,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { API_QUERY_KEYS } from "@/lib/query-keys";
 import { z } from "zod";
 import {
   Form,
@@ -562,7 +563,7 @@ export function CreateDocumentDialog({
     isLoading: unitsLoading,
     refetch: refetchUnits,
   } = useQuery({
-    queryKey: ["public-units"],
+    queryKey: API_QUERY_KEYS.publicUnits,
     queryFn: async () => {
       try {
         // Fetch units using public endpoint
@@ -930,7 +931,7 @@ export function CreateDocumentDialog({
       // Refresh units via query invalidation - more reliable and avoids reference issues
       try {
         // Force refresh units data through query invalidation
-        queryClient.invalidateQueries({ queryKey: ["public-units"] });
+        queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.publicUnits });
         // Units query invalidated to refresh data
       } catch (err) {}
 
@@ -983,7 +984,7 @@ export function CreateDocumentDialog({
       }
 
       // STAGE 5: Force data refresh in the background
-      queryClient.invalidateQueries({ queryKey: ["public-units"] });
+      queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.publicUnits });
 
       // Only log if we actually had data to restore
       if (formData?.unit || formData?.project_id) {
@@ -3356,7 +3357,7 @@ export function CreateDocumentDialog({
 
   // Geographic data query using the new normalized structure
   const { data: geographicData, isLoading: geographicDataLoading } = useQuery({
-    queryKey: ["geographic-data"],
+    queryKey: API_QUERY_KEYS.geographicData,
     queryFn: async () => {
       const response = await apiRequest("/api/geographic-data");
       console.log("[CreateDocument] Geographic data loaded:", response);

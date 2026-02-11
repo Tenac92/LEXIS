@@ -539,14 +539,13 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
     setLoadingState(userUnits, true);
     console.log(`[Prefetch] Starting background prefetch for units: ${userUnits.join(', ')}`);
 
-    // Get unit codes for the user's units
-    const unitCodes: string[] = [];
-    for (const unitId of userUnits) {
-      const unitCode = await getUnitCodeById(unitId);
-      if (unitCode) {
-        unitCodes.push(unitCode);
-      }
-    }
+    // Get unit codes for the user's units in parallel
+    const resolvedUnitCodes = await Promise.all(
+      userUnits.map((unitId) => getUnitCodeById(unitId)),
+    );
+    const unitCodes = resolvedUnitCodes.filter(
+      (unitCode): unitCode is string => Boolean(unitCode),
+    );
 
     if (unitCodes.length === 0) {
       setLoadingState(userUnits, false);
@@ -568,6 +567,39 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
         const beneficiaryCache: any[] = [];
         const employeeCache: any[] = [];
         const beneficiariesListCache: any[] = []; // For beneficiaries page list
+
+        // Fetch once: ALL beneficiary IDs that have ANY payment (to exclude from "new" beneficiaries)
+        const { data: allPaymentsBeneficiaryIds, error: allPaymentsError } = await supabase
+          .from('beneficiary_payments')
+          .select('beneficiary_id');
+
+        if (allPaymentsError) {
+          console.error('[Prefetch] Error fetching all beneficiary IDs from payments:', allPaymentsError);
+        }
+
+        const allBeneficiaryIdsWithPayments = new Set(
+          (allPaymentsBeneficiaryIds || [])
+            .map((p: { beneficiary_id: number | null }) => p.beneficiary_id)
+            .filter((id): id is number => typeof id === 'number'),
+        );
+        console.log(`[Prefetch] Total beneficiaries with any payments: ${allBeneficiaryIdsWithPayments.size}`);
+
+        // Fetch once: beneficiaries that have NO payments yet (new beneficiaries visible to all units)
+        const { data: allBeneficiaryIds, error: allBeneficiariesError } = await supabase
+          .from('beneficiaries')
+          .select('id');
+
+        if (allBeneficiariesError) {
+          console.error('[Prefetch] Error fetching all beneficiary IDs:', allBeneficiariesError);
+        }
+
+        const beneficiaryIdsWithoutPayments = (allBeneficiaryIds || [])
+          .map((b: { id: number | null }) => b.id)
+          .filter((id): id is number => typeof id === 'number')
+          .filter((id) => !allBeneficiaryIdsWithPayments.has(id));
+        console.log(
+          `[Prefetch] Found ${beneficiaryIdsWithoutPayments.length} beneficiaries without any payments (new/unassigned)`,
+        );
 
         // Fetch beneficiaries using the same logic as getBeneficiariesByUnitOptimized:
         // 1. Beneficiaries with payments for THIS unit
@@ -602,34 +634,7 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
           const beneficiaryIdsWithPayments = new Set(paymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
           console.log(`[Prefetch] Found ${beneficiaryIdsWithPayments.size} beneficiaries with payments for unit ${unitCode}`);
           
-          // STEP 2: Get ALL beneficiary IDs that have ANY payment (to exclude from "new" beneficiaries)
-          const { data: allPaymentsBeneficiaryIds, error: allPaymentsError } = await supabase
-            .from('beneficiary_payments')
-            .select('beneficiary_id');
-            
-          if (allPaymentsError) {
-            console.error('[Prefetch] Error fetching all beneficiary IDs from payments:', allPaymentsError);
-          }
-          
-          const allBeneficiaryIdsWithPayments = new Set(allPaymentsBeneficiaryIds?.map(p => p.beneficiary_id) || []);
-          console.log(`[Prefetch] Total beneficiaries with any payments: ${allBeneficiaryIdsWithPayments.size}`);
-          
-          // STEP 3: Get beneficiaries that have NO payments yet (new beneficiaries visible to all units)
-          const { data: allBeneficiaryIds, error: allBeneficiariesError } = await supabase
-            .from('beneficiaries')
-            .select('id');
-            
-          if (allBeneficiariesError) {
-            console.error('[Prefetch] Error fetching all beneficiary IDs:', allBeneficiariesError);
-          }
-          
-          // Find beneficiaries with NO payments (new/unassigned)
-          const beneficiaryIdsWithoutPayments = (allBeneficiaryIds || [])
-            .filter(b => !allBeneficiaryIdsWithPayments.has(b.id))
-            .map(b => b.id);
-          console.log(`[Prefetch] Found ${beneficiaryIdsWithoutPayments.length} beneficiaries without any payments (new/unassigned)`);
-          
-          // STEP 4: Combine: beneficiaries with payments for this unit + new beneficiaries without any payments
+          // STEP 2: Combine beneficiaries with payments for this unit + new beneficiaries without any payments
           const uniqueBeneficiaryIds = Array.from(new Set([
             ...Array.from(beneficiaryIdsWithPayments),
             ...beneficiaryIdsWithoutPayments

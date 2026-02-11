@@ -8,11 +8,15 @@
  * Two arrays with same elements in same order will produce same hash
  * Used as part of query keys to invalidate cache when units change
  */
-export function hashArray(arr: number[] | undefined): string {
+export function hashArray(arr: readonly number[] | undefined): string {
   if (!arr || arr.length === 0) return "none";
   // Sort to ensure consistent hashing regardless of order
-  return arr.sort((a, b) => a - b).join(",");
+  return [...arr].sort((a, b) => a - b).join(",");
 }
+
+export type DashboardQueryKey =
+  | readonly ["/api/dashboard/stats", "no-user"]
+  | readonly ["/api/dashboard/stats", number, string];
 
 /**
  * Create a dashboard stats query key that includes user context
@@ -22,7 +26,10 @@ export function hashArray(arr: number[] | undefined): string {
  * @param unitIds - The user's assigned unit IDs
  * @returns Query key array suitable for React Query
  */
-export function createDashboardQueryKey(userId: number | undefined, unitIds: number[] | undefined): any[] {
+export function createDashboardQueryKey(
+  userId: number | undefined,
+  unitIds: readonly number[] | undefined,
+): DashboardQueryKey {
   if (!userId) {
     return ["/api/dashboard/stats", "no-user"];
   }

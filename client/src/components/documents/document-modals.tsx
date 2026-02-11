@@ -926,7 +926,12 @@ export function ExportDocumentModal({ isOpen, onClose, document }: ExportModalPr
       setLoading(true);
       console.log('Έναρξη διαδικασίας εξαγωγής εγγράφων...');
 
-      const testResponse = await fetch(`/api/documents/generated/${document.id}/test`);
+      const testResponse = await fetch(`/api/documents/generated/${document.id}/test`, {
+        credentials: "include",
+      });
+      if (!testResponse.ok) {
+        throw new Error(`Validation failed with status: ${testResponse.status}`);
+      }
       const testResult = await testResponse.json();
 
       if (!testResult.success) {

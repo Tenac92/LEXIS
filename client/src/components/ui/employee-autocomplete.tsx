@@ -45,9 +45,13 @@ export function EmployeeAutocomplete({
   // Fetch employees based on AFM search
   const { data: employees = [], isLoading } = useQuery({
     queryKey: ['/api/employees/search', searchTerm],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!searchTerm || searchTerm.length < 1) return [];
-      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(searchTerm)}`);
+      const response = await fetch(
+        `/api/employees/search?afm=${encodeURIComponent(searchTerm)}`,
+        { signal, credentials: "include" },
+      );
+      if (!response.ok) return [];
       const data = await response.json();
       return data.success ? data.data : [];
     },
@@ -177,7 +181,11 @@ export function useEmployeeSearch() {
     if (!afm || afm.length < 9) return null;
     
     try {
-      const response = await fetch(`/api/employees/search?afm=${encodeURIComponent(afm)}`);
+      const response = await fetch(
+        `/api/employees/search?afm=${encodeURIComponent(afm)}`,
+        { credentials: "include" },
+      );
+      if (!response.ok) return null;
       const data = await response.json();
       
       if (data.success && data.data.length > 0) {

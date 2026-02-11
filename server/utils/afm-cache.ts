@@ -18,8 +18,8 @@ const AFM_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 const unitCacheMap = new Map<string, UnitCache>();
 
-export function getUnitCacheKey(unitIds: number[]): string {
-  return `unit_${unitIds.sort().join('_')}`;
+export function getUnitCacheKey(unitIds: readonly number[]): string {
+  return `unit_${[...unitIds].sort((a, b) => a - b).join('_')}`;
 }
 
 export function getCachedAFMData(unitIds: number[]): UnitCache | null {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { queryClient } from '@/lib/queryClient';
+import { API_QUERY_KEYS } from '@/lib/query-keys';
 import { useAuth } from '@/hooks/use-auth';
 import { BudgetUpdate } from '@/lib/types';
 
@@ -142,8 +143,8 @@ export function useStableWebSocket() {
               break;
               
             case 'beneficiary_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/beneficiaries'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/beneficiary-payments'] });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.beneficiaries });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.beneficiaryPayments });
               break;
               
             case 'project_update':
@@ -163,19 +164,19 @@ export function useStableWebSocket() {
               break;
               
             case 'user_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/users'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.users });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.authMe });
               break;
               
             case 'reference_data_update':
-              queryClient.invalidateQueries({ queryKey: ['/api/public/units'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/public/event-types'] });
-              queryClient.invalidateQueries({ queryKey: ['/api/public/expenditure-types'] });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.publicUnits });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.publicEventTypes });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.publicExpenditureTypes });
               break;
               
             case 'DOCUMENT_UPDATE':
             case 'PROTOCOL_UPDATE':
-              queryClient.invalidateQueries({ queryKey: ['/api/documents'] });
+              queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.documentsRoot });
               break;
               
             case 'realtime_notification':

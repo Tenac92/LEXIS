@@ -1495,8 +1495,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/health/ready', async (req: Request, res: Response) => {
     const productionMode = process.env.NODE_ENV === 'production';
+    const requireRedisInProduction = process.env.REQUIRE_REDIS_IN_PROD === 'true';
+    const redisEnforcedInProduction =
+      productionMode && (requireRedisInProduction || Boolean(process.env.REDIS_URL));
     const requiredEnv = ['SESSION_SECRET', 'SUPABASE_URL', 'SUPABASE_KEY'];
-    if (productionMode) {
+    if (requireRedisInProduction) {
       requiredEnv.push('REDIS_URL');
     }
 
@@ -1519,12 +1522,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: null as string | null,
       },
       cache: {
-        ok: productionMode ? redisAvailable : true,
+        ok: redisEnforcedInProduction ? redisAvailable : true,
         backend: redisAvailable ? 'redis' : 'memory',
+        required: redisEnforcedInProduction,
       },
       session: {
-        ok: productionMode ? sessionStatus.storeType === 'redis' : true,
+        ok: redisEnforcedInProduction ? sessionStatus.storeType === 'redis' : true,
         backend: sessionStatus.storeType,
+        required: redisEnforcedInProduction,
       },
     };
 
@@ -1590,14 +1595,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    if (productionMode && !redisAvailable) {
+    if (redisEnforcedInProduction && !redisAvailable) {
       failures.push({
         code: 'CACHE_BACKEND_UNAVAILABLE',
         message: 'Redis cache backend is required in production',
       });
     }
 
-    if (productionMode && sessionStatus.storeType !== 'redis') {
+    if (redisEnforcedInProduction && sessionStatus.storeType !== 'redis') {
       failures.push({
         code: 'SESSION_BACKEND_INVALID',
         message: 'Redis session store is required in production',

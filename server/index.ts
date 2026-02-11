@@ -50,6 +50,8 @@ process.on('unhandledRejection', (reason, promise) => {
 console.log(`[Startup] Beginning server initialization (LOG_LEVEL=${getCurrentLogLevel()})`);
 
 const isProduction = process.env.NODE_ENV === 'production';
+const requireRedisInProduction = process.env.REQUIRE_REDIS_IN_PROD === 'true';
+const redisEnforcedInProduction = isProduction && (requireRedisInProduction || Boolean(process.env.REDIS_URL));
 
 // Verify required environment variables with detailed logging
 const requiredEnvVars = new Set<string>(['SESSION_SECRET']);
@@ -92,7 +94,9 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
 if (isProduction) {
   requiredEnvVars.add('SUPABASE_URL');
   requiredEnvVars.add('SUPABASE_KEY');
-  requiredEnvVars.add('REDIS_URL');
+  if (requireRedisInProduction) {
+    requiredEnvVars.add('REDIS_URL');
+  }
 }
 
 const missingVars = Array.from(requiredEnvVars).filter((varName) => !process.env[varName]);
@@ -143,11 +147,11 @@ async function startServer() {
       redisInitialized = false;
     }
 
-    if (isProduction && !redisInitialized) {
+    if (redisEnforcedInProduction && !redisInitialized) {
       throw new Error('Redis is required in production but is unavailable');
     }
 
-    if (isProduction) {
+    if (isProduction && redisInitialized) {
       const redisClient = getRedisClient();
       if (!redisClient || !isRedisAvailable()) {
         throw new Error('Redis session backend is unavailable in production');
@@ -155,6 +159,9 @@ async function startServer() {
       storage.setSessionStore(new RedisSessionStore(redisClient), 'redis');
       refreshSessionMiddleware();
       console.log('[Startup] Production session backend configured: redis');
+    } else if (isProduction) {
+      console.warn('[Startup] REDIS_URL not provided/unavailable: using in-memory sessions in production');
+      console.warn('[Startup] Set REQUIRE_REDIS_IN_PROD=true to enforce Redis in production');
     } else {
       console.log('[Startup] Non-production mode: using in-memory session backend');
     }
@@ -318,9 +325,18 @@ async function startServer() {
         res.sendFile(join(__dirname, '../client/index.html'));
       });
 
-      // Use environment PORT if available, otherwise default to 5000
-      const PORT = parseInt(process.env.PORT || '5000', 10);
+      // Render provides PORT. Fall back to 10000 in production, 5000 otherwise.
+      const defaultPort = isProduction ? 10000 : 5000;
+      const rawPort = process.env.PORT;
+      const parsedPort = Number.parseInt(rawPort ?? '', 10);
+      const PORT = Number.isFinite(parsedPort) && parsedPort > 0 && parsedPort <= 65535
+        ? parsedPort
+        : defaultPort;
       const HOST = '0.0.0.0'; // Bind to all network interfaces
+      if (!rawPort || PORT !== parsedPort) {
+        console.warn(`[Startup] Invalid or missing PORT="${rawPort ?? 'unset'}", falling back to ${PORT}`);
+      }
+      console.log(`[Startup] Binding HTTP server on ${HOST}:${PORT}`);
 
       // Start the server with enhanced error handling
       return new Promise((resolve, reject) => {

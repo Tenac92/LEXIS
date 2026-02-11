@@ -209,7 +209,7 @@ export async function apiRequest<T = unknown>(
 export const getQueryFn = (
   { on401 = "throw" }: { on401?: "returnNull" | "throw" } = {}
 ): QueryFunction => {
-  return async ({ queryKey }) => {
+  return async ({ queryKey, signal }) => {
     try {
       const url = queryKey[0] as string;
       
@@ -228,7 +228,8 @@ export const getQueryFn = (
       // Make the fetch request
       const response = await fetch(formattedUrl, { 
         credentials: 'include', // Include cookies for authentication
-        headers
+        headers,
+        signal,
       });
 
       // Handle non-OK responses

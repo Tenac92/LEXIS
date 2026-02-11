@@ -265,13 +265,19 @@ export function SimpleAFMAutocomplete({
   // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: employees = [], isLoading: employeesLoading } = useQuery({
     queryKey: ['/api/employees/search-fast', debouncedSearchTerm],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       
       const startTime = performance.now();
       
       // Use the optimized fast search endpoint
-      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`);
+      const response = await fetch(
+        `/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}&type=employee`,
+        { signal, credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new Error(`Employee fast search failed: ${response.status}`);
+      }
       const data = await response.json();
       
       const elapsed = Math.round(performance.now() - startTime);
@@ -284,7 +290,11 @@ export function SimpleAFMAutocomplete({
       // If cache miss (fallback), try regular search only for prefix searches
       if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
         console.log(`[SimpleAFM] Cache miss, falling back to regular employee search`);
-        const fallbackResponse = await fetch(`/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackResponse = await fetch(
+          `/api/employees/search?afm=${encodeURIComponent(debouncedSearchTerm)}`,
+          { signal, credentials: "include" },
+        );
+        if (!fallbackResponse.ok) return [];
         const fallbackData = await fallbackResponse.json();
         return fallbackData.success ? fallbackData.data : [];
       }
@@ -300,13 +310,19 @@ export function SimpleAFMAutocomplete({
   // Uses optimized /search-fast endpoint that handles both hash lookup (9-digit) and cache (prefix)
   const { data: beneficiaries = [], isLoading: beneficiariesLoading } = useQuery({
     queryKey: ['/api/beneficiaries/search-fast', debouncedSearchTerm],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!debouncedSearchTerm || debouncedSearchTerm.length < 4) return [];
       
       const startTime = performance.now();
       
       // Use the optimized fast search endpoint
-      const response = await fetch(`/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+      const response = await fetch(
+        `/api/beneficiaries/search-fast?afm=${encodeURIComponent(debouncedSearchTerm)}`,
+        { signal, credentials: "include" },
+      );
+      if (!response.ok) {
+        throw new Error(`Beneficiary fast search failed: ${response.status}`);
+      }
       const data = await response.json();
       
       const elapsed = Math.round(performance.now() - startTime);
@@ -319,7 +335,11 @@ export function SimpleAFMAutocomplete({
       // If cache miss (fallback), try regular search only for prefix searches
       if (data.source === 'fallback' && debouncedSearchTerm.length < 9) {
         console.log(`[SimpleAFM] Cache miss, falling back to regular beneficiary search`);
-        const fallbackResponse = await fetch(`/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`);
+        const fallbackResponse = await fetch(
+          `/api/beneficiaries/search?afm=${encodeURIComponent(debouncedSearchTerm)}`,
+          { signal, credentials: "include" },
+        );
+        if (!fallbackResponse.ok) return [];
         const fallbackData = await fallbackResponse.json();
         return fallbackData.success ? fallbackData.data : [];
       }

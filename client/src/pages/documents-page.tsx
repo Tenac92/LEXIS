@@ -35,6 +35,7 @@ import { CreateDocumentDialog } from "@/components/documents/create-document-dia
 // Removed direct Supabase import
 import type { GeneratedDocument } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { API_QUERY_KEYS } from "@/lib/query-keys";
 import { useWebSocketUpdates } from "@/hooks/use-websocket-updates";
 import { useExpenditureTypesForFilter } from "@/hooks/useExpenditureTypes";
 
@@ -124,7 +125,7 @@ export default function DocumentsPage() {
 
   // Fetch units data for dropdown with aggressive caching
   const { data: allUnits = [] } = useQuery<Unit[]>({
-    queryKey: ["/api/public/units"],
+    queryKey: API_QUERY_KEYS.publicUnits,
     staleTime: 30 * 60 * 1000, // 30 minutes cache - units rarely change
     gcTime: 60 * 60 * 1000, // 1 hour cache retention (v5 renamed from cacheTime)
     refetchOnWindowFocus: false,
@@ -215,7 +216,7 @@ export default function DocumentsPage() {
   });
 
   const fetchDocuments = useCallback(
-    async (context: QueryFunctionContext<readonly [string, Filters, number, number]>) => {
+    async (context: QueryFunctionContext<readonly [string, Filters]>) => {
       const { queryKey, signal } = context;
       const [, currentFilters] = queryKey;
       try {
@@ -313,7 +314,7 @@ export default function DocumentsPage() {
     error,
     refetch,
   } = useQuery<GeneratedDocument[]>({
-    queryKey: ["/api/documents", filters] as const,
+    queryKey: API_QUERY_KEYS.documents(filters),
     staleTime: 5 * 60 * 1000, // Increased to 5 minutes cache for better performance
     gcTime: 15 * 60 * 1000, // Increased to 15 minutes cache retention
     refetchOnMount: false, // Use cached data when available
@@ -842,8 +843,8 @@ export default function DocumentsPage() {
         documentId={selectedDocument?.id.toString() || ""}
         onDelete={() => {
           // Force refetch after deletion to immediately update the UI
-          queryClient.invalidateQueries({ queryKey: ["/api/documents"] });
-          queryClient.refetchQueries({ queryKey: ["/api/documents"] });
+          queryClient.invalidateQueries({ queryKey: API_QUERY_KEYS.documentsRoot });
+          queryClient.refetchQueries({ queryKey: API_QUERY_KEYS.documentsRoot });
         }}
       />
 
