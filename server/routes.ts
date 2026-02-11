@@ -1,10 +1,11 @@
 import { Request, Response, Express } from 'express';
 import { Server } from 'http';
-import { authenticateSession, AuthenticatedRequest } from './authentication';
+import { authenticateSession, AuthenticatedRequest, getSessionBackendStatus } from './authentication';
 import { supabase } from './config/db';
 import { log } from './vite';
 import { createServer } from 'http';
 import { storage } from './storage';
+import { isRedisAvailable } from './config/redis';
 import { getBudgetByMis } from './controllers/budgetController';
 import { validateBudgetAllocation } from './services/budgetNotificationService';
 import { broadcastBeneficiaryUpdate } from './websocket';
@@ -825,13 +826,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       const projectId = req.query.project_id as string;
       const expenditureType = req.query.expenditure_type as string;
-      const userUnitIdRaw = req.user?.unit_id?.[0];
-      const userUnitIdNum =
-        typeof userUnitIdRaw === 'number'
-          ? userUnitIdRaw
-          : userUnitIdRaw
-          ? parseInt(String(userUnitIdRaw), 10)
-          : null;
+      const userUnitIdsRaw = Array.isArray(req.user?.unit_id)
+        ? req.user?.unit_id
+        : req.user?.unit_id !== undefined && req.user?.unit_id !== null
+        ? [req.user.unit_id]
+        : [];
+      const userUnitIds = userUnitIdsRaw
+        .map((value: any) =>
+          typeof value === 'number' ? value : parseInt(String(value), 10),
+        )
+        .filter((value: number) => Number.isFinite(value));
       
       if (!userId) {
         return res.status(401).json({ message: 'User not authenticated' });
@@ -839,8 +843,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('[UserPreferences] ESDIAN request for user:', userId, 'project:', projectId, 'type:', expenditureType);
 
-      // Get user's unit_id to get relevant suggestions
-      const userUnitId = userUnitIdNum;
+      // Restrict suggestions strictly to units the current user is authorized for
+      if (userUnitIds.length === 0) {
+        return res.json({
+          status: 'success',
+          suggestions: [],
+          completeSets: [],
+          autoPopulate: null,
+          categories: { recent: [], frequent: [], contextual: [], team: [] },
+          total: 0,
+          hasContext: false,
+          contextMatchCount: 0,
+          scopeApplied: 'authorized_units',
+        });
+      }
       
       // First, resolve expenditure type if provided
       let expenditureTypeId: number | null = null;
@@ -869,33 +885,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .not('esdian', 'is', null)
         .order('created_at', { ascending: false });
         
-      // Get wider dataset for better analysis (user + team + context)
-      if (userUnitId) {
-        baseQuery = baseQuery.eq('unit_id', userUnitId);
-      }
-      
+      // Get wider dataset for better analysis (user + team + context), scoped to authorized units
+      baseQuery = baseQuery.in('unit_id', userUnitIds);
       let { data: allDocuments, error } = await baseQuery.limit(100);
-
-      // Fallback: if no data came back with a unit filter, try without it to avoid empty suggestions
-      if (!error && (!allDocuments || allDocuments.length === 0)) {
-        const fallbackQuery = supabase
-          .from('generated_documents')
-          .select(`
-            esdian, 
-            created_at, 
-            generated_by, 
-            project_index_id,
-            unit_id,
-            id
-          `)
-          .not('esdian', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(100);
-        const fallbackResult = await fallbackQuery;
-        if (!fallbackResult.error && fallbackResult.data) {
-          allDocuments = fallbackResult.data;
-        }
-      }
       
       if (error) {
         console.error('[UserPreferences] Error fetching ESDIAN suggestions:', error);
@@ -906,7 +898,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let projectIndexExpTypeMap = new Map<number, number>();
       if (expenditureTypeId && allDocuments && allDocuments.length > 0) {
         // Get unique project_index_ids from documents
-        const projectIndexIds = [...new Set(allDocuments.map((doc: any) => doc.project_index_id).filter(Boolean))];
+        const projectIndexIds = Array.from(
+          new Set(allDocuments.map((doc: any) => doc.project_index_id).filter(Boolean)),
+        );
         console.log('[UserPreferences] Filtering by expenditure_type:', expenditureTypeId, 'Found', projectIndexIds.length, 'unique project_index_ids');
         
         if (projectIndexIds.length > 0) {
@@ -941,10 +935,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .select('id, monada_id, expenditure_type_id')
           .eq('project_id', isNaN(projectIdNum) ? projectId : projectIdNum);
 
-        // Prefer entries matching the user's unit/monada when available
-        if (userUnitId) {
-          projectIndexQuery = projectIndexQuery.eq('monada_id', userUnitId);
-        }
+        // Prefer entries matching one of the user's authorized units
+        projectIndexQuery = projectIndexQuery.in('monada_id', userUnitIds);
 
         // If an expenditure type is provided, resolve it to id and filter
         if (expenditureType) {
@@ -1102,6 +1094,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         team: suggestions.filter(s => s.teamFrequency > 0 && s.userFrequency === 0).slice(0, 4)
       };
 
+      const contextMatchCount = suggestions.filter((s) => s.contextMatches > 0).length;
+      const hasContext = contextMatchCount > 0;
+
       console.log('[UserPreferences] Returning', suggestions.length, 'suggestions with', recentSets.length, 'complete sets');
 
       res.json({
@@ -1111,7 +1106,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoPopulate,
         categories: categorized,
         total: suggestions.length,
-        hasContext: Boolean(currentProjectIndexId)
+        hasContext,
+        contextMatchCount,
+        scopeApplied: 'authorized_units'
       });
 
     } catch (error) {
@@ -1494,6 +1491,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
+  });
+
+  app.get('/api/health/ready', async (req: Request, res: Response) => {
+    const productionMode = process.env.NODE_ENV === 'production';
+    const requiredEnv = ['SESSION_SECRET', 'SUPABASE_URL', 'SUPABASE_KEY'];
+    if (productionMode) {
+      requiredEnv.push('REDIS_URL');
+    }
+
+    const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+    const redisAvailable = isRedisAvailable();
+    const sessionStatus = getSessionBackendStatus();
+
+    const checks = {
+      env: {
+        ok: missingEnv.length === 0,
+        missing: missingEnv,
+      },
+      database: {
+        ok: false,
+        error: null as string | null,
+      },
+      migration: {
+        ok: false,
+        required: 'generated_documents.creation_integrity',
+        error: null as string | null,
+      },
+      cache: {
+        ok: productionMode ? redisAvailable : true,
+        backend: redisAvailable ? 'redis' : 'memory',
+      },
+      session: {
+        ok: productionMode ? sessionStatus.storeType === 'redis' : true,
+        backend: sessionStatus.storeType,
+      },
+    };
+
+    const failures: Array<{ code: string; message: string; details?: any }> = [];
+
+    if (!checks.env.ok) {
+      failures.push({
+        code: 'MISSING_ENV',
+        message: 'Required environment variables are missing',
+        details: { missing: missingEnv },
+      });
+    }
+
+    try {
+      const { error: dbError } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1);
+
+      checks.database.ok = !dbError;
+      checks.database.error = dbError?.message || null;
+      if (dbError) {
+        failures.push({
+          code: 'DATABASE_UNAVAILABLE',
+          message: 'Database connectivity check failed',
+          details: { error: dbError.message },
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      checks.database.ok = false;
+      checks.database.error = message;
+      failures.push({
+        code: 'DATABASE_UNAVAILABLE',
+        message: 'Database connectivity check failed',
+        details: { error: message },
+      });
+    }
+
+    try {
+      const { error: migrationError } = await supabase
+        .from('generated_documents')
+        .select('creation_integrity')
+        .limit(1);
+
+      checks.migration.ok = !migrationError;
+      checks.migration.error = migrationError?.message || null;
+      if (migrationError) {
+        failures.push({
+          code: 'MIGRATION_VERSION_MISMATCH',
+          message: 'Required migration state was not detected',
+          details: { error: migrationError.message, required: checks.migration.required },
+        });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      checks.migration.ok = false;
+      checks.migration.error = message;
+      failures.push({
+        code: 'MIGRATION_VERSION_MISMATCH',
+        message: 'Required migration state was not detected',
+        details: { error: message, required: checks.migration.required },
+      });
+    }
+
+    if (productionMode && !redisAvailable) {
+      failures.push({
+        code: 'CACHE_BACKEND_UNAVAILABLE',
+        message: 'Redis cache backend is required in production',
+      });
+    }
+
+    if (productionMode && sessionStatus.storeType !== 'redis') {
+      failures.push({
+        code: 'SESSION_BACKEND_INVALID',
+        message: 'Redis session store is required in production',
+        details: { backend: sessionStatus.storeType },
+      });
+    }
+
+    const payload = {
+      status: failures.length === 0 ? 'ready' : 'not_ready',
+      timestamp: new Date().toISOString(),
+      checks,
+      failures,
+    };
+
+    return res.status(failures.length === 0 ? 200 : 503).json(payload);
   });
 
   // Public API routes

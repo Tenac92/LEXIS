@@ -26,7 +26,7 @@ export const FEATURES = {
     enabled: false,
     path: null,
     label: "Παρακολούθηση υγείας συστήματος",
-    reason: "Under development - no health check endpoints"
+    reason: "Under development - backend readiness endpoint exists but UI is pending"
   },
 
   // Template Management

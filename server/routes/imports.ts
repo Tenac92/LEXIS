@@ -409,6 +409,7 @@ router.post(
               Array<{
                 id: number | string;
                 payment_date: string | null;
+                eps: string | null;
                 freetext: string | null;
               }>
             >();

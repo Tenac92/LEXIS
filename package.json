@@ -10,7 +10,9 @@
     "check": "tsc",
     "lint": "eslint \"client/src/**/*.{ts,tsx}\" \"server/**/*.{ts,tsx}\" \"shared/**/*.{ts,tsx}\"",
     "test:geo": "tsx client/tests/beneficiary-geo.test.ts",
+    "test:beneficiary-sync": "tsx server/tests/beneficiary-recipient-sync.test.ts",
     "test:regiondet": "tsx server/tests/regiondet-merge.test.ts",
+    "verify:release": "tsx scripts/verify-release.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

@@ -60,10 +60,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  if (!project) return null;
-
   // Extract project details safely with comprehensive error handling
-  const projectData = project as any;
+  const projectData = (project ?? {}) as any;
   const projectId = projectData?.id;
 
   // PERFORMANCE OPTIMIZATION: Single API call to fetch all project data
@@ -377,6 +375,8 @@ export const ProjectDetailsDialog: React.FC<ProjectDetailsDialogProps> = ({
       </p>
     </div>
   );
+
+  if (!project) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

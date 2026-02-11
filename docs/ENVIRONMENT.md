@@ -148,6 +148,19 @@ This document describes all environment variables used by the Lexis Budget Manag
   - Password reset URLs
 - **Notes**: Affects security posture - must match actual deployment URL
 
+### Redis Configuration
+
+#### `REDIS_URL` (Required in production)
+- **Type**: `string` (Redis connection URL)
+- **Format**: `redis://[:password@]host:port[/db-number]`
+- **Description**: Backend for cache and production session storage
+- **Examples**:
+  - `redis://localhost:6379`
+  - `redis://:password@redis.internal:6379/0`
+- **Notes**:
+  - In production, startup fails if Redis is unavailable.
+  - In non-production, in-memory sessions are used as fallback.
+
 ### Session Management
 
 #### `SESSION_COOKIE_NAME`
@@ -196,6 +209,7 @@ SUPABASE_SERVICE_KEY=${STAGING_SUPABASE_SERVICE_KEY}
 # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 SESSION_SECRET=${STAGING_SESSION_SECRET}
 AFM_KEY=${STAGING_AFM_KEY}
+REDIS_URL=${STAGING_REDIS_URL}
 
 COOKIE_DOMAIN=.staging-budget.sdegdaefk.gr
 DEPLOYED_URL=https://budget-staging.sdegdaefk.gr
@@ -226,6 +240,7 @@ SUPABASE_SERVICE_KEY=${PROD_SUPABASE_SERVICE_KEY}
 # Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 SESSION_SECRET=${PROD_SESSION_SECRET}
 AFM_KEY=${PROD_AFM_KEY}
+REDIS_URL=${PROD_REDIS_URL}
 
 COOKIE_DOMAIN=.sdegdaefk.gr
 DEPLOYED_URL=https://budget.sdegdaefk.gr
@@ -364,6 +379,20 @@ DEPLOYED_URL=https://budget.sdegdaefk.gr  # Enables strict CSP
    PORT=5000 node dist/index.js
    # Environment variables injected by deployment platform
    ```
+
+## Release Verification
+
+Run the release gate before deploying:
+
+```bash
+npm run verify:release
+```
+
+Optional runtime smoke checks (when environment is already running):
+
+```bash
+VERIFY_RELEASE_BASE_URL=https://your-hostname npm run verify:release
+```
 
 ## See Also
 

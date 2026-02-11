@@ -43,6 +43,26 @@ export interface SystemHealth {
 }
 
 /**
+ * Readiness Health Status
+ */
+export interface ReadinessHealth {
+  status: "ready" | "not_ready";
+  timestamp: string;
+  checks: {
+    env: { ok: boolean; missing: string[] };
+    database: { ok: boolean; error: string | null };
+    migration: { ok: boolean; required: string; error: string | null };
+    cache: { ok: boolean; backend: "memory" | "redis" };
+    session: { ok: boolean; backend: "memory" | "redis" };
+  };
+  failures: Array<{
+    code: string;
+    message: string;
+    details?: unknown;
+  }>;
+}
+
+/**
  * Budget Overview (NOT YET IMPLEMENTED)
  */
 export interface BudgetOverview {
@@ -157,6 +177,12 @@ export const API_ENDPOINTS = {
     path: "/api/admin/quarter-transition/status",
     implemented: true,
     description: "Get quarter transition status",
+  },
+  HEALTH_READY: {
+    method: "GET",
+    path: "/api/health/ready",
+    implemented: true,
+    description: "Strict readiness status for release gating",
   },
 
   // ⚠️ Partially Implemented

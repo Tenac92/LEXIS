@@ -22,9 +22,22 @@ interface CacheEntry {
 }
 const beneficiariesCache = new Map<string, CacheEntry>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+let beneficiariesCacheVersion = 0;
 
-function getCacheKey(unitIds: number[]): string {
-  return `beneficiaries_${unitIds.sort().join('_')}`;
+function getBeneficiariesCacheVersion(): number {
+  return beneficiariesCacheVersion;
+}
+
+function bumpBeneficiariesCacheVersion(): number {
+  beneficiariesCacheVersion += 1;
+  return beneficiariesCacheVersion;
+}
+
+function getCacheKey(unitIds: readonly (number | string | bigint)[]): string {
+  const normalizedUnitIds = unitIds
+    .map((unitId) => String(unitId))
+    .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+  return `beneficiaries_${normalizedUnitIds.join("_")}`;
 }
 
 function getCachedBeneficiaries(unitIds: number[]): any[] | null {
@@ -49,15 +62,16 @@ function setCachedBeneficiaries(unitIds: number[], data: any[]): void {
 // Clear cache for specific units (call after create/update/delete)
 // Clears BOTH the beneficiaries list cache AND the AFM autocomplete cache
 export function invalidateBeneficiariesCache(unitIds?: number[]): void {
+  const nextVersion = bumpBeneficiariesCacheVersion();
   if (unitIds) {
     const key = getCacheKey(unitIds);
     beneficiariesCache.delete(key);
     invalidateAFMCache(unitIds); // Also clear AFM cache
-    console.log(`[Beneficiaries] BOTH CACHES INVALIDATED for units: ${unitIds.join(', ')}`);
+    console.log(`[Beneficiaries] BOTH CACHES INVALIDATED for units: ${unitIds.join(', ')} (cache version ${nextVersion})`);
   } else {
     beneficiariesCache.clear();
     invalidateAFMCache(); // Clear all AFM cache
-    console.log('[Beneficiaries] BOTH CACHES CLEARED (all units)');
+    console.log(`[Beneficiaries] BOTH CACHES CLEARED (all units, cache version ${nextVersion})`);
   }
 }
 
@@ -146,6 +160,8 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
       return res.json(paginatedData);
     }
     
+    const cacheVersionSnapshot = getBeneficiariesCacheVersion();
+
     // SECURITY: Get beneficiaries ONLY for user's assigned units
     // OPTIMIZATION: Use optimized method that skips AFM decryption for much faster loading
     // PERFORMANCE: Fetch all units in PARALLEL instead of sequentially
@@ -163,8 +179,14 @@ router.get('/', authenticateSession, async (req: AuthenticatedRequest, res: Resp
     const beneficiaryArrays = await Promise.all(beneficiaryPromises);
     const allBeneficiaries = beneficiaryArrays.flat();
     
-    // Cache the results
-    setCachedBeneficiaries(userUnits, allBeneficiaries);
+    // Cache the results only if cache wasn't invalidated while this request was in flight.
+    if (cacheVersionSnapshot === getBeneficiariesCacheVersion()) {
+      setCachedBeneficiaries(userUnits, allBeneficiaries);
+    } else {
+      console.log(
+        `[Beneficiaries] Skipping stale cache set for units: ${userUnits.join(', ')} (started on version ${cacheVersionSnapshot}, current ${getBeneficiariesCacheVersion()})`,
+      );
+    }
     
     // Apply pagination
     let paginatedData = allBeneficiaries;
@@ -511,6 +533,8 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
       });
     }
 
+    const prefetchCacheVersion = getBeneficiariesCacheVersion();
+
     // Start background prefetch
     setLoadingState(userUnits, true);
     console.log(`[Prefetch] Starting background prefetch for units: ${userUnits.join(', ')}`);
@@ -673,6 +697,15 @@ router.get('/prefetch', authenticateSession, async (req: AuthenticatedRequest, r
               });
             }
           }
+        }
+
+        const currentCacheVersion = getBeneficiariesCacheVersion();
+        if (prefetchCacheVersion !== currentCacheVersion) {
+          console.log(
+            `[Prefetch] Skipping stale cache write for units: ${userUnits.join(', ')} (started on version ${prefetchCacheVersion}, current ${currentCacheVersion})`,
+          );
+          setLoadingState(userUnits, false);
+          return;
         }
 
         // Store in AFM autocomplete cache
@@ -1300,6 +1333,18 @@ router.delete('/:id', authenticateSession, async (req: AuthenticatedRequest, res
     const id = parseInt(req.params.id);
     if (isNaN(id)) {
       return res.status(400).json({ message: 'Invalid beneficiary ID' });
+    }
+
+    const deletionStatus = await storage.getBeneficiaryDeletionStatus(id);
+    if (deletionStatus.hasPayments || deletionStatus.hasDocumentLinkedPayments) {
+      return res.status(409).json({
+        code: 'BENEFICIARY_HAS_LINKED_PAYMENTS',
+        message: 'Cannot delete beneficiary because it has linked payments/documents.',
+        details: {
+          paymentCount: deletionStatus.paymentCount,
+          hasDocumentLinkedPayments: deletionStatus.hasDocumentLinkedPayments,
+        },
+      });
     }
 
     console.log(`[Beneficiaries] Deleting beneficiary ${id}`);

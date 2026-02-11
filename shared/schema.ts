@@ -160,6 +160,7 @@ export const budgetHistory = pgTable("budget_history", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
   batch_id: text("batch_id"), // UUID string for grouping related entries
+  metadata: jsonb("metadata"),
 });
 
 /**
@@ -286,6 +287,7 @@ export const generatedDocuments = pgTable("generated_documents", {
   updated_by: text("updated_by"),
   updated_at: timestamp("updated_at", { withTimezone: true }),
   esdian: text("esdian").array(),
+  creation_integrity: jsonb("creation_integrity"),
   director_signature: jsonb("director_signature"),
   beneficiary_payments_id: integer("beneficiary_payments_id").array(),
   employee_payments_id: integer("employee_payments_id").array(),

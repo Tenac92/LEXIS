@@ -9,6 +9,7 @@ import { storage } from "../storage";
 import { encryptAFM, hashAFM, decryptAFM } from "../utils/crypto";
 import { validateBudgetAllocation } from "../services/budgetNotificationService";
 import { mergeRegiondetWithPayments } from "../utils/regiondet-merge";
+import { buildBeneficiaryRecipientSyncPlan } from "../utils/beneficiary-recipient-sync";
 import JSZip from "jszip";
 
 const logger = createLogger("DocumentsController");
@@ -993,6 +994,7 @@ router.post(
         director_signature: directorSignature,
         beneficiary_payments_id: [], // Will be populated after beneficiary payments creation
         employee_payments_id: [], // Will be populated for ΕΚΤΟΣ ΕΔΡΑΣ documents
+        creation_integrity: null,
         region: regionJsonb, // Geographic region data (parsed from Region|RegionalUnit|Municipality format)
         needs_xrimatodotisi: budgetWarning?.budgetType === 'katanomi' ? true : false, // Flag for budget warning requiring approval
         created_at: now,
@@ -1029,13 +1031,142 @@ router.post(
       );
 
       // Create beneficiary payments OR employee payments for each recipient using project_index_id
-      const beneficiaryPaymentsIds = [];
-      const employeePaymentsIds = [];
+      const beneficiaryPaymentsIds: number[] = [];
+      const employeePaymentsIds: number[] = [];
       const createdBeneficiaryIds: number[] = []; // Track newly created beneficiaries for rollback
       let beneficiaryPaymentFailed = false;
       let beneficiaryPaymentError: any = null;
       let employeePaymentFailed = false;
       let employeePaymentError: any = null;
+      type CreationIssue = { code: string; stage: string; message: string };
+      const creationIssues: CreationIssue[] = [];
+      let shouldPersistAsDraft = false;
+      let rollbackAttempted = false;
+      let rollbackSucceeded = true;
+
+      const toIssueMessage = (errorOrMessage: unknown): string => {
+        if (errorOrMessage instanceof Error) {
+          return errorOrMessage.message;
+        }
+        if (typeof errorOrMessage === "string") {
+          return errorOrMessage;
+        }
+        if (
+          errorOrMessage &&
+          typeof errorOrMessage === "object" &&
+          "message" in errorOrMessage &&
+          typeof (errorOrMessage as any).message === "string"
+        ) {
+          return (errorOrMessage as any).message;
+        }
+        try {
+          return JSON.stringify(errorOrMessage);
+        } catch {
+          return String(errorOrMessage);
+        }
+      };
+
+      const addCreationIssue = (
+        code: string,
+        stage: string,
+        errorOrMessage: unknown,
+      ) => {
+        creationIssues.push({
+          code,
+          stage,
+          message: toIssueMessage(errorOrMessage),
+        });
+      };
+
+      const rollbackPostInsertArtifacts = async (stage: string) => {
+        rollbackAttempted = true;
+
+        if (beneficiaryPaymentsIds.length > 0) {
+          const { error: beneficiaryRollbackError } = await supabase
+            .from("beneficiary_payments")
+            .delete()
+            .in("id", beneficiaryPaymentsIds);
+
+          if (beneficiaryRollbackError) {
+            rollbackSucceeded = false;
+            addCreationIssue(
+              "ROLLBACK_BENEFICIARY_PAYMENTS_FAILED",
+              stage,
+              beneficiaryRollbackError,
+            );
+          } else {
+            beneficiaryPaymentsIds.length = 0;
+          }
+        }
+
+        if (employeePaymentsIds.length > 0) {
+          const { error: employeeRollbackError } = await supabase
+            .from("EmployeePayments")
+            .delete()
+            .in("id", employeePaymentsIds);
+
+          if (employeeRollbackError) {
+            rollbackSucceeded = false;
+            addCreationIssue(
+              "ROLLBACK_EMPLOYEE_PAYMENTS_FAILED",
+              stage,
+              employeeRollbackError,
+            );
+          } else {
+            employeePaymentsIds.length = 0;
+          }
+        }
+
+        if (createdBeneficiaryIds.length > 0) {
+          const { data: linkedBeneficiaries, error: linkedBeneficiariesError } =
+            await supabase
+              .from("beneficiary_payments")
+              .select("beneficiary_id")
+              .in("beneficiary_id", createdBeneficiaryIds);
+
+          if (linkedBeneficiariesError) {
+            rollbackSucceeded = false;
+            addCreationIssue(
+              "ROLLBACK_BENEFICIARY_LINK_LOOKUP_FAILED",
+              stage,
+              linkedBeneficiariesError,
+            );
+          } else {
+            const linkedSet = new Set<number>(
+              (linkedBeneficiaries || [])
+                .map((entry: any) => Number(entry.beneficiary_id))
+                .filter((entry: number) => Number.isFinite(entry)),
+            );
+            const beneficiariesToDelete = createdBeneficiaryIds.filter(
+              (beneficiaryId) => !linkedSet.has(beneficiaryId),
+            );
+
+            if (beneficiariesToDelete.length > 0) {
+              const { error: beneficiaryDeleteError } = await supabase
+                .from("beneficiaries")
+                .delete()
+                .in("id", beneficiariesToDelete);
+
+              if (beneficiaryDeleteError) {
+                rollbackSucceeded = false;
+                addCreationIssue(
+                  "ROLLBACK_CREATED_BENEFICIARIES_FAILED",
+                  stage,
+                  beneficiaryDeleteError,
+                );
+              } else {
+                beneficiariesToDelete.forEach((beneficiaryId) => {
+                  const idx = createdBeneficiaryIds.indexOf(beneficiaryId);
+                  if (idx >= 0) {
+                    createdBeneficiaryIds.splice(idx, 1);
+                  }
+                });
+              }
+            }
+          }
+        }
+      };
+
       try {
         console.log(
           "[DocumentsController] V2 Creating payments for",
@@ -1050,48 +1181,55 @@ router.post(
           projectIndexId,
         );
 
-        // Check if this is ΕΚΤΟΣ ΕΔΡΑΣ (out-of-office expenses)
+        // Check if this is out-of-office expenses
         const isEktosEdras = isEktosEdrasType;
 
         for (const recipient of formattedRecipients) {
-          // ΕΚΤΟΣ ΕΔΡΑΣ: Create employee payment
+          // Out-of-office flow: create employee payment
           if (isEktosEdras) {
-            console.log("[DocumentsController] V2 Creating employee payment for ΕΚΤΟΣ ΕΔΡΑΣ");
-            console.log("[DocumentsController] V2 DEBUG - Full recipient object:", JSON.stringify(recipient, null, 2));
-            console.log("[DocumentsController] V2 DEBUG - recipient.month value:", recipient.month);
-            console.log("[DocumentsController] V2 DEBUG - recipient.month type:", typeof recipient.month);
-            
-            // Validate required ΕΚΤΟΣ ΕΔΡΑΣ fields
-            if (!recipient.month || !recipient.month.trim()) {
-              console.error("[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: month is required");
-              console.error("[DocumentsController] V2 DEBUG - All recipients:", JSON.stringify(formattedRecipients, null, 2));
-              return res.status(400).json({
-                message: "Ο μήνας είναι υποχρεωτικός για ΕΚΤΟΣ ΕΔΡΑΣ",
-              });
+            // Validate required out-of-office fields
+            if (!recipient.month || !String(recipient.month).trim()) {
+              employeePaymentFailed = true;
+              employeePaymentError = new Error(
+                "Month is required for out-of-office employee payments",
+              );
+              addCreationIssue(
+                "EMPLOYEE_PAYMENT_VALIDATION_FAILED",
+                "employee_payments",
+                employeePaymentError,
+              );
+              break;
             }
-            
+
             // Calculate totals
             const dailyComp = Number(recipient.daily_compensation) || 0;
             const accommodation = Number(recipient.accommodation_expenses) || 0;
             const kmTraveled = Number(recipient.kilometers_traveled) || 0;
-            const pricePerKm = Number(recipient.price_per_km) || 0.20;
+            const pricePerKm = Number(recipient.price_per_km) || 0.2;
             const tickets = Number(recipient.tickets_tolls_rental) || 0;
-            
+
             const kmCost = kmTraveled * pricePerKm;
             const totalExpense = dailyComp + accommodation + kmCost + tickets;
-            
-            // Validate that there's at least some expense amount
+
             if (totalExpense <= 0) {
-              console.error("[DocumentsController] V2 ΕΚΤΟΣ ΕΔΡΑΣ validation failed: total expense must be > 0");
-              return res.status(400).json({
-                message: "Το συνολικό ποσό δαπάνης πρέπει να είναι μεγαλύτερο από 0 για ΕΚΤΟΣ ΕΔΡΑΣ",
-              });
+              employeePaymentFailed = true;
+              employeePaymentError = new Error(
+                "Total expenses must be greater than zero for out-of-office employee payments",
+              );
+              addCreationIssue(
+                "EMPLOYEE_PAYMENT_VALIDATION_FAILED",
+                "employee_payments",
+                employeePaymentError,
+              );
+              break;
             }
-            
-            // For ΕΚΤΟΣ ΕΔΡΑΣ: 2% withholding applies ONLY to daily compensation (ημερήσια αποζημίωση)
-            const deduction2Percent = recipient.has_2_percent_deduction ? dailyComp * 0.02 : 0;
+
+            // For out-of-office: 2% withholding applies only to daily compensation
+            const deduction2Percent = recipient.has_2_percent_deduction
+              ? dailyComp * 0.02
+              : 0;
             const netPayable = totalExpense - deduction2Percent;
-            
+
             const employeePayment = {
               employee_id: recipient.employee_id || null,
               document_id: data.id,
@@ -1111,8 +1249,6 @@ router.post(
               updated_at: now,
             };
 
-            console.log("[DocumentsController] V2 Employee payment data:", employeePayment);
-
             const { data: empPaymentData, error: empPaymentError } = await supabase
               .from("EmployeePayments")
               .insert([employeePayment])
@@ -1120,560 +1256,351 @@ router.post(
               .single();
 
             if (empPaymentError) {
-              console.error(
-                "[DocumentsController] V2 Error creating employee payment:",
-                empPaymentError,
-              );
               employeePaymentFailed = true;
               employeePaymentError = empPaymentError;
             } else {
               employeePaymentsIds.push(empPaymentData.id);
-              console.log(
-                "[DocumentsController] V2 Created employee payment:",
-                empPaymentData.id,
-              );
             }
-          } 
+          }
           // Standard flow: Create beneficiary payment
           else {
             // Step 1: Look up or create/update beneficiary
             let beneficiaryId = null;
-          try {
-            // Find existing beneficiary by AFM hash (since AFM is encrypted)
-            const afmHash = hashAFM(recipient.afm);
-            const { data: existingBeneficiary, error: findError } =
-              await supabase
-                .from("beneficiaries")
-                .select("id, regiondet")
-                .eq("afm_hash", afmHash)
-                .single();
+            try {
+              // Find existing beneficiary by AFM hash (since AFM is encrypted)
+              const afmHash = hashAFM(recipient.afm);
+              const { data: existingBeneficiary, error: findError } =
+                await supabase
+                  .from("beneficiaries")
+                  .select("id, regiondet")
+                  .eq("afm_hash", afmHash)
+                  .single();
 
-            if (existingBeneficiary) {
-              beneficiaryId = existingBeneficiary.id;
-              console.log(
-                "[DocumentsController] V2 Found existing beneficiary:",
-                beneficiaryId,
-                "for AFM:",
-                recipient.afm,
-              );
-              
-              // Update beneficiary with latest details
-              const mergedRegiondet = mergeRegiondetWithPayments(
-                existingBeneficiary.regiondet,
-                recipient.regiondet || null,
-              );
+              if (existingBeneficiary) {
+                beneficiaryId = existingBeneficiary.id;
 
-              const { error: updateError } = await supabase
-                .from("beneficiaries")
-                .update({
+                // Update beneficiary with latest details
+                const mergedRegiondet = mergeRegiondetWithPayments(
+                  existingBeneficiary.regiondet,
+                  recipient.regiondet || null,
+                );
+
+                const { error: updateError } = await supabase
+                  .from("beneficiaries")
+                  .update({
+                    surname: recipient.lastname,
+                    name: recipient.firstname,
+                    fathername: recipient.fathername,
+                    regiondet: mergedRegiondet,
+                    updated_at: now,
+                  })
+                  .eq("id", beneficiaryId);
+
+                if (updateError) {
+                  console.error(
+                    "[DocumentsController] V2 Error updating beneficiary:",
+                    updateError,
+                  );
+                }
+              } else if (findError && findError.code === "PGRST116") {
+                // Beneficiary not found, create new one
+                const newBeneficiary = {
+                  afm: encryptAFM(recipient.afm),
+                  afm_hash: afmHash,
                   surname: recipient.lastname,
                   name: recipient.firstname,
                   fathername: recipient.fathername,
-                  regiondet: mergedRegiondet,
+                  regiondet: mergeRegiondetWithPayments(
+                    null,
+                    recipient.regiondet || null,
+                  ),
+                  date: new Date().toISOString().split("T")[0],
+                  created_at: now,
                   updated_at: now,
-                })
-                .eq("id", beneficiaryId);
-              
-              if (updateError) {
-                console.error(
-                  "[DocumentsController] V2 Error updating beneficiary:",
-                  updateError,
-                );
-              } else {
-                console.log(
-                  "[DocumentsController] V2 Updated beneficiary details for:",
-                  beneficiaryId,
-                );
-              }
-            } else if (findError && findError.code === "PGRST116") {
-              // Beneficiary not found, create new one
-              const newBeneficiary = {
-                afm: encryptAFM(recipient.afm), // Encrypt AFM for security
-                afm_hash: afmHash, // Use the hash we already computed
-                surname: recipient.lastname,
-                name: recipient.firstname,
-                fathername: recipient.fathername,
-                regiondet: mergeRegiondetWithPayments(
-                  null,
-                  recipient.regiondet || null,
-                ),
-                date: new Date().toISOString().split("T")[0],
-                created_at: now,
-                updated_at: now,
-              };
+                };
 
-              const { data: createdBeneficiary, error: createError } =
-                await supabase
-                  .from("beneficiaries")
-                  .insert([newBeneficiary])
+                const { data: createdBeneficiary, error: createError } =
+                  await supabase
+                    .from("beneficiaries")
+                    .insert([newBeneficiary])
+                    .select("id")
+                    .single();
+
+                if (createError) {
+                  beneficiaryPaymentFailed = true;
+                  beneficiaryPaymentError = createError;
+                } else {
+                  beneficiaryId = createdBeneficiary.id;
+                  createdBeneficiaryIds.push(beneficiaryId);
+                }
+              } else {
+                beneficiaryPaymentFailed = true;
+                beneficiaryPaymentError = findError;
+              }
+            } catch (beneficiaryError) {
+              beneficiaryPaymentFailed = true;
+              beneficiaryPaymentError = beneficiaryError;
+            }
+
+            // Step 2: Create separate beneficiary payment records for each installment
+            if (beneficiaryId) {
+              if (recipient.installments && recipient.installmentAmounts) {
+                for (const installmentName of recipient.installments) {
+                  const installmentAmount = recipient.installmentAmounts[installmentName];
+
+                  if (installmentAmount > 0) {
+                    const beneficiaryPayment = {
+                      document_id: data.id,
+                      beneficiary_id: beneficiaryId,
+                      amount: installmentAmount,
+                      status: "pending",
+                      installment: installmentName,
+                      freetext: recipient.secondary_text || null,
+                      unit_id: numericUnitId,
+                      project_index_id: projectIndexId,
+                      created_at: now,
+                      updated_at: now,
+                    };
+
+                    const { data: paymentData, error: paymentError } =
+                      await supabase
+                        .from("beneficiary_payments")
+                        .insert([beneficiaryPayment])
+                        .select("id")
+                        .single();
+
+                    if (paymentError) {
+                      beneficiaryPaymentFailed = true;
+                      beneficiaryPaymentError = paymentError;
+                    } else {
+                      beneficiaryPaymentsIds.push(paymentData.id);
+                      try {
+                        await storage.appendPaymentIdToRegiondet(
+                          beneficiaryId,
+                          paymentData.id,
+                        );
+                      } catch (appendError) {
+                        console.error(
+                          "[DocumentsController] V2 Error appending payment id to regiondet:",
+                          appendError,
+                        );
+                      }
+                    }
+                  }
+                }
+              } else {
+                const beneficiaryPayment = {
+                  document_id: data.id,
+                  beneficiary_id: beneficiaryId,
+                  amount: recipient.amount,
+                  status: "pending",
+                  installment: recipient.installment,
+                  freetext: recipient.secondary_text || null,
+                  unit_id: numericUnitId,
+                  project_index_id: projectIndexId,
+                  created_at: now,
+                  updated_at: now,
+                };
+
+                const { data: paymentData, error: paymentError } = await supabase
+                  .from("beneficiary_payments")
+                  .insert([beneficiaryPayment])
                   .select("id")
                   .single();
 
-              if (createError) {
-                console.error(
-                  "[DocumentsController] V2 Error creating beneficiary:",
-                  createError,
-                );
-              } else {
-                beneficiaryId = createdBeneficiary.id;
-                createdBeneficiaryIds.push(beneficiaryId); // Track for potential rollback
-                console.log(
-                  "[DocumentsController] V2 Created new beneficiary:",
-                  beneficiaryId,
-                  "for AFM:",
-                  recipient.afm,
-                );
-              }
-            } else {
-              console.error(
-                "[DocumentsController] V2 Error finding beneficiary:",
-                findError,
-              );
-              beneficiaryPaymentFailed = true;
-              beneficiaryPaymentError = findError;
-            }
-          } catch (beneficiaryError) {
-            console.error(
-              "[DocumentsController] V2 Error during beneficiary lookup/creation:",
-              beneficiaryError,
-            );
-            beneficiaryPaymentFailed = true;
-            beneficiaryPaymentError = beneficiaryError;
-          }
-
-          // Step 2: Create separate beneficiary payment records for each installment
-          if (beneficiaryId) {
-            // Check if recipient has installments array and amounts
-            if (recipient.installments && recipient.installmentAmounts) {
-              console.log(
-                "[DocumentsController] V2 Creating",
-                recipient.installments.length,
-                "installment payments for",
-                recipient.afm,
-              );
-
-              // Create one payment record per installment
-              for (const installmentName of recipient.installments) {
-                const installmentAmount =
-                  recipient.installmentAmounts[installmentName];
-
-                if (installmentAmount > 0) {
-                  const beneficiaryPayment = {
-                    document_id: data.id,
-                    beneficiary_id: beneficiaryId,
-                    amount: installmentAmount,
-                    status: "pending",
-                    installment: installmentName, // Use specific installment name
-                    freetext: recipient.secondary_text || null,
-                    unit_id: numericUnitId,
-                    project_index_id: projectIndexId,
-                    created_at: now,
-                    updated_at: now,
-                  };
-
-                  console.log(
-                    "[DocumentsController] V2 Creating installment payment:",
-                    installmentName,
-                    "Amount:",
-                    installmentAmount,
-                  );
-                  console.log(
-                    "[DocumentsController] V2 Payment payload with IDs:",
-                    {
-                      document_id: data.id,
-                      beneficiary_id: beneficiaryId,
-                      unit_id: numericUnitId,
-                      project_index_id: projectIndexId,
-                      unit_raw: unit,
-                      projectIndexId_raw: projectIndexId,
-                    },
-                  );
-
-                  const { data: paymentData, error: paymentError } =
-                    await supabase
-                      .from("beneficiary_payments")
-                      .insert([beneficiaryPayment])
-                      .select("id")
-                      .single();
-
-                  if (paymentError) {
-                    console.error(
-                      "[DocumentsController] V2 Error creating installment payment:",
-                      paymentError,
-                    );
-                    beneficiaryPaymentFailed = true;
-                    beneficiaryPaymentError = paymentError;
-                  } else {
-                    beneficiaryPaymentsIds.push(paymentData.id);
-                    try {
-                      await storage.appendPaymentIdToRegiondet(
-                        beneficiaryId,
-                        paymentData.id,
-                      );
-                    } catch (appendError) {
-                      console.error(
-                        "[DocumentsController] V2 Error appending payment id to regiondet:",
-                        appendError,
-                      );
-                    }
-                    console.log(
-                      "[DocumentsController] V2 Created installment payment:",
+                if (paymentError) {
+                  beneficiaryPaymentFailed = true;
+                  beneficiaryPaymentError = paymentError;
+                } else {
+                  beneficiaryPaymentsIds.push(paymentData.id);
+                  try {
+                    await storage.appendPaymentIdToRegiondet(
+                      beneficiaryId,
                       paymentData.id,
-                      "for",
-                      installmentName,
+                    );
+                  } catch (appendError) {
+                    console.error(
+                      "[DocumentsController] V2 Error appending payment id to regiondet:",
+                      appendError,
                     );
                   }
                 }
               }
             } else {
-              // Fallback: create single payment record (legacy behavior)
-              const beneficiaryPayment = {
-                document_id: data.id,
-                beneficiary_id: beneficiaryId,
-                amount: recipient.amount,
-                status: "pending",
-                installment: recipient.installment,
-                freetext: recipient.secondary_text || null,
-                unit_id: numericUnitId,
-                project_index_id: projectIndexId,
-                created_at: now,
-                updated_at: now,
-              };
-
-              console.log(
-                "[DocumentsController] V2 Creating single payment (fallback):",
-                beneficiaryPayment,
-              );
-              console.log(
-                "[DocumentsController] V2 Single payment IDs check:",
-                {
-                  unit_id: numericUnitId,
-                  project_index_id: projectIndexId,
-                  unit_raw: unit,
-                  projectIndexId_null: projectIndexId === null,
-                },
-              );
-
-              const { data: paymentData, error: paymentError } = await supabase
-                .from("beneficiary_payments")
-                .insert([beneficiaryPayment])
-                .select("id")
-                .single();
-
-              if (paymentError) {
-                console.error(
-                  "[DocumentsController] V2 Error creating single payment:",
-                  paymentError,
+              beneficiaryPaymentFailed = true;
+              beneficiaryPaymentError =
+                beneficiaryPaymentError ||
+                new Error(
+                  `Cannot create payment because beneficiary_id is missing for AFM ${recipient.afm}`,
                 );
-                beneficiaryPaymentFailed = true;
-                beneficiaryPaymentError = paymentError;
-              } else {
-                beneficiaryPaymentsIds.push(paymentData.id);
-                try {
-                  await storage.appendPaymentIdToRegiondet(
-                    beneficiaryId,
-                    paymentData.id,
-                  );
-                } catch (appendError) {
-                  console.error(
-                    "[DocumentsController] V2 Error appending payment id to regiondet:",
-                    appendError,
-                  );
-                }
-                console.log(
-                  "[DocumentsController] V2 Created single payment:",
-                  paymentData.id,
-                );
-              }
             }
-          } else {
-            console.error(
-              "[DocumentsController] V2 Cannot create payment: beneficiary_id is null for AFM:",
-              recipient.afm,
-            );
-            beneficiaryPaymentFailed = true;
           }
-          } // End of else block for standard beneficiary payments
         }
 
         // Update document with appropriate payment IDs based on expenditure type
         if (isEktosEdras) {
-          // If no employee payments were created, rollback the document to avoid orphan records
           if (employeePaymentsIds.length === 0 || employeePaymentFailed) {
-            console.error(
-              "[DocumentsController] V2 Employee payments were not created for ΕΚΤΟΣ ΕΔΡΑΣ document. Rolling back document:",
-              data.id,
-              "last error:",
-              employeePaymentError,
+            shouldPersistAsDraft = true;
+            addCreationIssue(
+              "EMPLOYEE_PAYMENTS_NOT_CREATED",
+              "employee_payments",
+              employeePaymentError || "No employee payments were created",
             );
-
-            // Attempt to delete any partially created employee payments
-            if (employeePaymentsIds.length > 0) {
-              try {
-                await supabase
-                  .from("EmployeePayments")
-                  .delete()
-                  .in("id", employeePaymentsIds);
-                console.log(
-                  "[DocumentsController] V2 Rollback: Deleted partial employee payments:",
-                  employeePaymentsIds,
-                );
-              } catch (deleteError) {
-                console.error(
-                  "[DocumentsController] V2 Rollback failed while deleting employee payments:",
-                  deleteError,
-                );
-              }
-            }
-
-            try {
-              await supabase
-                .from("generated_documents")
-                .delete()
-                .eq("id", data.id);
-            } catch (rollbackError) {
-              console.error(
-                "[DocumentsController] V2 Rollback failed while deleting document:",
-                rollbackError,
-              );
-            }
-
-            return res.status(500).json({
-              message:
-                "Employee payments could not be saved. The document was not created.",
-              error:
-                employeePaymentError?.message || "employee_payments_not_created",
-              details: employeePaymentError || undefined,
-            });
-          }
-
-          console.log(
-            "[DocumentsController] V2 Updating document with employee payment IDs:",
-            employeePaymentsIds,
-          );
-
-          const { error: updateError } = await supabase
-            .from("generated_documents")
-            .update({ employee_payments_id: employeePaymentsIds })
-            .eq("id", data.id);
-
-          if (updateError) {
-            console.error(
-              "[DocumentsController] V2 Error updating document with employee payment IDs:",
-              updateError,
-            );
+            await rollbackPostInsertArtifacts("employee_payments");
           } else {
-            console.log(
-              "[DocumentsController] V2 Successfully updated document with employee payment IDs:",
-              employeePaymentsIds,
-            );
+            const { error: updateError } = await supabase
+              .from("generated_documents")
+              .update({ employee_payments_id: employeePaymentsIds })
+              .eq("id", data.id);
+
+            if (updateError) {
+              shouldPersistAsDraft = true;
+              addCreationIssue(
+                "DOCUMENT_PAYMENT_LINK_UPDATE_FAILED",
+                "employee_payments",
+                updateError,
+              );
+              await rollbackPostInsertArtifacts("employee_payments");
+            }
           }
         } else {
           if (
             formattedRecipients.length > 0 &&
             (beneficiaryPaymentsIds.length === 0 || beneficiaryPaymentFailed)
           ) {
-            console.error(
-              "[DocumentsController] V2 Beneficiary payments were not created for non-EKTOS EDRAS document. Rolling back document:",
-              data.id,
-              "last error:",
-              beneficiaryPaymentError,
+            shouldPersistAsDraft = true;
+            addCreationIssue(
+              "BENEFICIARY_PAYMENTS_NOT_CREATED",
+              "beneficiary_payments",
+              beneficiaryPaymentError || "No beneficiary payments were created",
             );
-
-            // Attempt to delete any partially created payments
-            if (beneficiaryPaymentsIds.length > 0) {
-              try {
-                await supabase
-                  .from("beneficiary_payments")
-                  .delete()
-                  .in("id", beneficiaryPaymentsIds);
-                console.log(
-                  "[DocumentsController] V2 Rollback: Deleted beneficiary payments:",
-                  beneficiaryPaymentsIds,
-                );
-              } catch (deleteError) {
-                console.error(
-                  "[DocumentsController] V2 Rollback failed while deleting partial beneficiary payments:",
-                  deleteError,
-                );
-              }
-            }
-
-            // Delete newly created beneficiaries to prevent orphan records
-            if (createdBeneficiaryIds.length > 0) {
-              try {
-                await supabase
-                  .from("beneficiaries")
-                  .delete()
-                  .in("id", createdBeneficiaryIds);
-                console.log(
-                  "[DocumentsController] V2 Rollback: Deleted orphan beneficiaries:",
-                  createdBeneficiaryIds,
-                );
-              } catch (deleteError) {
-                console.error(
-                  "[DocumentsController] V2 Rollback failed while deleting beneficiaries:",
-                  deleteError,
-                );
-              }
-            }
-
-            try {
-              await supabase
-                .from("generated_documents")
-                .delete()
-                .eq("id", data.id);
-            } catch (rollbackError) {
-              console.error(
-                "[DocumentsController] V2 Rollback failed while deleting document:",
-                rollbackError,
-              );
-            }
-
-            return res.status(500).json({
-              message:
-                "Beneficiary payments could not be saved. The document was not created.",
-              error:
-                beneficiaryPaymentError?.message ||
-                "beneficiary_payments_not_created",
-              details: beneficiaryPaymentError || undefined,
-            });
-          }
-
-          console.log(
-            "[DocumentsController] V2 Updating document with beneficiary payment IDs:",
-            beneficiaryPaymentsIds,
-          );
-
-          const { error: updateError } = await supabase
-            .from("generated_documents")
-            .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
-            .eq("id", data.id);
-
-          if (updateError) {
-            console.error(
-              "[DocumentsController] V2 Error updating document with beneficiary payment IDs:",
-              updateError,
-            );
-            console.error(
-              "[DocumentsController] V2 Update error details:",
-              updateError.details,
-            );
-            console.error(
-              "[DocumentsController] V2 Update error hint:",
-              updateError.hint,
-            );
+            await rollbackPostInsertArtifacts("beneficiary_payments");
           } else {
-            console.log(
-              "[DocumentsController] V2 Successfully updated document with beneficiary payment IDs:",
-              beneficiaryPaymentsIds,
-            );
+            const { error: updateError } = await supabase
+              .from("generated_documents")
+              .update({ beneficiary_payments_id: beneficiaryPaymentsIds })
+              .eq("id", data.id);
+
+            if (updateError) {
+              shouldPersistAsDraft = true;
+              addCreationIssue(
+                "DOCUMENT_PAYMENT_LINK_UPDATE_FAILED",
+                "beneficiary_payments",
+                updateError,
+              );
+              await rollbackPostInsertArtifacts("beneficiary_payments");
+            }
           }
         }
-      } catch (beneficiaryError) {
-        console.error(
-          "[DocumentsController] V2 Error creating beneficiary payments:",
-          beneficiaryError,
+      } catch (paymentsError) {
+        shouldPersistAsDraft = true;
+        addCreationIssue(
+          "PAYMENT_CREATION_EXCEPTION",
+          "payments",
+          paymentsError,
         );
+        await rollbackPostInsertArtifacts("payments");
       }
 
       // Update project budget with spending amount and create budget history
-      try {
-        console.log(
-          "[DocumentsController] V2 Updating budget for spending amount:",
-          total_amount,
-        );
-        const { storage } = await import("../storage");
-        await storage.updateProjectBudgetSpending(
-          project_id,
-          parseFloat(String(total_amount)) || 0,
-          data.id,
-          req.user?.id,
-        );
-        console.log("[DocumentsController] V2 Budget updated successfully");
-
-        // Broadcast dashboard refresh to trigger budget indicator updates in all connected clients
+      if (!shouldPersistAsDraft) {
         try {
-          broadcastDashboardRefresh({
-            projectId: project_id,
-            changeType: 'document_created',
-            reason: `Document ${data.id} created with amount ${total_amount}`
-          });
-        } catch (broadcastError) {
-          console.error('[DocumentsController] Failed to broadcast dashboard refresh:', broadcastError);
-          // Don't fail document creation if broadcast fails
-        }
-
-        // Validate budget and trigger notifications if needed
-        try {
-          await validateBudgetAllocation(
+          console.log(
+            "[DocumentsController] V2 Updating budget for spending amount:",
+            total_amount,
+          );
+          const { storage } = await import("../storage");
+          await storage.updateProjectBudgetSpending(
             project_id,
             parseFloat(String(total_amount)) || 0,
-            req.user?.id
+            data.id,
+            req.user?.id,
           );
-          console.log('[DocumentsController] V2 Budget validation completed and notifications triggered if applicable');
-        } catch (validationError) {
-          console.error('[DocumentsController] V2 Error during budget validation:', validationError);
-          // Don't fail document creation if validation fails
-        }
-      } catch (budgetError) {
-        console.error(
-          "[DocumentsController] V2 Error updating budget:",
-          budgetError,
-        );
-        
-        // Since we have pre-validation, a failure here is unexpected
-        // We should rollback by deleting the document and payments
-        const errorMessage = budgetError instanceof Error ? budgetError.message : "Unknown budget error";
-        
-        const isBudgetExceeded = errorMessage.includes('BUDGET_EXCEEDED');
-        console.log('[DocumentsController] V2 Budget update failed - rolling back document creation');
-        
-        try {
-          // Delete beneficiary payments first
-          if (beneficiaryPaymentsIds.length > 0) {
-            await supabase
-              .from("BeneficiaryPayments")
-              .delete()
-              .in("id", beneficiaryPaymentsIds);
-            console.log('[DocumentsController] V2 Rollback: Deleted beneficiary payments:', beneficiaryPaymentsIds);
+          console.log("[DocumentsController] V2 Budget updated successfully");
+
+          try {
+            broadcastDashboardRefresh({
+              projectId: project_id,
+              changeType: "document_created",
+              reason: `Document ${data.id} created with amount ${total_amount}`,
+            });
+          } catch (broadcastError) {
+            console.error(
+              "[DocumentsController] Failed to broadcast dashboard refresh:",
+              broadcastError,
+            );
           }
-          
-          // Delete employee payments if any
-          if (employeePaymentsIds.length > 0) {
-            await supabase
-              .from("EmployeePayments")
-              .delete()
-              .in("id", employeePaymentsIds);
-            console.log('[DocumentsController] V2 Rollback: Deleted employee payments:', employeePaymentsIds);
+
+          try {
+            await validateBudgetAllocation(
+              project_id,
+              parseFloat(String(total_amount)) || 0,
+              req.user?.id,
+            );
+          } catch (validationError) {
+            console.error(
+              "[DocumentsController] V2 Error during budget validation:",
+              validationError,
+            );
           }
-          
-          // Delete the document
-          await supabase
-            .from("generated_documents")
-            .delete()
-            .eq("id", data.id);
-          console.log('[DocumentsController] V2 Rollback: Deleted document:', data.id);
-          
-        } catch (rollbackError) {
-          console.error('[DocumentsController] V2 Rollback failed:', rollbackError);
+        } catch (budgetError) {
+          shouldPersistAsDraft = true;
+          addCreationIssue("BUDGET_UPDATE_FAILED", "budget_update", budgetError);
+          await rollbackPostInsertArtifacts("budget_update");
         }
-        
-        if (isBudgetExceeded) {
-          return res.status(422).json({
-            message: "Ανεπαρκής προϋπολογισμός",
-            error: errorMessage.replace('BUDGET_EXCEEDED: ', ''),
-            budget_error: true
+      }
+
+      if (shouldPersistAsDraft) {
+        const creationIntegrity = {
+          integrity_status: "incomplete" as const,
+          issues: creationIssues,
+          rollback: {
+            attempted: rollbackAttempted,
+            succeeded: rollbackSucceeded,
+          },
+          generated_at: new Date().toISOString(),
+        };
+
+        const { error: draftUpdateError } = await supabase
+          .from("generated_documents")
+          .update({
+            status: "draft",
+            beneficiary_payments_id: [],
+            employee_payments_id: [],
+            creation_integrity: creationIntegrity,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id);
+
+        if (draftUpdateError) {
+          return res.status(500).json({
+            message: "Error finalizing draft integrity state",
+            error: draftUpdateError.message,
+            integrity_status: "incomplete",
+            creation_issues: creationIssues,
           });
         }
-        
-        return res.status(500).json({
-          message: "Αποτυχία ενημέρωσης προϋπολογισμού",
-          error: errorMessage,
+
+        broadcastDocumentUpdate({
+          type: "DOCUMENT_UPDATE",
+          documentId: data.id,
+          data: {
+            userId: (req as any).user?.id,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        return res.status(201).json({
+          id: data.id,
+          status: "draft",
+          integrity_status: "incomplete",
+          creation_issues: creationIssues,
+          message:
+            "Document saved as draft with integrity flags due to post-create failures",
+          beneficiary_payments_count: beneficiaryPaymentsIds.length,
         });
       }
 
-      // Broadcast document update to all connected clients
       broadcastDocumentUpdate({
         type: "DOCUMENT_UPDATE",
         documentId: data.id,
@@ -1683,21 +1610,22 @@ router.post(
         },
       });
 
-      // Include budget warning in response if κατανομή was exceeded
       const responsePayload: any = {
         id: data.id,
-        message: budgetWarning 
-          ? "Το έγγραφο αποθηκεύτηκε με προειδοποίηση προϋπολογισμού" 
+        status: "pending",
+        integrity_status: "ok",
+        message: budgetWarning
+          ? "Document saved with budget warning"
           : "Document created successfully",
         beneficiary_payments_count: beneficiaryPaymentsIds.length,
       };
-      
+
       if (budgetWarning) {
         responsePayload.budget_warning = true;
         responsePayload.budget_warning_message = budgetWarning.message;
         responsePayload.budget_type = budgetWarning.budgetType;
       }
-      
+
       res.status(201).json(responsePayload);
     } catch (error) {
       console.error("[DocumentsController] V2 Error creating document:", error);
@@ -2090,24 +2018,26 @@ router.get("/", async (req: Request, res: Response) => {
 
     // Amount filters - sum all recipient amounts and filter
     if (filters.amountFrom) {
+      const minAmount = filters.amountFrom;
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
         const totalAmount = doc.recipients.reduce(
           (sum: number, recipient: any) => sum + (recipient.amount || 0),
           0,
         );
-        return totalAmount >= filters.amountFrom;
+        return totalAmount >= minAmount;
       });
     }
 
     if (filters.amountTo) {
+      const maxAmount = filters.amountTo;
       filteredDocuments = filteredDocuments.filter((doc) => {
         if (!doc.recipients || !Array.isArray(doc.recipients)) return false;
         const totalAmount = doc.recipients.reduce(
           (sum: number, recipient: any) => sum + (recipient.amount || 0),
           0,
         );
-        return totalAmount <= filters.amountTo;
+        return totalAmount <= maxAmount;
       });
     }
 
@@ -4530,6 +4460,10 @@ router.put(
         return res.status(400).json({ message: "Recipients must be an array" });
       }
 
+      if (recipients.length === 0) {
+        return res.status(400).json({ message: "At least one recipient is required" });
+      }
+
       // Check if this is an ΕΚΤΟΣ ΕΔΡΑΣ document by checking expenditure type
       const { data: document, error: docError } = await supabase
         .from("generated_documents")
@@ -4758,125 +4692,234 @@ router.put(
       }
 
       // Handle standard beneficiary payments
-      const updatedPayments = [];
+      const updatedPayments: any[] = [];
+      const createdPayments: any[] = [];
 
-      for (const recipient of recipients) {
-        if (recipient.id) {
-          // First, get the existing payment to find beneficiary_id
-          const { data: existingPayment, error: fetchError } = await supabase
-            .from("beneficiary_payments")
-            .select("beneficiary_id")
-            .eq("id", recipient.id)
-            .eq("document_id", documentId)
-            .single();
+      const { data: existingPayments, error: existingPaymentsError } = await supabase
+        .from("beneficiary_payments")
+        .select("id, beneficiary_id")
+        .eq("document_id", documentId);
 
-          if (fetchError || !existingPayment) {
-            console.error("Error fetching existing payment:", fetchError);
-            continue;
+      if (existingPaymentsError) {
+        console.error("Error fetching current beneficiary payments:", existingPaymentsError);
+        return res.status(500).json({
+          message: "Failed to fetch current beneficiary payments",
+          error: existingPaymentsError.message,
+        });
+      }
+
+      const existingPaymentMap = new Map<number, { id: number; beneficiary_id: number | null }>(
+        (existingPayments || []).map((payment: any) => [
+          Number(payment.id),
+          {
+            id: Number(payment.id),
+            beneficiary_id:
+              payment.beneficiary_id !== null && payment.beneficiary_id !== undefined
+                ? Number(payment.beneficiary_id)
+                : null,
+          },
+        ]),
+      );
+
+      const syncPlan = buildBeneficiaryRecipientSyncPlan(
+        recipients,
+        Array.from(existingPaymentMap.keys()),
+      );
+
+      if (!syncPlan.ok) {
+        return res.status(syncPlan.status).json({
+          message: syncPlan.message,
+          ...(syncPlan.details ? { details: syncPlan.details } : {}),
+        });
+      }
+
+      const { toUpdate, toCreate, toDeleteIds } = syncPlan;
+
+      for (const recipient of toUpdate) {
+        const existingPayment = existingPaymentMap.get(recipient.id)!;
+
+        // Update beneficiary information if we have it
+        if (
+          existingPayment.beneficiary_id &&
+          (recipient.firstname ||
+            recipient.lastname ||
+            recipient.fathername ||
+            recipient.afm)
+        ) {
+          const beneficiaryUpdate: any = {};
+          if (recipient.firstname) beneficiaryUpdate.name = recipient.firstname;
+          if (recipient.lastname) beneficiaryUpdate.surname = recipient.lastname;
+          if (recipient.fathername) beneficiaryUpdate.fathername = recipient.fathername;
+          if (recipient.afm) {
+            beneficiaryUpdate.afm = encryptAFM(recipient.afm);
+            beneficiaryUpdate.afm_hash = hashAFM(recipient.afm);
           }
 
-          // Update beneficiary information if we have it
-          if (
-            existingPayment.beneficiary_id &&
-            (recipient.firstname ||
-              recipient.lastname ||
-              recipient.fathername ||
-              recipient.afm)
-          ) {
-            const beneficiaryUpdate: any = {};
-            if (recipient.firstname)
-              beneficiaryUpdate.name = recipient.firstname;
-            if (recipient.lastname)
-              beneficiaryUpdate.surname = recipient.lastname;
-            if (recipient.fathername)
-              beneficiaryUpdate.fathername = recipient.fathername;
-            if (recipient.afm) {
-              beneficiaryUpdate.afm = encryptAFM(recipient.afm);
-              beneficiaryUpdate.afm_hash = hashAFM(recipient.afm);
-            }
+          if (Object.keys(beneficiaryUpdate).length > 0) {
+            const { error: beneficiaryError } = await supabase
+              .from("beneficiaries")
+              .update(beneficiaryUpdate)
+              .eq("id", existingPayment.beneficiary_id);
 
-            if (Object.keys(beneficiaryUpdate).length > 0) {
-              const { error: beneficiaryError } = await supabase
-                .from("beneficiaries")
-                .update(beneficiaryUpdate)
-                .eq("id", existingPayment.beneficiary_id);
-
-              if (beneficiaryError) {
-                console.error("Error updating beneficiary:", beneficiaryError);
-              }
+            if (beneficiaryError) {
+              console.error("Error updating beneficiary:", beneficiaryError);
+              return res.status(500).json({
+                message: "Failed to update beneficiary",
+                error: beneficiaryError.message,
+              });
             }
           }
+        }
 
-          // Update payment information
-          const { data: updatedPayment, error } = await supabase
-            .from("beneficiary_payments")
-            .update({
-              amount: recipient.amount?.toString(),
-              installment: recipient.installment || "ΕΦΑΠΑΞ",
-              status: recipient.status || "pending",
-              updated_at: new Date().toISOString(),
+        // Update payment information
+        const { data: updatedPayment, error } = await supabase
+          .from("beneficiary_payments")
+          .update({
+            amount: recipient.amount?.toString(),
+            installment: recipient.installment || "ΕΦΑΠΑΞ",
+            status: recipient.status || "pending",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", recipient.id)
+          .eq("document_id", documentId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error updating beneficiary payment:", error);
+          return res.status(500).json({
+            message: "Failed to update beneficiary payment",
+            error: error.message,
+          });
+        }
+
+        updatedPayments.push(updatedPayment);
+      }
+
+      for (const recipient of toCreate) {
+        if (!recipient.afm || !recipient.firstname || !recipient.lastname) {
+          return res.status(400).json({
+            message: "Recipient is missing required fields",
+            details: { required: ["firstname", "lastname", "afm"] },
+          });
+        }
+
+        const afmHash = hashAFM(recipient.afm);
+        const encryptedAFM = encryptAFM(recipient.afm);
+
+        const { data: existingBeneficiary, error: existingBeneficiaryError } = await supabase
+          .from("beneficiaries")
+          .select("id")
+          .eq("afm_hash", afmHash)
+          .maybeSingle();
+
+        if (existingBeneficiaryError) {
+          console.error("Error searching beneficiary by AFM hash:", existingBeneficiaryError);
+          return res.status(500).json({
+            message: "Failed to search beneficiary by AFM",
+            error: existingBeneficiaryError.message,
+          });
+        }
+
+        let beneficiaryId = existingBeneficiary?.id as number | undefined;
+
+        if (!beneficiaryId) {
+          const { data: newBeneficiary, error: beneficiaryError } = await supabase
+            .from("beneficiaries")
+            .insert({
+              name: recipient.firstname,
+              surname: recipient.lastname,
+              fathername: recipient.fathername || null,
+              afm: encryptedAFM,
+              afm_hash: afmHash,
             })
-            .eq("id", recipient.id)
-            .eq("document_id", documentId)
-            .select()
+            .select("id")
             .single();
 
-          if (error) {
-            console.error("Error updating beneficiary payment:", error);
+          if (beneficiaryError || !newBeneficiary) {
+            console.error("Error creating beneficiary:", beneficiaryError);
             return res.status(500).json({
-              message: "Failed to update beneficiary payment",
-              error: error.message,
+              message: "Failed to create beneficiary",
+              error: beneficiaryError?.message,
             });
           }
 
-          updatedPayments.push(updatedPayment);
-        } else if (recipient.firstname && recipient.lastname && recipient.afm) {
-          // Create new beneficiary and payment if we have required data
-          const encryptedAFM = encryptAFM(recipient.afm);
-          const afmHash = hashAFM(recipient.afm);
-          const { data: newBeneficiary, error: beneficiaryError } =
-            await supabase
-              .from("beneficiaries")
-              .insert({
-                name: recipient.firstname,
-                surname: recipient.lastname,
-                fathername: recipient.fathername || null,
-                afm: encryptedAFM,
-                afm_hash: afmHash,
-              })
-              .select()
-              .single();
+          beneficiaryId = newBeneficiary.id;
+        }
 
-          if (beneficiaryError) {
-            console.error("Error creating beneficiary:", beneficiaryError);
-            continue;
-          }
+        const { data: newPayment, error: paymentError } = await supabase
+          .from("beneficiary_payments")
+          .insert({
+            document_id: documentId,
+            beneficiary_id: beneficiaryId,
+            amount: recipient.amount?.toString() || "0",
+            installment: recipient.installment || "ΕΦΑΠΑΞ",
+            status: recipient.status || "pending",
+          })
+          .select()
+          .single();
 
-          // Create new payment
-          const { data: newPayment, error: paymentError } = await supabase
-            .from("beneficiary_payments")
-            .insert({
-              document_id: documentId,
-              beneficiary_id: newBeneficiary.id,
-              amount: recipient.amount?.toString() || "0",
-              installment: recipient.installment || "ΕΦΑΠΑΞ",
-              status: recipient.status || "pending",
-            })
-            .select()
-            .single();
+        if (paymentError) {
+          console.error("Error creating beneficiary payment:", paymentError);
+          return res.status(500).json({
+            message: "Failed to create beneficiary payment",
+            error: paymentError.message,
+          });
+        }
 
-          if (paymentError) {
-            console.error("Error creating beneficiary payment:", paymentError);
-            continue;
-          }
+        createdPayments.push(newPayment);
+      }
 
-          updatedPayments.push(newPayment);
+      if (toDeleteIds.length > 0) {
+        const { error: deletePaymentsError } = await supabase
+          .from("beneficiary_payments")
+          .delete()
+          .eq("document_id", documentId)
+          .in("id", toDeleteIds);
+
+        if (deletePaymentsError) {
+          console.error("Error deleting removed beneficiary payments:", deletePaymentsError);
+          return res.status(500).json({
+            message: "Failed to delete removed beneficiary payments",
+            error: deletePaymentsError.message,
+          });
         }
       }
 
-      // Calculate new total amount from all updated beneficiary payments
-      const newTotalAmount = recipients.reduce((sum, recipient) => {
-        return sum + (parseFloat(recipient.amount?.toString() || '0') || 0);
+      const { data: finalPayments, error: finalPaymentsError } = await supabase
+        .from("beneficiary_payments")
+        .select("id, amount, installment, status, beneficiary_id")
+        .eq("document_id", documentId)
+        .order("id", { ascending: true });
+
+      if (finalPaymentsError) {
+        console.error("Error fetching final beneficiary payments:", finalPaymentsError);
+        return res.status(500).json({
+          message: "Failed to fetch final beneficiary payments",
+          error: finalPaymentsError.message,
+        });
+      }
+
+      const finalPaymentIds = (finalPayments || []).map((payment: any) => Number(payment.id));
+      const { error: documentPaymentSyncError } = await supabase
+        .from("generated_documents")
+        .update({ beneficiary_payments_id: finalPaymentIds })
+        .eq("id", documentId);
+
+      if (documentPaymentSyncError) {
+        console.error(
+          "Error syncing generated_documents.beneficiary_payments_id:",
+          documentPaymentSyncError,
+        );
+        return res.status(500).json({
+          message: "Failed to sync document beneficiary payment IDs",
+          error: documentPaymentSyncError.message,
+        });
+      }
+
+      // Calculate new total amount from final persisted beneficiary payments
+      const newTotalAmount = (finalPayments || []).reduce((sum: number, payment: any) => {
+        return sum + (parseFloat(String(payment.amount || "0")) || 0);
       }, 0);
 
       // Get current document data for budget reconciliation
@@ -4943,8 +4986,10 @@ router.put(
 
       res.json({
         message: "Beneficiaries and payments updated successfully",
-        payments: updatedPayments,
-        count: updatedPayments.length,
+        payments: finalPayments || [...updatedPayments, ...createdPayments],
+        count: (finalPayments || []).length,
+        deleted_count: toDeleteIds.length,
+        payment_ids: finalPaymentIds,
       });
     } catch (error) {
       console.error("Error updating beneficiary payments:", error);

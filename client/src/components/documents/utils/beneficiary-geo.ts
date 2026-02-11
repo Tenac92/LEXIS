@@ -149,15 +149,23 @@ export const deriveGeoSelectionFromRegiondet = (
 
   const regionCode =
     resolved.regions && resolved.regions[0]
-      ? String(resolved.regions[0].code || "")
+      ? String(resolved.regions[0].code || resolved.regions[0].region_code || "")
       : "";
   const unitCode =
     resolved.regional_units && resolved.regional_units[0]
-      ? String(resolved.regional_units[0].code || "")
+      ? String(
+          resolved.regional_units[0].code ||
+            resolved.regional_units[0].region_code ||
+            "",
+        )
       : "";
   const municipalityCode =
     resolved.municipalities && resolved.municipalities[0]
-      ? String(resolved.municipalities[0].code || "")
+      ? String(
+          resolved.municipalities[0].code ||
+            resolved.municipalities[0].id ||
+            "",
+        )
       : "";
 
   return { regionCode, unitCode, municipalityCode };

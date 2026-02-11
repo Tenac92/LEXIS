@@ -93,4 +93,14 @@ assert.deepStrictEqual(
   "deriveGeoSelectionFromRegiondet should use the latest geo entry when no payment id is provided",
 );
 
+assert.deepStrictEqual(
+  deriveGeoSelectionFromRegiondet({
+    regions: [{ name: "Region Legacy", region_code: "R20" }],
+    regional_units: [{ name: "Unit Legacy", region_code: "U20" }],
+    municipalities: [{ name: "Municipality Legacy", id: "M20" }],
+  } as any),
+  { regionCode: "R20", unitCode: "U20", municipalityCode: "M20" },
+  "deriveGeoSelectionFromRegiondet should support legacy fallback keys",
+);
+
 console.log("beneficiary-geo.test.ts passed");

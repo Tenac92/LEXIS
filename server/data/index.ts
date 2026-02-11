@@ -6,7 +6,6 @@
 import { createClient } from '@supabase/supabase-js';
 import * as schema from '@shared/schema';
 import { log } from '../vite';
-import type { Database } from '@shared/schema';
 
 /**
  * Database Configuration
@@ -58,7 +57,7 @@ class DatabaseAccess {
       DatabaseConfig.validateConfig();
       
       // Initialize Supabase with enhanced configuration and more resilient settings
-      this.supabaseClient = createClient<Database>(
+      this.supabaseClient = createClient(
         DatabaseConfig.supabaseUrl!,
         DatabaseConfig.supabaseKey!,
         {

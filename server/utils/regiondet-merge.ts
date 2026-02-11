@@ -50,9 +50,19 @@ export const mergeRegiondetWithPayments = (
     .filter((entry) => entry.payment_id === undefined)
     .reduce((acc, entry) => ({ ...acc, ...entry }), {});
 
+  const existingEntryFallbackTemplate = existingEntries
+    .filter((entry) => entry.payment_id !== undefined)
+    .map((entry) => {
+      const { payment_id, payment_ids, ...geo } = entry;
+      return geo;
+    })
+    .find((geo) => Object.keys(geo).length > 0);
+
   const template = Object.keys(incomingTemplate).length
     ? incomingTemplate
-    : existingTemplate;
+    : Object.keys(existingTemplate).length
+      ? existingTemplate
+      : existingEntryFallbackTemplate || {};
 
   const merged = new Map<string, RegiondetEntry>();
 
@@ -61,7 +71,8 @@ export const mergeRegiondetWithPayments = (
       entry.payment_id !== undefined
         ? String(entry.payment_id)
         : `__no_payment__:${idx}`;
-    const value = template ? ({ ...template, ...entry } as RegiondetEntry) : entry;
+    // Incoming template should override existing geo fields for mapped payments.
+    const value = template ? ({ ...entry, ...template } as RegiondetEntry) : entry;
     merged.set(key, value);
   });
 

@@ -8,11 +8,30 @@ import { encryptAFM, decryptAFM, hashAFM } from './utils/crypto';
 import { mergeRegiondetWithPayments } from './utils/regiondet-merge';
 
 type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute' | 'monada'>;
+type CreateBeneficiaryInput = Omit<InsertBeneficiary, 'afm_hash'>;
 
 const ENGINEERS_CACHE_TTL = 5 * 60 * 1000;
+const SESSION_TTL_MS = 48 * 60 * 60 * 1000;
+
+export type SessionStoreType = 'memory' | 'redis';
+
+export function createMemorySessionStore(): session.Store {
+  const MemoryStoreSession = MemoryStore(session);
+  return new MemoryStoreSession({
+    checkPeriod: 86400000, // prune expired entries every 24h
+    ttl: SESSION_TTL_MS, // 48 hours (match cookie maxAge)
+    stale: false,
+    noDisposeOnSet: true, // Prevent disposal on session updates
+    dispose: (key: string) => {
+      console.log(`[SessionStore] Session naturally expired: ${key}`);
+    },
+  });
+}
 
 export interface IStorage {
   sessionStore: session.Store;
+  sessionStoreType: SessionStoreType;
+  setSessionStore(store: session.Store, storeType: SessionStoreType): void;
   getProjectsByUnit(unit: string): Promise<Project[]>;
   getProjectExpenditureTypes(projectId: string): Promise<string[]>;
   getBudgetData(mis: string): Promise<ProjectBudget | null>;
@@ -77,9 +96,14 @@ export interface IStorage {
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
   searchBeneficiariesByAFM(afm: string): Promise<Beneficiary[]>;
   getBeneficiaryById(id: number): Promise<Beneficiary | null>;
-  createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary>;
+  createBeneficiary(beneficiary: CreateBeneficiaryInput): Promise<Beneficiary>;
   updateBeneficiary(id: number, beneficiary: Partial<InsertBeneficiary>): Promise<Beneficiary>;
   appendPaymentIdToRegiondet(beneficiaryId: number, paymentId: number | string): Promise<void>;
+  getBeneficiaryDeletionStatus(id: number): Promise<{
+    hasPayments: boolean;
+    hasDocumentLinkedPayments: boolean;
+    paymentCount: number;
+  }>;
   deleteBeneficiary(id: number): Promise<void>;
   
   // Document search operations - SECURITY: Searches encrypted AFM via hash
@@ -117,22 +141,19 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
+  sessionStoreType: SessionStoreType = 'memory';
   private engineersCache: { data: EngineerSummary[]; expiresAt: number } | null = null;
   
   constructor() {
-    // Create an in-memory session store with proper configuration
-    const MemoryStoreSession = MemoryStore(session);
-    this.sessionStore = new MemoryStoreSession({
-      checkPeriod: 86400000, // prune expired entries every 24h
-      ttl: 48 * 60 * 60 * 1000, // 48 hours (match cookie maxAge)
-      stale: false,
-      noDisposeOnSet: true, // Prevent disposal on session updates
-      dispose: (key: string, session: any) => {
-        console.log(`[SessionStore] Session naturally expired: ${key}`);
-      }
-    });
+    this.sessionStore = createMemorySessionStore();
     
     console.log('[Storage] In-memory session store initialized');
+  }
+
+  setSessionStore(store: session.Store, storeType: SessionStoreType): void {
+    this.sessionStore = store;
+    this.sessionStoreType = storeType;
+    console.log(`[Storage] Session store switched to ${storeType}`);
   }
 
   async getProjectsByUnit(unit: string): Promise<Project[]> {
@@ -292,9 +313,15 @@ export class DatabaseStorage implements IStorage {
               `change_reason indicates €${expectedChange}, but available budget changed by €${calculatedChange}`
             );
             // Add warning to metadata
-            if (!entry.metadata) entry.metadata = {};
-            entry.metadata.audit_warning = 
-              `Ανακάλυψη: Δαπάνη εγγράφου €${expectedChange} δεν ταιριάζει με αλλαγή υπολοίπου €${calculatedChange}`;
+            const existingMetadata =
+              entry.metadata &&
+              typeof entry.metadata === "object" &&
+              !Array.isArray(entry.metadata)
+                ? (entry.metadata as Record<string, any>)
+                : {};
+            existingMetadata.audit_warning =
+              `Audit warning: document amount ${expectedChange} does not match available budget delta ${calculatedChange}`;
+            entry.metadata = existingMetadata;
           }
         }
       }
@@ -2191,7 +2218,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createBeneficiary(beneficiary: InsertBeneficiary): Promise<Beneficiary> {
+  async createBeneficiary(beneficiary: CreateBeneficiaryInput): Promise<Beneficiary> {
     try {
       console.log('[Storage] Creating new beneficiary:', beneficiary);
       
@@ -2302,6 +2329,51 @@ export class DatabaseStorage implements IStorage {
       console.log(`[Storage] Successfully deleted beneficiary ${id}`);
     } catch (error) {
       console.error('[Storage] Error in deleteBeneficiary:', error);
+      throw error;
+    }
+  }
+
+  async getBeneficiaryDeletionStatus(id: number): Promise<{
+    hasPayments: boolean;
+    hasDocumentLinkedPayments: boolean;
+    paymentCount: number;
+  }> {
+    try {
+      const { count: paymentCount, error: paymentCountError } = await supabase
+        .from("beneficiary_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("beneficiary_id", id);
+
+      if (paymentCountError) {
+        console.error(
+          "[Storage] Error checking beneficiary payment references:",
+          paymentCountError,
+        );
+        throw paymentCountError;
+      }
+
+      const { count: linkedCount, error: linkedCountError } = await supabase
+        .from("beneficiary_payments")
+        .select("id", { count: "exact", head: true })
+        .eq("beneficiary_id", id)
+        .not("document_id", "is", null);
+
+      if (linkedCountError) {
+        console.error(
+          "[Storage] Error checking beneficiary document-linked references:",
+          linkedCountError,
+        );
+        throw linkedCountError;
+      }
+
+      const normalizedPaymentCount = paymentCount ?? 0;
+      return {
+        hasPayments: normalizedPaymentCount > 0,
+        hasDocumentLinkedPayments: (linkedCount ?? 0) > 0,
+        paymentCount: normalizedPaymentCount,
+      };
+    } catch (error) {
+      console.error("[Storage] Error in getBeneficiaryDeletionStatus:", error);
       throw error;
     }
   }

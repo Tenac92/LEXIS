@@ -318,6 +318,7 @@ export function CreateDocumentDialog({
   const [direction, setDirection] = useState(0);
   const [loading, setLoading] = useState(false);
   const [formReset, setFormReset] = useState(false);
+  const [draftInstanceId, setDraftInstanceId] = useState(0);
   const { toast } = useToast();
   const { user, refreshUser } = useAuth();
   const queryClient = useQueryClient();
@@ -837,7 +838,8 @@ export function CreateDocumentDialog({
     const hasExistingFormData =
       formData?.project_id ||
       formData?.expenditure_type ||
-      (formData?.recipients && formData.recipients.length > 0);
+      (formData?.recipients && formData.recipients.length > 0) ||
+      (Array.isArray(formData?.esdian_fields) && formData.esdian_fields.length > 0);
 
     // Force reset when initialBeneficiary is provided, even if there's existing form data
     const shouldResetForm = !hasExistingFormData || hasInitialPrefill;
@@ -879,6 +881,9 @@ export function CreateDocumentDialog({
         recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
+        esdian_fields: [],
+        esdian_field1: "",
+        esdian_field2: "",
       });
 
       // Reset context state with preserved unit
@@ -891,7 +896,11 @@ export function CreateDocumentDialog({
         recipients: initialRecipients,
         status: "draft",
         selectedAttachments: [],
+        esdian_fields: [],
+        esdian_field1: "",
+        esdian_field2: "",
       });
+      setDraftInstanceId((prev) => prev + 1);
       setCurrentStep(0);
 
       if (defaultUnit) {
@@ -940,6 +949,7 @@ export function CreateDocumentDialog({
         unit: formData?.unit || "",
         project_id: formData?.project_id || "",
         region: formData?.region || "",
+        for_yl_id: formData?.for_yl_id || null,
         expenditure_type: formData?.expenditure_type || "",
         recipients: hasInitialPrefill
           ? [...prefillRecipients]
@@ -950,6 +960,11 @@ export function CreateDocumentDialog({
         selectedAttachments: Array.isArray(formData?.selectedAttachments)
           ? [...formData.selectedAttachments]
           : [],
+        esdian_fields: Array.isArray(formData?.esdian_fields)
+          ? [...formData.esdian_fields]
+          : formData?.esdian_field1 || formData?.esdian_field2
+            ? [formData?.esdian_field1 || "", formData?.esdian_field2 || ""].filter(Boolean)
+            : [],
         esdian_field1: formData?.esdian_field1 || "",
         esdian_field2: formData?.esdian_field2 || "",
       };
@@ -1056,7 +1071,6 @@ export function CreateDocumentDialog({
 
         // Update form context as well
         updateFormData({
-          ...formData,
           unit: unitToSelect,
         });
 
@@ -1107,6 +1121,7 @@ export function CreateDocumentDialog({
       recipients: [],
       status: "draft",
       selectedAttachments: [],
+      esdian_fields: [],
       esdian_field1: "",
       esdian_field2: "",
     });
@@ -1119,9 +1134,11 @@ export function CreateDocumentDialog({
       recipients: [],
       status: "draft",
       selectedAttachments: [],
+      esdian_fields: [],
       esdian_field1: "",
       esdian_field2: "",
     });
+    setDraftInstanceId((prev) => prev + 1);
     setLocalCurrentStep(0);
     setSavedStep(0);
   }, [form, updateFormData, setSavedStep]);
@@ -1231,10 +1248,16 @@ export function CreateDocumentDialog({
         unit: formValues.unit || "",
         project_id: formValues.project_id || "",
         region: formValues.region || "",
+        for_yl_id: formValues.for_yl_id || null,
         expenditure_type: formValues.expenditure_type || "",
         recipients: formValues.recipients || [],
         status: "draft",
         selectedAttachments: formValues.selectedAttachments || [],
+        esdian_fields: Array.isArray(formValues.esdian_fields)
+          ? formValues.esdian_fields.filter(
+              (field): field is string => typeof field === "string" && field.trim() !== "",
+            )
+          : [],
         esdian_field1: formValues.esdian_field1 || "",
         esdian_field2: formValues.esdian_field2 || "",
       };
@@ -3064,7 +3087,16 @@ export function CreateDocumentDialog({
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        })) as { id?: number; message?: string; budget_warning?: boolean; budget_warning_message?: string; budget_type?: string };
+        })) as {
+          id?: number;
+          message?: string;
+          budget_warning?: boolean;
+          budget_warning_message?: string;
+          budget_type?: string;
+          integrity_status?: "ok" | "incomplete";
+          creation_issues?: Array<{ code: string; stage: string; message: string }>;
+          status?: "draft" | "pending";
+        };
 
         console.log("[HandleSubmit] API request completed successfully!");
 
@@ -3097,18 +3129,27 @@ export function CreateDocumentDialog({
           }),
         ]);
 
-        // Show appropriate toast based on budget status
-        if (response.budget_warning && response.budget_type === 'katanomi') {
-          // Document saved with budget warning (κατανομή exceeded)
+        // Show appropriate toast based on integrity + budget status
+        if (response.integrity_status === "incomplete") {
           toast({
-            title: "Έγγραφο Αποθηκεύτηκε με Προειδοποίηση",
-            description: "Υπέρβαση κατανομής έτους - Απαιτείται χρηματοδότηση. Το έγγραφο αποθηκεύτηκε επιτυχώς.",
+            title: "Saved as Draft",
+            description:
+              response.creation_issues && response.creation_issues.length > 0
+                ? `The document was saved as draft with ${response.creation_issues.length} integrity issue(s).`
+                : "The document was saved as draft with integrity issues.",
+            variant: "warning",
+          });
+        } else if (response.budget_warning && response.budget_type === "katanomi") {
+          // Document saved with budget warning (katanomi exceeded)
+          toast({
+            title: "Saved with Warning",
+            description: "Year allocation exceeded. Financing approval is required before final processing.",
             variant: "warning",
           });
         } else {
           toast({
-            title: "Επιτυχία",
-            description: "Το έγγραφο δημιουργήθηκε επιτυχώς",
+            title: "Success",
+            description: "Document created successfully",
           });
         }
 
@@ -3126,6 +3167,7 @@ export function CreateDocumentDialog({
           unit: defaultUnit,
           project_id: "",
           region: "",
+          for_yl_id: null,
           expenditure_type: "",
           recipients: [],
           status: "draft",
@@ -3140,6 +3182,7 @@ export function CreateDocumentDialog({
           unit: defaultUnit,
           project_id: "",
           region: "",
+          for_yl_id: null,
           expenditure_type: "",
           recipients: [],
           status: "draft",
@@ -3148,6 +3191,7 @@ export function CreateDocumentDialog({
           esdian_field1: "",
           esdian_field2: "",
         });
+        setDraftInstanceId((prev) => prev + 1);
 
         // Reset to first step
         setCurrentStep(0);
@@ -4019,10 +4063,18 @@ export function CreateDocumentDialog({
         unit: formValues.unit,
         project_id: formValues.project_id,
         region: formValues.region,
+        for_yl_id: formValues.for_yl_id || null,
         expenditure_type: formValues.expenditure_type,
         recipients: formValues.recipients,
         status: formValues.status,
         selectedAttachments: formValues.selectedAttachments,
+        esdian_fields: Array.isArray(formValues.esdian_fields)
+          ? formValues.esdian_fields.filter(
+              (field): field is string => typeof field === "string" && field.trim() !== "",
+            )
+          : [],
+        esdian_field1: formValues.esdian_field1 || "",
+        esdian_field2: formValues.esdian_field2 || "",
       });
 
       // Simple step validation
@@ -4133,10 +4185,18 @@ export function CreateDocumentDialog({
       unit: formValues.unit,
       project_id: formValues.project_id,
       region: formValues.region,
+      for_yl_id: formValues.for_yl_id || null,
       expenditure_type: formValues.expenditure_type,
       recipients: formValues.recipients,
       status: formValues.status,
       selectedAttachments: formValues.selectedAttachments,
+      esdian_fields: Array.isArray(formValues.esdian_fields)
+        ? formValues.esdian_fields.filter(
+            (field): field is string => typeof field === "string" && field.trim() !== "",
+          )
+        : [],
+      esdian_field1: formValues.esdian_field1 || "",
+      esdian_field2: formValues.esdian_field2 || "",
     });
 
     // Simple step transition
@@ -5555,7 +5615,11 @@ export function CreateDocumentDialog({
 
                 {/* ESDIAN Internal Distribution */}
                 <div className="mt-6 pt-6 border-t">
-                  <EsdianFieldsWithSuggestions form={form} user={user} />
+                  <EsdianFieldsWithSuggestions
+                    form={form}
+                    user={user}
+                    draftInstanceId={draftInstanceId}
+                  />
                 </div>
                 </div>
 
@@ -5596,7 +5660,6 @@ export function CreateDocumentDialog({
 
         // Also update form context data to ensure consistency
         updateFormData({
-          ...formData,
           unit: unitValue,
         });
 
@@ -5655,10 +5718,17 @@ export function CreateDocumentDialog({
               unit: formValues.unit,
               project_id: formValues.project_id,
               region: formValues.region,
+              for_yl_id: formValues.for_yl_id || null,
               expenditure_type: formValues.expenditure_type,
               recipients: formValues.recipients,
               status: formValues.status || "draft",
               selectedAttachments: formValues.selectedAttachments,
+              esdian_fields: Array.isArray(formValues.esdian_fields)
+                ? formValues.esdian_fields.filter(
+                    (field): field is string =>
+                      typeof field === "string" && field.trim() !== "",
+                  )
+                : [],
               esdian_field1: formValues.esdian_field1 || "",
               esdian_field2: formValues.esdian_field2 || "",
             });

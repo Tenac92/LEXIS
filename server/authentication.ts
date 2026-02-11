@@ -72,27 +72,54 @@ export const changePasswordSchema = z.object({
 // ============================================================================
 
 // Session middleware with enhanced security settings for cross-domain support
-const isProduction = process.env.NODE_ENV === "production";
+const createSessionMiddleware = () => {
+  const isProduction = process.env.NODE_ENV === "production";
 
-export const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || "document-manager-secret",
-  resave: false,
-  saveUninitialized: false,
-  store: storage.sessionStore, // Using the in-memory store from storage.ts
-  name: "sid", // Custom session ID name
-  cookie: {
-    secure: isProduction, // In dev over HTTP, allow insecure cookies for local testing
-    httpOnly: true,
-    maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
-    sameSite: isProduction ? "none" : "lax", // Use 'none' for cross-domain in prod, lax locally
-    path: "/",
-    // Only set domain if it's a valid non-empty string
-    ...(isProduction && process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim() 
-      ? { domain: process.env.COOKIE_DOMAIN.trim() } 
-      : {}),
-  },
-  proxy: true, // Enable proxy support for Render/Cloudflare
-});
+  return session({
+    secret: process.env.SESSION_SECRET || "document-manager-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    name: "sid", // Custom session ID name
+    cookie: {
+      secure: isProduction, // In dev over HTTP, allow insecure cookies for local testing
+      httpOnly: true,
+      maxAge: 48 * 60 * 60 * 1000, // 48 hours (extended from 24)
+      sameSite: isProduction ? "none" : "lax", // Use 'none' for cross-domain in prod, lax locally
+      path: "/",
+      // Only set domain if it's a valid non-empty string
+      ...(isProduction && process.env.COOKIE_DOMAIN && process.env.COOKIE_DOMAIN.trim()
+        ? { domain: process.env.COOKIE_DOMAIN.trim() }
+        : {}),
+    },
+    proxy: true, // Enable proxy support for Render/Cloudflare
+  });
+};
+
+let sessionMiddlewareInstance = createSessionMiddleware();
+
+export const sessionMiddleware = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => (sessionMiddlewareInstance as any)(req, res, next);
+
+export function refreshSessionMiddleware(): void {
+  sessionMiddlewareInstance = createSessionMiddleware();
+  console.log(
+    `[Auth] Session middleware refreshed with ${storage.sessionStoreType} store`,
+  );
+}
+
+export function getSessionBackendStatus(): {
+  storeType: "memory" | "redis";
+  isProduction: boolean;
+} {
+  return {
+    storeType: storage.sessionStoreType,
+    isProduction: process.env.NODE_ENV === "production",
+  };
+}
 
 // ============================================================================
 // Rate Limiting Middleware
@@ -578,10 +605,6 @@ export async function changeUserPassword(
  */
 export async function setupAuth(app: Express) {
   console.log("[Auth] Starting authentication setup...");
-
-  // Apply session middleware
-  app.use(sessionMiddleware);
-  console.log("[Auth] Session middleware applied");
 
   // Login route with enhanced security and rate limiting
   app.post("/api/auth/login", authLimiter, async (req, res) => {

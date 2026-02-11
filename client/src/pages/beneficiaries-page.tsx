@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -375,11 +375,19 @@ export default function BeneficiariesPage() {
       });
     },
     onError: (error: any) => {
+      const hasLinkedPayments =
+        error?.status === 409 ||
+        error?.code === "BENEFICIARY_HAS_LINKED_PAYMENTS" ||
+        error?.raw?.code === "BENEFICIARY_HAS_LINKED_PAYMENTS";
+
       toast({
         title: "Σφάλμα",
-        description: error.message || "Αποτυχία διαγραφής δικαιούχου",
+        description: hasLinkedPayments
+          ? "Δεν μπορεί να διαγραφεί δικαιούχος που έχει συνδεδεμένες πληρωμές/έγγραφα."
+          : error.message || "Αποτυχία διαγραφής δικαιούχου",
         variant: "destructive",
       });
+
     },
   });
 
@@ -2306,7 +2314,7 @@ function ExistingPaymentsDisplay({
       <div className="text-center py-8">
         <div className="text-muted-foreground">
           <DollarSign className="h-8 w-8 mx-auto mb-2" />
-          <p>Δεν βρέθ;�καν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
+          <p>Δεν βρέθηκαν καταχωρημένες πληρωμές για αυτόν τον δικαιούχο</p>
         </div>
       </div>
     );
@@ -3316,3 +3324,5 @@ export function BeneficiaryForm({
     </>
   );
 }
+
+

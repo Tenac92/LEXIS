@@ -136,6 +136,21 @@ export default function UsersPage() {
     },
   });
 
+  const selectedUnitIds = form.watch('unit_id') || [];
+  const { data: departments = [] } = useQuery<string[]>({
+    queryKey: ['departments', selectedUnitIds],
+    queryFn: async () => {
+      if (selectedUnitIds.length === 0) return [];
+
+      const params = new URLSearchParams();
+      selectedUnitIds.forEach((unitId) => params.append('units', unitId.toString()));
+      const response = await fetch(`/api/users/units/parts?${params}`);
+      if (!response.ok) throw new Error('Failed to fetch departments');
+      return response.json();
+    },
+    enabled: selectedUnitIds.length > 0,
+  });
+
   const toggleUserStatusMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: number; is_active: boolean }) => {
       const response = await fetch(`/api/users/${id}`, {
@@ -725,22 +740,6 @@ export default function UsersPage() {
                 control={form.control}
                 name="department"
                 render={({ field }) => {
-                  const selectedUnitIds = form.watch('unit_id') || [];
-                  const { data: departments = [] } = useQuery({
-                    queryKey: ['departments', selectedUnitIds],
-                    queryFn: async () => {
-                      if (selectedUnitIds.length === 0) return [];
-                      
-                      // Send numeric unit IDs directly to the backend
-                      const params = new URLSearchParams();
-                      selectedUnitIds.forEach(unitId => params.append('units', unitId.toString()));
-                      const response = await fetch(`/api/users/units/parts?${params}`);
-                      if (!response.ok) throw new Error('Failed to fetch departments');
-                      return response.json();
-                    },
-                    enabled: selectedUnitIds.length > 0
-                  });
-
                   return (
                     <FormItem>
                       <FormLabel>Department</FormLabel>
@@ -976,22 +975,6 @@ export default function UsersPage() {
                 control={form.control}
                 name="department"
                 render={({ field }) => {
-                  const selectedUnitIds = form.watch('unit_id') || [];
-                  const { data: departments = [] } = useQuery({
-                    queryKey: ['departments', selectedUnitIds],
-                    queryFn: async () => {
-                      if (selectedUnitIds.length === 0) return [];
-                      
-                      // Send numeric unit IDs directly to the backend
-                      const params = new URLSearchParams();
-                      selectedUnitIds.forEach(unitId => params.append('units', unitId.toString()));
-                      const response = await fetch(`/api/users/units/parts?${params}`);
-                      if (!response.ok) throw new Error('Failed to fetch departments');
-                      return response.json();
-                    },
-                    enabled: selectedUnitIds.length > 0
-                  });
-
                   return (
                     <FormItem>
                       <FormLabel>Department</FormLabel>

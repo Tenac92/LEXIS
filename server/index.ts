@@ -6,8 +6,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorHandler } from "./middleware/errorHandler";
 import { securityHeaders } from "./middleware/securityHeaders";
-// Import sessionMiddleware from the new centralized authentication module
-import { sessionMiddleware, setupAuth } from './authentication';
+// Import sessionMiddleware from the centralized authentication module
+import { refreshSessionMiddleware, sessionMiddleware, setupAuth } from './authentication';
 import corsMiddleware from './middleware/corsMiddleware';
 import { geoIpRestriction } from './middleware/geoIpMiddleware';
 import sdegdaefkRootHandler from './middleware/sdegdaefk/rootHandler';
@@ -20,7 +20,9 @@ import { registerAdminRoutes } from './routes/admin';
 import { Router } from 'express';
 import { applyConsoleLogLevelFilter, getCurrentLogLevel } from './utils/logger';
 import cacheControlMiddleware from './middleware/cacheControlMiddleware';
-import { initializeRedis } from './config/redis';
+import { getRedisClient, initializeRedis, isRedisAvailable } from './config/redis';
+import { RedisSessionStore } from './config/redisSessionStore';
+import { storage } from './storage';
 
 applyConsoleLogLevelFilter('server');
 
@@ -47,10 +49,10 @@ process.on('unhandledRejection', (reason, promise) => {
 
 console.log(`[Startup] Beginning server initialization (LOG_LEVEL=${getCurrentLogLevel()})`);
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Verify required environment variables with detailed logging
-const requiredEnvVars = [
-  'SESSION_SECRET'
-];
+const requiredEnvVars = new Set<string>(['SESSION_SECRET']);
 
 // Extract Supabase credentials from DATABASE_URL if they're not already set
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
@@ -70,23 +72,30 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
         process.env.SUPABASE_URL = supabaseUrl;
         process.env.SUPABASE_KEY = supabaseKey;
         
-        console.log(`[Startup] Successfully extracted Supabase credentials from DATABASE_URL`);
-        console.log(`[Startup] SUPABASE_URL: ${supabaseUrl}`);
-        console.log(`[Startup] SUPABASE_KEY: ${supabaseKey.substring(0, 4)}...${supabaseKey.substring(supabaseKey.length - 4)}`);
+        console.log('[Startup] Successfully extracted Supabase credentials from DATABASE_URL');
       } else {
         console.error('[Startup] Failed to extract Supabase credentials from DATABASE_URL');
-        requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+        requiredEnvVars.add('SUPABASE_URL');
+        requiredEnvVars.add('SUPABASE_KEY');
       }
     } catch (error) {
       console.error('[Startup] Error extracting Supabase credentials:', error);
-      requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+      requiredEnvVars.add('SUPABASE_URL');
+      requiredEnvVars.add('SUPABASE_KEY');
     }
   } else {
-    requiredEnvVars.push('SUPABASE_URL', 'SUPABASE_KEY');
+    requiredEnvVars.add('SUPABASE_URL');
+    requiredEnvVars.add('SUPABASE_KEY');
   }
 }
 
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (isProduction) {
+  requiredEnvVars.add('SUPABASE_URL');
+  requiredEnvVars.add('SUPABASE_KEY');
+  requiredEnvVars.add('REDIS_URL');
+}
+
+const missingVars = Array.from(requiredEnvVars).filter((varName) => !process.env[varName]);
 if (missingVars.length > 0) {
   console.error('[Fatal] Missing required environment variables:', missingVars);
   process.exit(1);
@@ -119,18 +128,35 @@ async function startServer() {
       console.warn('[Startup] The server will start anyway, and database functions will be retried at runtime');
     }
 
-    // Initialize Redis cache (optional, will gracefully degrade if unavailable)
+    // Initialize Redis cache/session backend.
+    let redisInitialized = false;
     try {
       console.log('[Startup] Initializing Redis cache...');
-      const redisInitialized = await initializeRedis();
+      redisInitialized = await initializeRedis();
       if (redisInitialized) {
         console.log('[Startup] Redis cache initialized successfully');
       } else {
-        console.warn('[Startup] Redis cache unavailable, will use in-memory caching as fallback');
+        console.warn('[Startup] Redis cache unavailable');
       }
     } catch (redisErr) {
       console.error('[Startup] Error initializing Redis:', redisErr);
-      console.warn('[Startup] Redis cache unavailable, will use in-memory caching as fallback');
+      redisInitialized = false;
+    }
+
+    if (isProduction && !redisInitialized) {
+      throw new Error('Redis is required in production but is unavailable');
+    }
+
+    if (isProduction) {
+      const redisClient = getRedisClient();
+      if (!redisClient || !isRedisAvailable()) {
+        throw new Error('Redis session backend is unavailable in production');
+      }
+      storage.setSessionStore(new RedisSessionStore(redisClient), 'redis');
+      refreshSessionMiddleware();
+      console.log('[Startup] Production session backend configured: redis');
+    } else {
+      console.log('[Startup] Non-production mode: using in-memory session backend');
     }
 
     const app = express();

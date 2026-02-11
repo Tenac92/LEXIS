@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, Star, Plus, Trash2 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Enhanced ESDIAN suggestion types
 interface EsdianSuggestion {
@@ -51,16 +50,37 @@ interface EsdianSuggestionsResponse {
   categories: EsdianCategories;
   total: number;
   hasContext: boolean;
+  contextMatchCount: number;
+  scopeApplied?: 'authorized_units';
 }
 
 interface EsdianFieldsWithSuggestionsProps {
   form: any;
   user: any;
+  draftInstanceId?: number;
 }
 
-export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSuggestionsProps) {
+const emptyEsdianResponse: EsdianSuggestionsResponse = {
+  status: 'error',
+  suggestions: [],
+  completeSets: [],
+  autoPopulate: null,
+  categories: { recent: [], frequent: [], contextual: [], team: [] },
+  total: 0,
+  hasContext: false,
+  contextMatchCount: 0,
+};
+
+export function EsdianFieldsWithSuggestions({
+  form,
+  user,
+  draftInstanceId = 0,
+}: EsdianFieldsWithSuggestionsProps) {
   const projectId = form.watch("project_id");
   const expenditureType = form.watch("expenditure_type");
+  const hasUserTouchedRef = useRef(false);
+  const hasAutoPopulatedRef = useRef(false);
+  const [didAutoPopulate, setDidAutoPopulate] = useState(false);
 
   // Watch the esdian_fields array
   const esdianFields = form.watch("esdian_fields") || [];
@@ -72,33 +92,54 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
     }
   }, [form, esdianFields]);
 
+  useEffect(() => {
+    hasUserTouchedRef.current = false;
+    hasAutoPopulatedRef.current = false;
+    setDidAutoPopulate(false);
+  }, [draftInstanceId]);
+
   const { data: esdianSuggestions } = useQuery<EsdianSuggestionsResponse>({
     queryKey: ['esdian-suggestions', user?.id, projectId, expenditureType],
     queryFn: async () => {
-      if (!user?.id) return { 
-        status: 'error', 
-        suggestions: [], 
-        completeSets: [],
-        autoPopulate: null,
-        categories: { recent: [], frequent: [], contextual: [], team: [] },
-        total: 0, 
-        hasContext: false 
-      };
+      if (!user?.id) return emptyEsdianResponse;
       
       const params = new URLSearchParams();
       if (projectId) params.append('project_id', projectId);
       if (expenditureType) params.append('expenditure_type', expenditureType);
       
       const url = `/api/user-preferences/esdian${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await apiRequest(url);
-      return response as EsdianSuggestionsResponse;
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include'
+        });
+
+        if (response.status === 401) {
+          return emptyEsdianResponse;
+        }
+
+        if (!response.ok) {
+          return emptyEsdianResponse;
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          return emptyEsdianResponse;
+        }
+
+        const data = (await response.json()) as EsdianSuggestionsResponse;
+        return data;
+      } catch (error) {
+        return emptyEsdianResponse;
+      }
     },
     enabled: Boolean(user?.id),
     staleTime: 2 * 60 * 1000, // Cache for 2 minutes to allow for context changes
   });
 
   const suggestions = esdianSuggestions?.suggestions || [];
-  const hasContext = esdianSuggestions?.hasContext || false;
+  const contextMatchCount = esdianSuggestions?.contextMatchCount || 0;
   const completeSets = esdianSuggestions?.completeSets || [];
   const autoPopulate = esdianSuggestions?.autoPopulate;
   const categories = esdianSuggestions?.categories;
@@ -107,6 +148,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
     contextSuggestions.length > 0 ? contextSuggestions.slice(0, 5) : suggestions.slice(0, 5);
 
   const handleSuggestionClick = (value: string, fieldIndex: number) => {
+    hasUserTouchedRef.current = true;
     const currentFields = form.getValues("esdian_fields") || [];
     const newFields = [...currentFields];
     newFields[fieldIndex] = value;
@@ -114,17 +156,20 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
   };
 
   const addEsdianField = () => {
+    hasUserTouchedRef.current = true;
     const currentFields = form.getValues("esdian_fields") || [];
     form.setValue("esdian_fields", [...currentFields, ""]);
   };
 
   const removeEsdianField = (index: number) => {
+    hasUserTouchedRef.current = true;
     const currentFields = form.getValues("esdian_fields") || [];
     const newFields = currentFields.filter((_: string, i: number) => i !== index);
     form.setValue("esdian_fields", newFields);
   };
 
   const applySuggestionToNext = (value: string) => {
+    hasUserTouchedRef.current = true;
     const currentFields = form.getValues("esdian_fields") || [];
     const firstEmptyIndex = currentFields.findIndex(
       (v: string) => !v || !String(v).trim(),
@@ -139,6 +184,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
   };
 
   const applyContextSuggestions = () => {
+    hasUserTouchedRef.current = true;
     const contextSuggestionsLocal = suggestions.filter((s: EsdianSuggestion) => s.contextMatches > 0);
     const source = contextSuggestionsLocal.length > 0 ? contextSuggestionsLocal : suggestions;
     if (source.length > 0) {
@@ -154,8 +200,10 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
       // Only auto-populate if fields are empty
       const hasEmptyFields = currentFields.every((field: string) => !field || field.trim() === "");
 
-      if (hasEmptyFields) {
+      if (hasEmptyFields && !hasUserTouchedRef.current && !hasAutoPopulatedRef.current) {
         form.setValue("esdian_fields", autoPopulate.fields);
+        hasAutoPopulatedRef.current = true;
+        setDidAutoPopulate(true);
         console.log(`[EsdianFields] Auto-populated with ${autoPopulate.reason}: ${autoPopulate.fields.join(', ')}`);
       }
     }
@@ -163,6 +211,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
 
   // Apply complete set function
   const applyCompleteSet = (set: EsdianCompleteSet) => {
+    hasUserTouchedRef.current = true;
     form.setValue("esdian_fields", set.fields);
   };
 
@@ -193,7 +242,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
             <span className="text-green-600 font-medium"> 1. Χρονολογικό Αρχείο</span> συμπεριλαμβάνεται αυτόματα
           </p>
         </div>
-        {suggestions.length > 0 && hasContext && (
+        {suggestions.length > 0 && contextMatchCount > 0 && (
           <Badge variant="secondary" className="text-xs h-fit whitespace-nowrap">
             <Lightbulb className="h-3 w-3 mr-1" />
             Σχετικό
@@ -202,7 +251,7 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
       </div>
 
       {/* Auto-Population Indicator - Compact */}
-      {autoPopulate && autoPopulate.confidence === 'high' && (
+      {didAutoPopulate && autoPopulate && autoPopulate.confidence === 'high' && (
         <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
           <div className="flex items-start gap-2">
             <Lightbulb className="h-3.5 w-3.5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -290,6 +339,10 @@ export function EsdianFieldsWithSuggestions({ form, user }: EsdianFieldsWithSugg
                           placeholder="Τμήμα/Μονάδα" 
                           className="h-8 text-xs"
                           data-testid={`input-esdian-field-${index + 1}`}
+                          onChange={(event) => {
+                            hasUserTouchedRef.current = true;
+                            field.onChange(event);
+                          }}
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />

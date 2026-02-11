@@ -379,6 +379,7 @@ export const broadcastDashboardRefresh = (payload?: { projectId?: number; change
   // If specific units are provided, only broadcast to users who have those units
   let targetClients = openClients;
   if (payload?.unitIds && payload.unitIds.length > 0) {
+    const targetUnitIds = payload.unitIds;
     targetClients = openClients.filter(client => {
       // Send to admins (no unit restriction) and users whose units overlap with the event units
       if (!client.unitIds || client.unitIds.length === 0) {
@@ -386,9 +387,9 @@ export const broadcastDashboardRefresh = (payload?: { projectId?: number; change
         return true;
       }
       // Check if user has at least one unit that matches
-      return payload.unitIds.some(unitId => client.unitIds!.includes(unitId));
+      return targetUnitIds.some(unitId => client.unitIds!.includes(unitId));
     });
-    console.log(`[WebSocket] Filtering broadcast for units ${payload.unitIds.join(',')}: targeting ${targetClients.length} of ${openClients.length} clients`);
+    console.log(`[WebSocket] Filtering broadcast for units ${targetUnitIds.join(',')}: targeting ${targetClients.length} of ${openClients.length} clients`);
   }
 
   targetClients.forEach((client) => {

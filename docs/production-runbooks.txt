@@ -1,0 +1,56 @@
+Production Runbooks
+===================
+
+This document is the operational baseline for production deployments.
+All procedures assume date-stamped change records and on-call ownership.
+
+1) Deployment Runbook
+---------------------
+1. Confirm release branch is clean and CI is green.
+2. Run `npm run verify:release`.
+3. Apply pending migrations in order from `migrations/`.
+4. Deploy to staging and monitor for 24-48h:
+   - `/api/health`
+   - `/api/health/ready`
+   - error rate and websocket connectivity
+5. Promote to production via canary rollout.
+6. Verify at T+15m, T+1h, T+24h:
+   - login and session persistence
+   - document create/edit/delete flows
+   - beneficiary delete constraints
+   - budget reconciliation events
+
+2) Rollback Runbook
+-------------------
+1. Trigger rollback to previous stable deployment artifact.
+2. Confirm app is serving and `/api/health/ready` returns `ready`.
+3. If rollback crosses schema boundaries, apply matching DB rollback or restore backup.
+4. Announce rollback status and incident scope.
+5. Open corrective action ticket with root cause and prevention actions.
+
+3) Secret Rotation Runbook
+--------------------------
+1. Rotate `SUPABASE_KEY`, `SESSION_SECRET`, `AFM_KEY`, and `REDIS_URL` credentials in secret manager.
+2. Update staging first and validate:
+   - app boot succeeds
+   - `/api/health/ready` is green
+   - login/session flows are stable
+3. Roll changes to production during a controlled window.
+4. Confirm no secret values are present in logs.
+5. Revoke old secrets after successful cutover.
+
+4) Database Connectivity Incident Runbook
+-----------------------------------------
+1. Check `/api/health` and `/api/health/ready` payload failures.
+2. Validate Supabase availability and credentials.
+3. Validate Redis availability (production requires Redis-backed sessions).
+4. Restart service only after backend availability is restored.
+5. If errors persist:
+   - enable heightened logging
+   - capture failing request IDs and DB errors
+   - escalate to database owner/on-call
+6. Post-incident:
+   - document timeline
+   - classify impact
+   - add permanent monitoring/alert improvements
+

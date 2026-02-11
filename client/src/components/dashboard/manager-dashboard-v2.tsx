@@ -34,6 +34,7 @@ import {
   calculateCompletionRate,
   sumObjectValues,
 } from "@/lib/dashboard-utils";
+import { createDashboardQueryKey } from "@/lib/dashboard-query-keys";
 import { DocumentDetailsModal } from "@/components/documents/DocumentDetailsModal";
 import { apiRequest } from "@/lib/queryClient";
 

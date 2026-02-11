@@ -81,7 +81,7 @@ export async function getDashboardStats(req: Request, res: Response) {
     // Get budget data filtered by user's unit for non-admin users
     console.log('[Dashboard] Building budget query...');
     
-    let budgetData = [];
+    let budgetData: any[] = [];
     let budgetError: any = null;
     
     if (userRole !== 'admin') {
@@ -189,7 +189,7 @@ export async function getDashboardStats(req: Request, res: Response) {
 
     // Get recent budget history with limit and enhanced info using correct schema
     // CRITICAL: Filter by document's unit_id for ALL user's units
-    let historyData = [];
+    let historyData: any[] = [];
     
     console.log('[Dashboard] Fetching recent activity (budget history)...');
     
@@ -254,9 +254,21 @@ export async function getDashboardStats(req: Request, res: Response) {
           historyData = history || [];
           console.log(`[Dashboard] Step 2 complete: Found ${historyData.length} recent activity records`);
           if (historyData.length > 0) {
-            console.log('[Dashboard] Sample activities:', historyData.slice(0, 2).map(h => ({
-              id: h.id, type: h.change_type, docId: h.document_id, docUnit: h.generated_documents?.unit_id, projId: h.project_id
-            })));
+            console.log(
+              '[Dashboard] Sample activities:',
+              historyData.slice(0, 2).map((h: any) => {
+                const generatedDoc = Array.isArray(h.generated_documents)
+                  ? h.generated_documents[0]
+                  : h.generated_documents;
+                return {
+                  id: h.id,
+                  type: h.change_type,
+                  docId: h.document_id,
+                  docUnit: generatedDoc?.unit_id,
+                  projId: h.project_id,
+                };
+              }),
+            );
           }
         }
       } else {

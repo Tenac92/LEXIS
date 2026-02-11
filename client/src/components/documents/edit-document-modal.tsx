@@ -155,6 +155,64 @@ const normalizeRegiondet = (
   ) as RegiondetSelection | null;
 };
 
+const hasPaymentMatch = (
+  entry: any,
+  paymentId?: number | string,
+): boolean => {
+  if (!entry || typeof entry !== "object" || paymentId === undefined) {
+    return false;
+  }
+
+  const ids: Array<string | number> = [];
+  if (entry.payment_id !== undefined && entry.payment_id !== null) {
+    ids.push(entry.payment_id);
+  }
+  if (Array.isArray(entry.payment_ids)) {
+    ids.push(...entry.payment_ids);
+  }
+
+  return ids.map(String).includes(String(paymentId));
+};
+
+const normalizeRegiondetForPaymentContext = ({
+  value,
+  paymentId,
+  projectIndexId,
+}: {
+  value: any;
+  paymentId?: number | string;
+  projectIndexId?: number | string | null;
+}): RegiondetSelection | null => {
+  if (!value) return null;
+
+  const entries = Array.isArray(value) ? value : [value];
+  const validEntries = entries.filter(
+    (entry) => entry && typeof entry === "object",
+  );
+
+  if (paymentId !== undefined) {
+    const paymentMatch = validEntries.find((entry) =>
+      hasPaymentMatch(entry, paymentId),
+    );
+    if (paymentMatch) {
+      return normalizeRegiondet(paymentMatch, paymentId);
+    }
+  }
+
+  if (projectIndexId !== undefined && projectIndexId !== null) {
+    const projectMatch = validEntries.find(
+      (entry: any) =>
+        entry.project_index_id !== undefined &&
+        String(entry.project_index_id) === String(projectIndexId),
+    );
+    if (projectMatch) {
+      return normalizeRegiondet(projectMatch, paymentId);
+    }
+  }
+
+  return normalizeRegiondet(value, paymentId);
+};
+
 export function EditDocumentModal({
   document,
   open,
@@ -1027,7 +1085,12 @@ export function EditDocumentModal({
           installment: "Προκαταβολή",
           installments: ["Προκαταβολή"],
           installmentAmounts: { Προκαταβολή: parseFloat(payment.amount) || 0 },
-          regiondet: normalizeRegiondet(payment.regiondet, payment.id),
+          regiondet: normalizeRegiondetForPaymentContext({
+            value: payment.regiondet,
+            paymentId: payment.id,
+            projectIndexId:
+              payment.project_index_id ?? document.project_index_id ?? null,
+          }),
         };
       }
 
@@ -1052,7 +1115,15 @@ export function EditDocumentModal({
         tickets_tolls_rental_entries: [],
         status: payment.status || "pending",
         secondary_text: payment.freetext || "",
-        regiondet: normalizeRegiondet(beneficiaryData?.regiondet, payment.id),
+        regiondet: normalizeRegiondetForPaymentContext({
+          value:
+            beneficiaryData?.regiondet ??
+            (payment as any)?.regiondet ??
+            null,
+          paymentId: payment.id,
+          projectIndexId:
+            payment.project_index_id ?? document.project_index_id ?? null,
+        }),
       };
     });
 
@@ -1073,10 +1144,14 @@ export function EditDocumentModal({
               installmentAmounts: r.installmentAmounts || {
                 [key]: amountNumber,
               },
-              regiondet: normalizeRegiondet(
-                r.regiondet || (r as any).region || null,
-                r.id as number | string | undefined,
-              ),
+              regiondet: normalizeRegiondetForPaymentContext({
+                value: r.regiondet || (r as any).region || null,
+                paymentId: r.id as number | string | undefined,
+                projectIndexId:
+                  (r as any).project_index_id ??
+                  document.project_index_id ??
+                  null,
+              }),
             };
           })
         : [];
@@ -1253,6 +1328,19 @@ export function EditDocumentModal({
           body: JSON.stringify(correctionPayload),
         });
       } else {
+        const validRecipients = (recipientsPayload || []).filter(
+          (r) =>
+            r.id ||
+            r.firstname ||
+            r.lastname ||
+            r.afm ||
+            (r.amount && r.amount > 0),
+        );
+
+        if (validRecipients.length === 0) {
+          throw new Error("At least one recipient is required");
+        }
+
         // Regular edit mode: Update existing document
         const documentPayload = {
           protocol_number_input: data.protocol_number_input || null,
@@ -1276,25 +1364,15 @@ export function EditDocumentModal({
           body: JSON.stringify(documentPayload),
         });
 
-        // Update beneficiaries if they exist and have data
-        if (recipientsPayload && recipientsPayload.length > 0) {
-          const validRecipients = recipientsPayload.filter(
-            (r) =>
-              r.firstname || r.lastname || r.afm || (r.amount && r.amount > 0),
-          );
-
-          if (validRecipients.length > 0) {
-            console.log(
-              "[EditDocument] Sending recipients to backend:",
-              JSON.stringify(validRecipients, null, 2),
-            );
-            await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ recipients: validRecipients }),
-            });
-          }
-        }
+        console.log(
+          "[EditDocument] Sending recipients to backend:",
+          JSON.stringify(validRecipients, null, 2),
+        );
+        await apiRequest(`/api/documents/${document.id}/beneficiaries`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipients: validRecipients }),
+        });
       }
     },
     onSuccess: () => {
@@ -1406,6 +1484,25 @@ export function EditDocumentModal({
     console.log("[EditDocument] =============================================");
     if (!validateBeneficiaryRegions()) {
       return;
+    }
+    if (!isCorrection) {
+      const recipients = Array.isArray(data.recipients) ? data.recipients : [];
+      const validRecipients = recipients.filter(
+        (r: any) =>
+          r?.id ||
+          r?.firstname ||
+          r?.lastname ||
+          r?.afm ||
+          (r?.amount && r.amount > 0),
+      );
+      if (validRecipients.length === 0) {
+        toast({
+          title: "Σφάλμα",
+          description: "Πρέπει να υπάρχει τουλάχιστον ένας δικαιούχος.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
     setIsLoading(true);
     updateMutation.mutate(data);
