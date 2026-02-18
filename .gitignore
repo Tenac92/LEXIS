@@ -36,6 +36,7 @@ pnpm-debug.log*
 *.tmp
 *.temp
 vite.config.ts.*
+tmpclaude*
 
 # Archives
 *.tar.gz

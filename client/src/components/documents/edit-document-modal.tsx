@@ -622,11 +622,59 @@ export function EditDocumentModal({
     });
 
   // Computed available options based on current selections
-  const availableRegions =
-    (projectGeographicAreas as any)?.availableRegions || [];
-  const availableUnits = (projectGeographicAreas as any)?.availableUnits || [];
-  const availableMunicipalities =
-    (projectGeographicAreas as any)?.availableMunicipalities || [];
+  // Falls back to full geographicData when project has no specific geographic constraints
+  const availableRegions = useMemo(() => {
+    const projectRegions =
+      (projectGeographicAreas as any)?.availableRegions || [];
+    if (projectRegions.length > 0) return projectRegions;
+    if (geographicData && Array.isArray((geographicData as any).regions)) {
+      return (geographicData as any).regions.map((region: any) => ({
+        id: `region-${region.code}`,
+        code: region.code,
+        name: region.name,
+        type: "region",
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
+
+  const availableUnits = useMemo(() => {
+    const projectUnits =
+      (projectGeographicAreas as any)?.availableUnits || [];
+    if (projectUnits.length > 0) return projectUnits;
+    if (
+      geographicData &&
+      Array.isArray((geographicData as any).regionalUnits)
+    ) {
+      return (geographicData as any).regionalUnits.map((unit: any) => ({
+        id: `unit-${unit.code}`,
+        code: unit.code,
+        name: unit.name,
+        type: "regional_unit",
+        region_code: unit.region_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
+
+  const availableMunicipalities = useMemo(() => {
+    const projectMunis =
+      (projectGeographicAreas as any)?.availableMunicipalities || [];
+    if (projectMunis.length > 0) return projectMunis;
+    if (
+      geographicData &&
+      Array.isArray((geographicData as any).municipalities)
+    ) {
+      return (geographicData as any).municipalities.map((muni: any) => ({
+        id: `municipality-${muni.code}`,
+        code: muni.code,
+        name: muni.name,
+        type: "municipality",
+        unit_code: muni.unit_code,
+      }));
+    }
+    return [];
+  }, [projectGeographicAreas, geographicData]);
 
   const regiondetMutation = useMutation({
     mutationFn: async ({
