@@ -34,6 +34,9 @@ const QuarterManagementPage = lazy(
 const BudgetMonitoringPage = lazy(
   () => import("@/pages/admin/BudgetMonitoringPage"),
 );
+const MonadaManagementPage = lazy(
+  () => import("@/pages/admin/MonadaManagementPage"),
+);
 const TemplatesPage = lazy(() => import("@/pages/templates"));
 
 import { ProtectedRoute } from "./lib/protected-route";
@@ -111,6 +114,10 @@ function Router(): JSX.Element {
           <ProtectedRoute
             path="/admin/quarter-management"
             component={() => <QuarterManagementPage />}
+          />
+          <ProtectedRoute
+            path="/admin/monada"
+            component={MonadaManagementPage}
           />
 
           <Route path="/auth" component={AuthPage} />

@@ -20,6 +20,8 @@ export interface UnitDetails {
     prop: string;
     propgen?: string; // Genitive case (γενική πτώση) for ΕΚΤΟΣ ΕΔΡΑΣ documents
     namegen?: string; // Name in genitive case (γενική πτώση)
+    over?: string; // For cases where the unit has an "over" name to be displayed above the main name (e.g., for certain ministries or agencies)
+    geniki?: string; // For cases where the unit has a "geniki" name to be displayed above the main name (e.g., for certain ministries or agencies)
   };
   manager?: {
     name: string;

@@ -1340,7 +1340,8 @@ export class DocumentGenerator {
       boldP(
         "ΓΕΝΙΚΗ ΓΡΑΜΜΑΤΕΙΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΑΙ ΚΡΑΤΙΚΗΣ ΑΡΩΓΗΣ",
       ),
-      boldP("ΓΕΝΙΚΗ ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ"),
+       boldP(unitDetails?.unit_name?.geniki || ""),
+      ...(unitDetails?.unit_name?.over ? [boldP(cleanText(unitDetails.unit_name.over))] : []),
       boldP(cleanText(unitDetails?.unit_name?.title || unitDetails?.name || "")),
       boldP(
         (() => {

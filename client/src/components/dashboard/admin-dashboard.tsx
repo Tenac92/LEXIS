@@ -458,6 +458,17 @@ export function AdminDashboard() {
                 asChild
                 className="w-full justify-start"
               >
+                <Link href="/admin/monada">
+                  <Building className="w-4 h-4 mr-2" />
+                  Διαχείριση μονάδων
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="w-full justify-start"
+              >
                 <Link href="/admin/notifications">
                   <AlertTriangle className="w-4 h-4 mr-2" />
                   Ειδοποιήσεις συστήματος

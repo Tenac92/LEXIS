@@ -123,7 +123,7 @@ export default function UsersPage() {
 
   // Define a type for the unit data
   interface UnitData {
-    id: string;
+    id: number;
     name: string;
   }
 
@@ -204,7 +204,7 @@ export default function UsersPage() {
     
     return userUnitIds.map(unitId => {
       // Find unit by numeric ID
-      const unit = units.find(u => parseInt(u.id) === unitId);
+      const unit = units.find(u => u.id === unitId);
       return unit ? unit.name : `Unit ${unitId}`;
     });
   };

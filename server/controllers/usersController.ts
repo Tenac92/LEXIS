@@ -4,6 +4,7 @@ import { authenticateSession } from '../authentication';
 import type { User } from '@shared/schema';
 import bcrypt from 'bcrypt';
 import { Request, Response } from 'express';
+import { formatMonadaUnits } from '../utils/unitFormatter';
 
 // Create a Supabase client with SERVICE_ROLE key that can bypass RLS
 const supabaseAdmin = createClient(
@@ -48,34 +49,7 @@ router.get('/units', authenticateSession, async (_req: AuthenticatedRequest, res
 
     console.log('[Units] Raw units data sample:', units?.slice(0, 2));
 
-    // Extract unique unit names from various possible structures
-    const uniqueUnits = new Set<{id: string, name: string}>();
-    units?.forEach(unit => {
-      let unitName: string | null = null;
-      let unitId: string | null = null;
-
-      // Try different possible structures
-      if (unit.unit_name?.name && typeof unit.unit_name.name === 'string') {
-        unitName = unit.unit_name.name;
-        unitId = unit.id?.toString() || unit.unit_name.name;
-      } else if (unit.unit && typeof unit.unit === 'string') {
-        unitName = unit.unit;
-        unitId = unit.id?.toString() || unit.unit;
-      } else if (typeof unit.unit_name === 'string') {
-        unitName = unit.unit_name;
-        unitId = unit.id?.toString() || unit.unit_name;
-      }
-
-      if (unitName) {
-        // Use a combination of id and name to ensure uniqueness
-        const existingUnit = Array.from(uniqueUnits).find(u => u.name === unitName);
-        if (!existingUnit) {
-          uniqueUnits.add({ id: unitId || unitName, name: unitName });
-        }
-      }
-    });
-
-    const unitsList = Array.from(uniqueUnits).sort((a, b) => a.name.localeCompare(b.name));
+    const unitsList = formatMonadaUnits(units as any[]).sort((a, b) => a.name.localeCompare(b.name));
     
     console.log('[Units] Found matching units:', unitsList.length);
     res.json(unitsList);

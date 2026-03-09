@@ -66,6 +66,7 @@ const navigationItems = [
   },
   { href: "/beneficiaries", icon: Award, label: "Δικαιούχοι", roles: ["user", "manager"] },
   { href: "/users", icon: Users, label: "Χρήστες", roles: ["admin"] },
+  { href: "/admin/monada", icon: FolderKanban, label: "Μονάδες", roles: ["admin"] },
   {
     href: "/notifications",
     icon: Bell,

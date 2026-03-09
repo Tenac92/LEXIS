@@ -385,13 +385,19 @@ export const employees = pgTable(
     attribute: text("attribute"),
     workaf: text("workaf"),
     monada: text("monada"),
+    monada_id: bigint("monada_id", { mode: "number" }),
   },
   (table) => ({
     monadaReference: foreignKey({
       columns: [table.monada],
       foreignColumns: [monada.unit],
     }),
+    monadaIdReference: foreignKey({
+      columns: [table.monada_id],
+      foreignColumns: [monada.id],
+    }),
     afmHashIndex: index("idx_employees_afm_hash").on(table.afm_hash),
+    monadaIdIndex: index("idx_employees_monada_id").on(table.monada_id),
   }),
 );
 

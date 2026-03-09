@@ -130,6 +130,31 @@ router.get('/search', async (req: AuthenticatedRequest, res: Response) => {
 });
 
 /**
+ * GET /api/employees/unit-consistency
+ * Admin-only consistency report for Employees.monada and Employees.monada_id transition
+ */
+router.get('/unit-consistency', async (req: AuthenticatedRequest, res: Response) => {
+  if (!requireAdmin(req, res)) return;
+
+  try {
+    logger.info('Generating employee unit consistency report');
+    const report = await storage.getEmployeeUnitConsistencyReport();
+
+    res.json({
+      success: true,
+      data: report,
+    });
+  } catch (error) {
+    logger.error('Error generating employee unit consistency report:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Σφάλμα κατά τη δημιουργία αναφοράς συνέπειας μονάδων',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * POST /api/employees
  * Create a new employee
  */

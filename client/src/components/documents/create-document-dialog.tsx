@@ -596,36 +596,6 @@ export function CreateDocumentDialog({
           return [];
         }
 
-        // Units fetched successfully - processing data
-
-        // Enhanced data transformation
-
-        // Process abbreviated unit IDs mapping
-        const unitAbbreviations: Record<string, string> = {
-          "ΔΑΕΦΚ-ΚΕ":
-            "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΚΕΝΤΡΙΚΗΣ ΕΛΛΑΔΟΣ",
-          "ΔΑΕΦΚ-ΒΕ":
-            "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΒΟΡΕΙΑΣ ΕΛΛΑΔΟΣ",
-          "ΔΑΕΦΚ-ΔΕ":
-            "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΕΛΛΑΔΟΣ",
-          "ΤΑΕΦΚ-ΑΑ":
-            "ΤΜΗΜΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΝΑΤΟΛΙΚΗΣ ΑΤΤΙΚΗΣ",
-          "ΤΑΕΦΚ-ΔΑ":
-            "ΤΜΗΜΑ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΔΥΤΙΚΗΣ ΑΤΤΙΚΗΣ",
-          "ΔΑΕΦΚ-ΑΚ":
-            "ΔΙΕΥΘΥΝΣΗ ΑΠΟΚΑΤΑΣΤΑΣΗΣ ΕΠΙΠΤΩΣΕΩΝ ΦΥΣΙΚΩΝ ΚΑΤΑΣΤΡΟΦΩΝ ΑΙΓΑΙΟΥ ΚΑΙ ΚΡΗΤΗΣ",
-        };
-
-        // If the user only has access to one unit, track it for auto-selection
-        let userSingleUnit = "";
-        if (userUnitIds.length === 1) {
-          // Convert unit ID to unit name by finding matching unit
-          const userUnitData = data.find(
-            (item: any) => item.id === userUnitIds[0],
-          );
-          userSingleUnit = userUnitData?.unit || "";
-        }
-
         // Filter units based on user's assigned unit_id array
         devLog(
           "UserUnits",
@@ -658,63 +628,29 @@ export function CreateDocumentDialog({
         );
 
         const processedUnits = filteredUnits.map((item: any) => {
-          // For debugging purposes
-          if (!item.unit && !item.id) {
-            console.warn("Unit item missing both unit and id:", item);
-          }
+          const unitId = String(item.id ?? item.unit ?? "");
+          const unitCode = String(item.code ?? item.unit ?? "");
 
-          // First handle the ID
-          let unitId = item.id || item.unit || "";
-
-          // Ensure the unit ID matches the expected format if it's abbreviated
-          const userHasAccessToUnit = userUnitIds.includes(item.id);
-          if (
-            userHasAccessToUnit ||
-            Object.keys(unitAbbreviations).includes(unitId)
-          ) {
-            // Keep the unit ID as is - it's already in the correct format
-          } else if (unitId.length > 20) {
-            // For long unit IDs, try to find the abbreviated form
-            const abbrevEntry = Object.entries(unitAbbreviations).find(
-              ([abbrev, fullName]) =>
-                fullName === unitId || unitId.includes(fullName),
-            );
-
-            if (abbrevEntry) {
-              unitId = abbrevEntry[0]; // Use the abbreviated form
-            }
-          }
-
-          // Then handle the display name with proper fallbacks
           let unitName = "";
-
-          // Case 1: Direct name property
-          if (item.name) {
-            unitName = item.name;
-          }
-          // Case 2: unit_name is a string
-          else if (typeof item.unit_name === "string") {
-            unitName = item.unit_name;
-          }
-          // Case 3: unit_name is an object with name property
-          else if (
+          if (typeof item.name === "string" && item.name.trim()) {
+            unitName = item.name.trim();
+          } else if (typeof item.unit_name === "string" && item.unit_name.trim()) {
+            unitName = item.unit_name.trim();
+          } else if (
             item.unit_name &&
             typeof item.unit_name === "object" &&
-            item.unit_name.name
+            typeof item.unit_name.name === "string" &&
+            item.unit_name.name.trim()
           ) {
-            unitName = item.unit_name.name;
-          }
-          // Case 4: Look up the full name from abbreviations
-          else if (unitAbbreviations[unitId]) {
-            unitName = unitAbbreviations[unitId];
-          }
-          // Case 5: Fall back to unit value if nothing else
-          else {
-            unitName = String(item.unit || unitId || "Άγνωστη Μονάδα");
+            unitName = item.unit_name.name.trim();
+          } else {
+            unitName = String(item.unit || unitCode || unitId || "Άγνωστη Μονάδα");
           }
 
           return {
             id: unitId,
+            code: unitCode,
+            unit: unitCode,
             name: unitName,
           };
         });
@@ -1057,7 +993,7 @@ export function CreateDocumentDialog({
       // Case 2: User has only one assigned unit - auto-select it
       else if (userUnitIds.length === 1) {
         const userUnitData = units.find(
-          (unit: any) => unit.id === userUnitIds[0],
+          (unit: any) => String(unit.id) === String(userUnitIds[0]),
         );
         if (userUnitData) {
           unitToSelect = userUnitData.id;
@@ -3347,7 +3283,7 @@ export function CreateDocumentDialog({
     } else if (userUnitIds.length === 1 && units?.length > 0) {
       // If user has only one assigned unit, find its matching unit object and select it
       const userUnitId = userUnitIds[0] || "";
-      const matchingUnit = units.find((unit) => unit.id === userUnitId);
+      const matchingUnit = units.find((unit) => String(unit.id) === String(userUnitId));
       if (matchingUnit) {
         // Auto-selected user's unit
         form.setValue("unit", matchingUnit.id);

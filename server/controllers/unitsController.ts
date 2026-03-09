@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticateSession } from "../authentication";
 import { supabase } from "../config/db";
+import { formatMonadaUnits } from "../utils/unitFormatter";
 
 export const router = Router();
 
@@ -133,12 +134,7 @@ router.get("/", authenticateSession, async (req: any, res) => {
 
     console.log("[Units] Raw units data sample:", unitsData?.slice(0, 2));
 
-    // Map the units to the expected format with correct ID mapping
-    const formattedUnits = (unitsData || []).map(unit => ({
-      id: unit.id.toString(), // Convert numeric ID to string for frontend
-      name: unit.unit_name?.name || unit.unit, // Use full name from unit_name.name
-      code: unit.unit // Keep unit code
-    }));
+    const formattedUnits = formatMonadaUnits(unitsData as any[]);
 
     console.log("[Units] Found matching units:", formattedUnits.length);
     res.json(formattedUnits);

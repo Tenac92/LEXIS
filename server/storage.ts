@@ -9,6 +9,27 @@ import { mergeRegiondetWithPayments } from './utils/regiondet-merge';
 
 type EngineerSummary = Pick<Employee, 'id' | 'name' | 'surname' | 'attribute' | 'monada'>;
 type CreateBeneficiaryInput = Omit<InsertBeneficiary, 'afm_hash'>;
+type EmployeeUnitFields = {
+  monada?: string | null;
+  monada_id?: number | null;
+};
+
+type EmployeeUnitConsistencyReport = {
+  totalEmployees: number;
+  withMonadaId: number;
+  withoutMonadaId: number;
+  withMonadaCode: number;
+  withoutMonadaCode: number;
+  mismatchedCodeAndId: number;
+  orphanMonadaId: number;
+  sampleMismatches: Array<{
+    id: number;
+    monada: string | null;
+    monada_id: number | null;
+    resolved_unit: string | null;
+    issue: string;
+  }>;
+};
 
 const ENGINEERS_CACHE_TTL = 5 * 60 * 1000;
 const SESSION_TTL_MS = 48 * 60 * 60 * 1000;
@@ -91,6 +112,7 @@ export interface IStorage {
   deleteEmployee(id: number): Promise<void>;
   bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }>;
   cleanupDuplicateEmployees(): Promise<{ deleted: number; kept: number; errors: string[] }>;
+  getEmployeeUnitConsistencyReport(): Promise<EmployeeUnitConsistencyReport>;
 
   // Beneficiary management operations - SECURITY: Unit-based access only
   getBeneficiariesByUnit(unit: string): Promise<Beneficiary[]>;
@@ -1398,9 +1420,136 @@ export class DatabaseStorage implements IStorage {
     this.engineersCache = null;
   }
 
+  private normalizeUnitCode(unit: string | null | undefined): string | null {
+    if (typeof unit !== 'string') return null;
+    const trimmed = unit.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  private parseMonadaId(monadaId: unknown): number | null {
+    if (typeof monadaId === 'number' && Number.isFinite(monadaId)) {
+      return monadaId;
+    }
+
+    if (typeof monadaId === 'string') {
+      const parsed = Number(monadaId);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  }
+
+  private async resolveEmployeeUnitFields<T extends EmployeeUnitFields>(
+    employee: T,
+  ): Promise<T> {
+    const monadaCode = this.normalizeUnitCode(employee.monada);
+    const monadaId = this.parseMonadaId(employee.monada_id);
+
+    if (!monadaCode && !monadaId) {
+      return {
+        ...employee,
+        monada: null,
+        monada_id: null,
+      };
+    }
+
+    if (monadaId && !monadaCode) {
+      const { data } = await supabase
+        .from('Monada')
+        .select('id, unit')
+        .eq('id', monadaId)
+        .single();
+
+      return {
+        ...employee,
+        monada: this.normalizeUnitCode(data?.unit) || null,
+        monada_id: data?.id ?? monadaId,
+      };
+    }
+
+    if (monadaCode && !monadaId) {
+      const { data } = await supabase
+        .from('Monada')
+        .select('id, unit')
+        .eq('unit', monadaCode)
+        .single();
+
+      return {
+        ...employee,
+        monada: monadaCode,
+        monada_id: data?.id ?? null,
+      };
+    }
+
+    if (monadaId) {
+      const { data } = await supabase
+        .from('Monada')
+        .select('id, unit')
+        .eq('id', monadaId)
+        .single();
+
+      if (data?.id) {
+        return {
+          ...employee,
+          monada: this.normalizeUnitCode(data.unit) || monadaCode || null,
+          monada_id: data.id,
+        };
+      }
+    }
+
+    return {
+      ...employee,
+      monada: monadaCode,
+      monada_id: monadaId,
+    };
+  }
+
+  private async getMonadaMaps(): Promise<{
+    monadaCodeToId: Map<string, number>;
+    monadaIdToCode: Map<number, string>;
+  }> {
+    const { data: monadaRows } = await supabase
+      .from('Monada')
+      .select('id, unit');
+
+    const monadaCodeToId = new Map<string, number>();
+    const monadaIdToCode = new Map<number, string>();
+
+    (monadaRows || []).forEach((row: any) => {
+      const code = this.normalizeUnitCode(row.unit);
+      const id = Number(row.id);
+
+      if (!code || !Number.isFinite(id)) {
+        return;
+      }
+
+      monadaCodeToId.set(code, id);
+      monadaIdToCode.set(id, code);
+    });
+
+    return { monadaCodeToId, monadaIdToCode };
+  }
+
+  private normalizeEmployeesUnitView<T extends EmployeeUnitFields>(
+    employees: T[],
+    monadaIdToCode: Map<number, string>,
+  ): T[] {
+    return employees.map((employee) => {
+      const monadaId = this.parseMonadaId(employee.monada_id);
+      const canonicalCode = monadaId ? monadaIdToCode.get(monadaId) : null;
+      return {
+        ...employee,
+        monada: canonicalCode || this.normalizeUnitCode(employee.monada) || null,
+        monada_id: monadaId,
+      };
+    });
+  }
+
   async getAllEmployees(): Promise<Employee[]> {
     try {
       console.log('[Storage] Fetching all employees');
+
+      const { monadaIdToCode } = await this.getMonadaMaps();
       
       const { data, error } = await supabase
         .from('Employees')
@@ -1412,9 +1561,11 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
       
-      const decryptedEmployees = (data || []).map(e => ({
+      const normalizedEmployees = this.normalizeEmployeesUnitView((data || []) as EmployeeUnitFields[], monadaIdToCode);
+
+      const decryptedEmployees = normalizedEmployees.map(e => ({
         ...e,
-        afm: decryptAFM(e.afm)
+        afm: decryptAFM((e as any).afm)
       }));
       
       console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees`);
@@ -1435,9 +1586,11 @@ export class DatabaseStorage implements IStorage {
 
       console.log('[Storage] Fetching engineers with DB-side filter');
 
+      const { monadaIdToCode } = await this.getMonadaMaps();
+
       const { data, error } = await supabase
         .from('Employees')
-        .select('id, name, surname, attribute, monada')
+        .select('id, name, surname, attribute, monada, monada_id')
         .eq('attribute', 'Μηχανικός')
         .order('surname', { ascending: true })
         .order('name', { ascending: true });
@@ -1447,7 +1600,7 @@ export class DatabaseStorage implements IStorage {
         throw error;
       }
 
-      const engineers = data || [];
+      const engineers = this.normalizeEmployeesUnitView((data || []) as EmployeeUnitFields[], monadaIdToCode) as EngineerSummary[];
       this.engineersCache = { data: engineers, expiresAt: now + ENGINEERS_CACHE_TTL };
       console.log(`[Storage] Cached ${engineers.length} engineers for ${ENGINEERS_CACHE_TTL / 1000}s`);
 
@@ -1461,21 +1614,38 @@ export class DatabaseStorage implements IStorage {
   async getEmployeesByUnit(unit: string): Promise<Employee[]> {
     try {
       console.log(`[Storage] Fetching employees for unit: ${unit}`);
-      
-      const { data, error } = await supabase
+
+      const { monadaCodeToId, monadaIdToCode } = await this.getMonadaMaps();
+
+      const normalizedUnit = unit.trim();
+      const parsedUnitId = Number(normalizedUnit);
+      const isNumericUnit = Number.isFinite(parsedUnitId) && String(parsedUnitId) === normalizedUnit;
+      const resolvedMonadaId = isNumericUnit ? parsedUnitId : (monadaCodeToId.get(normalizedUnit) ?? null);
+
+      let query = supabase
         .from('Employees')
         .select('*')
-        .eq('monada', unit)
         .order('surname', { ascending: true });
+
+      if (resolvedMonadaId) {
+        const escapedUnit = normalizedUnit.replace(/,/g, '\\,');
+        query = query.or(`monada_id.eq.${resolvedMonadaId},and(monada_id.is.null,monada.eq.${escapedUnit})`);
+      } else {
+        query = query.eq('monada', normalizedUnit);
+      }
+
+      const { data, error } = await query;
         
       if (error) {
         console.error('[Storage] Error fetching employees by unit:', error);
         throw error;
       }
       
-      const decryptedEmployees = (data || []).map(e => ({
+      const normalizedEmployees = this.normalizeEmployeesUnitView((data || []) as EmployeeUnitFields[], monadaIdToCode);
+
+      const decryptedEmployees = normalizedEmployees.map(e => ({
         ...e,
-        afm: decryptAFM(e.afm)
+        afm: decryptAFM((e as any).afm)
       }));
       
       console.log(`[Storage] Successfully fetched ${decryptedEmployees.length} employees for unit: ${unit}`);
@@ -1489,6 +1659,8 @@ export class DatabaseStorage implements IStorage {
   async searchEmployeesByAFM(afm: string): Promise<Employee[]> {
     try {
       console.log(`[Storage] Searching employees by AFM: ${afm}`);
+
+      const { monadaIdToCode } = await this.getMonadaMaps();
       
       if (!/^\d+$/.test(afm)) {
         console.log(`[Storage] Invalid AFM format (contains non-digits): ${afm}`);
@@ -1506,7 +1678,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns for faster query
         const { data, error } = await supabase
           .from('Employees')
-          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada, monada_id')
           .eq('afm_hash', afmHash)
           .order('surname', { ascending: true })
           .limit(20);
@@ -1516,9 +1688,11 @@ export class DatabaseStorage implements IStorage {
           throw error;
         }
         
-        const decryptedEmployees = (data || []).map(e => ({
+        const normalizedEmployees = this.normalizeEmployeesUnitView((data || []) as EmployeeUnitFields[], monadaIdToCode);
+
+        const decryptedEmployees = normalizedEmployees.map(e => ({
           ...e,
-          afm: decryptAFM(e.afm)
+          afm: decryptAFM((e as any).afm)
         }));
         
         console.log(`[Storage] Found ${decryptedEmployees.length} employees with exact AFM: ${afm}`);
@@ -1529,7 +1703,7 @@ export class DatabaseStorage implements IStorage {
         // Optimized: select only essential columns and reduced batch size
         const { data, error } = await supabase
           .from('Employees')
-          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada')
+          .select('id, afm, afm_hash, surname, name, fathername, klados, attribute, workaf, monada, monada_id')
           .order('surname', { ascending: true })
           .limit(200);
           
@@ -1539,8 +1713,10 @@ export class DatabaseStorage implements IStorage {
         }
         
         // Optimized: early exit after finding 20 matches to avoid unnecessary decryption
+        const normalizedEmployees = this.normalizeEmployeesUnitView((data || []) as EmployeeUnitFields[], monadaIdToCode);
+
         const results: any[] = [];
-        for (const e of (data || [])) {
+        for (const e of normalizedEmployees as any[]) {
           if (results.length >= 20) break;
           
           const decryptedAFM = decryptAFM(e.afm);
@@ -1564,10 +1740,14 @@ export class DatabaseStorage implements IStorage {
   async createEmployee(employee: InsertEmployee): Promise<Employee> {
     try {
       console.log('[Storage] Creating new employee:', employee);
+
+      const resolvedEmployee = await this.resolveEmployeeUnitFields(employee as EmployeeUnitFields);
       
       const afmString = employee.afm ? String(employee.afm) : '';
       const employeeToInsert = {
         ...employee,
+        monada: resolvedEmployee.monada ?? null,
+        monada_id: resolvedEmployee.monada_id ?? null,
         afm: afmString ? encryptAFM(afmString) : '',
         afm_hash: afmString ? hashAFM(afmString) : ''
       };
@@ -1599,10 +1779,14 @@ export class DatabaseStorage implements IStorage {
   async updateEmployee(id: number, employee: Partial<InsertEmployee>): Promise<Employee> {
     try {
       console.log(`[Storage] Updating employee ${id}:`, employee);
+
+      const resolvedEmployee = await this.resolveEmployeeUnitFields(employee as EmployeeUnitFields);
       
       const afmString = employee.afm ? String(employee.afm) : '';
       const employeeToUpdate = {
         ...employee,
+        monada: resolvedEmployee.monada ?? employee.monada,
+        monada_id: resolvedEmployee.monada_id ?? employee.monada_id,
         afm: afmString ? encryptAFM(afmString) : undefined,
         afm_hash: afmString ? hashAFM(afmString) : undefined
       };
@@ -1635,6 +1819,21 @@ export class DatabaseStorage implements IStorage {
   async bulkImportEmployees(employees: InsertEmployee[]): Promise<{ success: number; failed: number; errors: string[] }> {
     try {
       console.log(`[Storage] Bulk importing ${employees.length} employees`);
+
+      const { data: monadaRows } = await supabase
+        .from('Monada')
+        .select('id, unit');
+
+      const monadaCodeToId = new Map<string, number>();
+      const monadaIdToCode = new Map<number, string>();
+      (monadaRows || []).forEach((row: any) => {
+        const code = this.normalizeUnitCode(row.unit);
+        if (!code || !Number.isFinite(Number(row.id))) return;
+
+        const id = Number(row.id);
+        monadaCodeToId.set(code, id);
+        monadaIdToCode.set(id, code);
+      });
       
       // Deduplicate by AFM - keep only the last occurrence of each AFM
       const afmMap = new Map<string, InsertEmployee>();
@@ -1667,9 +1866,16 @@ export class DatabaseStorage implements IStorage {
       const employeesToInsert = deduplicatedEmployees.map((emp, idx) => {
         const afmString = emp.afm ? String(emp.afm) : '';
         const encryptedAfm = afmString ? encryptAFM(afmString) : '';
+        const monadaCode = this.normalizeUnitCode(emp.monada) || '';
+        const parsedMonadaId = this.parseMonadaId((emp as any).monada_id);
+        const monadaId = parsedMonadaId ?? monadaCodeToId.get(monadaCode) ?? null;
+        const normalizedMonada = monadaCode || (monadaId ? monadaIdToCode.get(monadaId) || '' : '');
+
         return {
           ...emp,
           id: nextId + idx,
+          monada: normalizedMonada || null,
+          monada_id: monadaId,
           afm: encryptedAfm,
           afm_hash: afmString ? hashAFM(afmString) : ''
         };
@@ -1791,6 +1997,83 @@ export class DatabaseStorage implements IStorage {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       return { deleted: 0, kept: 0, errors: [errorMsg] };
     }
+  }
+
+  async getEmployeeUnitConsistencyReport(): Promise<EmployeeUnitConsistencyReport> {
+    const { monadaIdToCode } = await this.getMonadaMaps();
+    const { data, error } = await supabase
+      .from('Employees')
+      .select('id, monada, monada_id');
+
+    if (error) {
+      throw error;
+    }
+
+    const rows = (data || []) as Array<{ id: number; monada: string | null; monada_id: number | null }>;
+    const sampleMismatches: EmployeeUnitConsistencyReport['sampleMismatches'] = [];
+
+    let withMonadaId = 0;
+    let withoutMonadaId = 0;
+    let withMonadaCode = 0;
+    let withoutMonadaCode = 0;
+    let mismatchedCodeAndId = 0;
+    let orphanMonadaId = 0;
+
+    for (const row of rows) {
+      const code = this.normalizeUnitCode(row.monada);
+      const monadaId = this.parseMonadaId(row.monada_id);
+      const resolvedCode = monadaId ? monadaIdToCode.get(monadaId) || null : null;
+
+      if (monadaId) {
+        withMonadaId++;
+      } else {
+        withoutMonadaId++;
+      }
+
+      if (code) {
+        withMonadaCode++;
+      } else {
+        withoutMonadaCode++;
+      }
+
+      if (monadaId && !resolvedCode) {
+        orphanMonadaId++;
+        if (sampleMismatches.length < 20) {
+          sampleMismatches.push({
+            id: row.id,
+            monada: code,
+            monada_id: monadaId,
+            resolved_unit: null,
+            issue: 'orphan_monada_id',
+          });
+        }
+        continue;
+      }
+
+      if (monadaId && code && resolvedCode && code !== resolvedCode) {
+        mismatchedCodeAndId++;
+        if (sampleMismatches.length < 20) {
+          sampleMismatches.push({
+            id: row.id,
+            monada: code,
+            monada_id: monadaId,
+            resolved_unit: resolvedCode,
+            issue: 'code_id_mismatch',
+          });
+        }
+      }
+    }
+
+    return {
+      totalEmployees: rows.length,
+      withMonadaId,
+      withoutMonadaId,
+      withMonadaCode,
+      withoutMonadaCode,
+      mismatchedCodeAndId,
+      orphanMonadaId,
+      sampleMismatches,
+    };
   }
 
   // Beneficiary management methods - SECURITY: Removed getAllBeneficiaries to prevent unauthorized access

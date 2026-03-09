@@ -10,6 +10,7 @@ import { getBudgetByMis } from './controllers/budgetController';
 import { validateBudgetAllocation } from './services/budgetNotificationService';
 import { broadcastBeneficiaryUpdate } from './websocket';
 import { cacheReferenceData, getReferenceData } from './utils/reference-data-cache';
+import { formatMonadaUnits } from './utils/unitFormatter';
 
 function getChangeTypeLabel(type: string): string {
   switch (type) {
@@ -1671,20 +1672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: 'Failed to fetch units' });
       }
       
-      // Transform units to match frontend Unit interface
-      // Keep id as number, include all necessary fields
-      // Prefer unit field, but use unit_name or fallback to id if empty
-      const formattedUnits = (units || []).map((unit: any) => {
-        // Use unit field as display name (all units have this field)
-        const displayName = (unit.unit || `Unit ${unit.id}`).trim();
-        
-        return {
-          id: Number(unit.id),
-          unit: unit.unit,
-          unit_name: unit.unit_name,
-          name: displayName
-        };
-      });
+      const formattedUnits = formatMonadaUnits(units as any[]);
       
       console.log('[API] /api/public/units returning:', formattedUnits.length, 'units');
       res.json(formattedUnits);

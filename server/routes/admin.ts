@@ -10,6 +10,8 @@ import { requireAdmin, authenticateSession, AuthenticatedRequest } from '../auth
 import { manualQuarterTransitionCheck, processQuarterTransition, manualYearEndClosure } from '../services/schedulerService';
 import { createLogger } from '../utils/logger';
 import { broadcastAdminOperation } from '../websocket';
+import { supabase } from '../config/db';
+import { formatMonadaUnits } from '../utils/unitFormatter';
 
 const logger = createLogger('AdminRoutes');
 
@@ -18,6 +20,177 @@ export function registerAdminRoutes(router: Router, wss: any) {
   const adminRouter = Router();
   adminRouter.use(authenticateSession);
   adminRouter.use(requireAdmin);
+
+  adminRouter.get('/monada', async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { data, error } = await supabase
+        .from('Monada')
+        .select('id, unit, unit_name, email, director, address, parts')
+        .order('id', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      const normalized = formatMonadaUnits(data as any[]).map((unit, index) => ({
+        ...unit,
+        email: (data || [])[index]?.email ?? null,
+        director: (data || [])[index]?.director ?? null,
+        address: (data || [])[index]?.address ?? null,
+        parts: (data || [])[index]?.parts ?? null,
+      }));
+
+      return res.json(normalized);
+    } catch (error) {
+      logger.error('[Admin API] Error fetching Monada data', error);
+      return res.status(500).json({
+        message: 'Failed to fetch Monada data',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  adminRouter.post('/monada', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const payload = req.body || {};
+      const unitCode = typeof payload.unit === 'string' ? payload.unit.trim() : '';
+
+      if (!unitCode) {
+        return res.status(400).json({ message: 'unit is required' });
+      }
+
+      let id = Number(payload.id);
+      if (!Number.isFinite(id)) {
+        const { data: latest } = await supabase
+          .from('Monada')
+          .select('id')
+          .order('id', { ascending: false })
+          .limit(1)
+          .single();
+
+        id = Number(latest?.id || 0) + 1;
+      }
+
+      const insertPayload = {
+        id,
+        unit: unitCode,
+        unit_name: payload.unit_name ?? null,
+        email: payload.email ?? null,
+        director: payload.director ?? null,
+        address: payload.address ?? null,
+        parts: payload.parts ?? null,
+      };
+
+      const { data, error } = await supabase
+        .from('Monada')
+        .insert(insertPayload)
+        .select('id, unit, unit_name, email, director, address, parts')
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.status(201).json(data);
+    } catch (error) {
+      logger.error('[Admin API] Error creating Monada row', error);
+      return res.status(500).json({
+        message: 'Failed to create Monada row',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  adminRouter.patch('/monada/:id', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ message: 'Invalid id' });
+      }
+
+      const payload = req.body || {};
+      const updatePayload: Record<string, any> = {};
+
+      if (typeof payload.unit === 'string') {
+        updatePayload.unit = payload.unit.trim();
+      }
+      if ('unit_name' in payload) updatePayload.unit_name = payload.unit_name;
+      if ('email' in payload) updatePayload.email = payload.email;
+      if ('director' in payload) updatePayload.director = payload.director;
+      if ('address' in payload) updatePayload.address = payload.address;
+      if ('parts' in payload) updatePayload.parts = payload.parts;
+
+      const { data, error } = await supabase
+        .from('Monada')
+        .update(updatePayload)
+        .eq('id', id)
+        .select('id, unit, unit_name, email, director, address, parts')
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json(data);
+    } catch (error) {
+      logger.error('[Admin API] Error updating Monada row', error);
+      return res.status(500).json({
+        message: 'Failed to update Monada row',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  adminRouter.delete('/monada/:id', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) {
+        return res.status(400).json({ message: 'Invalid id' });
+      }
+
+      const [projectIndexRef, documentsRef, paymentsRef, employeesRef] = await Promise.all([
+        supabase.from('project_index').select('id', { count: 'exact', head: true }).eq('monada_id', id),
+        supabase.from('generated_documents').select('id', { count: 'exact', head: true }).eq('unit_id', id),
+        supabase.from('beneficiary_payments').select('id', { count: 'exact', head: true }).eq('unit_id', id),
+        supabase.from('Employees').select('id', { count: 'exact', head: true }).eq('monada_id', id),
+      ]);
+
+      const hasReferences =
+        (projectIndexRef.count || 0) > 0 ||
+        (documentsRef.count || 0) > 0 ||
+        (paymentsRef.count || 0) > 0 ||
+        (employeesRef.count || 0) > 0;
+
+      if (hasReferences) {
+        return res.status(409).json({
+          message: 'Cannot delete Monada row because it is referenced by other records',
+          references: {
+            project_index: projectIndexRef.count || 0,
+            generated_documents: documentsRef.count || 0,
+            beneficiary_payments: paymentsRef.count || 0,
+            employees: employeesRef.count || 0,
+          },
+        });
+      }
+
+      const { error } = await supabase
+        .from('Monada')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      return res.json({ success: true });
+    } catch (error) {
+      logger.error('[Admin API] Error deleting Monada row', error);
+      return res.status(500).json({
+        message: 'Failed to delete Monada row',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
   
   /**
    * Trigger a manual quarter transition check and update

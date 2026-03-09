@@ -11,6 +11,7 @@ import {
   parseEuropeanNumber,
 } from "../utils/europeanNumberParser";
 import { canAccessProject, requireProjectAccess } from "../utils/authorization";
+import { formatMonadaUnits } from "../utils/unitFormatter";
 
 export const router = Router();
 
@@ -1648,7 +1649,7 @@ router.get("/reference-data", authenticateSession, async (req: AuthenticatedRequ
 
     const referenceData = {
       eventTypes: eventTypesRes.data || [],
-      units: unitsRes.data || [],
+      units: formatMonadaUnits(unitsRes.data as any[]),
       kallikratis: kallikratisFromIndex,
       expenditureTypes: expenditureTypesRes.data || [],
       forYl: formattedForYl, // For YL (implementing agencies)
@@ -3355,20 +3356,32 @@ router.get(
         eventTypesResult,
         unitsResult,
         expenditureTypesResult,
+        forYlResult,
       ] = await Promise.all([
         supabase.from("event_types").select("*").order("id"),
-        supabase.from("Monada").select("*").order("id"),
+        supabase.from("Monada").select("id, unit, unit_name").order("id"),
         supabase.from("expenditure_types").select("*").order("id"),
+        supabase.from("for_yl").select("id, foreis"),
       ]);
 
+      const formattedForYl = (forYlResult.data || []).map(item => {
+        const foreis = item.foreis as { title?: string; monada_id?: string } | null;
+        return {
+          id: item.id,
+          title: foreis?.title || "",
+          monada_id: foreis?.monada_id || "",
+        };
+      });
+
       const referenceData = {
-        event_types: eventTypesResult.data || [],
-        units: unitsResult.data || [],
-        expenditure_types: expenditureTypesResult.data || [],
+        eventTypes: eventTypesResult.data || [],
+        units: formatMonadaUnits(unitsResult.data as any[]),
+        expenditureTypes: expenditureTypesResult.data || [],
+        forYl: formattedForYl,
       };
 
       console.log(
-        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.event_types.length} event types, ${referenceData.units.length} units, ${referenceData.expenditure_types.length} expenditure types`,
+        `[ReferenceData] Successfully fetched combined reference data: ${referenceData.eventTypes.length} event types, ${referenceData.units.length} units, ${referenceData.expenditureTypes.length} expenditure types, ${referenceData.forYl.length} for_yl`,
       );
 
       res.json(referenceData);
