@@ -42,6 +42,7 @@ tmpclaude*
 *.tar.gz
 *.zip
 *.md
+*.sql
 
 # Project-specific (migrations and scripts are tracked)
 # scripts/  - commented out if tracking scripts
