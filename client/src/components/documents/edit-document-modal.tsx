@@ -515,7 +515,9 @@ export function EditDocumentModal({
 
         try {
           // Find the project to get its MIS
-          const project = projects.find((p) => p.id === selectedProjectId);
+          const project = projects.find(
+            (p) => String(p?.id) === String(selectedProjectId),
+          );
           if (!project) {
             console.error("Project not found:", selectedProjectId);
             return [];
@@ -1166,8 +1168,8 @@ export function EditDocumentModal({
         secondary_text: payment.freetext || "",
         regiondet: normalizeRegiondetForPaymentContext({
           value:
-            beneficiaryData?.regiondet ??
             (payment as any)?.regiondet ??
+            beneficiaryData?.regiondet ??
             null,
           paymentId: payment.id,
           projectIndexId:
@@ -1176,37 +1178,101 @@ export function EditDocumentModal({
       };
     });
 
-    // Fallback to document.recipients if payments were not fetched (avoid losing recipients on correction)
-    const recipientsFromDocument =
-      initialRecipients.length === 0 && Array.isArray(docAny?.recipients)
-        ? (docAny.recipients as any[]).map((r) => {
-            const amountNumber =
-              typeof r.amount === "string"
-                ? parseFloat(r.amount) || 0
-                : Number(r.amount) || 0;
-            const key = r.installment || r.month || "ΝΣΧΝΣΟΝΤΏΟΑ";
-            return {
-              ...r,
-              amount: amountNumber,
-              installment: key,
-              installments: r.installments || [key],
-              installmentAmounts: r.installmentAmounts || {
-                [key]: amountNumber,
-              },
-              regiondet: normalizeRegiondetForPaymentContext({
-                value: r.regiondet || (r as any).region || null,
-                paymentId: r.id as number | string | undefined,
-                projectIndexId:
-                  (r as any).project_index_id ??
-                  document.project_index_id ??
-                  null,
-              }),
-            };
-          })
-        : [];
+    // Keep a normalized snapshot of document recipients for geo fallback.
+    const recipientsFromDocument = Array.isArray(docAny?.recipients)
+      ? (docAny.recipients as any[]).map((r) => {
+          const amountNumber =
+            typeof r.amount === "string"
+              ? parseFloat(r.amount) || 0
+              : Number(r.amount) || 0;
+          const key = r.installment || r.month || "ΝΣΧΝΣΟΝΤΏΟΑ";
+          return {
+            ...r,
+            amount: amountNumber,
+            installment: key,
+            installments: r.installments || [key],
+            installmentAmounts: r.installmentAmounts || {
+              [key]: amountNumber,
+            },
+            regiondet: normalizeRegiondetForPaymentContext({
+              value: r.regiondet || (r as any).region || null,
+              paymentId: r.id as number | string | undefined,
+              projectIndexId:
+                (r as any).project_index_id ??
+                document.project_index_id ??
+                null,
+            }),
+          };
+        })
+      : [];
 
     const hydratedRecipients =
-      initialRecipients.length > 0 ? initialRecipients : recipientsFromDocument;
+      initialRecipients.length > 0
+        ? initialRecipients.map((recipient: any) => {
+            if (isRegiondetComplete(recipient?.regiondet as RegiondetSelection)) {
+              return recipient;
+            }
+
+            const fallbackDocRecipient = recipientsFromDocument.find((docRecipient: any) => {
+              if (
+                recipient?.id !== undefined &&
+                docRecipient?.id !== undefined &&
+                String(recipient.id) === String(docRecipient.id)
+              ) {
+                return true;
+              }
+
+              if (
+                recipient?.beneficiary_id !== undefined &&
+                docRecipient?.beneficiary_id !== undefined &&
+                String(recipient.beneficiary_id) === String(docRecipient.beneficiary_id)
+              ) {
+                return true;
+              }
+
+              if (
+                recipient?.employee_id !== undefined &&
+                docRecipient?.employee_id !== undefined &&
+                String(recipient.employee_id) === String(docRecipient.employee_id)
+              ) {
+                return true;
+              }
+
+              if (recipient?.afm && docRecipient?.afm) {
+                return String(recipient.afm) === String(docRecipient.afm);
+              }
+
+              return false;
+            });
+
+            if (!fallbackDocRecipient) {
+              return recipient;
+            }
+
+            const fallbackRegiondet = normalizeRegiondetForPaymentContext({
+              value:
+                fallbackDocRecipient.regiondet ||
+                (fallbackDocRecipient as any).region ||
+                null,
+              paymentId:
+                recipient?.id ??
+                (fallbackDocRecipient.id as number | string | undefined),
+              projectIndexId:
+                (fallbackDocRecipient as any).project_index_id ??
+                document.project_index_id ??
+                null,
+            });
+
+            if (!isRegiondetComplete(fallbackRegiondet as RegiondetSelection)) {
+              return recipient;
+            }
+
+            return {
+              ...recipient,
+              regiondet: fallbackRegiondet,
+            };
+          })
+        : recipientsFromDocument;
 
     // Cache initial recipients for fallback usage during submission
     initialRecipientsRef.current = hydratedRecipients;
@@ -2956,7 +3022,11 @@ export function EditDocumentModal({
                   <CardTitle className="text-lg">Εσωτερική Διανομή</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <EsdianFieldsWithSuggestions form={form} user={user} />
+                  <EsdianFieldsWithSuggestions
+                    form={form}
+                    user={user}
+                    enableAutoPopulate={false}
+                  />
                 </CardContent>
               </Card>
 

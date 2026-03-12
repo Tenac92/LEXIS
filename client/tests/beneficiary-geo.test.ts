@@ -103,4 +103,77 @@ assert.deepStrictEqual(
   "deriveGeoSelectionFromRegiondet should support legacy fallback keys",
 );
 
+assert.deepStrictEqual(
+  deriveGeoSelectionFromRegiondet({
+    regions: [{ name: "Region Legacy" }],
+    regional_units: [{ name: "Unit Legacy", unit_code: "U30" }],
+    municipalities: [{ name: "Municipality Legacy", id: "M30" }],
+  } as any),
+  { regionCode: "Region Legacy", unitCode: "U30", municipalityCode: "M30" },
+  "deriveGeoSelectionFromRegiondet should use unit_code when code is missing",
+);
+
+assert.deepStrictEqual(
+  deriveGeoSelectionFromRegiondet({
+    region: "Περιφέρεια Δοκιμή",
+    regional_unit: "Ενότητα Δοκιμή",
+    municipality: "Δήμος Δοκιμή",
+  } as any),
+  {
+    regionCode: "Περιφέρεια Δοκιμή",
+    unitCode: "Ενότητα Δοκιμή",
+    municipalityCode: "Δήμος Δοκιμή",
+  },
+  "deriveGeoSelectionFromRegiondet should support legacy simple string regiondet shape",
+);
+
+assert.deepStrictEqual(
+  deriveGeoSelectionFromRegiondet(
+    '{"regions":[{"code":"R30","name":"Region Thirty"}],"regional_units":[{"code":"U30","name":"Unit Thirty"}],"municipalities":[{"code":"M30","name":"Municipality Thirty"}]}' as any,
+  ),
+  { regionCode: "R30", unitCode: "U30", municipalityCode: "M30" },
+  "deriveGeoSelectionFromRegiondet should parse stringified JSON regiondet",
+);
+
+assert.strictEqual(
+  isRegiondetComplete(
+    '[{"regions":[{"code":"R40","name":"Region Forty"}],"payment_id":40}]' as any,
+  ),
+  true,
+  "isRegiondetComplete should support stringified JSON arrays",
+);
+
+const mixedPayload = [
+  {
+    payment_id: 589,
+    payment_ids: [589],
+  },
+  {
+    regions: [{ code: 2, name: "ΚΕΝΤΡΙΚΗΣ ΜΑΚΕΔΟΝΙΑΣ" }],
+    payment_id: 828,
+    payment_ids: [828],
+    municipalities: [
+      {
+        id: "municipality-9056",
+        code: 9056,
+        name: "ΑΡΙΣΤΟΤΕΛΗ",
+        unit_code: 207,
+      },
+    ],
+    regional_units: [
+      {
+        code: 207,
+        name: "ΧΑΛΚΙΔΙΚΗΣ",
+        region_code: 2,
+      },
+    ],
+  },
+];
+
+assert.deepStrictEqual(
+  deriveGeoSelectionFromRegiondet(normalizeRegiondetEntry(mixedPayload as any, 589) as any),
+  { regionCode: "2", unitCode: "207", municipalityCode: "9056" },
+  "normalizeRegiondetEntry should fallback to latest geo-bearing entry when matched payment entry has no geo",
+);
+
 console.log("beneficiary-geo.test.ts passed");

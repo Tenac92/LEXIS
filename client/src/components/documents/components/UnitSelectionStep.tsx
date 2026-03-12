@@ -30,7 +30,22 @@ export function UnitSelectionStep({
   userUnitIds,
   onUnitChange,
 }: UnitSelectionStepProps) {
-  const selectedUnit = form.watch("unit");
+  const getUnitNameById = React.useCallback(
+    (value: unknown) => {
+      const normalizedValue =
+        value === undefined || value === null ? "" : String(value);
+      if (!normalizedValue || !Array.isArray(units) || units.length === 0) {
+        return "";
+      }
+
+      const matchedUnit = units.find(
+        (u: any) => String(u?.id ?? "") === normalizedValue,
+      );
+
+      return matchedUnit?.name || normalizedValue;
+    },
+    [units],
+  );
 
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
@@ -55,7 +70,11 @@ export function UnitSelectionStep({
                 field.onChange(value);
                 onUnitChange(value);
               }}
-              value={field.value}
+              value={
+                field.value === undefined || field.value === null
+                  ? ""
+                  : String(field.value)
+              }
               disabled={unitsLoading || (units && units.length <= 1)}
             >
               <FormControl>
@@ -67,17 +86,17 @@ export function UnitSelectionStep({
                         : "Επιλέξτε μονάδα"
                     }
                   >
-                    {field.value && Array.isArray(units) && units.length > 0
-                      ? units.find((u: any) => u.id === field.value)?.name ||
-                        field.value
-                      : undefined}
+                    {field.value ? getUnitNameById(field.value) : undefined}
                   </SelectValue>
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 {Array.isArray(units) && units.length > 0 ? (
                   units.map((unit: any) => (
-                    <SelectItem key={unit.id || unit.name} value={unit.id}>
+                    <SelectItem
+                      key={String(unit.id || unit.name)}
+                      value={String(unit.id)}
+                    >
                       {unit.name}
                     </SelectItem>
                   ))
@@ -92,10 +111,7 @@ export function UnitSelectionStep({
             {field.value && (
               <p className="text-xs text-muted-foreground mt-2">
                 <strong>Επιλεγμένη:</strong>{" "}
-                {Array.isArray(units) && units.length > 0
-                  ? units.find((u: any) => u.id === field.value)?.name ||
-                    field.value
-                  : field.value}
+                {getUnitNameById(field.value)}
               </p>
             )}
           </FormItem>

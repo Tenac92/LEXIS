@@ -58,6 +58,7 @@ interface EsdianFieldsWithSuggestionsProps {
   form: any;
   user: any;
   draftInstanceId?: number;
+  enableAutoPopulate?: boolean;
 }
 
 const emptyEsdianResponse: EsdianSuggestionsResponse = {
@@ -75,6 +76,7 @@ export function EsdianFieldsWithSuggestions({
   form,
   user,
   draftInstanceId = 0,
+  enableAutoPopulate = true,
 }: EsdianFieldsWithSuggestionsProps) {
   const projectId = form.watch("project_id");
   const expenditureType = form.watch("expenditure_type");
@@ -195,6 +197,8 @@ export function EsdianFieldsWithSuggestions({
 
   // Auto-population effect when suggestions load
   useEffect(() => {
+    if (!enableAutoPopulate) return;
+
     if (autoPopulate && autoPopulate.confidence === 'high') {
       const currentFields = form.getValues("esdian_fields") || [];
       // Only auto-populate if fields are empty
@@ -207,7 +211,7 @@ export function EsdianFieldsWithSuggestions({
         console.log(`[EsdianFields] Auto-populated with ${autoPopulate.reason}: ${autoPopulate.fields.join(', ')}`);
       }
     }
-  }, [autoPopulate, form]);
+  }, [autoPopulate, form, enableAutoPopulate]);
 
   // Apply complete set function
   const applyCompleteSet = (set: EsdianCompleteSet) => {
@@ -251,7 +255,7 @@ export function EsdianFieldsWithSuggestions({
       </div>
 
       {/* Auto-Population Indicator - Compact */}
-      {didAutoPopulate && autoPopulate && autoPopulate.confidence === 'high' && (
+      {enableAutoPopulate && didAutoPopulate && autoPopulate && autoPopulate.confidence === 'high' && (
         <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
           <div className="flex items-start gap-2">
             <Lightbulb className="h-3.5 w-3.5 text-blue-600 mt-0.5 flex-shrink-0" />

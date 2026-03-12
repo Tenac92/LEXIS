@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import { MapPin, AlertCircle, RefreshCcw, X, ChevronRight } from "lucide-react";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
   buildRegiondetSelection,
   deriveGeoSelectionFromRegiondet,
   isRegiondetComplete,
+  normalizeRegiondetEntry,
   type MunicipalityOption,
   type RegionOption,
   type RegiondetSelection,
@@ -41,18 +42,13 @@ function BeneficiaryGeoSelectorComponent({
   error,
   onRetry,
 }: BeneficiaryGeoSelectorProps) {
-  const [regionCode, setRegionCode] = useState<string>("");
-  const [unitCode, setUnitCode] = useState<string>("");
-  const [municipalityCode, setMunicipalityCode] = useState<string>("");
-
-  // Hydrate local selectors from incoming value
-  useEffect(() => {
-    const { regionCode, unitCode, municipalityCode } =
-      deriveGeoSelectionFromRegiondet(value);
-    setRegionCode(regionCode);
-    setUnitCode(unitCode);
-    setMunicipalityCode(municipalityCode);
-  }, [value]);
+  // Derive codes directly from value so they're always in sync,
+  // even when geo option lists load after the value is set.
+  const { regionCode, unitCode, municipalityCode } = useMemo(
+    () => deriveGeoSelectionFromRegiondet(value),
+    [value],
+  );
+  const normalizedValue = useMemo(() => normalizeRegiondetEntry(value), [value]);
 
   const filteredUnits = useMemo(() => {
     if (regionCode) {
@@ -82,18 +78,8 @@ function BeneficiaryGeoSelectorComponent({
   const handleRegionChange = (code: string) => {
     const selectedRegion =
       regions.find((r) => String(r.code) === String(code)) || null;
-    setRegionCode(code);
-    
-    /**
-     * HIERARCHY & CLEARING RULE: When region changes, clear dependent selections
-     * 
-     * Since Regional Units and Municipalities depend on Region,
-     * we must clear them when region changes to maintain hierarchy integrity.
-     * This prevents invalid states like selecting a municipality from a different region.
-     */
-    setUnitCode("");
-    setMunicipalityCode("");
-    
+    // No local setState needed — codes are derived from value via useMemo.
+    // Clearing unit/municipality is handled by passing null in buildRegiondetSelection.
     onChange(
       buildRegiondetSelection({
         region: selectedRegion,
@@ -117,20 +103,8 @@ function BeneficiaryGeoSelectorComponent({
           (r) => String(r.code) === String(selectedUnit.region_code),
         ) || null
       : null;
-    setRegionCode(parentRegion?.code ? String(parentRegion.code) : "");
-    setUnitCode(code);
-    
-    /**
-     * AUTO-LOAD RULE: When Regional Unit is selected, automatically load municipalities
-     * 
-     * Instead of requiring the user to manually trigger municipality loading,
-     * we automatically filter municipalities to match the selected unit.
-     * This eliminates the need for manual dropdown interaction.
-     */
-    // Clear previous municipality selection when unit changes
-    // (it would be invalid for the new unit anyway)
-    setMunicipalityCode("");
-    
+    // No local setState needed — region auto-fill and municipality clearing
+    // are handled by what we pass to buildRegiondetSelection.
     onChange(
       buildRegiondetSelection({
         region: parentRegion || null,
@@ -160,10 +134,7 @@ function BeneficiaryGeoSelectorComponent({
         ) || null
       : null;
 
-    setRegionCode(parentRegion?.code ? String(parentRegion.code) : "");
-    setUnitCode(parentUnit?.code ? String(parentUnit.code) : "");
-    setMunicipalityCode(code);
-
+    // No local setState needed — codes are derived from value via useMemo.
     onChange(
       buildRegiondetSelection({
         region: parentRegion || null,
@@ -186,13 +157,7 @@ function BeneficiaryGeoSelectorComponent({
    * any derived state (form validation, dependent UI, etc.)
    */
   const handleClear = () => {
-    // Step 1: Clear all local dropdown states
-    setRegionCode("");
-    setUnitCode("");
-    setMunicipalityCode("");
-
-    // Step 2: Update parent form value to null
-    // This signals: "geographic selection has been cleared"
+    // Codes are derived from value via useMemo; just signal null to parent.
     onChange(null);
 
     // Note: Validation state reset happens automatically because:
@@ -264,6 +229,14 @@ function BeneficiaryGeoSelectorComponent({
               <SelectValue placeholder="Περιφέρεια" />
             </SelectTrigger>
             <SelectContent>
+              {regionCode &&
+                !regions.some(
+                  (region) => String(region.code || region.name) === String(regionCode),
+                ) && (
+                  <SelectItem value={String(regionCode)}>
+                    {normalizedValue?.regions?.[0]?.name || String(regionCode)}
+                  </SelectItem>
+                )}
               {regions.map((region) => (
                 <SelectItem
                   key={`region-${region.code || region.name}`}
@@ -287,6 +260,14 @@ function BeneficiaryGeoSelectorComponent({
               <SelectValue placeholder="Ενότητα" />
             </SelectTrigger>
             <SelectContent>
+              {unitCode &&
+                !filteredUnits.some(
+                  (unit) => String(unit.code || unit.name) === String(unitCode),
+                ) && (
+                  <SelectItem value={String(unitCode)}>
+                    {normalizedValue?.regional_units?.[0]?.name || String(unitCode)}
+                  </SelectItem>
+                )}
               {filteredUnits.map((unit) => (
                 <SelectItem
                   key={`unit-${unit.code || unit.name}`}
@@ -296,6 +277,17 @@ function BeneficiaryGeoSelectorComponent({
                 </SelectItem>
               ))}
             </SelectContent>
+              {municipalityCode &&
+                !filteredMunicipalities.some(
+                  (municipality) =>
+                    String(municipality.code || municipality.name) ===
+                    String(municipalityCode),
+                ) && (
+                  <SelectItem value={String(municipalityCode)}>
+                    {normalizedValue?.municipalities?.[0]?.name ||
+                      String(municipalityCode)}
+                  </SelectItem>
+                )}
           </Select>
         </div>
 

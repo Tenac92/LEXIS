@@ -37,6 +37,128 @@ const extractCorrectionReason = (doc: any): string | undefined => {
   return undefined;
 };
 
+const resolveReadableAFM = (storedAfm: unknown): string => {
+  if (storedAfm === null || storedAfm === undefined) {
+    return "";
+  }
+
+  const rawValue = String(storedAfm).trim();
+  if (!rawValue) {
+    return "";
+  }
+
+  const decryptedValue = decryptAFM(rawValue);
+  if (decryptedValue && String(decryptedValue).trim()) {
+    return String(decryptedValue).trim();
+  }
+
+  // Some rows may already be plaintext AFM; keep it instead of returning blank.
+  return rawValue;
+};
+
+const buildPaymentGeoSnapshot = (rawRegiondet: unknown) => {
+  const parseJsonIfNeeded = (value: unknown): unknown => {
+    let current = value;
+    for (let i = 0; i < 3; i += 1) {
+      if (typeof current !== "string") {
+        return current;
+      }
+
+      const trimmed = current.trim();
+      if (!trimmed) {
+        return null;
+      }
+
+      if (!(trimmed.startsWith("{") || trimmed.startsWith("[") || trimmed.startsWith('"{') || trimmed.startsWith('"['))) {
+        return current;
+      }
+
+      try {
+        current = JSON.parse(trimmed);
+      } catch {
+        return current;
+      }
+    }
+    return current;
+  };
+
+  const toObjectArray = (value: unknown): any[] => {
+    if (Array.isArray(value)) {
+      return value.filter((entry) => entry && typeof entry === "object");
+    }
+    if (value && typeof value === "object") {
+      return [value];
+    }
+    return [];
+  };
+
+  const hasGeo = (entry: any): boolean => {
+    if (!entry || typeof entry !== "object") return false;
+    return Boolean(
+      (Array.isArray(entry.regions) && entry.regions.length > 0) ||
+        (Array.isArray(entry.regional_units) && entry.regional_units.length > 0) ||
+        (Array.isArray(entry.municipalities) && entry.municipalities.length > 0) ||
+        entry.region_code ||
+        entry.unit_code ||
+        entry.municipality_code ||
+        entry.region ||
+        entry.regional_unit ||
+        entry.municipality,
+    );
+  };
+
+  const parsed = parseJsonIfNeeded(rawRegiondet);
+  const entries = toObjectArray(parsed);
+  const resolvedEntry =
+    [...entries].reverse().find((entry) => hasGeo(entry)) ||
+    (entries.length > 0 ? entries[entries.length - 1] : null);
+
+  if (!resolvedEntry) {
+    return {
+      regiondet: null,
+      region_code: null,
+      regional_unit_code: null,
+      municipality_code: null,
+    };
+  }
+
+  const regions = toObjectArray((resolvedEntry as any).regions);
+  const regionalUnits = toObjectArray((resolvedEntry as any).regional_units ?? (resolvedEntry as any).regional_unit ?? (resolvedEntry as any).unit);
+  const municipalities = toObjectArray((resolvedEntry as any).municipalities ?? (resolvedEntry as any).municipality);
+
+  const regionCodeRaw =
+    regions[0]?.code ??
+    regions[0]?.region_code ??
+    (resolvedEntry as any).region_code ??
+    null;
+  const regionalUnitCodeRaw =
+    regionalUnits[0]?.code ??
+    regionalUnits[0]?.unit_code ??
+    (resolvedEntry as any).unit_code ??
+    null;
+  const municipalityCodeRaw =
+    municipalities[0]?.code ??
+    municipalities[0]?.id ??
+    (resolvedEntry as any).municipality_code ??
+    null;
+
+  return {
+    regiondet: resolvedEntry,
+    region_code:
+      regionCodeRaw !== null && regionCodeRaw !== undefined
+        ? String(regionCodeRaw)
+        : null,
+    regional_unit_code:
+      regionalUnitCodeRaw !== null && regionalUnitCodeRaw !== undefined
+        ? String(regionalUnitCodeRaw)
+        : null,
+    municipality_code:
+      municipalityCodeRaw !== null && municipalityCodeRaw !== undefined
+        ? String(municipalityCodeRaw)
+        : null,
+  };
+};
+
 // Export the router as default
 // Debug endpoint to check expenditure type data
 router.get("/debug-expenditure/:docId", async (req: Request, res: Response) => {
@@ -1356,6 +1478,7 @@ router.post(
                       status: "pending",
                       installment: installmentName,
                       freetext: recipient.secondary_text || null,
+                      ...buildPaymentGeoSnapshot(recipient.regiondet || null),
                       unit_id: numericUnitId,
                       project_index_id: projectIndexId,
                       created_at: now,
@@ -1396,6 +1519,7 @@ router.post(
                   status: "pending",
                   installment: recipient.installment,
                   freetext: recipient.secondary_text || null,
+                  ...buildPaymentGeoSnapshot(recipient.regiondet || null),
                   unit_id: numericUnitId,
                   project_index_id: projectIndexId,
                   created_at: now,
@@ -3483,6 +3607,7 @@ router.post("/:id/correction", authenticateSession, async (req: AuthenticatedReq
                   installment: recipient.installment || "ΕΦΑΠΑΞ",
                   amount: recipient.amount,
                   status: recipient.status || "pending",
+                  ...buildPaymentGeoSnapshot(recipient.regiondet || null),
                   project_index_id: effectiveProjectIndexId,
                   unit_id: effectiveUnitId,
                 })
@@ -4295,7 +4420,7 @@ router.get(
       // First, get the document to check if it has employee_payments_id
       const { data: document, error: docError } = await supabase
         .from("generated_documents")
-        .select("employee_payments_id, beneficiary_payments_id")
+        .select("employee_payments_id, beneficiary_payments_id, project_index_id")
         .eq("id", documentId)
         .single();
 
@@ -4355,13 +4480,14 @@ router.get(
           const employee = Array.isArray(payment.Employees)
             ? payment.Employees[0]
             : payment.Employees;
+
           return {
             id: payment.id,
             employee_id: employee?.id,
             firstname: employee?.name || "",
             lastname: employee?.surname || "",
             fathername: employee?.fathername || "",
-            afm: employee?.afm ? decryptAFM(employee.afm) || "" : "",
+            afm: resolveReadableAFM(employee?.afm),
             amount: parseFloat(payment.net_payable) || 0,
             month: payment.month || "",
             days: payment.days || 0,
@@ -4375,6 +4501,7 @@ router.get(
             deduction_2_percent: payment.deduction_2_percent ?? 0,
             status: payment.status || "pending",
             secondary_text: employee?.klados || "",
+            regiondet: null,
           };
         });
 
@@ -4388,6 +4515,11 @@ router.get(
           `
         id,
         beneficiary_id,
+        project_index_id,
+        regiondet,
+        region_code,
+        regional_unit_code,
+        municipality_code,
         amount,
         installment,
         status,
@@ -4423,11 +4555,12 @@ router.get(
         
         return {
           ...payment,
+          regiondet: (payment as any).regiondet ?? beneficiary?.regiondet ?? null,
           eps: epsValue,
           freetext: epsValue,
           beneficiaries: beneficiary ? {
             ...beneficiary,
-            afm: decryptAFM(beneficiary.afm) || ""
+            afm: resolveReadableAFM(beneficiary.afm)
           } : null
         };
       });
@@ -4778,6 +4911,7 @@ router.put(
             amount: recipient.amount?.toString(),
             installment: recipient.installment || "ΕΦΑΠΑΞ",
             status: recipient.status || "pending",
+            ...buildPaymentGeoSnapshot(recipient.regiondet || null),
             updated_at: new Date().toISOString(),
           })
           .eq("id", recipient.id)
@@ -4855,6 +4989,7 @@ router.put(
             amount: recipient.amount?.toString() || "0",
             installment: recipient.installment || "ΕΦΑΠΑΞ",
             status: recipient.status || "pending",
+            ...buildPaymentGeoSnapshot(recipient.regiondet || null),
           })
           .select()
           .single();

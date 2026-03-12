@@ -448,6 +448,10 @@ export const beneficiaryPayments = pgTable(
     payment_date: date("payment_date"),
     eps: varchar("eps", { length: 7 }), // 7-digit EPS number
     freetext: text("freetext"),
+    regiondet: jsonb("regiondet"),
+    region_code: text("region_code"),
+    regional_unit_code: text("regional_unit_code"),
+    municipality_code: text("municipality_code"),
     created_at: timestamp("created_at").defaultNow(),
     updated_at: timestamp("updated_at").defaultNow(),
 
