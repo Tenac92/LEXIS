@@ -2894,6 +2894,7 @@ export function CreateDocumentDialog({
               lastname: r.lastname.trim(),
               fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
+              regiondet: r.regiondet ?? null,
               amount: quarterTotal,
               secondary_text: r.secondary_text?.trim() || "",
               installment:
@@ -2913,6 +2914,7 @@ export function CreateDocumentDialog({
               lastname: r.lastname.trim(),
               fathername: r.fathername?.trim() || "",
               afm: r.afm.trim(),
+              regiondet: r.regiondet ?? null,
               employee_id: r.employee_id,
               month: r.month,
               days: r.days,
@@ -2958,6 +2960,7 @@ export function CreateDocumentDialog({
             lastname: r.lastname.trim(),
             fathername: r.fathername?.trim() || "",
             afm: r.afm.trim(),
+            regiondet: r.regiondet ?? null,
             amount: parseFloat(r.amount.toString()),
             secondary_text: r.secondary_text?.trim() || "",
             installment:

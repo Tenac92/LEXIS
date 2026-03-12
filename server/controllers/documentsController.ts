@@ -689,6 +689,7 @@ router.post(
           installment: String(r.installment || "Α").trim(),
           installments: r.installments || [],
           installmentAmounts: r.installmentAmounts || {},
+          regiondet: r.regiondet ?? r.region ?? null,
           secondary_text: r.secondary_text
             ? String(r.secondary_text).trim()
             : undefined,
@@ -4552,10 +4553,24 @@ router.get(
           ? payment.beneficiaries[0]
           : payment.beneficiaries;
         const epsValue = payment.eps ?? payment.freetext ?? null;
+        const paymentGeoFallback = {
+          region_code: (payment as any).region_code ?? null,
+          unit_code: (payment as any).regional_unit_code ?? null,
+          municipality_code: (payment as any).municipality_code ?? null,
+        };
+        const hasPaymentGeoFallback = Boolean(
+          paymentGeoFallback.region_code ||
+            paymentGeoFallback.unit_code ||
+            paymentGeoFallback.municipality_code,
+        );
         
         return {
           ...payment,
-          regiondet: (payment as any).regiondet ?? beneficiary?.regiondet ?? null,
+          regiondet:
+            (payment as any).regiondet ??
+            (hasPaymentGeoFallback ? paymentGeoFallback : null) ??
+            beneficiary?.regiondet ??
+            null,
           eps: epsValue,
           freetext: epsValue,
           beneficiaries: beneficiary ? {

@@ -1150,6 +1150,16 @@ export function EditDocumentModal({
         ? payment.beneficiaries[0]
         : payment.beneficiaries;
       const installmentKey = payment.installment || "Προκαταβολή";
+      const paymentGeoFallback = {
+        region_code: (payment as any)?.region_code ?? null,
+        unit_code: (payment as any)?.regional_unit_code ?? null,
+        municipality_code: (payment as any)?.municipality_code ?? null,
+      };
+      const hasPaymentGeoFallback = Boolean(
+        paymentGeoFallback.region_code ||
+          paymentGeoFallback.unit_code ||
+          paymentGeoFallback.municipality_code,
+      );
       return {
         id: payment.id,
         beneficiary_id: payment.beneficiary_id,
@@ -1169,6 +1179,7 @@ export function EditDocumentModal({
         regiondet: normalizeRegiondetForPaymentContext({
           value:
             (payment as any)?.regiondet ??
+            (hasPaymentGeoFallback ? paymentGeoFallback : null) ??
             beneficiaryData?.regiondet ??
             null,
           paymentId: payment.id,
