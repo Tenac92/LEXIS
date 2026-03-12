@@ -680,6 +680,13 @@ router.post(
 
       // Format recipients data consistently
       let formattedRecipients = recipients.map((r: any) => {
+        const normalizedFreetext =
+          r.freetext !== undefined && r.freetext !== null
+            ? String(r.freetext).trim()
+            : r.secondary_text !== undefined && r.secondary_text !== null
+              ? String(r.secondary_text).trim()
+              : undefined;
+
         const baseRecipient = {
           firstname: String(r.firstname || "").trim(),
           lastname: String(r.lastname || "").trim(),
@@ -690,9 +697,8 @@ router.post(
           installments: r.installments || [],
           installmentAmounts: r.installmentAmounts || {},
           regiondet: r.regiondet ?? r.region ?? null,
-          secondary_text: r.secondary_text
-            ? String(r.secondary_text).trim()
-            : undefined,
+          freetext: normalizedFreetext,
+          secondary_text: normalizedFreetext,
         };
 
         // Include ΕΚΤΟΣ ΕΔΡΑΣ-specific fields if this is an out-of-office expense
@@ -1478,7 +1484,8 @@ router.post(
                       amount: installmentAmount,
                       status: "pending",
                       installment: installmentName,
-                      freetext: recipient.secondary_text || null,
+                      freetext:
+                        recipient.freetext ?? recipient.secondary_text ?? null,
                       ...buildPaymentGeoSnapshot(recipient.regiondet || null),
                       unit_id: numericUnitId,
                       project_index_id: projectIndexId,
@@ -1519,7 +1526,8 @@ router.post(
                   amount: recipient.amount,
                   status: "pending",
                   installment: recipient.installment,
-                  freetext: recipient.secondary_text || null,
+                  freetext:
+                    recipient.freetext ?? recipient.secondary_text ?? null,
                   ...buildPaymentGeoSnapshot(recipient.regiondet || null),
                   unit_id: numericUnitId,
                   project_index_id: projectIndexId,
@@ -2042,8 +2050,8 @@ router.get("/", async (req: Request, res: Response) => {
               installment: payment.installment || "",
               region: beneficiary?.regiondet || "",
               status: payment.status || "pending",
-              freetext: payment.eps ?? payment.freetext ?? null,
-              eps: payment.eps ?? payment.freetext ?? null,
+              freetext: payment.freetext ?? null,
+              eps: payment.eps ?? null,
               payment_date: payment.payment_date || null,
             };
           });
@@ -4227,8 +4235,8 @@ router.get(
                 afm: decryptedAFM,
                 amount: parseFloat(payment.amount || "0"),
                 installment: payment.installment || "ΕΦΑΠΑΞ",
-                freetext: payment.eps ?? payment.freetext ?? null,
-                eps: payment.eps ?? payment.freetext ?? null,
+                freetext: payment.freetext ?? null,
+                eps: payment.eps ?? null,
               };
             });
           }

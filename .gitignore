@@ -44,6 +44,7 @@ tmpclaude*
 *.md
 *.sql
 
+
 # Project-specific (migrations and scripts are tracked)
 # scripts/  - commented out if tracking scripts
 # migrations/  - commented out if tracking migrations

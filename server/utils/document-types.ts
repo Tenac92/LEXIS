@@ -119,6 +119,7 @@ export interface DocumentData {
     installment: number | string;
     installments?: string[];
     installmentAmounts?: Record<string, number>;
+    freetext?: string;
     secondary_text?: string;
     payment_type?: string;
     address?: string;

@@ -244,6 +244,7 @@ const DocumentCard = memo(function DocumentCard({
       firstname: string;
       lastname: string;
       fathername: string;
+      freetext: string | null;
       totalAmount: number;
       payments: Array<{
         installment: string;
@@ -257,7 +258,8 @@ const DocumentCard = memo(function DocumentCard({
         secondary_text?: string;
         payment_date?: string | null;
         freetext?: string | null;
-      }>;
+        eps?: string | null;
+      }>
     }>();
 
     recipients.forEach(r => {
@@ -268,6 +270,7 @@ const DocumentCard = memo(function DocumentCard({
           firstname: r.firstname,
           lastname: r.lastname,
           fathername: r.fathername,
+          freetext: (r as any).freetext || r.secondary_text || null,
           totalAmount: 0,
           payments: []
         });
@@ -286,6 +289,7 @@ const DocumentCard = memo(function DocumentCard({
         secondary_text: r.secondary_text,
         payment_date: (r as any).payment_date || null,
         freetext: (r as any).freetext || null,
+        eps: (r as any).eps || null,
       });
     });
 
@@ -808,6 +812,11 @@ const DocumentCard = memo(function DocumentCard({
                             })}
                           </span>
                         </div>
+                        {group.freetext && group.freetext.trim() && (
+                          <div className="text-[11px] text-orange-600 italic truncate">
+                            ({group.freetext.trim()})
+                          </div>
+                        )}
                         {/* Indented Payments List */}
                         {group.payments.length > 0 && (
                           <div className="mt-1 pl-3 border-l-2 border-orange-300 space-y-1">
@@ -836,9 +845,11 @@ const DocumentCard = memo(function DocumentCard({
                                       ? new Date(payment.payment_date).toLocaleDateString("el-GR")
                                       : "—"}
                                   </span>
-                                  <span className="ml-2 truncate" title={payment.freetext || "—"}>
-                                    EPS: {payment.freetext || "—"}
-                                  </span>
+                                  {payment.eps && (
+                                    <span className="ml-2 truncate" title={payment.eps}>
+                                      EPS: {payment.eps}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))}

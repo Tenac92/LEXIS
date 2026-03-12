@@ -661,10 +661,17 @@ export class DocumentGenerator {
             children: columns.map((label: string, idx: number) => {
               if (label === "ΟΝΟΜΑΤΕΠΩΝΥΜΟ") {
                 const runs: TextRun[] = [t(fullName, { ...FONT })];
-                if (recipient?.freetext && recipient.freetext.trim()) {
+                const recipientFreeText =
+                  (typeof recipient?.freetext === "string"
+                    ? recipient.freetext
+                    : typeof recipient?.secondary_text === "string"
+                      ? recipient.secondary_text
+                      : "") || "";
+
+                if (recipientFreeText.trim()) {
                   runs.push(
                     new TextRun({ break: 1 }),
-                    t(cleanText(recipient.freetext), { ...FONT }),
+                    t(`(${cleanText(recipientFreeText.trim())})`, { ...FONT }),
                   );
                 }
                 return new TableCell({

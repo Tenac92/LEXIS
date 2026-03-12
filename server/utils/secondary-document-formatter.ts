@@ -392,13 +392,39 @@ export class SecondaryDocumentFormatter {
     const rows: TableRow[] = [new TableRow({ children: headerCells })];
 
     // Helper to build one data row in the exact header order
-    const mkRow = (data: Record<string, string>) =>
+    const mkRow =
+      (data: Record<string, string> & { __nameFreetext?: string }) =>
       new TableRow({
         children: headerOrder.map(
           (col) =>
             new TableCell({
               borders: cellBorder,
-              children: [mkCentered(data[col] ?? "", false)],
+              children:
+                col === "ΟΝΟΜΑΤΕΠΩΝΥΜΟ" &&
+                data.__nameFreetext &&
+                data.__nameFreetext.trim()
+                  ? [
+                      new Paragraph({
+                        alignment: AlignmentType.CENTER,
+                        children: [
+                          new TextRun({
+                            text: data[col] ?? "",
+                            bold: false,
+                            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                            font: DocumentUtilities.DEFAULT_FONT,
+                          }),
+                          new TextRun({
+                            break: 1,
+                            text: `(${data.__nameFreetext.trim()})`,
+                            bold: false,
+                            size: DocumentUtilities.DEFAULT_FONT_SIZE,
+                            font: DocumentUtilities.DEFAULT_FONT,
+                          }),
+                        ],
+                        spacing: { after: 0 },
+                      }),
+                    ]
+                  : [mkCentered(data[col] ?? "", false)],
               verticalAlign: VerticalAlign.CENTER,
             }),
         ),
@@ -414,7 +440,13 @@ export class SecondaryDocumentFormatter {
         ? `${lastname} ${firstname} ΤΟΥ ${fathername}`.trim()
         : `${lastname} ${firstname}`.trim();
       const afm = r.afm ? String(r.afm) : "";
-      const praxis = r.secondary_text || expenditureType || "";
+      const freetext =
+        (typeof r.freetext === "string"
+          ? r.freetext
+          : typeof r.secondary_text === "string"
+            ? r.secondary_text
+            : "") || "";
+      const praxis = expenditureType || "";
 
       const addOneRow = (typeValue: string, amountNum: number) => {
         const amountStr = DocumentUtilities.formatCurrency(amountNum || 0);
@@ -428,6 +460,7 @@ export class SecondaryDocumentFormatter {
             [typeCol]: typeValue,
             ΠΡΑΞΗ: praxis,
             "ΠΟΣΟ (€)": amountStr,
+            __nameFreetext: freetext,
           }),
         );
       };
